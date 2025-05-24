@@ -7,19 +7,34 @@
 
 #include <string>
 
-extern const u8 bg_main_png[];
-extern const u8 logo_wiifin_png[];
-extern const u8 button_start_png[];
-extern const u8 cursor_png[];
-extern const u8 wii_font_ttf[];
-extern const u32 wii_font_ttf_len;
-extern const unsigned char cursor_png[];
-extern const unsigned int cursor_png_len;
+extern unsigned char data_bg_main_png[];
+extern unsigned int data_bg_main_png_len;
+extern unsigned char data_logo_wiifin_png[];
+extern unsigned int data_logo_wiifin_png_len;
+extern unsigned char data_button_start_png[];
+extern unsigned int data_button_start_png_len;
+extern unsigned char data_cursor_png[];
+extern unsigned int data_cursor_png_len;
+extern unsigned char data_wii_font_ttf[];
+extern unsigned int data_wii_font_ttf_len;
+
+#define bg_main_png data_bg_main_png
+#define bg_main_png_len data_bg_main_png_len
+#define logo_wiifin_png data_logo_wiifin_png
+#define logo_wiifin_png_len data_logo_wiifin_png_len
+#define button_start_png data_button_start_png
+#define button_start_png_len data_button_start_png_len
+#define cursor_png data_cursor_png
+#define cursor_png_len data_cursor_png_len
+#define wii_font_ttf data_wii_font_ttf
+#define wii_font_ttf_len data_wii_font_ttf_len
 
 void App::DrawIRCursor(int x, int y) {
-    if (cursorTex) {
-        GRRLIB_DrawImg(x - cursorTex->w / 2, y - cursorTex->h / 2, cursorTex, 0, 1, 1, 0xFFFFFFFF);
+    if (!cursorTex) {
+        GRRLIB_PrintfTTF(20, 20, font, "Error: cursorTex NULL", 18, 0xFF0000FF);
+        return;
     }
+    GRRLIB_DrawImg(x - cursorTex->w / 2, y - cursorTex->h / 2, cursorTex, 0, 1, 1, 0xFFFFFFFF);
 }
 
 void App::init() {
@@ -29,13 +44,16 @@ void App::init() {
 
     // GRRLIB handles video initialization, no need for xfb / rmode
     GRRLIB_Init();
-    GRRLIB_SetBackgroundColour(255, 255, 255, 255);  // fond blanc
+    GRRLIB_SetBackgroundColour(255, 255, 255, 255);  // white background
 
     // Load textures
     bgTex = GRRLIB_LoadTexture(bg_main_png);
     logoTex = GRRLIB_LoadTexture(logo_wiifin_png);
     btnTex = GRRLIB_LoadTexture(button_start_png);
     cursorTex = GRRLIB_LoadTexture(cursor_png);
+    if (!cursorTex) {
+        printf("[ERROR] cursor.png could not be loaded!\n");
+    }
 
     // Load font
     font = GRRLIB_LoadTTF(wii_font_ttf, wii_font_ttf_len);
@@ -88,9 +106,15 @@ void App::loop() {
             GRRLIB_PrintfTTF(x + 50, y + 50, font, menuItems[i].c_str(), 20, color);
         }
 
-        // IR Cursor
-        if (ir.valid) {
-            DrawIRCursor(ir.x, ir.y);
+        // Dynamic IR Cursor with rotation
+        if (cursorTex && ir.valid) {
+            // Uses the Wiimote's angle for rotation
+            float angle = 0.0f;
+            orient_t orient;
+            WPAD_Orientation(WPAD_CHAN_0, &orient);
+            angle = orient.roll; // in degrees
+            // Displays the cursor with rotation
+            GRRLIB_DrawImg(ir.x - cursorTex->w / 2, ir.y - cursorTex->h / 2, cursorTex, angle, 1, 1, 0xFFFFFFFF);
         }
 
         // Hover + click with A
@@ -103,9 +127,9 @@ void App::loop() {
                 if (ir.x >= x && ir.x <= x + w && ir.y >= y && ir.y <= y + h) {
                     selectedIndex = i;
                     switch (i) {
-                        case 0: /* Se connecter */ break;
-                        case 1: /* Parcourir */ break;
-                        case 2: /* Paramètres */ break;
+                        case 0: /* Connect */ break;
+                        case 1: /* Browse */ break;
+                        case 2: /* Settings */ break;
                         case 3: running = false; break;
                     }
                 }
@@ -122,6 +146,7 @@ void App::loop() {
     GRRLIB_FreeTexture(cursorTex);
     GRRLIB_FreeTTF(font);
     GRRLIB_Exit();
+    exit(0);
 }
 
 void App::run() {
