@@ -3,6 +3,18 @@
   <em>Jellyfin client for the Nintendo Wii</em>
 </p>
 
+<p align="center">
+  <a href="../README.md"><img src="https://flagcdn.com/w40/gb.png" width="28" alt="English"/></a>
+  &nbsp;
+  <a href="README/README.fr.md"><img src="https://flagcdn.com/w40/fr.png" width="28" alt="Français"/></a>
+  &nbsp;
+  <a href="README/README.de.md"><img src="https://flagcdn.com/w40/de.png" width="28" alt="Deutsch"/></a>
+  &nbsp;
+  <a href="README/README.es.md"><img src="https://flagcdn.com/w40/es.png" width="28" alt="Español"/></a>
+  &nbsp;
+  <a href="README/README.it.md"><img src="https://flagcdn.com/w40/it.png" width="28" alt="Italiano"/></a>
+</p>
+
 ---
 
 <p align="center">
@@ -84,8 +96,16 @@ WiiFin/
 
 ## 🤝 Contributing
 
-This project is open to pull requests, bug reports, and suggestions.
-Feel free to contribute and help shape a fun, functional media client for the Wii!
+WiiFin is open to pull requests, bug reports, and suggestions.
+
+* 📘 Read the [contribution guidelines](CONTRIBUTING.md)
+* 🐛 Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.md)
+* 💡 Got a feature idea? Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.md)
+
+
+<a href="https://discord.gg/p9DXfEmUYu">
+  <img src="https://img.shields.io/badge/Join%20us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord Badge"/>
+</a>
 
 ---
 
@@ -93,5 +113,3 @@ Feel free to contribute and help shape a fun, functional media client for the Wi
 
 This project is licensed under the **GPLv3**.
 See the [LICENSE](LICENSE) file for more details.
-
----
