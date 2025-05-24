@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  <a href="README/README.md"><img src="https://flagcdn.com/w40/gb.png" width="28" alt="English"/></a>
+  <a href="../README.md"><img src="https://flagcdn.com/w40/gb.png" width="28" alt="English"/></a>
   &nbsp;
   <a href="README/README.fr.md"><img src="https://flagcdn.com/w40/fr.png" width="28" alt="Français"/></a>
   &nbsp;
