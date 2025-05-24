@@ -39,7 +39,8 @@ ASSET_OFILES := \
 	$(BUILD)/bg_main_png.o \
 	$(BUILD)/button_start_png.o \
 	$(BUILD)/logo_wiifin_png.o \
-	$(BUILD)/wii_font_ttf.o
+	$(BUILD)/wii_font_ttf.o \
+	$(BUILD)/cursor_png.o
 
 OFILES      := $(SRC_OFILES) $(ASSET_OFILES)
 
@@ -97,7 +98,7 @@ $(BUILD)/bg_main_png.o: data/bg_main.png
 
 $(BUILD)/cursor_png.o: data/cursor.png
 	xxd -i $< > $(BUILD)/cursor_png.h
-	$(CC) -x c -c -o $@ -I$(BUILD) $(BUILD)/cursorpng.h
+	$(CC) -x c -c -o $@ -I$(BUILD) $(BUILD)/cursor_png.h
 
 $(BUILD)/button_start_png.o: data/button_start.png
 	xxd -i $< > $(BUILD)/button_start_png.h
