@@ -85,6 +85,7 @@ private:
     std::vector<DiscoveredServer> discoveredServers;
     int discoverSelected          = 0;
     lwp_t discoverThread          = LWP_THREAD_NULL;
+    struct DiscoverCtx* discoverCtx = nullptr;
 
     // VKB layout
     static const char* kbRows[7];

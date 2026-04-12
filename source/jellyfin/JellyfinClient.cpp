@@ -233,11 +233,15 @@ static bool schemeAutoHttps(const std::string& url) {
     return p == 443 || p == 8920;
 }
 
-/* Ensure a server URL has an http:// or https:// scheme prefix. */
+/* Ensure a server URL has an http:// or https:// scheme prefix.
+ * If the URL already contains "://" but is not http/https, return it unchanged
+ * (parseUrl will then reject it with an unsupported-scheme error). */
 static std::string addScheme(const std::string& url) {
     const std::string n = normScheme(url);
     if (n.size() >= 7 && n.compare(0, 7, "http://")  == 0) return n;
     if (n.size() >= 8 && n.compare(0, 8, "https://") == 0) return n;
+    // If there's already a "://" it's an unsupported scheme — don't prepend
+    if (n.find("://") != std::string::npos) return n;
     return (schemeAutoHttps(n) ? "https://" : "http://") + n;
 }
 
@@ -254,6 +258,12 @@ bool JellyfinClient::parseUrl(const std::string& rawUrl,
         u = u.substr(7);
         port = 80;
     } else {
+        // Reject any other scheme (ftp://, etc.) — only truly scheme-less URLs
+        // (no "://" present) are accepted here for auto-detection.
+        if (u.find("://") != std::string::npos) {
+            errMsg = "Unsupported URL scheme";
+            return false;
+        }
         // No scheme — auto-detect via exact port number (not substring match).
         // Port 443 = standard HTTPS; 8920 = Jellyfin default HTTPS port.
         isHttps = schemeAutoHttps(u);

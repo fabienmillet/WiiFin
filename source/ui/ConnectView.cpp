@@ -30,14 +30,18 @@ static void usbCallback(char c) { usbChar = c; }
 // ---------------------------------------------------------------------------
 // Background discovery thread
 // ---------------------------------------------------------------------------
-static u8                       s_discoverStack[32 * 1024];
-static volatile bool            s_discoverDone;
-static JellyfinClient*          s_discoverClient;
-static std::vector<DiscoveredServer>* s_discoverOut;
+static u8  s_discoverStack[32 * 1024];
 
-static void* discoverWorker(void*) {
-    s_discoverClient->discoverServers(*s_discoverOut);
-    s_discoverDone = true;
+struct DiscoverCtx {
+    JellyfinClient*              client;
+    std::vector<DiscoveredServer>* out;
+    volatile bool                done;
+};
+
+static void* discoverWorker(void* arg) {
+    DiscoverCtx* ctx = static_cast<DiscoverCtx*>(arg);
+    ctx->client->discoverServers(*ctx->out);
+    ctx->done = true;
     return nullptr;
 }
 
@@ -111,6 +115,13 @@ ConnectResult ConnectView::update(ir_t& ir) {
     // B = cancel (or close VKB)
     if (Input::isBackPressed()) {
         if (kbActive) { kbActive = false; return ConnectResult::None; }
+        // Join any in-flight discovery thread before leaving
+        if (discoverThread != LWP_THREAD_NULL) {
+            LWP_JoinThread(discoverThread, nullptr);
+            discoverThread = LWP_THREAD_NULL;
+            delete discoverCtx;
+            discoverCtx = nullptr;
+        }
         return ConnectResult::Cancelled;
     }
 
@@ -271,19 +282,25 @@ ConnectResult ConnectView::update(ir_t& ir) {
                     }
                     discoveredServers.clear();
                     discoverSelected = 0;
-                    s_discoverClient = &client;
-                    s_discoverOut    = &discoveredServers;
-                    s_discoverDone   = false;
-                    LWP_CreateThread(&discoverThread, discoverWorker, nullptr,
-                                     s_discoverStack, sizeof(s_discoverStack), 64);
+                    discoverCtx = new DiscoverCtx{&client, &discoveredServers, false};
+                    if (LWP_CreateThread(&discoverThread, discoverWorker, discoverCtx,
+                                         s_discoverStack, sizeof(s_discoverStack), 64) < 0) {
+                        delete discoverCtx;
+                        discoverCtx = nullptr;
+                        discoverThread = LWP_THREAD_NULL;
+                        setStatus("Failed to start scan thread.", true);
+                        break;
+                    }
                     discoverState = DiscoverState::Scanning;
                 }
                 break;
             }
             case DiscoverState::Scanning:
-                if (s_discoverDone) {
+                if (discoverCtx && discoverCtx->done) {
                     LWP_JoinThread(discoverThread, nullptr);
                     discoverThread = LWP_THREAD_NULL;
+                    delete discoverCtx;
+                    discoverCtx = nullptr;
                     discoverState  = DiscoverState::Done;
                     if (discoveredServers.empty())
                         setStatus("No servers found on the local network.", false);
@@ -301,9 +318,10 @@ ConnectResult ConnectView::update(ir_t& ir) {
                         discoverState = DiscoverState::Idle;
                     break;
                 }
-                // Navigate list
-                if (Input::isDownPressed()) { discoverSelected = (discoverSelected + 1) % n; irMode = false; }
-                if (Input::isUpPressed())   { discoverSelected = (discoverSelected - 1 + n) % n; irMode = false; }
+                // Navigate list — clamp to the 6 visible rows
+                int visible = (n < 6) ? n : 6;
+                if (Input::isDownPressed()) { discoverSelected = (discoverSelected + 1) % visible; irMode = false; }
+                if (Input::isUpPressed())   { discoverSelected = (discoverSelected - 1 + visible) % visible; irMode = false; }
 
                 bool doSelect = false;
                 if (ir.valid) {
