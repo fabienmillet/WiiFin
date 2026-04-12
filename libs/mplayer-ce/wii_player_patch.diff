@@ -272,3 +272,53 @@
 +        }
 +
 +        if (!ov_visible) return;
+
+// ==========================================================================
+// Change 12: Add plain-HTTP stream module (stream_http_wii.c)
+// ==========================================================================
+// libmplayer.a has no HTTP stream handler — only stream_https_wii handles
+// network URLs (https:// only).  Without an http:// handler, MPlayer logs
+// "No stream found to handle url" and exits immediately, causing WiiFin's
+// music player to skip every track in a loop and video to never launch when
+// the Jellyfin server is accessed over plain HTTP.
+//
+// Fix: create stream/stream_http_wii.c (plain TCP, no TLS) and register it
+// in stream/stream.c alongside stream_info_https_wii.
+//
+// stream/stream_http_wii.c — NEW FILE
+// A self-contained plain-HTTP stream module modelled on stream_https_wii.c.
+// Replaces all mbedTLS calls with net_read/net_write + a 30-second timeout
+// loop identical to the tls_recv_cb pattern.  Handles:
+//   - HTTP/1.1 GET requests
+//   - chunked Transfer-Encoding (same decoder as HTTPS variant)
+//   - 3xx redirects (up to 5 hops)
+//   - 5xx retries (up to 5 × 5 s) for slow Jellyfin transcoders
+//   - Content-Length and body-sniff fallback for chunked detection
+// Registered as stream_info_http_wii for protocol "http".
+//
+// stream/stream.c — ADD under #ifdef GEKKO
+//
+// After the existing stream_info_https_wii extern declaration (≈ line 88):
+//
+-#ifdef GEKKO
+-extern const stream_info_t stream_info_https_wii;
+-#endif
++#ifdef GEKKO
++extern const stream_info_t stream_info_https_wii;
++extern const stream_info_t stream_info_http_wii;
++#endif
+//
+// After the existing &stream_info_https_wii, entry in auto_open_streams[]
+// (≈ line 158):
+//
+-#ifdef GEKKO
+-  &stream_info_https_wii,
+-#endif
++#ifdef GEKKO
++  &stream_info_https_wii,
++  &stream_info_http_wii,
++#endif
+//
+// Build: see MPLAYER_CE_BUILD.md §6 — use build_https.sh which compiles
+// both stream modules plus stream.c and injects all three .o files into
+// libmplayer.a via `ar r`.

@@ -94,6 +94,11 @@ struct QuickConnectResult {
     bool authenticated;  // true once user approved on another device
 };
 
+struct DiscoveredServer {
+    std::string name;    // server display name
+    std::string address; // full URL, e.g. "http://192.168.1.10:8096"
+};
+
 class JellyfinClient {
 public:
     // Initialize networking (call once)
@@ -118,6 +123,10 @@ public:
     bool quickConnectAuthenticate(const std::string& serverUrl,
                                   const std::string& secret,
                                   JellyfinAuth& out);
+
+    // Discover Jellyfin servers on the LAN via UDP broadcast (port 7359)
+    // Blocks for ~2 s; returns true if socket opened (even if no servers found)
+    bool discoverServers(std::vector<DiscoveredServer>& out);
 
     bool isNetworkReady() const { return networkReady; }
     const std::string& lastError() const { return errMsg; }
@@ -348,6 +357,8 @@ public:
 private:
     bool networkReady = false;
     std::string errMsg;
+    std::string localIp_;   // set by initNetwork, used by discoverServers
+    std::string localMask_;
 
     // Low-level HTTP/HTTPS: auto-detects scheme, returns HTTP status code
     int httpRequest(const std::string& url,

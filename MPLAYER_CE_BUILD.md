@@ -128,7 +128,50 @@ The `--start-group`/`--end-group` flags in `WiiFin/Makefile` handle circular ref
 
 ---
 
-## 6. Install into WiiFin
+## 6. Add Wii HTTP/HTTPS stream modules
+
+`libmplayer.a` has no built-in HTTP stream handler (only `stream_ffmpeg` for `ffmpeg://`). WiiFin ships two custom stream modules:
+
+| File | Protocol | Notes |
+|------|----------|-------|
+| `stream/stream_https_wii.c` | `https://` | mbedTLS + libogc |
+| `stream/stream_http_wii.c` | `http://` | plain TCP + libogc, no TLS |
+
+Both must be present in the cloned `mplayer-ce/mplayer/stream/` directory (they are tracked in the WiiFin repo as source files).  
+`stream/stream.c` must also declare and register both modules in `auto_open_streams[]` under `#ifdef GEKKO`.
+
+Use the helper script to compile and inject all three objects in one step:
+
+```bash
+bash /path/to/WiiFin/repo/../mplayer-ce/build_https.sh
+```
+
+> `build_https.sh` compiles `stream_https_wii.c`, `stream_http_wii.c`, and `stream.c` (with `-Iffmpeg` for `libavutil` headers), then adds all three `.o` files to both library paths via `ar r`.
+
+Alternatively, compile manually:
+
+```bash
+GCC=/opt/devkitpro/devkitPPC/bin/powerpc-eabi-gcc
+AR=/opt/devkitpro/devkitPPC/bin/powerpc-eabi-ar
+CFLAGS="-O2 -mcpu=750 -meabi -mrvl -msdata -mmultiple -pipe \
+  -std=gnu99 -DGEKKO -DHW_RVL -DDISABLE_MAIN \
+  -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE \
+  -I/opt/devkitpro/portlibs/ppc/include \
+  -I/opt/devkitpro/libogc/include \
+  -I/path/to/WiiFin/libs/mbedtls/include \
+  -I. -Wno-undef -Wno-redundant-decls"
+
+cd ~/mplayer-ce/mplayer
+$GCC $CFLAGS -c -o stream/stream_https_wii.o stream/stream_https_wii.c
+$GCC $CFLAGS -c -o stream/stream_http_wii.o  stream/stream_http_wii.c
+$GCC $CFLAGS -Iffmpeg -c -o stream/stream.o  stream/stream.c
+$AR r /path/to/WiiFin/libs/mplayer-ce-build/libmplayer.a \
+    stream/stream_https_wii.o stream/stream_http_wii.o stream/stream.o
+```
+
+---
+
+## 7. Install into WiiFin
 
 ```bash
 mkdir -p /path/to/WiiFin/libs/mplayer-ce-build

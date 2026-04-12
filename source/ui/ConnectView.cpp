@@ -2,6 +2,7 @@
 #include "../input/Input.h"
 #include "../core/SoundFX.h"
 #include <wiikeyboard/keyboard.h>
+#include <ogc/lwp.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -13,7 +14,7 @@ const char* ConnectView::kbRows[7] = {
     "1234567890-.",
     "qwertyuiop:/",
     "asdfghjkl@_ ",
-    "\x01zxcvbnm.,\x02\x7f",   // \x01=Shift  \x02=SYM  \x7f=Backspace
+    "\x01zxcvbnm,\x02\x7f",    // \x01=Shift  \x02=SYM  \x7f=Backspace
     // --- Page 1 : symbols ---
     "!?@#$%^&*()-",
     "_+=|\\[]{};:\"",
@@ -25,6 +26,20 @@ static const int KB_COLS_MAX = 12;
 // USB keyboard callback — appends char to a shared buffer
 static char usbChar = 0;
 static void usbCallback(char c) { usbChar = c; }
+
+// ---------------------------------------------------------------------------
+// Background discovery thread
+// ---------------------------------------------------------------------------
+static u8                       s_discoverStack[32 * 1024];
+static volatile bool            s_discoverDone;
+static JellyfinClient*          s_discoverClient;
+static std::vector<DiscoveredServer>* s_discoverOut;
+
+static void* discoverWorker(void*) {
+    s_discoverClient->discoverServers(*s_discoverOut);
+    s_discoverDone = true;
+    return nullptr;
+}
 
 // ---------------------------------------------------------------
 ConnectView::ConnectView(GRRLIB_texImg* btn, GRRLIB_texImg* cursor,
@@ -108,15 +123,13 @@ ConnectResult ConnectView::update(ir_t& ir) {
 
     bool irTabHandled = false;
     if (ir.valid && aPressed && ir.y >= 44 && ir.y <= 80) {
-        if (ir.x >= 20 && ir.x <= 200) {
-            activeTab = Tab::Credentials; kbActive = false; irTabHandled = true;
-        } else if (ir.x >= 220 && ir.x <= 440) {
-            activeTab = Tab::QuickConnect; kbActive = false; irTabHandled = true;
-        }
+        if      (ir.x >= 10  && ir.x <= 195) { activeTab = Tab::Credentials;  kbActive = false; irTabHandled = true; }
+        else if (ir.x >= 200 && ir.x <= 400) { activeTab = Tab::QuickConnect; kbActive = false; irTabHandled = true; }
+        else if (ir.x >= 405 && ir.x <= 540) { activeTab = Tab::Discover;     kbActive = false; irTabHandled = true; }
     }
     if (!kbActive) {
-        if (Input::isLPressed()) { activeTab = Tab::Credentials; irMode = false; }
-        if (Input::isRPressed()) { activeTab = Tab::QuickConnect; irMode = false; }
+        if (Input::isLPressed()) { activeTab = (Tab)(((int)activeTab - 1 + 3) % 3); kbActive = false; irMode = false; }
+        if (Input::isRPressed()) { activeTab = (Tab)(((int)activeTab + 1) % 3);     kbActive = false; irMode = false; }
     }
 
     if (irTabHandled) return ConnectResult::None;
@@ -185,7 +198,7 @@ ConnectResult ConnectView::update(ir_t& ir) {
             // VKB is active
             handleVKBInput(ir);
         }
-    } else {
+    } else if (activeTab == Tab::QuickConnect) {
         // Quick Connect tab
         switch (qcState) {
             case QCState::Idle: {
@@ -242,6 +255,81 @@ ConnectResult ConnectView::update(ir_t& ir) {
                 if (aPressed && (!irMode || ir.valid)) qcState = QCState::Idle;
                 break;
             default: break;
+        }
+    } else {
+        // Discover tab
+        switch (discoverState) {
+            case DiscoverState::Idle: {
+                bool btnHit = ir.valid &&
+                              ir.x >= 200 && ir.x <= 440 &&
+                              ir.y >= 240 && ir.y <= 292;
+                if (btnHit) irMode = true;
+                if (aPressed && (btnHit || (!irMode && !ir.valid))) {
+                    if (!netReady) {
+                        netReady = client.initNetwork();
+                        if (!netReady) { setStatus(client.lastError(), true); break; }
+                    }
+                    discoveredServers.clear();
+                    discoverSelected = 0;
+                    s_discoverClient = &client;
+                    s_discoverOut    = &discoveredServers;
+                    s_discoverDone   = false;
+                    LWP_CreateThread(&discoverThread, discoverWorker, nullptr,
+                                     s_discoverStack, sizeof(s_discoverStack), 64);
+                    discoverState = DiscoverState::Scanning;
+                }
+                break;
+            }
+            case DiscoverState::Scanning:
+                if (s_discoverDone) {
+                    LWP_JoinThread(discoverThread, nullptr);
+                    discoverThread = LWP_THREAD_NULL;
+                    discoverState  = DiscoverState::Done;
+                    if (discoveredServers.empty())
+                        setStatus("No servers found on the local network.", false);
+                }
+                break;
+            case DiscoverState::Done: {
+                int n = (int)discoveredServers.size();
+                if (n == 0) {
+                    // Re-scan button (same hit zone as Scan)
+                    bool btnHit = ir.valid &&
+                                  ir.x >= 200 && ir.x <= 440 &&
+                                  ir.y >= 240 && ir.y <= 292;
+                    if (btnHit) irMode = true;
+                    if (aPressed && (btnHit || (!irMode && !ir.valid)))
+                        discoverState = DiscoverState::Idle;
+                    break;
+                }
+                // Navigate list
+                if (Input::isDownPressed()) { discoverSelected = (discoverSelected + 1) % n; irMode = false; }
+                if (Input::isUpPressed())   { discoverSelected = (discoverSelected - 1 + n) % n; irMode = false; }
+
+                bool doSelect = false;
+                if (ir.valid) {
+                    for (int i = 0; i < n && i < 6; i++) {
+                        int rowY = 130 + i * 48;
+                        if (ir.y >= rowY && ir.y <= rowY + 40 &&
+                            ir.x >= 60  && ir.x <= 580) {
+                            irMode = true;
+                            if (aPressed) { discoverSelected = i; doSelect = true; }
+                            break;
+                        }
+                    }
+                }
+                if (aPressed && !irMode) doSelect = true;
+
+                if (doSelect && discoverSelected < n) {
+                    fields[0] = discoveredServers[discoverSelected].address;
+                    while (fields[0].size() > 1 && fields[0].back() == '/')
+                        fields[0].pop_back();
+                    serverUrl = fields[0];
+                    activeTab = Tab::Credentials;
+                    focusedField = Field::Username;
+                    setStatus("Server URL set. Enter your credentials.", false);
+                }
+                break;
+            }
         }
     }
     return ConnectResult::None;
@@ -383,8 +471,10 @@ void ConnectView::renderBackground() {
     // Tabs
     u32 credCol = (activeTab == Tab::Credentials)    ? 0xFFFFFFFF : 0x778899FF;
     u32 qcCol   = (activeTab == Tab::QuickConnect)   ? 0xFFFFFFFF : 0x778899FF;
-    GRRLIB_PrintfTTF(30,  50, font, "[ Credentials ]", 18, credCol);
-    GRRLIB_PrintfTTF(240, 50, font, "[ Quick Connect ]", 18, qcCol);
+    u32 discCol = (activeTab == Tab::Discover)       ? 0xFFFFFFFF : 0x778899FF;
+    GRRLIB_PrintfTTF(20,  50, font, "[ Credentials ]",  18, credCol);
+    GRRLIB_PrintfTTF(200, 50, font, "[ Quick Connect ]", 18, qcCol);
+    GRRLIB_PrintfTTF(405, 50, font, "[ Discover ]",      18, discCol);
 
     // Status (deux lignes si le message est trop large)
     if (statusTimer > 0) {
@@ -545,9 +635,70 @@ void ConnectView::renderCursor(ir_t& ir) {
     }
 }
 
+void ConnectView::renderDiscover(ir_t& ir) {
+    int cx = 320;
+    switch (discoverState) {
+        case DiscoverState::Idle:
+            GRRLIB_PrintfTTF(0, 110, font,
+                "Find Jellyfin servers on your local network.", 18, 0xCCCCCCFF);
+            GRRLIB_PrintfTTF(0, 138, font,
+                "The Wii must be on the same network as the server.", 16, 0x778899FF);
+            {
+                bool btnFocus = ir.valid &&
+                                ir.x >= 200 && ir.x <= 440 &&
+                                ir.y >= 240 && ir.y <= 292;
+                drawButton(btnTex, font, cx, 240, 240, 52, "Scan for Servers", btnFocus);
+            }
+            break;
+
+        case DiscoverState::Scanning: {
+            int tw = GRRLIB_WidthTTF(font, "Scanning...", 22);
+            GRRLIB_PrintfTTF((640 - tw) / 2, 220, font, "Scanning...", 22, 0x4499FFFF);
+            break;
+        }
+
+        case DiscoverState::Done: {
+            int n = (int)discoveredServers.size();
+            if (n == 0) {
+                GRRLIB_PrintfTTF(0, 170, font, "No servers found.", 20, 0xFF8844FF);
+                GRRLIB_PrintfTTF(0, 200, font,
+                    "Check your network and server settings, then try again.", 15, 0x778899FF);
+                bool btnFocus = ir.valid &&
+                                ir.x >= 200 && ir.x <= 440 &&
+                                ir.y >= 240 && ir.y <= 292;
+                drawButton(btnTex, font, cx, 240, 200, 48, "Scan Again", btnFocus);
+                break;
+            }
+            GRRLIB_PrintfTTF(20, 100, font, "Found — select a server:", 16, 0xCCCCCCFF);
+            for (int i = 0; i < n && i < 6; i++) {
+                int rowY = 126 + i * 50;
+                bool sel = (i == discoverSelected);
+                bool irHov = ir.valid &&
+                             ir.x >= 60 && ir.x <= 580 &&
+                             ir.y >= rowY && ir.y <= rowY + 42;
+                bool highlight = sel || irHov;
+                u32 bg = highlight ? 0x1E3A5AE0 : 0x0D1526CC;
+                GRRLIB_Rectangle(60, rowY, 520, 42, bg, 1);
+                if (highlight)
+                    GRRLIB_Rectangle(58, rowY - 2, 524, 46, 0x4499FFFF, 0);
+                GRRLIB_PrintfTTF(70, rowY + 4, font,
+                    discoveredServers[i].name.c_str(), 16,
+                    highlight ? 0xFFFFFFFF : 0xBBCCDDFF);
+                GRRLIB_PrintfTTF(70, rowY + 24, font,
+                    discoveredServers[i].address.c_str(), 13,
+                    highlight ? 0x88CCFFFF : 0x778899FF);
+            }
+            GRRLIB_PrintfTTF(20, 126 + 6 * 50 + 6, font,
+                "A: Use this server   Up/Down: Navigate", 14, 0x778899FF);
+            break;
+        }
+    }
+}
+
 void ConnectView::render(ir_t& ir) {
     renderBackground();
-    if (activeTab == Tab::Credentials)  renderCredentials(ir);
-    else                                 renderQuickConnect(ir);
+    if      (activeTab == Tab::Credentials)  renderCredentials(ir);
+    else if (activeTab == Tab::QuickConnect) renderQuickConnect(ir);
+    else                                     renderDiscover(ir);
     renderCursor(ir);
 }

@@ -2,6 +2,7 @@
 #include <string>
 #include <grrlib.h>
 #include <wiiuse/wpad.h>
+#include <ogc/lwp.h>
 #include "../jellyfin/JellyfinClient.h"
 
 // Result returned to caller after the view completes
@@ -35,7 +36,7 @@ private:
     JellyfinClient& client;
 
     // --- Tabs ---
-    enum class Tab { Credentials, QuickConnect };
+    enum class Tab { Credentials, QuickConnect, Discover };
     Tab activeTab = Tab::Credentials;
 
     // --- Fields (Credentials tab) ---
@@ -74,8 +75,16 @@ private:
     void renderVKB(ir_t& ir);
     void renderCredentials(ir_t& ir);
     void renderQuickConnect(ir_t& ir);
+    void renderDiscover(ir_t& ir);
     void renderBackground();
     void renderCursor(ir_t& ir);
+
+    // --- Discover tab ---
+    enum class DiscoverState { Idle, Scanning, Done };
+    DiscoverState discoverState   = DiscoverState::Idle;
+    std::vector<DiscoveredServer> discoveredServers;
+    int discoverSelected          = 0;
+    lwp_t discoverThread          = LWP_THREAD_NULL;
 
     // VKB layout
     static const char* kbRows[7];

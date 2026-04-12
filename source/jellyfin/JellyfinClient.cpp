@@ -81,13 +81,170 @@ bool JellyfinClient::initNetwork() {
         return false;
     }
     networkReady = true;
+    localIp_   = ip;
+    localMask_ = mask;
     return true;
 }
 
-bool JellyfinClient::parseUrl(const std::string& url,
+bool JellyfinClient::discoverServers(std::vector<DiscoveredServer>& out) {
+    out.clear();
+
+    s32 sock = net_socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) {
+        errMsg = "UDP socket failed";
+        return false;
+    }
+
+    // Enable broadcast
+    u32 broadcastOn = 1;
+    net_setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcastOn, sizeof(broadcastOn));
+
+    // Build the two broadcast targets:
+    //  1) 255.255.255.255 (limited broadcast)
+    //  2) Subnet-directed broadcast — more reliable on some routers/IOS
+    struct sockaddr_in dest255, destSubnet;
+    memset(&dest255,   0, sizeof(dest255));
+    memset(&destSubnet, 0, sizeof(destSubnet));
+
+    dest255.sin_family      = AF_INET;
+    dest255.sin_port        = htons(7359);
+    dest255.sin_addr.s_addr = 0xFFFFFFFFu;
+
+    destSubnet.sin_family = AF_INET;
+    destSubnet.sin_port   = htons(7359);
+    // Compute (ip & mask) | ~mask — fall back gracefully if IP unknown
+    if (!localIp_.empty() && !localMask_.empty()) {
+        u32 ip4   = ntohl(inet_addr(localIp_.c_str()));
+        u32 mask4 = ntohl(inet_addr(localMask_.c_str()));
+        if (ip4 != 0xFFFFFFFFu && mask4 != 0xFFFFFFFFu)
+            destSubnet.sin_addr.s_addr = htonl((ip4 & mask4) | (~mask4));
+        else
+            destSubnet.sin_addr.s_addr = 0xFFFFFFFFu;
+    } else {
+        destSubnet.sin_addr.s_addr = 0xFFFFFFFFu;
+    }
+
+    SYS_Report("[Discover] localIp=%s\n", localIp_.c_str());
+
+    const char* msg = "Who is JellyfinServer?";
+    auto sendBroadcast = [&]() {
+        net_sendto(sock, msg, (s32)strlen(msg), 0,
+                   (struct sockaddr*)&dest255,   (socklen_t)sizeof(dest255));
+        net_sendto(sock, msg, (s32)strlen(msg), 0,
+                   (struct sockaddr*)&destSubnet, (socklen_t)sizeof(destSubnet));
+    };
+    sendBroadcast();
+
+    // Time-based collection using gettime() — independent of net_select resolution.
+    // • Exit 100 ms after first server found (LAN responses are nearly instantaneous).
+    // • Hard cap: 2000 ms if nothing found.
+    // • Re-broadcast at 800 ms to catch slow responders.
+    const u32 MAX_MS   = 2000;
+    const u32 FOUND_MS = 100;
+    u64 startTicks = gettime();
+    u64 foundTicks = 0;
+    bool rebroadcasted = false;
+    char buf[1024];
+
+    while (true) {
+        u32 elapsedMs = (u32)ticks_to_millisecs(gettime() - startTicks);
+        if (elapsedMs >= MAX_MS) break;
+        if (foundTicks > 0 && (u32)ticks_to_millisecs(gettime() - foundTicks) >= FOUND_MS)
+            break;
+
+        if (!rebroadcasted && elapsedMs >= 800) {
+            sendBroadcast();
+            rebroadcasted = true;
+        }
+
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(sock, &rfds);
+        struct timeval tv = {0, 50000};
+        int sel = net_select(sock + 1, &rfds, nullptr, nullptr, &tv);
+        if (sel <= 0) {
+            // Timeout with no data: if we already have results, stop now
+            if (!out.empty()) break;
+            continue;
+        }
+
+        struct sockaddr_in from;
+        socklen_t fromLen = (socklen_t)sizeof(from);
+        int n = (int)net_recvfrom(sock, buf, (s32)(sizeof(buf) - 1), 0,
+                                  (struct sockaddr*)&from, &fromLen);
+        if (n <= 0) continue;
+        buf[n] = '\0';
+
+        std::string json(buf, n);
+        std::string address = jsonGetString(json, "Address");
+        std::string name    = jsonGetString(json, "Name");
+        if (address.empty()) continue;
+
+        bool dup = false;
+        for (const auto& s : out)
+            if (s.address == address) { dup = true; break; }
+        if (!dup) {
+            DiscoveredServer ds;
+            ds.name    = name.empty() ? address : name;
+            ds.address = address;
+            out.push_back(ds);
+            if (foundTicks == 0) foundTicks = gettime();
+        }
+    }
+
+    SYS_Report("[Discover] done: %d servers\n", (int)out.size());
+    net_close(sock);
+    return true;
+}
+
+/* Normalise a URL scheme to lowercase so all comparisons can be case-sensitive.
+ * Handles HTTP://, HTTPS://, Http://, etc. typed on external keyboards. */
+static std::string normScheme(const std::string& url) {
+    // Scheme is everything before the first ':' — at most 8 chars for http/https.
+    size_t i = 0;
+    while (i < url.size() && i < 8 && url[i] != ':') ++i;
+    if (i < url.size() && url[i] == ':') {
+        std::string out = url;
+        for (size_t j = 0; j < i; ++j)
+            out[j] = (char)tolower((unsigned char)out[j]);
+        return out;
+    }
+    return url; // no ':' found before 8 chars — no scheme present
+}
+
+/* Extract the explicit port from the host:port portion of a scheme-less URL.
+ * Returns -1 if no colon is found (no explicit port in the URL). */
+static int extractPort(const std::string& url) {
+    size_t slash = url.find('/');
+    const std::string hostport = (slash != std::string::npos) ? url.substr(0, slash) : url;
+    size_t colon = hostport.rfind(':');
+    if (colon == std::string::npos) return -1;
+    return atoi(hostport.c_str() + colon + 1);
+}
+
+/* Returns true when a scheme-less URL should use HTTPS.
+ * No explicit port  → HTTPS:443 (most public Jellyfin servers use HTTPS).
+ * Port 443 or 8920  → HTTPS (8920 is Jellyfin's built-in HTTPS port).
+ * Any other port    → HTTP (e.g. :8096 / :80 / custom HTTP port).
+ * Users can always override by typing http:// or https:// explicitly. */
+static bool schemeAutoHttps(const std::string& url) {
+    int p = extractPort(url);
+    if (p < 0)  return true;          // no explicit port → default HTTPS
+    return p == 443 || p == 8920;
+}
+
+/* Ensure a server URL has an http:// or https:// scheme prefix. */
+static std::string addScheme(const std::string& url) {
+    const std::string n = normScheme(url);
+    if (n.size() >= 7 && n.compare(0, 7, "http://")  == 0) return n;
+    if (n.size() >= 8 && n.compare(0, 8, "https://") == 0) return n;
+    return (schemeAutoHttps(n) ? "https://" : "http://") + n;
+}
+
+bool JellyfinClient::parseUrl(const std::string& rawUrl,
                                std::string& host, int& port,
                                std::string& basePath, bool& isHttps) {
-    std::string u = url;
+    std::string u = normScheme(rawUrl);
     if (u.substr(0, 8) == "https://") {
         isHttps = true;
         u = u.substr(8);
@@ -97,8 +254,10 @@ bool JellyfinClient::parseUrl(const std::string& url,
         u = u.substr(7);
         port = 80;
     } else {
-        errMsg = "Unsupported URL scheme";
-        return false;
+        // No scheme — auto-detect via exact port number (not substring match).
+        // Port 443 = standard HTTPS; 8920 = Jellyfin default HTTPS port.
+        isHttps = schemeAutoHttps(u);
+        port = isHttps ? 443 : 80;
     }
 
     size_t slash = u.find('/');
@@ -323,19 +482,20 @@ int JellyfinClient::httpRequest(const std::string& url,
         return httpsRequest(host, port, basePath, method, contentType, body, authToken, responseBody);
     }
 
-    // Resolve host
-    struct hostent* he = net_gethostbyname(host.c_str());
-    if (!he) { errMsg = "DNS failed: " + host; return -1; }
-
-    s32 sock = net_socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) { errMsg = "socket() failed"; return -1; }
-
+    // Resolve host — try as a numeric IPv4 literal first; fall back to DNS.
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port   = htons(port);
-    if (he->h_length > (int)sizeof(addr.sin_addr)) { errMsg = "DNS: unexpected address length"; net_close(sock); return -1; }
-    memcpy(&addr.sin_addr, he->h_addr, he->h_length);
+    if (inet_aton(host.c_str(), &addr.sin_addr) == 0) {
+        struct hostent* he = net_gethostbyname(host.c_str());
+        if (!he) { errMsg = "DNS failed: " + host; return -1; }
+        if (he->h_length > (int)sizeof(addr.sin_addr)) { errMsg = "DNS: unexpected address length"; return -1; }
+        memcpy(&addr.sin_addr, he->h_addr, he->h_length);
+    }
+
+    s32 sock = net_socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) { errMsg = "socket() failed"; return -1; }
 
     {
         int cr = net_connect(sock, (struct sockaddr*)&addr, sizeof(addr));
@@ -361,10 +521,12 @@ int JellyfinClient::httpRequest(const std::string& url,
 
     std::string authHdr = authToken.empty() ? "" : (", Token=\"" + authToken + "\"");
     std::string ctHdr   = contentType.empty() ? "" : ("Content-Type: " + contentType + "\r\n");
+    // RFC 7230 §5.4: omit port from Host when it is the default for the scheme.
+    std::string hostHdr = host + (port == 80 ? "" : (":" + std::to_string(port)));
     char req[4096];
     int reqLen = snprintf(req, sizeof(req),
         "%s %s HTTP/1.1\r\n"
-        "Host: %s:%d\r\n"
+        "Host: %s\r\n"
         "Connection: close\r\n"
         "X-Emby-Authorization: " WIIFIN_CLIENT_HDR "%s\r\n"
         "%s"
@@ -372,7 +534,7 @@ int JellyfinClient::httpRequest(const std::string& url,
         "\r\n",
         method.c_str(),
         basePath.empty() ? "/" : basePath.c_str(),
-        host.c_str(), port,
+        hostHdr.c_str(),
         authHdr.c_str(),
         ctHdr.c_str(),
         body.size()
@@ -383,8 +545,34 @@ int JellyfinClient::httpRequest(const std::string& url,
         return -1;
     }
 
-    net_write(sock, req, reqLen);
-    if (!body.empty()) net_write(sock, (void*)body.c_str(), body.size());
+    SYS_Report("[http] %s http://%s%s\n", method.c_str(), hostHdr.c_str(), basePath.c_str());
+
+    // Send request headers + body, looping to handle partial writes and EAGAIN.
+    {
+        auto sendAll = [&](const void* data, int len) -> bool {
+            const char* p = (const char*)data;
+            int sent = 0;
+            while (sent < len) {
+                int w = net_write(sock, (void*)(p + sent), len - sent);
+                if (w > 0) { sent += w; continue; }
+                if (w == -EAGAIN || w == -EWOULDBLOCK) {
+                    fd_set wfds; FD_ZERO(&wfds); FD_SET(sock, &wfds);
+                    struct timeval tv = {10, 0};
+                    if (net_select(sock + 1, nullptr, &wfds, nullptr, &tv) <= 0)
+                        return false; // write timeout
+                    continue;
+                }
+                return false; // write error
+            }
+            return true;
+        };
+        if (!sendAll(req, reqLen) ||
+            (!body.empty() && !sendAll(body.c_str(), (int)body.size()))) {
+            errMsg = "Failed to send request";
+            net_close(sock);
+            return -1;
+        }
+    }
 
     static char rawBuf[256 * 1024];
     int rawLen = 0;
@@ -420,6 +608,12 @@ int JellyfinClient::httpRequest(const std::string& url,
     if (rawLen >= 12 && strncmp(rawBuf, "HTTP/", 5) == 0) {
         const char* sp = strchr(rawBuf, ' ');
         if (sp) status = atoi(sp + 1);
+    }
+    SYS_Report("[http] status=%d rawLen=%d\n", status, rawLen);
+    if (status == 0) {
+        errMsg = rawLen == 0 ? "No response from server (check server URL / port)"
+                             : "Invalid HTTP response (server may require HTTPS)";
+        return -1;
     }
     const char* sep = strstr(rawBuf, "\r\n\r\n");
     if (sep) {
@@ -460,16 +654,18 @@ int JellyfinClient::httpsRequest(const std::string& host, int port,
                                   std::string& responseBody) {
     int httpStatus = -1;
 
-    struct hostent* he = net_gethostbyname(host.c_str());
-    if (!he) { errMsg = "DNS failed: " + host; return -1; }
-
-    /* Resolve address once — reused across retry attempts. */
+    // Resolve address once — reused across retry attempts.
+    // Try as a numeric IPv4 literal first; fall back to DNS.
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port   = htons(port);
-    if (he->h_length > (int)sizeof(addr.sin_addr)) { errMsg = "DNS: unexpected address length"; return -1; }
-    memcpy(&addr.sin_addr, he->h_addr, he->h_length);
+    if (inet_aton(host.c_str(), &addr.sin_addr) == 0) {
+        struct hostent* he = net_gethostbyname(host.c_str());
+        if (!he) { errMsg = "DNS failed: " + host; return -1; }
+        if (he->h_length > (int)sizeof(addr.sin_addr)) { errMsg = "DNS: unexpected address length"; return -1; }
+        memcpy(&addr.sin_addr, he->h_addr, he->h_length);
+    }
 
     /* Retry loop for transient IOS send/recv failures.
      *
@@ -590,10 +786,12 @@ int JellyfinClient::httpsRequest(const std::string& host, int port,
         // Build HTTP/1.0 request
         std::string authHdr = authToken.empty() ? "" : (", Token=\"" + authToken + "\"");
         std::string ctHdr   = contentType.empty() ? "" : ("Content-Type: " + contentType + "\r\n");
+        // RFC 7230 §5.4: omit port from Host when it is the default for the scheme.
+        std::string hostHdr = host + (port == 443 ? "" : (":" + std::to_string(port)));
         char req[4096];
         int reqLen = snprintf(req, sizeof(req),
             "%s %s HTTP/1.0\r\n"
-            "Host: %s:%d\r\n"
+            "Host: %s\r\n"
             "Connection: close\r\n"
             "X-Emby-Authorization: " WIIFIN_CLIENT_HDR "%s\r\n"
             "%s"
@@ -601,7 +799,7 @@ int JellyfinClient::httpsRequest(const std::string& host, int port,
             "\r\n",
             method.c_str(),
             path.empty() ? "/" : path.c_str(),
-            host.c_str(), port,
+            hostHdr.c_str(),
             authHdr.c_str(),
             ctHdr.c_str(),
             body.size()
@@ -1876,7 +2074,7 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
 
     // TranscodingUrl is a relative path starting with '/'.  Jellyfin sometimes
     // produces a query string starting with "?&" (empty first parameter); fix it.
-    outUrl = serverUrl + relUrl;
+    outUrl = addScheme(serverUrl) + relUrl;
     {
         auto q = outUrl.find("?&");
         if (q != std::string::npos) outUrl.replace(q, 2, "?");
@@ -2127,6 +2325,7 @@ bool JellyfinClient::getAudioStreamUrl(const std::string& serverUrl,
      * when it is already MP3 ≤320 kbps; it will only transcode to 320 kbps
      * when the source uses a different codec (e.g. FLAC, AAC, OGG). */
     char audioUrl[1024];
+    std::string schemedSvr = addScheme(serverUrl);
     snprintf(audioUrl, sizeof(audioUrl),
         "%s/Audio/%s/universal"
         "?UserId=%s"
@@ -2141,7 +2340,7 @@ bool JellyfinClient::getAudioStreamUrl(const std::string& serverUrl,
         "&TranscodingProtocol=http"
         "&StartTimeTicks=%lld"
         "&api_key=%s",
-        serverUrl.c_str(), itemId.c_str(),
+        schemedSvr.c_str(), itemId.c_str(),
         auth.userId.c_str(),
         outPlaySessionId.c_str(),
         itemId.c_str(),
