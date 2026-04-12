@@ -99,7 +99,9 @@ WiiFin/
 
 ## 🚀 Hoja de ruta
 
-* [ ] Descubrimiento de servidores (detección automática de Jellyfin en la red local)
+* [ ] Ordenar/filtrar contenido (por año, género, puntuación)
+* [ ] Marcar elementos como favoritos desde la Wii
+* [ ] Múltiples temas de color para la interfaz
 
 ---
 

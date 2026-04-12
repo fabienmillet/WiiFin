@@ -99,7 +99,9 @@ WiiFin/
 
 ## 🚀 Roadmap
 
-* [ ] Servererkennung (automatisches Auffinden von Jellyfin im lokalen Netzwerk)
+* [ ] Sortieren/Filtern von Inhalten (nach Jahr, Genre, Bewertung)
+* [ ] Inhalte als Favoriten von der Wii aus markieren
+* [ ] Mehrere UI-Farbthemen
 
 ---
 

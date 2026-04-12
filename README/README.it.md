@@ -99,7 +99,9 @@ WiiFin/
 
 ## 🚀 Roadmap
 
-* [ ] Rilevamento automatico del server Jellyfin sulla rete locale
+* [ ] Ordinamento/filtro dei contenuti (per anno, genere, valutazione)
+* [ ] Aggiungere elementi ai preferiti dalla Wii
+* [ ] Temi di colore multipli per l'interfaccia
 
 ---
 

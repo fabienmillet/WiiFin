@@ -99,7 +99,9 @@ WiiFin/
 
 ## 🚀 Roadmap
 
-* [ ] Server discovery (Jellyfin auto-detect on local network)
+* [ ] Sort/filter items (by year, genre, rating)
+* [ ] Mark items as favorites from the Wii
+* [ ] Multiple UI color themes
 
 ---
 
