@@ -1,0 +1,88 @@
+name: "\U0001F41E Bug Report"
+description: Report something that doesn't work as expected
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the form below as accurately as possible.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "\U0001F9E9 Bug Description"
+      description: A clear and concise description of what the issue is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "\U0001F4CB Steps to Reproduce"
+      description: Describe the exact steps to reproduce the issue.
+      placeholder: |
+        1. Launch WiiFin using [Dolphin Emulator / Real Wii]
+        2. Go to menu: ...
+        3. Click on: ...
+        4. Observe: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "\U0001F4FA Expected Behavior"
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: "\U0001F4F7 Screenshots or Video (optional)"
+      description: If you have a screenshot or video of the bug, attach it here.
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: "\U0001F3AE Platform"
+      options:
+        - Real Wii
+        - Dolphin Emulator
+        - Both
+    validations:
+      required: true
+
+  - type: input
+    id: wii_model
+    attributes:
+      label: Wii Model / Emulator Version
+      placeholder: "e.g. RVL-001 / Dolphin 5.0-xxxxx"
+
+  - type: input
+    id: wiifin_version
+    attributes:
+      label: WiiFin Version / Commit
+      placeholder: "e.g. 0.1.3, or commit SHA"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: controller
+    attributes:
+      label: Controller
+      options:
+        - Wiimote
+        - GameCube Controller
+        - Emulated Controller
+
+  - type: dropdown
+    id: resolution
+    attributes:
+      label: TV Resolution / Mode
+      options:
+        - 480i (NTSC)
+        - 480p (NTSC)
+        - PAL
+        - Other

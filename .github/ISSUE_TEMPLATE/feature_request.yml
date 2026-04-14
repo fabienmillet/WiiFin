@@ -1,0 +1,61 @@
+name: "\u2728 Feature Request"
+description: Suggest an idea for WiiFin
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please describe your idea as clearly as possible.
+
+  - type: textarea
+    id: feature
+    attributes:
+      label: "\U0001F4A1 What is the feature you'd like to see?"
+      description: Clearly describe the new feature or improvement you are proposing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: "\U0001F914 Why is this feature important?"
+      description: |
+        Explain the motivation behind this request:
+        - Does it solve a current problem?
+        - Would it enhance usability or performance?
+        - Is it something expected by users?
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: "\U0001F9E0 Example Use Case"
+      description: Describe how this feature would be used in practice.
+      placeholder: 'e.g. "Add support for navigating the library with the D-Pad when the Wiimote pointer is disabled."'
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: "\U0001F3AE Platform Impact"
+      description: Is this feature useful for both platforms or only one?
+      options:
+        - Real Wii
+        - Dolphin Emulator
+        - Both
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical
+    attributes:
+      label: "\U0001F527 Technical Suggestions (optional)"
+      description: If you have a rough idea on how this could be implemented, feel free to share.
+      placeholder: 'e.g. "Could be done using PAD_ButtonsDown() with a focus system."'
+
+  - type: textarea
+    id: related
+    attributes:
+      label: "\U0001F9E9 Related Issues or Features (optional)"
+      description: Link to any other issue or pull request that might be related or helpful.
