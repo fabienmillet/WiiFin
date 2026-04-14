@@ -19,7 +19,7 @@
 
 <p align="center">
 <strong>WiiFin</strong> ist ein experimenteller Homebrew-Client für <a href="https://jellyfin.org">Jellyfin</a>, der speziell für die Nintendo Wii entwickelt wurde.<br>
-Er bietet ein leichtgewichtiges, konsolenfreundliches Erlebnis zum Durchsuchen und Abspielen von Medien, geschrieben in C++ mit <a href="https://github.com/GRRLIB/GRRLIB">GRRLIB</a> und <a href="https://github.com/dborth/mplayer-ce">MPlayer CE</a>.
+Er bietet ein leichtgewichtiges, konsolenfreundliches Erlebnis zum Durchsuchen und Abspielen von Medien, geschrieben in C++ mit <a href="https://github.com/GRRLIB/GRRLIB">GRRLIB</a> und <a href="https://github.com/extremscorner/mplayer-ce">MPlayer CE</a>.
 </p>
 
 ---

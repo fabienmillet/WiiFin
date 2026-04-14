@@ -1,6 +1,6 @@
 # Building MPlayer CE for WiiFin
 
-WiiFin uses a patched build of [MPlayer CE](https://github.com/dborth/mplayer-ce) compiled as a static library (`libmplayer.a`).  
+WiiFin uses a patched build of [MPlayer CE](https://github.com/extremscorner/mplayer-ce) compiled as a static library (`libmplayer.a`).  
 The build is **optional** — without it, WiiFin falls back to a stub player and still compiles cleanly.
 
 ---
@@ -16,7 +16,7 @@ The build is **optional** — without it, WiiFin falls back to a stub player and
 ## 1. Clone MPlayer CE
 
 ```bash
-git clone https://github.com/dborth/mplayer-ce.git ~/mplayer-ce
+git clone https://github.com/extremscorner/mplayer-ce.git ~/mplayer-ce
 cd ~/mplayer-ce/mplayer
 ```
 
