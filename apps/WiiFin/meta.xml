@@ -2,7 +2,7 @@
 <app version="1">
   <name>WiiFin</name>
   <coder>fabienmillet</coder>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <release_date>20260410000000</release_date>
   <short_description>Jellyfin client for Nintendo Wii</short_description>
   <long_description>WiiFin is an open-source Jellyfin client for the Nintendo Wii, built with GRRLIB. Browse and stream your Jellyfin media library directly from your console.</long_description>
