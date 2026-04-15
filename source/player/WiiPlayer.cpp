@@ -503,6 +503,12 @@ int wii_player_play(const char* url)
             VIDEO_SetBlack(false);
             VIDEO_Flush();
             VIDEO_WaitVSync();
+            /* Free the temporary loading framebuffers — mpgxInit() allocates
+             * its own XFBs so these are no longer needed.  Each buffer is
+             * ~640 KB; leaking both (~1.2 MB) would waste ~5 % of the Wii's
+             * usable RAM on every video playback. */
+            free(MEM_K1_TO_K0(pre_xfb0));
+            free(MEM_K1_TO_K0(pre_xfb1));
         } else {
             SYS_Report("[DBG] wii_player_play: GRRLIB cb set, using GRRLIB spinner\n");
         }
