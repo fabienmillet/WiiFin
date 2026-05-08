@@ -2489,7 +2489,7 @@ void LibraryView::render(ir_t& ir) {
                                 i == continueSel && actRow == 0, true,
                                 cwDisplayMain[i], cwDisplaySub[i]);
             } else {
-                GRRLIB_PrintfTTF(ACT_X0 + 20, ACT_ROW0_Y + 40, font, "Rien en cours", 14, 0x556677FF);
+                GRRLIB_PrintfTTF(ACT_X0 + 20, ACT_ROW0_Y + 40, font, "Nothing in progress", 14, 0x556677FF);
             }
 
             // Next Up row
@@ -3645,8 +3645,8 @@ void LibraryView::drawDetailView(ir_t& ir) {
         GRRLIB_Rectangle(cx - bw/2 - 1, cy + bh/2 - 1, bw + 2, 2,     0xFFFFFFCC, 1);
         GRRLIB_Rectangle(cx - bw/2 - 1, cy - bh/2 - 1, 2,     bh + 2, 0xFFFFFFCC, 1);
         GRRLIB_Rectangle(cx + bw/2 - 1, cy - bh/2 - 1, 2,     bh + 2, 0xFFFFFFCC, 1);
-        int tw = GRRLIB_WidthTTF(font, "\xe2\x96\xb6 Lire", 16);
-        GRRLIB_PrintfTTF(cx - tw/2, cy - 10, font, "\xe2\x96\xb6 Lire", 16, 0xFFFFFFFF);
+        int tw = GRRLIB_WidthTTF(font, "\xe2\x96\xb6 Play", 16);
+        GRRLIB_PrintfTTF(cx - tw/2, cy - 10, font, "\xe2\x96\xb6 Play", 16, 0xFFFFFFFF);
     }
 
     // ---- Title ----
