@@ -2966,7 +2966,7 @@ void LibraryView::render(ir_t& ir) {
                 int cw = (int)GRRLIB_WidthTTF(font, countStr, 15);
                 GRRLIB_PrintfTTF(620 - cw, 18, font, countStr, 15, 0x889AABFF);
             } else {
-                GRRLIB_PrintfTTF(520, 18, font, "Pas de favoris", 15, 0x889AABFF);
+                GRRLIB_PrintfTTF(520, 18, font, "No Favourites", 15, 0x889AABFF);
             }
         }
 
