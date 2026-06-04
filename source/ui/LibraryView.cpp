@@ -4011,10 +4011,10 @@ void LibraryView::renderSearchInput(ir_t& ir) {
     int hintY = SRCH_KB_Y + pageRows * SRCH_KB_CELLH + 10;
     if (srchKbPage == 0 && srchKbShift) {
         GRRLIB_PrintfTTF(SRCH_KB_X, hintY, font,
-            "[CAPS]  -: toggle  |  [+] Search  |  B: back", 13, 0xFFDD44FF);
+            "[CAPS]  -: toggle  |  [+] Search  |  B: Back", 13, 0xFFDD44FF);
     } else {
         GRRLIB_PrintfTTF(SRCH_KB_X, hintY, font,
-            "-: CAPS  |  [+] Search  |  B: back", 13, 0x778899FF);
+            "-: CAPS  |  [+] Search  |  B: Back", 13, 0x778899FF);
     }
 }
 
@@ -4090,7 +4090,7 @@ void LibraryView::renderSearchResults(ir_t& ir) {
     GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
     GRRLIB_PrintfTTF(20, 458, font, "[A] Open", 15, 0x889AABFF);
     {
-        const char* nh = "[1] Nouvelle recherche";
+        const char* nh = "[1] New Search";
         int nw = (int)GRRLIB_WidthTTF(font, nh, 15);
         GRRLIB_PrintfTTF(320 - nw / 2, 458, font, nh, 15, 0x889AABFF);
     }
