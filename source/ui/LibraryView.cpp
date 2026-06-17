@@ -2489,7 +2489,7 @@ void LibraryView::render(ir_t& ir) {
                                 i == continueSel && actRow == 0, true,
                                 cwDisplayMain[i], cwDisplaySub[i]);
             } else {
-                GRRLIB_PrintfTTF(ACT_X0 + 20, ACT_ROW0_Y + 40, font, "Rien en cours", 14, 0x556677FF);
+                GRRLIB_PrintfTTF(ACT_X0 + 20, ACT_ROW0_Y + 40, font, "Nothing in progress", 14, 0x556677FF);
             }
 
             // Next Up row
@@ -2966,7 +2966,7 @@ void LibraryView::render(ir_t& ir) {
                 int cw = (int)GRRLIB_WidthTTF(font, countStr, 15);
                 GRRLIB_PrintfTTF(620 - cw, 18, font, countStr, 15, 0x889AABFF);
             } else {
-                GRRLIB_PrintfTTF(520, 18, font, "Pas de favoris", 15, 0x889AABFF);
+                GRRLIB_PrintfTTF(520, 18, font, "No Favourites", 15, 0x889AABFF);
             }
         }
 
@@ -3645,8 +3645,8 @@ void LibraryView::drawDetailView(ir_t& ir) {
         GRRLIB_Rectangle(cx - bw/2 - 1, cy + bh/2 - 1, bw + 2, 2,     0xFFFFFFCC, 1);
         GRRLIB_Rectangle(cx - bw/2 - 1, cy - bh/2 - 1, 2,     bh + 2, 0xFFFFFFCC, 1);
         GRRLIB_Rectangle(cx + bw/2 - 1, cy - bh/2 - 1, 2,     bh + 2, 0xFFFFFFCC, 1);
-        int tw = GRRLIB_WidthTTF(font, "\xe2\x96\xb6 Lire", 16);
-        GRRLIB_PrintfTTF(cx - tw/2, cy - 10, font, "\xe2\x96\xb6 Lire", 16, 0xFFFFFFFF);
+        int tw = GRRLIB_WidthTTF(font, "\xe2\x96\xb6 Play", 16);
+        GRRLIB_PrintfTTF(cx - tw/2, cy - 10, font, "\xe2\x96\xb6 Play", 16, 0xFFFFFFFF);
     }
 
     // ---- Title ----
@@ -4011,10 +4011,10 @@ void LibraryView::renderSearchInput(ir_t& ir) {
     int hintY = SRCH_KB_Y + pageRows * SRCH_KB_CELLH + 10;
     if (srchKbPage == 0 && srchKbShift) {
         GRRLIB_PrintfTTF(SRCH_KB_X, hintY, font,
-            "[CAPS]  -: toggle  |  [+] Search  |  B: back", 13, 0xFFDD44FF);
+            "[CAPS]  -: toggle  |  [+] Search  |  B: Back", 13, 0xFFDD44FF);
     } else {
         GRRLIB_PrintfTTF(SRCH_KB_X, hintY, font,
-            "-: CAPS  |  [+] Search  |  B: back", 13, 0x778899FF);
+            "-: CAPS  |  [+] Search  |  B: Back", 13, 0x778899FF);
     }
 }
 
@@ -4090,7 +4090,7 @@ void LibraryView::renderSearchResults(ir_t& ir) {
     GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
     GRRLIB_PrintfTTF(20, 458, font, "[A] Open", 15, 0x889AABFF);
     {
-        const char* nh = "[1] Nouvelle recherche";
+        const char* nh = "[1] New Search";
         int nw = (int)GRRLIB_WidthTTF(font, nh, 15);
         GRRLIB_PrintfTTF(320 - nw / 2, 458, font, nh, 15, 0x889AABFF);
     }
