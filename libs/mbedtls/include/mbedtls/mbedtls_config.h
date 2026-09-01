@@ -34,6 +34,7 @@
 #define MBEDTLS_CIPHER_MODE_CBC
 #define MBEDTLS_CIPHER_MODE_GCM
 #define MBEDTLS_SHA256_C
+#define MBEDTLS_SHA384_C
 #define MBEDTLS_SHA512_C
 #define MBEDTLS_SHA1_C       /* needed for cert fingerprints */
 #define MBEDTLS_MD5_C        /* needed for some RSA ops */
