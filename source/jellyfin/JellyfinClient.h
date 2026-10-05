@@ -19,6 +19,12 @@ struct JellyfinItem {
     std::string seriesId;      // Episode only — parent series ID for backdrop lookup
     int         seasonNumber  = 0;
     int         episodeNumber = 0;
+    // Filled by getItemsByQuery (carousel home)
+    float       communityRating   = 0.0f;  // 0..10, 0 = unknown
+    std::string officialRating;            // "TV-PG", "PG-13", ...
+    int         childCount         = 0;    // Series: seasons
+    int         recursiveItemCount = 0;    // Series: episodes
+    std::string sortName;                  // what the list is sorted on ("matrix" for "The Matrix")
 };
 
 struct JellyfinSeason {
@@ -101,8 +107,21 @@ struct DiscoveredServer {
 
 class JellyfinClient {
 public:
-    // Initialize networking (call once)
+    // Bring the network up in the background (call once at boot, and again
+    // to retry after a failure).  networkBusy() is true while it runs.
+    void startNetwork();
+    bool networkBusy() const { return netBusy; }
+    // Once networkBusy() is false: the outcome of the last attempt.
+    bool takeNetworkResult();
+    // IOS dropped the network (Wi-Fi lost): restart it, blocking.
+    bool recoverNetwork();
+    // Blocking: starts the network if needed and waits for the result.
     bool initNetwork();
+
+    // Close the kept-alive HTTPS connection.  Call whenever IOS sockets may
+    // be closed behind our back (MPlayer closes all of them after a video
+    // session), so a stale socket number is never reused.
+    void dropConnection();
 
     // Authenticate with username + password
     // Returns true on success, fills out auth
@@ -182,6 +201,16 @@ public:
     bool getNextUp(const std::string& serverUrl,
                    const JellyfinAuth& auth,
                    std::vector<JellyfinItem>& out);
+
+    // Generic item query for the carousel home.  pathAndQuery is everything
+    // after the server URL ("/Users/<id>/Items/Latest?ParentId=...&Limit=16");
+    // the common Fields/EnableImages parameters are appended.  Accepts both
+    // the {"Items":[...]} envelope and the raw arrays /Items/Latest returns.
+    bool getItemsByQuery(const std::string& serverUrl,
+                         const JellyfinAuth& auth,
+                         const std::string& pathAndQuery,
+                         std::vector<JellyfinItem>& out,
+                         int* totalCount = nullptr);
 
     // Fetch BoxSet collections from a movies library (paginated)
     bool getMovieCollections(const std::string& serverUrl,
@@ -315,7 +344,7 @@ public:
                            std::string& outUrl,
                            std::string& outPlaySessionId);
 
-    // Playback reporting — call before and after wii_player_play()
+    // Playback reporting — call around a playback session
     // positionTicks is ignored by reportPlaybackStart; pass 0.
     bool reportPlaybackStart(const std::string& serverUrl,
                              const JellyfinAuth& auth,
@@ -354,8 +383,23 @@ public:
 
     bool sslVerify = true;   // true = verify certificate (set false to allow self-signed)
 
+    // Video transcode quality: 0 = Low, 1 = Normal, 2 = High (see videoBitrate()).
+    int videoQuality = 1;
+    // Ask Jellyfin to re-encode video and audio instead of copying a
+    // compatible source stream.  Set after the server failed a transcode
+    // with HTTP 500 (copying an old AVI/Xvid file into MPEG-TS fails).
+    bool forceReencode = false;
+
+    static const int VIDEO_QUALITY_COUNT = 3;
+    static const char* videoQualityName(int q);
+    int videoBitrate() const;      // bits/s for the current videoQuality
+
 private:
-    bool networkReady = false;
+    volatile bool networkReady = false;
+    volatile bool netBusy      = false;
+    unsigned int  netThread    = 0;         // lwp_t of the start-up thread, 0 = none
+    void bringUpNetwork();
+    static void* netThreadMain(void* self);
     std::string errMsg;
     std::string localIp_;   // set by initNetwork, used by discoverServers
     std::string localMask_;
@@ -368,8 +412,8 @@ private:
                     const std::string& authToken,
                     std::string& responseBody);
 
-    // TLS path — called by httpRequest when scheme is https://
-    int httpsRequest(const std::string& host, int port,
+    // One HTTP/1.1 request on the kept-alive connection (TLS if tls is set)
+    int request(bool tls, const std::string& host, int port,
                      const std::string& path,
                      const std::string& method,
                      const std::string& contentType,

@@ -1,6 +1,10 @@
 #include "JellyfinClient.h"
+#include "../core/ExitZone.h"
+#include "../core/Log.h"
+#include "../core/NetConnect.h"
 #include <network.h>
 #include <ogc/if_config.h>
+#include <ogc/lwp.h>
 #include <ogc/lwp_watchdog.h>
 #include <sys/filio.h>
 #include <string.h>
@@ -72,18 +76,71 @@ int wii_tls_recv(void* ctx, unsigned char* buf, size_t len) {
 
 // ---------------------------------------------------------------------------
 
-bool JellyfinClient::initNetwork() {
-    if (networkReady) return true;
-    char ip[16], mask[16], gw[16];
-    s32 ret = if_config(ip, mask, gw, true, 20);
-    if (ret < 0) {
-        errMsg = "Network init failed";
-        return false;
+void JellyfinClient::bringUpNetwork() {
+    /* The Wii's network stack sometimes needs several tries (slow DHCP,
+     * NWC24 still starting, a stale IOS state from the previous app).  The
+     * gateway is not asked for: libogc fails the whole call when the default
+     * route is not in the table yet, although the network works. */
+    s32 ret = -1;
+    for (int attempt = 0; attempt < 4; ++attempt) {
+        char ip[16] = "", mask[16] = "";
+        ret = if_config(ip, mask, nullptr, true, 20);
+        SYS_Report("[Net] attempt %d: if_config=%d ip=%s\n", attempt + 1, (int)ret, ip);
+        if (ret >= 0 && ip[0] && strcmp(ip, "0.0.0.0") != 0) {
+            localIp_   = ip;
+            localMask_ = mask;
+            networkReady = true;
+            return;
+        }
+        net_deinit();                 /* start over from a clean state */
+        usleep(1000 * 1000);
     }
-    networkReady = true;
-    localIp_   = ip;
-    localMask_ = mask;
-    return true;
+    char buf[96];
+    if (ret >= 0) snprintf(buf, sizeof(buf), "No IP address from the router (DHCP)");
+    else          snprintf(buf, sizeof(buf), "Network start-up failed (error %d)", (int)ret);
+    errMsg = buf;
+}
+
+void* JellyfinClient::netThreadMain(void* self) {
+    JellyfinClient* c = static_cast<JellyfinClient*>(self);
+    c->bringUpNetwork();
+    c->netBusy = false;
+    return nullptr;
+}
+
+void JellyfinClient::startNetwork() {
+    if (networkReady || netBusy) return;
+    if (netThread) {                  /* previous attempt finished: reap it */
+        LWP_JoinThread(netThread, nullptr);
+        netThread = 0;
+    }
+    static u8 stack[32 * 1024] __attribute__((aligned(32)));
+    lwp_t t = LWP_THREAD_NULL;
+    netBusy = true;
+    if (LWP_CreateThread(&t, netThreadMain, this, stack, sizeof(stack), 40) < 0) {
+        netBusy = false;
+        bringUpNetwork();             /* no thread: do it here */
+        return;
+    }
+    netThread = t;
+}
+
+bool JellyfinClient::takeNetworkResult() {
+    if (netThread && !netBusy) {
+        LWP_JoinThread(netThread, nullptr);
+        netThread = 0;
+    }
+    return networkReady;
+}
+
+bool JellyfinClient::initNetwork() {
+    if (takeNetworkResult()) return true;
+    startNetwork();                   /* a new attempt, unless one is running */
+    if (netThread) {
+        LWP_JoinThread(netThread, nullptr);
+        netThread = 0;
+    }
+    return networkReady;
 }
 
 bool JellyfinClient::discoverServers(std::vector<DiscoveredServer>& out) {
@@ -391,12 +448,22 @@ long long JellyfinClient::jsonGetLongLong(const std::string& json, const std::st
 // Walk "Items":[{...},{...}] inside a JSON string.
 // Calls callback(objectString) for each top-level object.
 namespace {
+void forEachArrayObject(const std::string& json, size_t pos,
+                        void (*cb)(const std::string&, void*), void* ctx);
+
 void forEachItemObject(const std::string& json,
                        void (*cb)(const std::string&, void*), void* ctx) {
     size_t pos = json.find("\"Items\":");
     if (pos == std::string::npos) return;
     pos = json.find('[', pos);
     if (pos == std::string::npos) return;
+    forEachArrayObject(json, pos, cb, ctx);
+}
+
+// Calls cb(objectString) for each top-level object of the array whose '['
+// is at pos.
+void forEachArrayObject(const std::string& json, size_t pos,
+                        void (*cb)(const std::string&, void*), void* ctx) {
     pos++; // skip '['
 
     while (pos < json.size()) {
@@ -487,155 +554,8 @@ int JellyfinClient::httpRequest(const std::string& url,
     int port;
     bool isHttps;
     if (!parseUrl(url, host, port, basePath, isHttps)) return -1;
-
-    if (isHttps) {
-        return httpsRequest(host, port, basePath, method, contentType, body, authToken, responseBody);
-    }
-
-    // Resolve host — try as a numeric IPv4 literal first; fall back to DNS.
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port   = htons(port);
-    if (inet_aton(host.c_str(), &addr.sin_addr) == 0) {
-        struct hostent* he = net_gethostbyname(host.c_str());
-        if (!he) { errMsg = "DNS failed: " + host; return -1; }
-        if (he->h_length > (int)sizeof(addr.sin_addr)) { errMsg = "DNS: unexpected address length"; return -1; }
-        memcpy(&addr.sin_addr, he->h_addr, he->h_length);
-    }
-
-    s32 sock = net_socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) { errMsg = "socket() failed"; return -1; }
-
-    {
-        int cr = net_connect(sock, (struct sockaddr*)&addr, sizeof(addr));
-        if (cr < 0) {
-            if (cr == -EINPROGRESS || cr == -EAGAIN) {
-                fd_set wfds;
-                FD_ZERO(&wfds); FD_SET(sock, &wfds);
-                struct timeval tv = {10, 0};
-                if (net_select(sock + 1, nullptr, &wfds, nullptr, &tv) <= 0) {
-                    errMsg = "connect() timed out";
-                    net_close(sock);
-                    return -1;
-                }
-            } else {
-                errMsg = "connect() failed";
-                net_close(sock);
-                return -1;
-            }
-        }
-    }
-    // libogc net_connect leaves the socket O_NONBLOCK after its internal polling loop — restore blocking.
-    { u32 nb = 0; net_ioctl(sock, FIONBIO, &nb); }
-
-    std::string authHdr = authToken.empty() ? "" : (", Token=\"" + authToken + "\"");
-    std::string ctHdr   = contentType.empty() ? "" : ("Content-Type: " + contentType + "\r\n");
-    // RFC 7230 §5.4: omit port from Host when it is the default for the scheme.
-    std::string hostHdr = host + (port == 80 ? "" : (":" + std::to_string(port)));
-    char req[4096];
-    int reqLen = snprintf(req, sizeof(req),
-        "%s %s HTTP/1.1\r\n"
-        "Host: %s\r\n"
-        "Connection: close\r\n"
-        "X-Emby-Authorization: " WIIFIN_CLIENT_HDR "%s\r\n"
-        "%s"
-        "Content-Length: %zu\r\n"
-        "\r\n",
-        method.c_str(),
-        basePath.empty() ? "/" : basePath.c_str(),
-        hostHdr.c_str(),
-        authHdr.c_str(),
-        ctHdr.c_str(),
-        body.size()
-    );
-    if (reqLen >= (int)sizeof(req)) {
-        errMsg = "Request headers too large";
-        net_close(sock);
-        return -1;
-    }
-
-    SYS_Report("[http] %s http://%s%s\n", method.c_str(), hostHdr.c_str(), basePath.c_str());
-
-    // Send request headers + body, looping to handle partial writes and EAGAIN.
-    {
-        auto sendAll = [&](const void* data, int len) -> bool {
-            const char* p = (const char*)data;
-            int sent = 0;
-            while (sent < len) {
-                int w = net_write(sock, (void*)(p + sent), len - sent);
-                if (w > 0) { sent += w; continue; }
-                if (w == -EAGAIN || w == -EWOULDBLOCK) {
-                    fd_set wfds; FD_ZERO(&wfds); FD_SET(sock, &wfds);
-                    struct timeval tv = {10, 0};
-                    if (net_select(sock + 1, nullptr, &wfds, nullptr, &tv) <= 0)
-                        return false; // write timeout
-                    continue;
-                }
-                return false; // write error
-            }
-            return true;
-        };
-        if (!sendAll(req, reqLen) ||
-            (!body.empty() && !sendAll(body.c_str(), (int)body.size()))) {
-            errMsg = "Failed to send request";
-            net_close(sock);
-            return -1;
-        }
-    }
-
-    static char rawBuf[256 * 1024];
-    int rawLen = 0;
-    char buf[4096];
-    while (true) {
-        /* 15 s per-read timeout — prevents a hung server from blocking forever */
-        {
-            fd_set rfds; FD_ZERO(&rfds); FD_SET(sock, &rfds);
-            struct timeval stv = {15, 0};
-            if (net_select(sock + 1, &rfds, nullptr, nullptr, &stv) <= 0)
-                break; /* timeout or select error */
-        }
-        int n = net_read(sock, buf, sizeof(buf) - 1);
-        if (n > 0) {
-            int canCopy = (int)(sizeof(rawBuf) - 1) - rawLen;
-            if (canCopy > 0) {
-                if (n < canCopy) canCopy = n;
-                memcpy(rawBuf + rawLen, buf, (size_t)canCopy);
-                rawLen += canCopy;
-            }
-        } else if (n == 0) {
-            break; // connection closed
-        } else if (n == -EAGAIN || n == -EWOULDBLOCK) {
-            continue; // spurious EAGAIN — retry
-        } else {
-            break; // error
-        }
-    }
-    net_close(sock);
-    rawBuf[rawLen] = '\0';
-
-    int status = 0;
-    if (rawLen >= 12 && strncmp(rawBuf, "HTTP/", 5) == 0) {
-        const char* sp = strchr(rawBuf, ' ');
-        if (sp) status = atoi(sp + 1);
-    }
-    SYS_Report("[http] status=%d rawLen=%d\n", status, rawLen);
-    if (status == 0) {
-        errMsg = rawLen == 0 ? "No response from server (check server URL / port)"
-                             : "Invalid HTTP response (server may require HTTPS)";
-        return -1;
-    }
-    const char* sep = strstr(rawBuf, "\r\n\r\n");
-    if (sep) {
-        int headersLen = (int)(sep - rawBuf);
-        const char* bodyPtr = sep + 4;
-        int bodyLen = rawLen - headersLen - 4;
-        if (bodyLen < 0) bodyLen = 0;
-        responseBody = decodeChunked(rawBuf, headersLen, bodyPtr, bodyLen);
-    } else {
-        responseBody = "";
-    }
-    return status;
+    return request(isHttps, host, port, basePath, method, contentType, body,
+                   authToken, responseBody);
 }
 
 // Wii RTC is unreliable and many home Jellyfin servers use self-signed certificates
@@ -645,6 +565,13 @@ int JellyfinClient::httpRequest(const std::string& url,
 // enforced by mbedtls_ssl_set_hostname() above, which prevents MITM: an attacker on
 // the local network would need a certificate valid for the exact server hostname.
 // REVOKED and CN_MISMATCH are intentionally kept.
+static int wii_cert_verify(void*, mbedtls_x509_crt*, int, uint32_t* flags);
+
+/* Shared with the MPlayer stream module (stream_wiifin.cpp) */
+int wiifin_cert_verify(void* ctx, mbedtls_x509_crt* crt, int depth, uint32_t* flags) {
+    return wii_cert_verify(ctx, crt, depth, flags);
+}
+
 static int wii_cert_verify(void*, mbedtls_x509_crt*, int, uint32_t* flags) {
     *flags &= ~(uint32_t)(MBEDTLS_X509_BADCERT_EXPIRED    | MBEDTLS_X509_BADCERT_FUTURE    |
                           MBEDTLS_X509_BADCRL_EXPIRED      | MBEDTLS_X509_BADCRL_FUTURE     |
@@ -653,245 +580,450 @@ static int wii_cert_verify(void*, mbedtls_x509_crt*, int, uint32_t* flags) {
 }
 
 // ---------------------------------------------------------------------------
-// HTTPS over TLS using mbedTLS (MBEDTLS_SSL_VERIFY_NONE — no CA bundle)
+// HTTP/HTTPS transport
+//
+// Setting up a connection is expensive on the Wii (TCP connect through IOS,
+// plus a TLS handshake and CA-bundle parse for HTTPS), so:
+//   - entropy, DRBG, SSL config and CA chain are initialised once;
+//   - the connection is kept alive (HTTP/1.1) and reused by the next request
+//     to the same server, which skips both the connect and the handshake.
 // ---------------------------------------------------------------------------
-int JellyfinClient::httpsRequest(const std::string& host, int port,
-                                  const std::string& path,
-                                  const std::string& method,
-                                  const std::string& contentType,
-                                  const std::string& body,
-                                  const std::string& authToken,
-                                  std::string& responseBody) {
-    int httpStatus = -1;
+namespace {
 
-    // Resolve address once — reused across retry attempts.
-    // Try as a numeric IPv4 literal first; fall back to DNS.
-    struct sockaddr_in addr;
+struct TlsShared {
+    bool                     seeded     = false;
+    mbedtls_entropy_context  entropy;
+    mbedtls_ctr_drbg_context drbg;
+    bool                     caLoaded   = false;
+    mbedtls_x509_crt         ca;
+    bool                     confReady  = false;
+    bool                     confVerify = false;
+    mbedtls_ssl_config       conf;
+};
+
+struct Conn {
+    bool                open   = false;
+    bool                tls    = false;
+    std::string         host;
+    int                 port   = 0;
+    bool                verify = false;
+    s32                 sock   = -1;   /* TLS BIO context points here */
+    mbedtls_ssl_context ssl;
+    u64                 lastUseMs = 0;
+};
+
+TlsShared s_tls;
+Conn      s_conn;
+
+/* Reconnect instead of reusing a connection idle for longer than this:
+ * servers drop idle keep-alive connections (nginx 75 s, Kestrel 130 s). */
+const u64 IDLE_REUSE_MS = 30000;
+
+u64 nowMs() { return ticks_to_millisecs(gettime()); }
+
+void closeConn() {
+    if (!s_conn.open) return;
+    /* No close_notify: the socket may already have been closed behind our
+     * back (MPlayer closes every IOS socket when a video session ends). */
+    if (s_conn.tls) mbedtls_ssl_free(&s_conn.ssl);
+    net_close(s_conn.sock);
+    s_conn.open = false;
+    s_conn.sock = -1;
+}
+
+bool loadCa(std::string& err) {
+    if (s_tls.caLoaded) return true;
+    mbedtls_x509_crt_init(&s_tls.ca);
+    // data_cacert_pem has a null terminator embedded (len includes it)
+    int parseRet = mbedtls_x509_crt_parse(&s_tls.ca, data_cacert_pem, data_cacert_pem_len);
+    if (parseRet < 0) {
+        mbedtls_x509_crt_free(&s_tls.ca);
+        err = "TLS: CA bundle parse failed (" + std::to_string(parseRet) + ")";
+        return false;
+    }
+    s_tls.caLoaded = true;
+    return true;
+}
+
+bool tlsSharedInit(bool verify, std::string& err) {
+    if (!s_tls.seeded) {
+        mbedtls_entropy_init(&s_tls.entropy);
+        mbedtls_ctr_drbg_init(&s_tls.drbg);
+        const char* pers = "wiifin_jellyfin";
+        if (mbedtls_ctr_drbg_seed(&s_tls.drbg, mbedtls_entropy_func, &s_tls.entropy,
+                                  (const unsigned char*)pers, strlen(pers)) != 0) {
+            mbedtls_ctr_drbg_free(&s_tls.drbg);
+            mbedtls_entropy_free(&s_tls.entropy);
+            err = "TLS: DRBG seed failed";
+            return false;
+        }
+        s_tls.seeded = true;
+    }
+    if (verify && !loadCa(err)) return false;
+    if (!s_tls.confReady || s_tls.confVerify != verify) {
+        if (s_tls.confReady) {
+            if (s_conn.tls) closeConn();   /* the SSL context references the old config */
+            mbedtls_ssl_config_free(&s_tls.conf);
+            s_tls.confReady = false;
+        }
+        mbedtls_ssl_config_init(&s_tls.conf);
+        if (mbedtls_ssl_config_defaults(&s_tls.conf, MBEDTLS_SSL_IS_CLIENT,
+                                        MBEDTLS_SSL_TRANSPORT_STREAM,
+                                        MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
+            mbedtls_ssl_config_free(&s_tls.conf);
+            err = "TLS: ssl_config_defaults failed";
+            return false;
+        }
+        if (verify) {
+            mbedtls_ssl_conf_ca_chain(&s_tls.conf, &s_tls.ca, nullptr);
+            mbedtls_ssl_conf_authmode(&s_tls.conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+            mbedtls_ssl_conf_verify(&s_tls.conf, wii_cert_verify, nullptr);
+        } else {
+            mbedtls_ssl_conf_authmode(&s_tls.conf, MBEDTLS_SSL_VERIFY_NONE);
+        }
+        mbedtls_ssl_conf_rng(&s_tls.conf, mbedtls_ctr_drbg_random, &s_tls.drbg);
+        s_tls.confReady  = true;
+        s_tls.confVerify = verify;
+    }
+    return true;
+}
+
+/* Resolve host (IPv4 literal or DNS) into addr. */
+bool resolve(const std::string& host, int port, struct sockaddr_in& addr, std::string& err) {
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port   = htons(port);
-    if (inet_aton(host.c_str(), &addr.sin_addr) == 0) {
-        struct hostent* he = net_gethostbyname(host.c_str());
-        if (!he) { errMsg = "DNS failed: " + host; return -1; }
-        if (he->h_length > (int)sizeof(addr.sin_addr)) { errMsg = "DNS: unexpected address length"; return -1; }
-        memcpy(&addr.sin_addr, he->h_addr, he->h_length);
-    }
+    if (inet_aton(host.c_str(), &addr.sin_addr) != 0) return true;
+    struct hostent* he = net_gethostbyname(host.c_str());
+    if (!he) { err = "DNS failed: " + host; return false; }
+    if (he->h_length > (int)sizeof(addr.sin_addr)) { err = "DNS: unexpected address length"; return false; }
+    memcpy(&addr.sin_addr, he->h_addr, he->h_length);
+    return true;
+}
 
-    /* Retry loop for transient IOS send/recv failures.
-     *
-     * After MPlayer CE exits via longjmp, its orphaned stream socket and cache2
-     * thread can leave the IOS network IPC queue in a busy/inconsistent state.
-     * The next TLS handshake attempt then fails because net_write() returns an
-     * error (visible as MBEDTLS_ERR_NET_SEND_FAILED / UNKNOWN ERROR CODE 004C).
-     * Closing the stale sockets in WiiPlayer.cpp resolves the root cause;
-     * this retry is a secondary safety net in case IOS needs more time to settle. */
-    for (int attempt = 0; attempt < 3; ++attempt) {
-        if (attempt > 0) usleep(500000); // 500 ms cool-down before retry
+/* net_socket()'s error when the last openConn failed there: ENETRESET /
+ * ENETDOWN mean IOS dropped the network (Wi-Fi link lost) and every new
+ * socket fails until the network is brought up again. */
+s32 s_lastSocketErr = 0;
 
+/* Open a TCP connection (and run the TLS handshake if tls) into s_conn.
+ * transient = true for IOS I/O errors worth retrying. */
+bool openConn(bool tls, const struct sockaddr_in& addr, const std::string& host, int port,
+              bool verify, std::string& err, bool& transient) {
+    transient = false;
     s32 sock = net_socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) { errMsg = "socket() failed (" + std::to_string(sock) + ")"; return -1; }
+    s_lastSocketErr = sock < 0 ? sock : 0;
+    if (sock < 0) { err = "socket() failed (" + std::to_string(sock) + ")"; return false; }
 
-    {
-        int cr = net_connect(sock, (struct sockaddr*)&addr, sizeof(addr));
-        if (cr < 0) {
-            if (cr == -EINPROGRESS || cr == -EAGAIN) {
-                // Non-blocking connect in progress — wait for it to complete.
-                fd_set wfds;
-                FD_ZERO(&wfds); FD_SET(sock, &wfds);
-                struct timeval tv = {10, 0}; // 10 s timeout
-                if (net_select(sock + 1, nullptr, &wfds, nullptr, &tv) <= 0) {
-                    errMsg = "connect() timed out";
-                    net_close(sock);
-                    return -1;
-                }
-            } else {
-                errMsg = "connect() failed";
-                net_close(sock);
-                return -1;
-            }
-        }
+    /* 8 s: a home server answers in milliseconds; past that it is down or
+     * the address is wrong, and the user should hear about it */
+    int cr = connectWithTimeout(sock, const_cast<struct sockaddr_in*>(&addr), 8);
+    if (cr < 0) {
+        err = cr == -ETIMEDOUT ? "Server not reachable (connection timed out)"
+                               : "connect() failed (" + std::to_string(cr) + ")";
+        net_close(sock);
+        return false;
     }
-    // libogc net_connect leaves the socket O_NONBLOCK after its internal polling loop — restore blocking.
-    { u32 nb = 0; net_ioctl(sock, FIONBIO, &nb); }
 
-    mbedtls_entropy_context  entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
-    mbedtls_ssl_context      ssl;
-    mbedtls_ssl_config       conf;
-    mbedtls_x509_crt         cacert;
-
-    mbedtls_entropy_init(&entropy);
-    mbedtls_ctr_drbg_init(&ctr_drbg);
-    mbedtls_ssl_init(&ssl);
-    mbedtls_ssl_config_init(&conf);
-    mbedtls_x509_crt_init(&cacert);
-
-    bool failed    = false;
-    bool transient = false;
-    int  ret       = 0;
-
-    do {
-        const char* pers = "wiifin_jellyfin";
-        if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-                                          (const unsigned char*)pers, strlen(pers))) != 0) {
-            errMsg = "TLS: DRBG seed failed";
-            failed = true; break;
+    s_conn.sock = sock;
+    if (tls) {
+        u64 t0 = nowMs();
+        mbedtls_ssl_init(&s_conn.ssl);
+        int ret = mbedtls_ssl_setup(&s_conn.ssl, &s_tls.conf);
+        if (ret == 0) {
+            mbedtls_ssl_set_hostname(&s_conn.ssl, host.c_str());
+            mbedtls_ssl_set_bio(&s_conn.ssl, &s_conn.sock, wii_tls_send, wii_tls_recv, nullptr);
+            do {
+                ret = mbedtls_ssl_handshake(&s_conn.ssl);
+            } while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
         }
-
-        if ((ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT,
-                                               MBEDTLS_SSL_TRANSPORT_STREAM,
-                                               MBEDTLS_SSL_PRESET_DEFAULT)) != 0) {
-            errMsg = "TLS: ssl_config_defaults failed";
-            failed = true; break;
-        }
-
-        // Certificate verification (configurable)
-        if (sslVerify) {
-            // data_cacert_pem has a null terminator embedded (len includes it)
-            int parseRet = mbedtls_x509_crt_parse(&cacert, data_cacert_pem, data_cacert_pem_len);
-            if (parseRet < 0) {
-                errMsg = "TLS: CA bundle parse failed (" + std::to_string(parseRet) + ")";
-                failed = true; break;
-            }
-            mbedtls_ssl_conf_ca_chain(&conf, &cacert, nullptr);
-            mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_REQUIRED);
-            mbedtls_ssl_conf_verify(&conf, wii_cert_verify, nullptr);
-        } else {
-            mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_NONE);
-        }
-        mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
-
-        if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0) {
-            errMsg = "TLS: ssl_setup failed";
-            failed = true; break;
-        }
-
-        mbedtls_ssl_set_hostname(&ssl, host.c_str());
-        mbedtls_ssl_set_bio(&ssl, &sock, wii_tls_send, wii_tls_recv, nullptr);
-
-        // TLS handshake
-        do {
-            ret = mbedtls_ssl_handshake(&ssl);
-        } while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
-
         if (ret != 0) {
             /* NET_SEND_FAILED (0x4C) / NET_RECV_FAILED (0x4E): transient IOS I/O error
              * from MPlayer CE's orphaned socket/cache thread after longjmp.  Retry. */
-            if ((ret == MBEDTLS_ERR_NET_SEND_FAILED ||
-                 ret == MBEDTLS_ERR_NET_RECV_FAILED) && attempt < 2) {
-                SYS_Report("[TLS] attempt %d: transient handshake err -0x%04X, retry\n",
-                           attempt, (unsigned)(-ret));
+            if (ret == MBEDTLS_ERR_NET_SEND_FAILED || ret == MBEDTLS_ERR_NET_RECV_FAILED) {
+                SYS_Report("[TLS] transient handshake err -0x%04X\n", (unsigned)(-ret));
                 transient = true;
+                err = "TLS handshake failed (network error)";
             } else {
-                uint32_t vflags = mbedtls_ssl_get_verify_result(&ssl);
+                uint32_t vflags = mbedtls_ssl_get_verify_result(&s_conn.ssl);
                 char ebuf[80];
                 mbedtls_strerror(ret, ebuf, sizeof(ebuf));
                 char vbuf[24];
                 snprintf(vbuf, sizeof(vbuf), " [f=%08X]", (unsigned)vflags);
-                errMsg = std::string("TLS handshake failed: ") + ebuf + vbuf;
+                err = std::string("TLS handshake failed: ") + ebuf + vbuf;
             }
-            failed = true; break;
+            mbedtls_ssl_free(&s_conn.ssl);
+            net_close(sock);
+            s_conn.sock = -1;
+            return false;
         }
+        SYS_Report("[TLS] handshake with %s:%d in %llu ms (%s)\n", host.c_str(), port,
+                   nowMs() - t0, mbedtls_ssl_get_ciphersuite(&s_conn.ssl));
+    }
+    s_conn.open      = true;
+    s_conn.tls       = tls;
+    s_conn.host      = host;
+    s_conn.port      = port;
+    s_conn.verify    = verify;
+    s_conn.lastUseMs = nowMs();
+    return true;
+}
 
-        // Build HTTP/1.0 request
-        std::string authHdr = authToken.empty() ? "" : (", Token=\"" + authToken + "\"");
-        std::string ctHdr   = contentType.empty() ? "" : ("Content-Type: " + contentType + "\r\n");
-        // RFC 7230 §5.4: omit port from Host when it is the default for the scheme.
-        std::string hostHdr = host + (port == 443 ? "" : (":" + std::to_string(port)));
-        char req[4096];
-        int reqLen = snprintf(req, sizeof(req),
-            "%s %s HTTP/1.0\r\n"
-            "Host: %s\r\n"
-            "Connection: close\r\n"
-            "X-Emby-Authorization: " WIIFIN_CLIENT_HDR "%s\r\n"
-            "%s"
-            "Content-Length: %zu\r\n"
-            "\r\n",
-            method.c_str(),
-            path.empty() ? "/" : path.c_str(),
-            hostHdr.c_str(),
-            authHdr.c_str(),
-            ctHdr.c_str(),
-            body.size()
-        );
-        if (reqLen >= (int)sizeof(req)) {
-            errMsg = "Request headers too large";
-            failed = true; break;
-        }
-
-        // Send headers
-        const unsigned char* ptr = (const unsigned char*)req;
-        int remaining = reqLen;
-        while (remaining > 0) {
-            ret = mbedtls_ssl_write(&ssl, ptr, (size_t)remaining);
-            if (ret == MBEDTLS_ERR_SSL_WANT_WRITE) continue;
-            if (ret < 0) { errMsg = "TLS: write failed"; failed = true; break; }
-            ptr += ret; remaining -= ret;
-        }
-        if (failed) break;
-
-        // Send body
-        if (!body.empty()) {
-            ptr = (const unsigned char*)body.c_str();
-            remaining = (int)body.size();
-            while (remaining > 0) {
-                ret = mbedtls_ssl_write(&ssl, ptr, (size_t)remaining);
-                if (ret == MBEDTLS_ERR_SSL_WANT_WRITE) continue;
-                if (ret < 0) { errMsg = "TLS: write body failed"; failed = true; break; }
-                ptr += ret; remaining -= ret;
-            }
-        }
-        if (failed) break;
-
-        // Read response — g_frameCallback is called inside wii_tls_recv on EAGAIN
-        static char rawBuf[256 * 1024];
-        int rawLen = 0;
-        unsigned char buf[2048];
-        while (true) {
-            ret = mbedtls_ssl_read(&ssl, buf, sizeof(buf));
-            if (ret == MBEDTLS_ERR_SSL_WANT_READ) continue;
-            if (ret <= 0) break;
-            int canCopy = (int)(sizeof(rawBuf) - 1) - rawLen;
-            if (canCopy > 0) {
-                if (ret < canCopy) canCopy = ret;
-                memcpy(rawBuf + rawLen, (char*)buf, (size_t)canCopy);
-                rawLen += canCopy;
-            }
-        }
-        rawBuf[rawLen] = '\0';
-
-        mbedtls_ssl_close_notify(&ssl);
-
-        if (rawLen >= 12 && strncmp(rawBuf, "HTTP/", 5) == 0) {
-            const char* sp = strchr(rawBuf, ' ');
-            if (sp) httpStatus = atoi(sp + 1);
-        }
-        const char* sep = strstr(rawBuf, "\r\n\r\n");
-        if (sep) {
-            int headersLen = (int)(sep - rawBuf);
-            const char* bodyPtr = sep + 4;
-            int bodyLen = rawLen - headersLen - 4;
-            if (bodyLen < 0) bodyLen = 0;
-            responseBody = decodeChunked(rawBuf, headersLen, bodyPtr, bodyLen);
+/* Write everything; false on error. */
+bool connWrite(const unsigned char* p, int n) {
+    while (n > 0) {
+        int w;
+        if (s_conn.tls) {
+            w = mbedtls_ssl_write(&s_conn.ssl, p, (size_t)n);
+            if (w == MBEDTLS_ERR_SSL_WANT_WRITE) continue;
         } else {
-            responseBody = "";
+            w = wii_tls_send(&s_conn.sock, p, (size_t)n);
+            if (w == MBEDTLS_ERR_SSL_WANT_WRITE) continue;
+        }
+        if (w <= 0) return false;
+        p += w; n -= w;
+    }
+    return true;
+}
+
+/* Read some bytes: > 0 bytes read, <= 0 connection closed / error / timeout. */
+int connRead(unsigned char* buf, int n) {
+    for (;;) {
+        int r = s_conn.tls ? mbedtls_ssl_read(&s_conn.ssl, buf, (size_t)n)
+                           : wii_tls_recv(&s_conn.sock, buf, (size_t)n);
+        if (r == MBEDTLS_ERR_SSL_WANT_READ) continue;
+        return r;
+    }
+}
+
+/* Case-insensitive lookup of a header value ("" if absent). */
+std::string headerValue(const char* headers, int len, const char* name) {
+    int nlen = (int)strlen(name);
+    for (int i = 0; i + nlen < len; ++i) {
+        if (i > 0 && headers[i - 1] != '\n') continue;
+        bool match = true;
+        for (int j = 0; j < nlen && match; ++j) {
+            char c = headers[i + j];
+            if (c >= 'A' && c <= 'Z') c += 32;
+            if (c != name[j]) match = false;
+        }
+        if (!match || headers[i + nlen] != ':') continue;
+        int v = i + nlen + 1;
+        while (v < len && headers[v] == ' ') ++v;
+        int e = v;
+        while (e < len && headers[e] != '\r' && headers[e] != '\n') ++e;
+        std::string out(headers + v, (size_t)(e - v));
+        for (char& c : out) if (c >= 'A' && c <= 'Z') c += 32;
+        return out;
+    }
+    return "";
+}
+
+/* True once a chunked body has been received up to its final 0-size chunk. */
+bool chunkedComplete(const char* body, int len) {
+    int pos = 0;
+    while (pos < len) {
+        int crlf = pos;
+        while (crlf + 1 < len && !(body[crlf] == '\r' && body[crlf + 1] == '\n')) crlf++;
+        if (crlf + 1 >= len) return false;
+        long size = strtol(body + pos, nullptr, 16);
+        pos = crlf + 2;
+        if (size == 0) {
+            /* Optional trailers end with an empty line */
+            if (pos + 2 <= len && body[pos] == '\r' && body[pos + 1] == '\n') return true;
+            for (int i = pos; i + 3 < len; ++i)
+                if (body[i] == '\r' && body[i + 1] == '\n' && body[i + 2] == '\r' && body[i + 3] == '\n')
+                    return true;
+            return false;
+        }
+        pos += (int)size + 2;
+    }
+    return false;
+}
+
+enum class ExResult { Ok, Stale, Failed };
+
+/* Send one request on s_conn and read the full response.
+ * Stale = the reused connection was already closed by the server (nothing
+ * received): the caller reconnects and sends the request again. */
+ExResult exchange(const char* req, int reqLen, const std::string& body, bool reused,
+                  int& status, std::string& responseBody, bool& keepAlive,
+                  std::string& err) {
+    if (!connWrite((const unsigned char*)req, reqLen) ||
+        (!body.empty() && !connWrite((const unsigned char*)body.data(), (int)body.size()))) {
+        if (reused) return ExResult::Stale;
+        err = "Failed to send request";
+        return ExResult::Failed;
+    }
+
+    static char rawBuf[256 * 1024] DEAD_AT_EXIT;
+    int  rawLen     = 0;
+    int  bodyStart  = -1;     /* offset of the body once headers are parsed */
+    long contentLen = -1;
+    bool chunked    = false;
+    bool noBody     = false;
+    bool complete   = false;
+    keepAlive = true;
+
+    unsigned char buf[4096];
+    while (!complete) {
+        int ret = connRead(buf, sizeof(buf));
+        if (ret <= 0) {
+            /* Connection ended (close_notify, EOF, error or timeout) */
+            keepAlive = false;
+            if (rawLen == 0 && reused) return ExResult::Stale;
+            break;
+        }
+        int canCopy = (int)(sizeof(rawBuf) - 1) - rawLen;
+        if (canCopy <= 0) { keepAlive = false; break; }   /* response too large */
+        if (ret < canCopy) canCopy = ret;
+        memcpy(rawBuf + rawLen, buf, (size_t)canCopy);
+        rawLen += canCopy;
+
+        if (bodyStart < 0) {
+            rawBuf[rawLen] = '\0';
+            const char* sep = strstr(rawBuf, "\r\n\r\n");
+            if (!sep) continue;
+            bodyStart = (int)(sep - rawBuf) + 4;
+            if (strncmp(rawBuf, "HTTP/", 5) == 0) {
+                const char* sp = strchr(rawBuf, ' ');
+                if (sp) status = atoi(sp + 1);
+            }
+            std::string te = headerValue(rawBuf, bodyStart, "transfer-encoding");
+            std::string cl = headerValue(rawBuf, bodyStart, "content-length");
+            std::string cn = headerValue(rawBuf, bodyStart, "connection");
+            chunked    = te.find("chunked") != std::string::npos;
+            contentLen = cl.empty() ? -1 : atol(cl.c_str());
+            noBody     = status == 204 || status == 304 || (status >= 100 && status < 200);
+            if (cn.find("close") != std::string::npos ||
+                strncmp(rawBuf, "HTTP/1.0", 8) == 0) keepAlive = false;
+            /* Without a length the body ends when the server closes */
+            if (!chunked && contentLen < 0 && !noBody) keepAlive = false;
+        }
+        int have = rawLen - bodyStart;
+        if (noBody)                complete = true;
+        else if (chunked)          complete = chunkedComplete(rawBuf + bodyStart, have);
+        else if (contentLen >= 0)  complete = have >= contentLen;
+    }
+    rawBuf[rawLen] = '\0';
+    if (!complete) keepAlive = false;
+
+    if (status == 0) {
+        err = rawLen == 0 ? "No response from server (check server URL / port)"
+                          : "Invalid HTTP response (server may require HTTPS)";
+        return ExResult::Failed;
+    }
+    if (bodyStart >= 0)
+        responseBody = decodeChunked(rawBuf, bodyStart - 4, rawBuf + bodyStart, rawLen - bodyStart);
+    else
+        responseBody = "";
+    return ExResult::Ok;
+}
+
+} // namespace
+
+/* Parsed CA bundle (lazily), shared with the MPlayer stream module. */
+mbedtls_x509_crt* wiifin_ca_chain() {
+    std::string err;
+    return loadCa(err) ? &s_tls.ca : nullptr;
+}
+
+void JellyfinClient::dropConnection() {
+    closeConn();
+}
+
+bool JellyfinClient::recoverNetwork() {
+    if (netBusy) return false;          /* the start-up thread owns it */
+    takeNetworkResult();
+    closeConn();
+    networkReady = false;
+    net_deinit();
+    bringUpNetwork();
+    return networkReady;
+}
+
+int JellyfinClient::request(bool tls, const std::string& host, int port,
+                            const std::string& path,
+                            const std::string& method,
+                            const std::string& contentType,
+                            const std::string& body,
+                            const std::string& authToken,
+                            std::string& responseBody) {
+    std::string err;
+    Log::addPrivate(host);   /* never write the server's name to the log */
+    /* failures go to the log (path only: queries may hold search terms) */
+    auto fail = [&](const std::string& why) {
+        errMsg = why;
+        SYS_Report("[HTTP] %s %s %s -> %s\n", method.c_str(), tls ? "https" : "http",
+                   path.substr(0, path.find('?')).c_str(), why.c_str());
+        return -1;
+    };
+    if (tls && !tlsSharedInit(sslVerify, err)) return fail(err);
+
+    std::string authHdr = authToken.empty() ? "" : (", Token=\"" + authToken + "\"");
+    std::string ctHdr   = contentType.empty() ? "" : ("Content-Type: " + contentType + "\r\n");
+    // RFC 7230 §5.4: omit port from Host when it is the default for the scheme.
+    std::string hostHdr = host + (port == (tls ? 443 : 80) ? "" : (":" + std::to_string(port)));
+    char req[4096];
+    int reqLen = snprintf(req, sizeof(req),
+        "%s %s HTTP/1.1\r\n"
+        "Host: %s\r\n"
+        "Connection: keep-alive\r\n"
+        "Authorization: " WIIFIN_CLIENT_HDR "%s\r\n"
+        "%s"
+        "Content-Length: %zu\r\n"
+        "\r\n",
+        method.c_str(),
+        path.empty() ? "/" : path.c_str(),
+        hostHdr.c_str(),
+        authHdr.c_str(),
+        ctHdr.c_str(),
+        body.size()
+    );
+    if (reqLen >= (int)sizeof(req)) return fail("Request headers too large");
+
+    /* Retry loop: a reused connection the server already closed is replaced
+     * by a fresh one; transient IOS send/recv failures during the handshake
+     * (left behind by MPlayer's orphaned sockets) get a short cool-down. */
+    bool recovered = false;
+    for (int attempt = 0; attempt < 3; ++attempt) {
+        bool reused = s_conn.open && s_conn.tls == tls && s_conn.host == host &&
+                      s_conn.port == port && (!tls || s_conn.verify == sslVerify) &&
+                      nowMs() - s_conn.lastUseMs < IDLE_REUSE_MS;
+        if (!reused) {
+            closeConn();
+            struct sockaddr_in addr;
+            if (!resolve(host, port, addr, err)) return fail(err);
+            bool transient = false;
+            if (!openConn(tls, addr, host, port, sslVerify, err, transient)) {
+                if ((s_lastSocketErr == -ENETRESET || s_lastSocketErr == -ENETDOWN ||
+                     s_lastSocketErr == -ENXIO) && !recovered) {
+                    SYS_Report("[Net] network lost (%d), restarting it\n", (int)s_lastSocketErr);
+                    recovered = true;
+                    if (recoverNetwork()) continue;
+                    return fail("Network lost: " + errMsg);
+                }
+                if (!transient || attempt == 2) return fail(err);
+                errMsg = err;
+                usleep(500000);   // 500 ms cool-down before retry
+                continue;
+            }
         }
 
-    } while (false);
-
-    mbedtls_ssl_free(&ssl);
-    mbedtls_ssl_config_free(&conf);
-    mbedtls_ctr_drbg_free(&ctr_drbg);
-    mbedtls_entropy_free(&entropy);
-    mbedtls_x509_crt_free(&cacert);
-    net_close(sock);
-
-        if (!failed)    return httpStatus; // success
-        if (!transient) return -1;         // permanent failure — do not retry
-        // transient failure — next loop iteration will wait + retry
-    } // end retry loop
-
-    return -1; // all attempts exhausted
+        int  status    = 0;
+        bool keepAlive = false;
+        ExResult r = exchange(req, reqLen, body, reused, status, responseBody,
+                              keepAlive, err);
+        if (r == ExResult::Stale) { closeConn(); continue; }
+        if (r == ExResult::Failed) { closeConn(); return fail(err); }
+        if (keepAlive) s_conn.lastUseMs = nowMs();
+        else           closeConn();
+        if (status >= 400 && !(status == 404 && path.find("/Images/") != std::string::npos))
+            SYS_Report("[HTTP] %s %s -> HTTP %d\n", method.c_str(),
+                       path.substr(0, path.find('?')).c_str(), status);
+        return status;
+    }
+    return fail("Connection lost");
 }
 
 // Escape a value for safe embedding inside a JSON string literal.
@@ -921,7 +1053,7 @@ bool JellyfinClient::authenticate(const std::string& serverUrl,
     if (status != 200) {
         if (status >= 0)
             errMsg = "Auth failed (HTTP " + std::to_string(status) + ")";
-        // status == -1 : errMsg already set by httpsRequest / httpRequest
+        // status == -1 : errMsg already set by request()
         return false;
     }
     out.accessToken = jsonGetString(resp, "AccessToken");
@@ -1940,6 +2072,20 @@ bool JellyfinClient::getPlaylistTracks(const std::string& serverUrl,
 // Transcoding URL via PlaybackInfo
 // ---------------------------------------------------------------------------
 
+const char* JellyfinClient::videoQualityName(int q) {
+    static const char* names[VIDEO_QUALITY_COUNT] = { "Low", "Normal", "High" };
+    return (q >= 0 && q < VIDEO_QUALITY_COUNT) ? names[q] : names[1];
+}
+
+int JellyfinClient::videoBitrate() const {
+    /* MPEG-4 ASP at 640 px.  Decoding cost grows with the bitrate (Dolphin,
+     * grainy 1080p source: 15% of real time at 1.5 Mb/s, 25% at 2.5, 39% at
+     * 4), so High stops at 3.5 to leave headroom on real hardware.  Playback
+     * steps down on its own when the link can't keep up. */
+    static const int bitrates[VIDEO_QUALITY_COUNT] = { 1500000, 2500000, 3500000 };
+    return bitrates[(videoQuality >= 0 && videoQuality < VIDEO_QUALITY_COUNT) ? videoQuality : 1];
+}
+
 bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
                                         const JellyfinAuth& auth,
                                         const std::string& itemId,
@@ -1967,63 +2113,53 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     // EnableDirectPlay and EnableDirectStream MUST be false in the JSON body.
     // Jellyfin reads these from the body; the same-named query params are ignored
     // by the server-side session manager when selecting the play method.
-    char bodyBuf[1024];
+    //
+    // Output: MPEG-4 ASP (DivX/Xvid class) + MP3 stereo in MPEG-TS.  On the Wii
+    // it decodes about as cheaply as MPEG-2 but gives a much better picture per
+    // bit (SSIM 0.959 at 1.2 Mb/s vs 0.939 for MPEG-2 at 2 Mb/s on grainy
+    // 1080p HEVC), which matters on the Wii's slow Wi-Fi.  640 px is the width
+    // of the Wii framebuffer: decoding wider pictures only wastes CPU.
+    //
     // CodecProfiles with LessThanEqual Width/Height Conditions are the only way to
     // enforce output resolution in Jellyfin — MaxWidth/MaxHeight in the top-level
     // body are hints; the internal scale filter uses its own 1280px default unless
     // the device profile declares explicit width/height constraints.
+    const int videoBps = videoBitrate();
+    static const int AUDIO_BPS = 128000;
     static const char* codecProfiles =
-        "[{\"Type\":\"Video\",\"Codec\":\"mpeg2video\",\"Conditions\":["
+        "[{\"Type\":\"Video\",\"Codec\":\"mpeg4\",\"Conditions\":["
         "{\"Condition\":\"LessThanEqual\",\"Property\":\"Width\","
-            "\"Value\":\"848\",\"IsRequired\":true},"
+            "\"Value\":\"640\",\"IsRequired\":true},"
         "{\"Condition\":\"LessThanEqual\",\"Property\":\"Height\","
             "\"Value\":\"480\",\"IsRequired\":true}"
         "]}]";
 
-    if (subtitleStreamIndex >= 0) {
-        snprintf(bodyBuf, sizeof(bodyBuf),
-            "{\"UserId\":\"%s\","
-            "\"MediaSourceId\":\"%s\","
-            "\"AudioStreamIndex\":%d,"
-            "\"SubtitleStreamIndex\":%d,"
-            "\"MaxStreamingBitrate\":1000000,"
-            "\"MaxWidth\":848,\"MaxHeight\":480,"
-            "\"StartTimeTicks\":%lld,"
-            "\"IsPlayback\":true,"
-            "\"AutoOpenLiveStream\":true,"
-            "\"EnableDirectPlay\":false,"
-            "\"EnableDirectStream\":false,"
-            "\"DeviceProfile\":{"
-            "\"DirectPlayProfiles\":[],"
-            "\"TranscodingProfiles\":[{\"Container\":\"ts\",\"Type\":\"Video\","
-            "\"VideoCodec\":\"mpeg2video\",\"AudioCodec\":\"mp3\","
-            "\"Protocol\":\"http\",\"Context\":\"Streaming\","
-            "\"MaxAudioChannels\":\"2\",\"MaxFramerate\":24}],"
-            "\"CodecProfiles\":%s,\"SubtitleProfiles\":[]}}",
-            auth.userId.c_str(), mediaSourceId.c_str(),
-            audioStreamIndex, subtitleStreamIndex, (long long)startTimeTicks, codecProfiles);
-    } else {
-        snprintf(bodyBuf, sizeof(bodyBuf),
-            "{\"UserId\":\"%s\","
-            "\"MediaSourceId\":\"%s\","
-            "\"AudioStreamIndex\":%d,"
-            "\"MaxStreamingBitrate\":1000000,"
-            "\"MaxWidth\":848,\"MaxHeight\":480,"
-            "\"StartTimeTicks\":%lld,"
-            "\"IsPlayback\":true,"
-            "\"AutoOpenLiveStream\":true,"
-            "\"EnableDirectPlay\":false,"
-            "\"EnableDirectStream\":false,"
-            "\"DeviceProfile\":{"
-            "\"DirectPlayProfiles\":[],"
-            "\"TranscodingProfiles\":[{\"Container\":\"ts\",\"Type\":\"Video\","
-            "\"VideoCodec\":\"mpeg2video\",\"AudioCodec\":\"mp3\","
-            "\"Protocol\":\"http\",\"Context\":\"Streaming\","
-            "\"MaxAudioChannels\":\"2\",\"MaxFramerate\":24}],"
-            "\"CodecProfiles\":%s,\"SubtitleProfiles\":[]}}",
-            auth.userId.c_str(), mediaSourceId.c_str(),
-            audioStreamIndex, (long long)startTimeTicks, codecProfiles);
-    }
+    char subField[48] = "";
+    if (subtitleStreamIndex >= 0)
+        snprintf(subField, sizeof(subField), "\"SubtitleStreamIndex\":%d,", subtitleStreamIndex);
+
+    char bodyBuf[2048];
+    snprintf(bodyBuf, sizeof(bodyBuf),
+        "{\"UserId\":\"%s\","
+        "\"MediaSourceId\":\"%s\","
+        "\"AudioStreamIndex\":%d,"
+        "%s"
+        "\"MaxStreamingBitrate\":%d,"
+        "\"MaxWidth\":640,\"MaxHeight\":480,"
+        "\"StartTimeTicks\":%lld,"
+        "\"IsPlayback\":true,"
+        "\"AutoOpenLiveStream\":true,"
+        "\"EnableDirectPlay\":false,"
+        "\"EnableDirectStream\":false,"
+        "\"DeviceProfile\":{"
+        "\"DirectPlayProfiles\":[],"
+        "\"TranscodingProfiles\":[{\"Container\":\"ts\",\"Type\":\"Video\","
+        "\"VideoCodec\":\"mpeg4\",\"AudioCodec\":\"mp3\","
+        "\"Protocol\":\"http\",\"Context\":\"Streaming\","
+        "\"MaxAudioChannels\":\"2\",\"MaxFramerate\":30}],"
+        "\"CodecProfiles\":%s,\"SubtitleProfiles\":[]}}",
+        auth.userId.c_str(), mediaSourceId.c_str(), audioStreamIndex, subField,
+        videoBps + AUDIO_BPS, (long long)startTimeTicks, codecProfiles);
 
     SYS_Report("[PlaybackInfo] POST %s\n", fullUrl);
     SYS_Report("[PlaybackInfo] body: %.256s\n", bodyBuf);
@@ -2056,14 +2192,18 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     outPlaySessionId = jsonGetString(resp, "PlaySessionId");
     SYS_Report("[PlaybackInfo] PlaySessionId='%s'\n", outPlaySessionId.c_str());
 
-    urlReplaceParam(relUrl, "VideoCodec", "mpeg2video");
+    // Jellyfin derives the bitrates from the source (e.g. keeps a 384 kb/s
+    // audio budget for 5.1 sources): pin them to what the Wii can stream.
+    char vbBuf[16], abBuf[16];
+    snprintf(vbBuf, sizeof(vbBuf), "%d", videoBps);
+    snprintf(abBuf, sizeof(abBuf), "%d", AUDIO_BPS);
+    urlReplaceParam(relUrl, "VideoCodec", "mpeg4");
     urlReplaceParam(relUrl, "AudioCodec", "mp3");
-    urlReplaceParam(relUrl, "AudioBitrate", "192000");
-    urlReplaceParam(relUrl, "VideoBitrate", "700000");
+    urlReplaceParam(relUrl, "AudioBitrate", abBuf);
+    urlReplaceParam(relUrl, "VideoBitrate", vbBuf);
     urlReplaceParam(relUrl, "MaxVideoBitDepth", "8");
-    urlReplaceParam(relUrl, "MaxWidth", "848");
+    urlReplaceParam(relUrl, "MaxWidth", "640");
     urlReplaceParam(relUrl, "MaxHeight", "480");
-    urlReplaceParam(relUrl, "MaxFramerate", "24");
 
     // When subtitles are off (subtitleStreamIndex < 0), Jellyfin may still
     // auto-select the media's default subtitle track and embed
@@ -2084,6 +2224,10 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
 
     // TranscodingUrl is a relative path starting with '/'.  Jellyfin sometimes
     // produces a query string starting with "?&" (empty first parameter); fix it.
+    if (forceReencode) {
+        urlReplaceParam(relUrl, "AllowVideoStreamCopy", "false");
+        urlReplaceParam(relUrl, "AllowAudioStreamCopy", "false");
+    }
     outUrl = addScheme(serverUrl) + relUrl;
     {
         auto q = outUrl.find("?&");
@@ -2349,7 +2493,7 @@ bool JellyfinClient::getAudioStreamUrl(const std::string& serverUrl,
         "&TranscodingContainer=mp3"
         "&TranscodingProtocol=http"
         "&StartTimeTicks=%lld"
-        "&api_key=%s",
+        "&ApiKey=%s",
         schemedSvr.c_str(), itemId.c_str(),
         auth.userId.c_str(),
         outPlaySessionId.c_str(),
@@ -2443,5 +2587,62 @@ bool JellyfinClient::searchItems(const std::string& serverUrl,
         if (!item.id.empty() && !item.name.empty())
             out.push_back(item);
     }
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// Generic query used by the carousel home (Flix theme)
+// ---------------------------------------------------------------------------
+static float jsonGetFloat(const std::string& json, const char* key) {
+    std::string search = std::string("\"") + key + "\":";
+    size_t pos = json.find(search);
+    if (pos == std::string::npos) return 0.0f;
+    return (float)strtod(json.c_str() + pos + search.size(), nullptr);
+}
+
+bool JellyfinClient::getItemsByQuery(const std::string& serverUrl,
+                                     const JellyfinAuth& auth,
+                                     const std::string& pathAndQuery,
+                                     std::vector<JellyfinItem>& out,
+                                     int* totalCount) {
+    std::string url = serverUrl + pathAndQuery +
+        (pathAndQuery.find('?') == std::string::npos ? "?" : "&") +
+        "Fields=ProductionYear,UserData,RunTimeTicks,SeriesId,ChildCount,RecursiveItemCount,SortName"
+        "&EnableImages=false";
+    std::string resp;
+    int status = httpRequest(url, "GET", "", "", auth.accessToken, resp);
+    if (status != 200) {
+        if (status >= 0) errMsg = "Query failed (HTTP " + std::to_string(status) + ")";
+        return false;
+    }
+
+    if (totalCount) *totalCount = jsonGetInt(resp, "TotalRecordCount");
+    size_t pos = resp.find("\"Items\":");
+    pos = resp.find('[', pos == std::string::npos ? 0 : pos);
+    if (pos == std::string::npos) return true;
+
+    struct Ctx { JellyfinClient* self; std::vector<JellyfinItem>* out; };
+    Ctx ctx{ this, &out };
+    forEachArrayObject(resp, pos, [](const std::string& obj, void* vctx) {
+        Ctx* c = static_cast<Ctx*>(vctx);
+        JellyfinItem item;
+        item.id                    = c->self->jsonGetString(obj, "Id");
+        item.name                  = c->self->jsonGetString(obj, "Name");
+        item.type                  = c->self->jsonGetString(obj, "Type");
+        item.year                  = c->self->jsonGetInt(obj,    "ProductionYear");
+        item.seriesName            = c->self->jsonGetString(obj, "SeriesName");
+        item.seriesId              = c->self->jsonGetString(obj, "SeriesId");
+        item.seasonNumber          = c->self->jsonGetInt(obj,    "ParentIndexNumber");
+        item.episodeNumber         = c->self->jsonGetInt(obj,    "IndexNumber");
+        item.runtimeTicks          = c->self->jsonGetLongLong(obj, "RunTimeTicks");
+        item.playbackPositionTicks = c->self->jsonGetLongLong(obj, "PlaybackPositionTicks");
+        item.communityRating       = jsonGetFloat(obj, "CommunityRating");
+        item.officialRating        = c->self->jsonGetString(obj, "OfficialRating");
+        item.childCount            = c->self->jsonGetInt(obj,    "ChildCount");
+        item.recursiveItemCount    = c->self->jsonGetInt(obj,    "RecursiveItemCount");
+        item.sortName              = c->self->jsonGetString(obj, "SortName");
+        if (!item.id.empty() && !item.name.empty())
+            c->out->push_back(item);
+    }, &ctx);
     return true;
 }
