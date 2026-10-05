@@ -194,8 +194,17 @@ static void* playThreadFunc(void*)
     addArg("-cache-seek-min"); addArg("5");
     addArg("-autosync"); addArg("10");
     addArg("-mc"); addArg("15");         /* large initial A/V gap on mid-stream resumes */
-    addArg("-delay"); addArg("0.3");
-    addArg("-lavdopts"); addArg("fast:skiploopfilter=all:skipidct=nonref:skipframe=nonref");
+    /* Audio vs picture, measured in Dolphin (flash + beep every 2 s, dumped
+     * picture and sound): "0.3" put the picture 0.39 s after the sound; with
+     * 0 the picture still lags ~50 ms (the frame is held to its refresh and
+     * Smooth Motion needs one more); -0.05 brings it to ~20 ms. */
+    addArg("-delay"); addArg("-0.05");
+    /* Every frame is decoded: skipframe/skipidct=nonref dropped or blurred
+     * B-frames.  WiiFin's own transcodes have none, but a compatible source
+     * (Xvid + MP3) is stream-copied by Jellyfin with its B-frames, and only
+     * one picture in three was shown (8 fps).  -hardframedrop still catches
+     * up when the CPU falls behind. */
+    addArg("-lavdopts"); addArg("fast:skiploopfilter=all");
     addArg("-hardframedrop");
     /* Discard the 3 s RESUME_PAD back-off at demuxer level so output starts
      * at the exact target position. */
