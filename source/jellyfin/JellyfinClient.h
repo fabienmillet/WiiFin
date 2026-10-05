@@ -407,9 +407,16 @@ public:
 
     static const int VIDEO_QUALITY_COUNT = 3;
     static const char* videoQualityName(int q);
-    int videoBitrate() const;      // bits/s for the current videoQuality
+    int videoBitrate() const;      // bits/s for effectiveQuality()
+
+    // videoQuality, capped to what the link carries (measured once per run
+    // and server, at the first playback: see measureLink).
+    int effectiveQuality() const { return videoQuality < linkCap ? videoQuality : linkCap; }
+    void measureLink(const std::string& serverUrl, const JellyfinAuth& auth);
 
 private:
+    int         linkCap = VIDEO_QUALITY_COUNT - 1;
+    std::string linkMeasuredFor;
     // GET an episode list (/Shows/{id}/Episodes...) and parse it
     bool fetchEpisodes(const std::string& url, const JellyfinAuth& auth,
                        std::vector<JellyfinEpisode>& out);

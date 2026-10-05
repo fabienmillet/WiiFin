@@ -2186,7 +2186,34 @@ int JellyfinClient::videoBitrate() const {
      * 4), so High stops at 3.5 to leave headroom on real hardware.  Playback
      * steps down on its own when the link can't keep up. */
     static const int bitrates[VIDEO_QUALITY_COUNT] = { 1500000, 2500000, 3500000 };
-    return bitrates[(videoQuality >= 0 && videoQuality < VIDEO_QUALITY_COUNT) ? videoQuality : 1];
+    int q = effectiveQuality();
+    return bitrates[(q >= 0 && q < VIDEO_QUALITY_COUNT) ? q : 1];
+}
+
+/* Start at a quality the link can carry instead of finding out through two
+ * rebuffers: time a download from Jellyfin's bitrate test (the same probe
+ * its own clients use), then cap the quality to the highest level whose
+ * stream fits with 30 % to spare for the cache to fill.  The setting itself
+ * is left alone. */
+void JellyfinClient::measureLink(const std::string& serverUrl, const JellyfinAuth& auth) {
+    if (linkMeasuredFor == serverUrl) return;
+    std::string body;
+    u64 t0 = nowMs();
+    int status = httpRequest(serverUrl + "/Playback/BitrateTest?size=300000", "GET", "", "",
+                             auth.accessToken, body);
+    u64 ms = nowMs() - t0;
+    if (status != 200 || body.size() < 100000) {
+        SYS_Report("[Net] link speed not measured (HTTP %d)\n", status);
+        return;                                  /* try again next playback */
+    }
+    linkMeasuredFor = serverUrl;
+    double kbps = body.size() * 8.0 / (ms ? ms : 1);
+    static const int bitrates[VIDEO_QUALITY_COUNT] = { 1500000, 2500000, 3500000 };
+    int cap = VIDEO_QUALITY_COUNT - 1;
+    while (cap > 0 && (bitrates[cap] + 128000) / 1000.0 * 1.3 > kbps) --cap;
+    linkCap = cap;
+    SYS_Report("[Net] link %.1f Mb/s (%u bytes in %llu ms): quality up to %s\n",
+               kbps / 1000.0, (unsigned)body.size(), ms, videoQualityName(cap));
 }
 
 bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
@@ -2227,6 +2254,7 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     // enforce output resolution in Jellyfin — MaxWidth/MaxHeight in the top-level
     // body are hints; the internal scale filter uses its own 1280px default unless
     // the device profile declares explicit width/height constraints.
+    measureLink(serverUrl, auth);
     const int videoBps = videoBitrate();
     static const int AUDIO_BPS = 128000;
     static const char* codecProfiles =

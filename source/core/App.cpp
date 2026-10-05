@@ -349,12 +349,12 @@ static bool runPlaySession(JellyfinClient& client,
              * bitrate, restart one quality step lower from here. */
             while (!rebufferTimes.empty() && now - rebufferTimes.front() > 120000)
                 rebufferTimes.erase(rebufferTimes.begin());
-            if (!stopRequested && rebufferTimes.size() >= 2 && client.videoQuality > 0) {
-                --client.videoQuality;
+            if (!stopRequested && rebufferTimes.size() >= 2 && client.effectiveQuality() > 0) {
+                client.videoQuality = client.effectiveQuality() - 1;
                 rebufferTimes.clear();
                 qualityRestartAt = view.position();
                 SYS_Report("[runPlay] slow link, lowering quality to %s\n",
-                           JellyfinClient::videoQualityName(client.videoQuality));
+                           JellyfinClient::videoQualityName(client.effectiveQuality()));
                 requestStop(PLAYER_STOP_SEEK, "Slow connection: lowering quality...");
             }
 
