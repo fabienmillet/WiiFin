@@ -1,13 +1,11 @@
 #include "ListFeed.h"
+#include "JpegTexture.h"
 #include "../core/ExitZone.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <ogc/system.h>
-
-/* Defined in LibraryView.cpp: decodes a JPEG into an RGBA8 texture. */
-GRRLIB_texImg* loadJPEGTexture(const u8* data, u32 size);
 
 ListFeed::ListFeed(JellyfinClient& c, const std::string& url, const JellyfinAuth& a)
     : client(c), serverUrl(url), auth(a)

@@ -346,4 +346,47 @@ private:
     bool updateState(ir_t& ir);
     void openItem(const JellyfinItem& it, State returnState);
     void openLibrary(int index);
+
+    // One file per screen: input (true = leave / play) and drawing.
+    // LibraryHome.cpp
+    bool updateHome(ir_t& ir, bool aPressed);
+    void renderHome(ir_t& ir);
+    bool updateGlobalFavorites(ir_t& ir, bool aPressed);
+    void renderGlobalFavorites(ir_t& ir);
+    // LibraryItems.cpp
+    bool updateItemList(ir_t& ir, bool aPressed);
+    void renderItemList(ir_t& ir);
+    bool updatePosterGrid(ir_t& ir, bool aPressed);
+    void renderPosterGrid(ir_t& ir);
+    // LibraryShows.cpp
+    bool updateSeasons(ir_t& ir, bool aPressed);
+    void renderSeasons(ir_t& ir);
+    bool updateEpisodes(ir_t& ir, bool aPressed);
+    void renderEpisodes(ir_t& ir);
+    // LibraryMusic.cpp
+    bool updateMusicTracks(ir_t& ir, bool aPressed);
+    void renderMusicTracks(ir_t& ir);
+    // LibrarySuggestions.cpp
+    static const int SG_X0  = 15;        // suggestion rows: first card
+    static const int SG_CW  = POSTER_W;  // card width (130)
+    static const int SG_CH  = 160;       // card height
+    static const int SG_GAP = 20;        // 4 x 130 + 3 x 20 = 580 fits in 640
+    void drawSuggestionRow(ir_t& ir, int rowY, const std::vector<JellyfinItem>& list,
+                           GRRLIB_texImg* const* texs, int off, int selIdx, bool rowActive,
+                           bool preferSeries, bool showProgress);
+    bool updateMovieSuggestions(ir_t& ir, bool aPressed);
+    void renderMovieSuggestions(ir_t& ir);
+    bool updateTVSuggestions(ir_t& ir, bool aPressed);
+    void renderTVSuggestions(ir_t& ir);
+    bool updateTVUpcoming(ir_t& ir, bool aPressed);
+    void renderTVUpcoming(ir_t& ir);
+    bool updateMusicSuggestions(ir_t& ir, bool aPressed);
+    void renderMusicSuggestions(ir_t& ir);
+    // LibraryDetail.cpp (and drawDetailView)
+    bool updateDetail(ir_t& ir, bool aPressed);
+    bool updateResumePrompt(ir_t& ir, bool aPressed);
+    void renderResumePrompt();
+    // LibrarySearch.cpp (and the search members above)
+    bool updateSearchInput(ir_t& ir);
+    bool updateSearchResults(ir_t& ir, bool aPressed);
 };
