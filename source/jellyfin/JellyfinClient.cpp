@@ -1110,6 +1110,90 @@ bool JellyfinClient::quickConnectAuthenticate(const std::string& serverUrl,
     return true;
 }
 
+void JellyfinClient::logServerInfo(const std::string& serverUrl) {
+    static std::string logged;
+    if (logged == serverUrl) return;
+    std::string resp;
+    if (httpRequest(serverUrl + "/System/Info/Public", "GET", "", "", "", resp) != 200) return;
+    logged = serverUrl;
+    SYS_Report("[Server] %s %s\n", jsonGetString(resp, "ProductName").c_str(),
+               jsonGetString(resp, "Version").c_str());
+}
+
+/* Hides what a server log line says about the user's files: quoted strings
+ * and tokens holding a path ("/media/...", "C:\\..."), which carry titles. */
+static std::string maskPaths(const std::string& in) {
+    std::string out;
+    for (size_t i = 0; i < in.size(); ) {
+        char c = in[i];
+        if (c == '"' || c == '\'') {
+            size_t e = in.find(c, i + 1);
+            std::string q = in.substr(i, e == std::string::npos ? std::string::npos : e - i + 1);
+            bool path = q.find('/') != std::string::npos || q.find('\\') != std::string::npos;
+            out += path ? std::string("<path>") : q;
+            i = e == std::string::npos ? in.size() : e + 1;
+            continue;
+        }
+        bool start = i == 0 || in[i - 1] == ' ' || in[i - 1] == '=' || in[i - 1] == ':';
+        bool winPath = i + 2 < in.size() && isalpha((unsigned char)c) && in[i + 1] == ':' && in[i + 2] == '\\';
+        if (start && (c == '/' || winPath)) {
+            /* unquoted paths may hold spaces: up to the next option or the
+             * end of the line, keeping a final '.', ':' or ',' */
+            size_t e = in.find(" -", i);
+            if (e == std::string::npos) e = in.size();
+            while (e > i && (in[e - 1] == '.' || in[e - 1] == ':' || in[e - 1] == ',')) --e;
+            out += "<path>";
+            i = e;
+            continue;
+        }
+        out += c;
+        ++i;
+    }
+    return out;
+}
+
+void JellyfinClient::logTranscodeFailure(const std::string& serverUrl, const JellyfinAuth& auth) {
+    std::string resp;
+    int status = httpRequest(serverUrl + "/System/Logs", "GET", "", "", auth.accessToken, resp);
+    if (status != 200) {
+        SYS_Report("[Server] FFmpeg log not readable (HTTP %d: the account is not an administrator)\n", status);
+        return;
+    }
+    /* newest FFmpeg.Transcode-*.log (ISO dates compare as strings) */
+    struct Pick { JellyfinClient* self; std::string name, date; };
+    Pick pick{ this, "", "" };
+    size_t pos = resp.find('[');
+    if (pos != std::string::npos)
+        forEachArrayObject(resp, pos, [](const std::string& obj, void* v) {
+            Pick* p = static_cast<Pick*>(v);
+            std::string name = p->self->jsonGetString(obj, "Name");
+            std::string date = p->self->jsonGetString(obj, "DateModified");
+            if (name.compare(0, 16, "FFmpeg.Transcode") == 0 && date > p->date) {
+                p->name = name;
+                p->date = date;
+            }
+        }, &pick);
+    if (pick.name.empty()) { SYS_Report("[Server] no FFmpeg transcode log found\n"); return; }
+    std::string text;
+    if (httpRequest(serverUrl + "/System/Logs/Log?name=" + pick.name, "GET", "", "",
+                    auth.accessToken, text) != 200) return;
+    /* the end holds the error; keep the last 25 lines, 200 chars each */
+    std::vector<std::string> lines;
+    size_t b = 0;
+    while (b < text.size()) {
+        size_t e = text.find('\n', b);
+        if (e == std::string::npos) e = text.size();
+        std::string ln = text.substr(b, e - b);
+        if (!ln.empty() && ln.back() == '\r') ln.pop_back();
+        if (!ln.empty()) lines.push_back(ln);
+        b = e + 1;
+    }
+    size_t from = lines.size() > 25 ? lines.size() - 25 : 0;
+    SYS_Report("[Server] end of the FFmpeg log of %s:\n", pick.date.c_str());
+    for (size_t i = from; i < lines.size(); ++i)
+        SYS_Report("[Server FFmpeg] %.200s\n", maskPaths(lines[i]).c_str());
+}
+
 bool JellyfinClient::getServerName(const std::string& serverUrl,
                                     const JellyfinAuth& auth,
                                     std::string& outName) {

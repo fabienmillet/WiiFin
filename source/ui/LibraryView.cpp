@@ -541,6 +541,7 @@ void LibraryView::clampEpisodeScroll() {
 void LibraryView::loadLibraries() {
     bool ok = false; std::string err;
     runWithLoading([&]() {
+        client.logServerInfo(serverUrl);
         ok = client.getLibraries(serverUrl, auth, libraries);
         if (!ok) err = client.lastError();
     });

@@ -192,6 +192,12 @@ public:
                        const JellyfinAuth& auth,
                        std::string& outName);
 
+    // Diagnostics for wiifin.log.  The server's Jellyfin version (once per
+    // server), and after a failed transcode the end of the server's newest
+    // FFmpeg log, file paths masked (only an administrator may read it).
+    void logServerInfo(const std::string& serverUrl);
+    void logTranscodeFailure(const std::string& serverUrl, const JellyfinAuth& auth);
+
     // Fetch up to 3 in-progress ("Continue Watching") video items
     bool getContinueWatching(const std::string& serverUrl,
                              const JellyfinAuth& auth,

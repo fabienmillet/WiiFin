@@ -530,6 +530,7 @@ static bool runPlaySession(JellyfinClient& client,
     MusicBGM::stop();
     MusicBGM::init(musicWasRunning);
     runWithPlayerUI(view, ir, "Stopping...", [&]() {
+        if (g_wiifin_stream_fail_status >= 500) client.logTranscodeFailure(serverUrl, auth);
         if (!reported && posTicks > 0)
             client.reportPlaybackStopped(serverUrl, auth, itemId, mediaSourceId,
                                          playSessionId, posTicks);
