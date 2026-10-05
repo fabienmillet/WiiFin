@@ -34,7 +34,7 @@ struct PlayerViewContext {
  *
  * Main loop, once per frame:
  *     Input::update(); WPAD_IR(...);
- *     Action a = view.update(WPAD_ButtonsDown(0), ir);
+ *     Action a = view.update(Input::rawDown(), ir);
  *     view.render(ir);
  *     GRRLIB_Render();
  *     VideoSurface::endFrame();

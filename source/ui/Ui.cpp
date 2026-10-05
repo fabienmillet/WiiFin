@@ -426,11 +426,46 @@ static void dpadGlyph(float cx, float cy, bool vertical, u32 c)
 }
 
 /* Width of the glyph drawn for a hint button (0 = label only). */
+static ButtonStyle s_buttonStyle = ButtonStyle::WiiRemote;
+void        setButtonStyle(ButtonStyle s) { s_buttonStyle = s; }
+ButtonStyle buttonStyle()                 { return s_buttonStyle; }
+
+const char* buttonName(const char* b)
+{
+    if (s_buttonStyle == ButtonStyle::WiiRemote) return b;
+    static const struct { const char* wii; const char* classic; const char* gc; } MAP[] = {
+        { "1",    "Y",    "Y" },
+        { "2",    "X",    "X" },
+        { "-",    "-",    "L" },
+        { "+",    "+",    "R" },
+        { "-/+",  "-/+",  "L/R" },
+        { "HOME", "HOME", "START" },
+    };
+    for (const auto& m : MAP)
+        if (strcmp(b, m.wii) == 0)
+            return s_buttonStyle == ButtonStyle::Classic ? m.classic : m.gc;
+    return b;
+}
+
+/* GameCube A and B are green and red; everything else is a grey button */
+static void buttonDisc(float cx, float cy, const char* b, u32& textColor)
+{
+    const Palette& p = pal();
+    u32 fill = p.cardTop;
+    textColor = p.text;
+    if (s_buttonStyle == ButtonStyle::GameCube && (b[0] == 'A' || b[0] == 'B') && !b[1]) {
+        fill = b[0] == 'A' ? 0x2FB56AFF : 0xD8463CFF;
+        textColor = 0xFFFFFFFF;
+    }
+    circle(cx, cy, 9, p.cardBorder);
+    circle(cx, cy, 7.5f, fill);
+}
+
 static float glyphWidth(const char* b)
 {
     if (!b[0]) return 0;
     if (strcmp(b, "UD") == 0 || strcmp(b, "LR") == 0) return 18;
-    if (strcmp(b, "-/+") == 0) return 40;
+    if (strcmp(b, "-/+") == 0 || strcmp(b, "L/R") == 0) return 40;
     if (strlen(b) > 1) return textWidth(b, 10) + 16;   /* HOME ... */
     return 18;
 }
@@ -447,29 +482,31 @@ static void plusGlyph(float cx, float cy, u32 c)
 float hint(float x, float y, const Hint& h)
 {
     const Palette& p = pal();
-    float cy = y + 9, w = glyphWidth(h.button);
+    const char* b = buttonName(h.button);
+    float cy = y + 9, w = glyphWidth(b);
+    u32 tc = p.text;
     if (w == 0) {
         /* plain caption */
-    } else if (strcmp(h.button, "UD") == 0 || strcmp(h.button, "LR") == 0) {
-        dpadGlyph(x + 9, cy, h.button[0] == 'U', p.text);
-    } else if (strcmp(h.button, "-/+") == 0) {
-        /* two small Wiimote buttons side by side */
+    } else if (strcmp(b, "UD") == 0 || strcmp(b, "LR") == 0) {
+        dpadGlyph(x + 9, cy, b[0] == 'U', p.text);
+    } else if (strcmp(b, "-/+") == 0 || strcmp(b, "L/R") == 0) {
+        /* two small buttons side by side */
         for (int i = 0; i < 2; ++i) {
             float bx = x + 9 + i * 22;
-            circle(bx, cy, 9, p.cardBorder);
-            circle(bx, cy, 7.5f, p.cardTop);
-            if (i == 0) minusGlyph(bx, cy, p.text); else plusGlyph(bx, cy, p.text);
+            buttonDisc(bx, cy, "", tc);
+            if (b[0] == 'L') textCentered(bx, cy - 7, i == 0 ? "L" : "R", 12, tc);
+            else if (i == 0) minusGlyph(bx, cy, tc);
+            else             plusGlyph(bx, cy, tc);
         }
-    } else if (strlen(h.button) > 1) {
+    } else if (strlen(b) > 1) {
         roundRect(x, cy - 8, w, 16, 8, p.cardTop, p.cardBottom);
         roundBorder(x, cy - 8, w, 16, 8, 1.5f, p.cardBorder);
-        textCentered(x + w * 0.5f, cy - 6, h.button, 10, p.textDim);
+        textCentered(x + w * 0.5f, cy - 6, b, 10, p.textDim);
     } else {
-        circle(x + 9, cy, 9, p.cardBorder);
-        circle(x + 9, cy, 7.5f, p.cardTop);
-        if      (h.button[0] == '-') minusGlyph(x + 9, cy, p.text);
-        else if (h.button[0] == '+') plusGlyph(x + 9, cy, p.text);
-        else textCentered(x + 9, cy - 7, h.button, 12, p.text);
+        buttonDisc(x + 9, cy, b, tc);
+        if      (b[0] == '-') minusGlyph(x + 9, cy, tc);
+        else if (b[0] == '+') plusGlyph(x + 9, cy, tc);
+        else textCentered(x + 9, cy - 7, b, 12, tc);
     }
     if (w > 0) w += 5;
     text(x + w, y + 2, h.label, 14, p.textDim);
@@ -478,7 +515,7 @@ float hint(float x, float y, const Hint& h)
 
 float hintWidth(const Hint& h)
 {
-    float g = glyphWidth(h.button);
+    float g = glyphWidth(buttonName(h.button));
     return (g > 0 ? g + 5 : 0) + textWidth(h.label, 14) + 14;
 }
 

@@ -81,7 +81,7 @@ void SettingsView::updateCalibration()
     if (Input::isLPressed()) Ui::setSafeArea(0, 0, 0, 0);   /* [-] reset */
 
     /* Single press = 1 px; holding repeats after 350 ms, faster after 1 s */
-    u32 held = WPAD_ButtonsHeld(0);
+    u32 held = Input::held();
     u32 dirs = held & (WPAD_BUTTON_UP | WPAD_BUTTON_DOWN | WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT);
     u64 now  = ticks_to_millisecs(gettime());
     int dx = 0, dy = 0, step = 1;

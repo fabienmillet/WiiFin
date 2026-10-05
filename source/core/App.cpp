@@ -373,7 +373,7 @@ static bool runPlaySession(JellyfinClient& client,
                 }
             }
 
-            switch (view.update(WPAD_ButtonsDown(0), ir)) {
+            switch (view.update(Input::rawDown(), ir)) {
             case PlayerView::Action::Back:   requestStop(PLAYER_STOP_EOF,   "Stopping...");             break;
             case PlayerView::Action::Next:   requestStop(PLAYER_STOP_NEXT,  "Loading next episode..."); break;
             case PlayerView::Action::Prev:   requestStop(PLAYER_STOP_PREV,  "Loading previous episode..."); break;

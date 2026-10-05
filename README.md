@@ -41,8 +41,24 @@ It provides a lightweight, console-friendly media browsing and playback experien
 - **Playback reporting**: progress sent back to the Jellyfin server (resume where you left off)
 - **HTTPS**: TLS connections via mbedTLS (self-signed certificates supported)
 - **Wiimote IR pointer** and **virtual on-screen keyboard**
+- **Classic Controller**, **Wii U GamePad** (Virtual Console injects) and **GameCube controller**: everything can be done with the D-pad, no sensor bar needed (see [Controls](#-controls))
 - **Background music** on menus
 - Ships as a ready-to-use `.dol` and installable `.wad` (Wii / vWii)
+
+### 🎮 Controls
+
+The pointer is optional: every screen works with the D-pad.
+
+| Wii Remote | Classic Controller / Wii U GamePad | GameCube controller | Action |
+|---|---|---|---|
+| A / B | A / B | A / B | Select / Back |
+| D-pad | D-pad or left stick | D-pad or stick | Move (hold to repeat) |
+| − / + | − / + or L / R | L / R | Tabs, pages, previous / next episode |
+| 1 / 2 | Y / X | Y / X | Search, audio / subtitle tracks |
+| HOME | HOME | START | HOME menu |
+| pointer | ZL / ZR | Z | Video zoom (fit / fill) |
+
+On-screen hints show the buttons of the controller used last (GameCube: A green, B red, L / R, START).
 
 ### ⚠️ Known limitations:
 - Direct-play is not supported; all video is transcoded by the server

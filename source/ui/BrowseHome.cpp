@@ -474,7 +474,7 @@ BrowseHome::Action BrowseHome::update(const ir_t& ir, bool& irMode)
     bool a     = Input::isAJustPressed();
     if (up || down || left || right) irMode = false;
 
-    if (WPAD_ButtonsDown(0) & WPAD_BUTTON_1) return Action::Search;
+    if (Input::is1Pressed()) return Action::Search;
     if (Input::isRPressed()) return Action::Browse;
     if (mode == Mode::Catalog && Input::isBackPressed()) return Action::Back;
 

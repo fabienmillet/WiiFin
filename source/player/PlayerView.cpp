@@ -3,6 +3,7 @@
 #include "../ui/Ui.h"
 #include "WiiPlayer.h"
 #include "VideoSurface.h"
+#include "../input/Input.h"
 
 #include <ogc/lwp_watchdog.h>
 #include <stdio.h>
@@ -312,6 +313,7 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
     if (down & WPAD_BUTTON_MINUS) {
         if (hasPrev) act = Action::Prev; else toast("No previous episode");
     }
+    if (down & Input::BTN_ZOOM) toggleZoom();   /* Classic ZL/ZR, GameCube Z */
     if (down & WPAD_BUTTON_1) {
         if (ctx.audioStreams.size() > 1) openPanel(Panel::Audio);
         else toast("No other audio track");
@@ -391,12 +393,17 @@ void PlayerView::render(const ir_t& ir)
         Ui::roundRect(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, TOP_H + 30, 22, p.barTop, p.barBottom);
         Ui::roundBorder(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, TOP_H + 30, 22, 1.5f, p.barBorder);
         {
-            const Ui::Hint hints[] = { { "1", "Audio" }, { "2", "Subtitles" }, { "B", "Back" } };
+            /* zoom has a button on the Classic (ZR) and GameCube (Z) only */
+            const Ui::ButtonStyle bs = Ui::buttonStyle();
+            const Ui::Hint all[] = { { bs == Ui::ButtonStyle::GameCube ? "Z" : "ZR", "Zoom" },
+                                     { "1", "Audio" }, { "2", "Subtitles" }, { "B", "Back" } };
+            const Ui::Hint* hints = bs == Ui::ButtonStyle::WiiRemote ? all + 1 : all;
+            const int nHints = bs == Ui::ButtonStyle::WiiRemote ? 3 : 4;
             float hw = 0;
-            for (const auto& h : hints) hw += Ui::hintWidth(h);
+            for (int i = 0; i < nHints; ++i) hw += Ui::hintWidth(hints[i]);
             float hx = 626 - hw;
             Ui::text(24, 15, fitText(ctx.title, 20, (int)hx - 40).c_str(), 20, p.text);
-            for (const auto& h : hints) hx += Ui::hint(hx, 16, h);
+            for (int i = 0; i < nHints; ++i) hx += Ui::hint(hx, 16, hints[i]);
         }
         Ui::popOffset();
 

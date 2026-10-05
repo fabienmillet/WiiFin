@@ -19,6 +19,7 @@
  */
 
 #include "WiiPlayer.h"
+#include "../input/Input.h"
 #include "../core/ExitZone.h"
 
 #include <setjmp.h>
@@ -311,20 +312,16 @@ static uint8_t      s_bg_stack[48 * 1024] DEAD_AT_EXIT __attribute__((aligned(32
  * it feeds MusicPlayerView's tick callback and renders its UI at 60 Hz. */
 static void* audioThreadFunc(void*)
 {
-    WPAD_ScanPads();
-    WPADData* wd0 = WPAD_Data(WPAD_CHAN_0);
-    u32 prevHeld = wd0 ? wd0->btns_h : 0;
+    Input::update();          /* drop what was pressed before the music started */
     while (!s_bg_stop) {
         if (g_app_powerOff || g_app_reset) {
             g_player_stop_reason = PLAYER_STOP_EOF;
             async_quit_request   = 1;
         }
 
-        WPAD_ScanPads();
-        WPADData* wd = WPAD_Data(WPAD_CHAN_0);
-        u32 held = wd ? wd->btns_h : 0;
-        u32 down = held & ~prevHeld;
-        prevHeld = held;
+        Input::update();      /* every controller, as Wii Remote buttons */
+        u32 down = Input::rawDown();
+        u32 held = Input::held();
 
         if (s_music_tick_cb)
             s_music_tick_cb(g_mplayer_paused, down, held);

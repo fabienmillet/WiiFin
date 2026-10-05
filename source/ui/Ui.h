@@ -112,6 +112,12 @@ void header(const char* title, const char* subtitle = nullptr);
  * Hints are pairs of (button, label); button is "A", "B", "1", "2", "+",
  * "-", "HOME" or a D-pad glyph name ("UD", "LR"). */
 struct Hint { const char* button; const char* label; };
+/* Hints name Wii Remote buttons ("A", "1", "-/+", "HOME", ...); they are
+ * shown as the buttons of the controller used last (Input sets it). */
+enum class ButtonStyle { WiiRemote, Classic, GameCube };
+void        setButtonStyle(ButtonStyle s);
+ButtonStyle buttonStyle();
+const char* buttonName(const char* wiiRemoteButton);
 void bottomBar(const Hint* left, int nLeft, const Hint* right = nullptr, int nRight = 0);
 /* Wiimote-style button glyph followed by its label; returns the width used. */
 float hint(float x, float y, const Hint& h);

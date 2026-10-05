@@ -1002,8 +1002,8 @@ bool LibraryView::updateState(ir_t& ir) {
                 if (Input::isLPressed()) { itemPage = 0; state = State::GlobalFavoritesLoad; irMode = false; return false; } // [-] prev: wrap to Favourites
                 if (Input::isRPressed()) { homePage = 1; irMode = false; return false; }                                    // [+] next: Activity
 
-                // [1] button (mapped to WPAD_BUTTON_1) → open search
-                if (WPAD_ButtonsDown(0) & WPAD_BUTTON_1) {
+                // [1] (Classic / GameCube: Y) → open search
+                if (Input::is1Pressed()) {
                     searchQuery.clear();
                     searchResults.clear();
                     searchSel       = 0;
@@ -2236,7 +2236,7 @@ bool LibraryView::updateState(ir_t& ir) {
                 return false;
             }
             // [1] → new search
-            if (WPAD_ButtonsDown(0) & WPAD_BUTTON_1) {
+            if (Input::is1Pressed()) {
                 searchQuery.clear();
                 searchResults.clear();
                 searchSel = 0; searchTop = 0;
