@@ -288,6 +288,8 @@ private:
     void loadItems();
     void loadPosters();
     void loadDetail();
+    void preparePlay(long long startTicks, const std::vector<JellyfinEpisode>* queue = nullptr);
+    bool startShuffle(const std::string& seasonId);   /* "" = whole series */
     void loadSeasons();
     void loadEpisodes();
     void loadMovieCollections();

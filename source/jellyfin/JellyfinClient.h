@@ -304,6 +304,15 @@ public:
                      const std::string& seasonId,
                      std::vector<JellyfinEpisode>& out);
 
+    // Up to `limit` episodes in random order, shuffled by the server: the
+    // whole series, or one season when seasonId is not empty.
+    bool getShuffledEpisodes(const std::string& serverUrl,
+                             const JellyfinAuth& auth,
+                             const std::string& seriesId,
+                             const std::string& seasonId,
+                             int limit,
+                             std::vector<JellyfinEpisode>& out);
+
     // Fetch intro/credits timestamps for an episode.
     // Tries the Intro Skipper plugin endpoint first; returns false (no error)
     // if the server responds 404 (plugin not installed or no data for item).
@@ -395,6 +404,9 @@ public:
     int videoBitrate() const;      // bits/s for the current videoQuality
 
 private:
+    // GET an episode list (/Shows/{id}/Episodes...) and parse it
+    bool fetchEpisodes(const std::string& url, const JellyfinAuth& auth,
+                       std::vector<JellyfinEpisode>& out);
     volatile bool networkReady = false;
     volatile bool netBusy      = false;
     unsigned int  netThread    = 0;         // lwp_t of the start-up thread, 0 = none

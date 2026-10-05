@@ -1465,7 +1465,26 @@ bool JellyfinClient::getEpisodes(const std::string& serverUrl,
         "/Shows/%s/Episodes?SeasonId=%s&UserId=%s"
         "&Fields=IndexNumber,ParentIndexNumber,UserData&EnableImages=false",
         seriesId.c_str(), seasonId.c_str(), auth.userId.c_str());
-    std::string url  = serverUrl + qs;
+    return fetchEpisodes(serverUrl + qs, auth, out);
+}
+
+bool JellyfinClient::getShuffledEpisodes(const std::string& serverUrl,
+                                          const JellyfinAuth& auth,
+                                          const std::string& seriesId,
+                                          const std::string& seasonId,
+                                          int limit,
+                                          std::vector<JellyfinEpisode>& out) {
+    char qs[512];
+    snprintf(qs, sizeof(qs),
+        "/Shows/%s/Episodes?UserId=%s%s%s&SortBy=Random&Limit=%d"
+        "&Fields=IndexNumber,ParentIndexNumber,UserData&EnableImages=false",
+        seriesId.c_str(), auth.userId.c_str(),
+        seasonId.empty() ? "" : "&SeasonId=", seasonId.c_str(), limit);
+    return fetchEpisodes(serverUrl + qs, auth, out);
+}
+
+bool JellyfinClient::fetchEpisodes(const std::string& url, const JellyfinAuth& auth,
+                                   std::vector<JellyfinEpisode>& out) {
     std::string resp;
     int status = httpRequest(url, "GET", "", "", auth.accessToken, resp);
     if (status != 200) {

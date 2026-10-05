@@ -261,6 +261,7 @@ static bool runPlaySession(JellyfinClient& client,
 
         /* ---- Playback: UI and MPlayer run side by side ---- */
         bool stopRequested = false;
+        bool reachedEnd    = false;   /* the watchdog ended it at the credits */
         auto requestStop = [&](int r, const char* msg) {
             if (stopRequested) return;
             wii_player_request_stop(r);
@@ -362,8 +363,10 @@ static bool runPlaySession(JellyfinClient& client,
                 lastProgressMs = now;
             } else if (!stopRequested && now - lastProgressMs > 3000) {
                 bool atEnd = ctx.runtime > 0.0f && view.position() >= ctx.runtime - 10.0f;
-                if (atEnd)
+                if (atEnd) {
+                    reachedEnd = true;
                     requestStop(PLAYER_STOP_EOF, "");
+                }
                 else if (now - lastProgressMs > 20000)
                     requestStop(ctx.runtime > 0.0f ? PLAYER_STOP_ERROR : PLAYER_STOP_EOF,
                                 "Reconnecting...");
@@ -414,6 +417,14 @@ static bool runPlaySession(JellyfinClient& client,
          * drop): pick up where it stopped, up to 3 times. */
         bool dropped = !stopRequested && reason == PLAYER_STOP_EOF &&
                        ctx.runtime > 0.0f && posSecs < ctx.runtime - 30.0f;
+        /* The episode played to its end (not stopped with B): go on with the
+         * next one of the list, season order or shuffled, as Jellyfin does. */
+        bool finished = reason == PLAYER_STOP_EOF && !dropped && everPlayed &&
+                        (!stopRequested || reachedEnd);
+        if (finished && episodeIdx + 1 < (int)episodes.size()) {
+            SYS_Report("[runPlay] episode finished, playing the next one\n");
+            reason = PLAYER_STOP_NEXT;
+        }
         /* If nothing played, retry from where this stream was meant to start */
         float startSecs = (float)(startTicks / 10000000.0);
         float restartAt = posSecs > startSecs ? posSecs : startSecs;

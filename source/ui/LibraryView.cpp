@@ -367,6 +367,112 @@ void LibraryView::loadPosters() {
     state = globFavMode ? State::GlobalFavoritesReady : State::PostersReady;
 }
 
+/* Fills pendingPlay* for the item in `detail` (App then plays it).  queue:
+ * the episodes previous/next walk through, instead of the season list. */
+void LibraryView::preparePlay(long long startTicks, const std::vector<JellyfinEpisode>* queue)
+{
+    int audioIdx = (!detail.audioStreams.empty())
+        ? detail.audioStreams[detailAudioSel].index : 0;
+    int subIdx = (detailSubSel >= 0 && !detail.subtitleStreams.empty())
+        ? detail.subtitleStreams[detailSubSel].index : -1;
+
+    std::string url;
+    std::string playSessionId;
+    // Show the spinner immediately in both framebuffers so the
+    // film/series detail page is hidden during the network call.
+    drawLoadingFrame();
+    drawLoadingFrame();
+    if (!client.getTranscodingUrl(serverUrl, auth,
+                                  detailItemId, detailItemId,
+                                  audioIdx, subIdx, startTicks, url, playSessionId)) {
+        SYS_Report("[LibraryView] getTranscodingUrl failed: %s — using fallback\n",
+                   client.lastError().c_str());
+        // Fallback: build URL directly (may result in direct play on server)
+        char fallback[1024];
+        if (subIdx >= 0) {
+            snprintf(fallback, sizeof(fallback),
+                "%s/Videos/%s/stream?Static=false&MediaSourceId=%s"
+                "&VideoCodec=mpeg4&AudioCodec=mp3&Container=ts"
+                "&MaxWidth=640&MaxHeight=480"
+                "&VideoBitrate=%d&AudioBitrate=128000"
+                "&AllowVideoStreamCopy=false&AllowAudioStreamCopy=false"
+                "&AudioStreamIndex=%d&SubtitleStreamIndex=%d&ApiKey=%s",
+                serverUrl.c_str(), detailItemId.c_str(), detailItemId.c_str(),
+                client.videoBitrate(), audioIdx, subIdx, auth.accessToken.c_str());
+        } else {
+            snprintf(fallback, sizeof(fallback),
+                "%s/Videos/%s/stream?Static=false&MediaSourceId=%s"
+                "&VideoCodec=mpeg4&AudioCodec=mp3&Container=ts"
+                "&MaxWidth=640&MaxHeight=480"
+                "&VideoBitrate=%d&AudioBitrate=128000"
+                "&AllowVideoStreamCopy=false&AllowAudioStreamCopy=false"
+                "&AudioStreamIndex=%d&ApiKey=%s",
+                serverUrl.c_str(), detailItemId.c_str(), detailItemId.c_str(),
+                client.videoBitrate(), audioIdx, auth.accessToken.c_str());
+        }
+        url = fallback;
+    }
+    pendingPlayUrl = url;
+    pendingPlayTitle = detail.name;
+    pendingPlayItemId = detailItemId;
+    pendingPlayMediaSourceId = detailItemId;
+    pendingPlaySessionId = playSessionId;
+    pendingPlayStartTimeTicks = startTicks;
+    pendingPlayRuntimeTicks  = detail.runtimeTicks;
+    // Audio / subtitle stream lists for in-player track switching
+    pendingPlayAudioStreams = detail.audioStreams;
+    pendingPlaySubStreams   = detail.subtitleStreams;
+    pendingPlayAudioIdx = (detailAudioSel < (int)detail.audioStreams.size())
+                          ? detail.audioStreams[detailAudioSel].index : 0;
+    pendingPlaySubIdx   = (detailSubSel >= 0 && detailSubSel < (int)detail.subtitleStreams.size())
+                          ? detail.subtitleStreams[detailSubSel].index : -1;
+    // Propagate episode list context for the player overlay
+    if (queue && !queue->empty()) {
+        /* shuffle: the drawn list is the queue, playing from its start */
+        pendingPlayEpisodes   = *queue;
+        pendingPlaySeriesId   = currentSeriesId;
+        pendingPlayEpisodeIdx = 0;
+    } else if (detailIsEpisode && !episodes.empty()) {
+        pendingPlayEpisodes   = episodes;
+        pendingPlaySeriesId   = currentSeriesId;
+        pendingPlayEpisodeIdx = 0;
+        for (int i = 0; i < (int)episodes.size(); ++i) {
+            if (episodes[i].id == detailItemId) {
+                pendingPlayEpisodeIdx = i;
+                break;
+            }
+        }
+    } else {
+        pendingPlayEpisodes.clear();
+        pendingPlayEpisodeIdx = 0;
+        pendingPlaySeriesId.clear();
+    }
+}
+
+/* Shuffle (2 on the season or episode list): the server draws up to 100
+ * episodes of the series, or of one season, in random order; the first one
+ * starts and the rest become the queue for next / previous. */
+bool LibraryView::startShuffle(const std::string& seasonId)
+{
+    std::vector<JellyfinEpisode> drawn;
+    bool ok = false;
+    std::string err;
+    freeDetail();
+    runWithLoading([&]() {
+        ok = client.getShuffledEpisodes(serverUrl, auth, currentSeriesId, seasonId, 100, drawn);
+        if (ok && !drawn.empty())
+            ok = client.getItemDetail(serverUrl, auth, drawn[0].id, detail);
+        if (!ok) err = client.lastError();
+    });
+    if (!ok) { errMsg = err; state = State::Error; return false; }
+    if (drawn.empty()) return false;
+    SYS_Report("[Shuffle] %d episode(s) drawn%s\n", (int)drawn.size(), seasonId.empty() ? "" : " (one season)");
+    detailItemId    = drawn[0].id;
+    detailIsEpisode = true;
+    preparePlay(0LL, &drawn);
+    return true;
+}
+
 // ---------------------------------------------------------------
 void LibraryView::loadDetail() {
     if (detailItemId.empty()) { state = State::PostersReady; return; }
@@ -1485,6 +1591,7 @@ bool LibraryView::updateState(ir_t& ir) {
                     }
                 }
             }
+            if (Input::is2Pressed() && n > 0) return startShuffle("");   /* whole series */
             if (aPressed && n > 0 && seasonSel < n) {
                 currentSeasonId   = seasons[seasonSel].id;
                 currentSeasonName = seasons[seasonSel].name;
@@ -1521,6 +1628,7 @@ bool LibraryView::updateState(ir_t& ir) {
                     }
                 }
             }
+            if (Input::is2Pressed() && n > 0) return startShuffle(currentSeasonId);
             if (aPressed && n > 0 && episodeSel < n) {
                 detailItemId = episodes[episodeSel].id;
                 detailReturnState = State::EpisodesReady;
@@ -1916,78 +2024,7 @@ bool LibraryView::updateState(ir_t& ir) {
                     return false;
                 }
                 // No saved position: play from the beginning immediately
-                int audioIdx = (!detail.audioStreams.empty())
-                    ? detail.audioStreams[detailAudioSel].index : 0;
-                int subIdx = (detailSubSel >= 0 && !detail.subtitleStreams.empty())
-                    ? detail.subtitleStreams[detailSubSel].index : -1;
-
-                std::string url;
-                std::string playSessionId;
-                long long startTicks = 0LL;
-                // Show the spinner immediately in both framebuffers so the
-                // film/series detail page is hidden during the network call.
-                drawLoadingFrame();
-                drawLoadingFrame();
-                if (!client.getTranscodingUrl(serverUrl, auth,
-                                              detailItemId, detailItemId,
-                                              audioIdx, subIdx, startTicks, url, playSessionId)) {
-                    SYS_Report("[LibraryView] getTranscodingUrl failed: %s — using fallback\n",
-                               client.lastError().c_str());
-                    // Fallback: build URL directly (may result in direct play on server)
-                    char fallback[1024];
-                    if (subIdx >= 0) {
-                        snprintf(fallback, sizeof(fallback),
-                            "%s/Videos/%s/stream?Static=false&MediaSourceId=%s"
-                            "&VideoCodec=mpeg4&AudioCodec=mp3&Container=ts"
-                            "&MaxWidth=640&MaxHeight=480"
-                            "&VideoBitrate=%d&AudioBitrate=128000"
-                            "&AllowVideoStreamCopy=false&AllowAudioStreamCopy=false"
-                            "&AudioStreamIndex=%d&SubtitleStreamIndex=%d&ApiKey=%s",
-                            serverUrl.c_str(), detailItemId.c_str(), detailItemId.c_str(),
-                            client.videoBitrate(), audioIdx, subIdx, auth.accessToken.c_str());
-                    } else {
-                        snprintf(fallback, sizeof(fallback),
-                            "%s/Videos/%s/stream?Static=false&MediaSourceId=%s"
-                            "&VideoCodec=mpeg4&AudioCodec=mp3&Container=ts"
-                            "&MaxWidth=640&MaxHeight=480"
-                            "&VideoBitrate=%d&AudioBitrate=128000"
-                            "&AllowVideoStreamCopy=false&AllowAudioStreamCopy=false"
-                            "&AudioStreamIndex=%d&ApiKey=%s",
-                            serverUrl.c_str(), detailItemId.c_str(), detailItemId.c_str(),
-                            client.videoBitrate(), audioIdx, auth.accessToken.c_str());
-                    }
-                    url = fallback;
-                }
-                pendingPlayUrl = url;
-                pendingPlayTitle = detail.name;
-                pendingPlayItemId = detailItemId;
-                pendingPlayMediaSourceId = detailItemId;
-                pendingPlaySessionId = playSessionId;
-                pendingPlayStartTimeTicks = startTicks;
-                pendingPlayRuntimeTicks  = detail.runtimeTicks;
-                // Audio / subtitle stream lists for in-player track switching
-                pendingPlayAudioStreams = detail.audioStreams;
-                pendingPlaySubStreams   = detail.subtitleStreams;
-                pendingPlayAudioIdx = (detailAudioSel < (int)detail.audioStreams.size())
-                                      ? detail.audioStreams[detailAudioSel].index : 0;
-                pendingPlaySubIdx   = (detailSubSel >= 0 && detailSubSel < (int)detail.subtitleStreams.size())
-                                      ? detail.subtitleStreams[detailSubSel].index : -1;
-                // Propagate episode list context for the player overlay
-                if (detailIsEpisode && !episodes.empty()) {
-                    pendingPlayEpisodes   = episodes;
-                    pendingPlaySeriesId   = currentSeriesId;
-                    pendingPlayEpisodeIdx = 0;
-                    for (int i = 0; i < (int)episodes.size(); ++i) {
-                        if (episodes[i].id == detailItemId) {
-                            pendingPlayEpisodeIdx = i;
-                            break;
-                        }
-                    }
-                } else {
-                    pendingPlayEpisodes.clear();
-                    pendingPlayEpisodeIdx = 0;
-                    pendingPlaySeriesId.clear();
-                }
+                preparePlay(0LL);
                 return true;
             }
             if (Input::isBackPressed()) {
@@ -2040,75 +2077,7 @@ bool LibraryView::updateState(ir_t& ir) {
                 return false;
             }
             if (aPressed) {
-                int audioIdx = (!detail.audioStreams.empty())
-                    ? detail.audioStreams[detailAudioSel].index : 0;
-                int subIdx = (detailSubSel >= 0 && !detail.subtitleStreams.empty())
-                    ? detail.subtitleStreams[detailSubSel].index : -1;
-
-                long long startTicks = (resumeSel == 0) ? detail.playbackPositionTicks : 0LL;
-                std::string url;
-                std::string playSessionId;
-                // Show the spinner immediately in both framebuffers so the
-                // film/series detail page is hidden during the network call.
-                drawLoadingFrame();
-                drawLoadingFrame();
-                if (!client.getTranscodingUrl(serverUrl, auth,
-                                              detailItemId, detailItemId,
-                                              audioIdx, subIdx, startTicks, url, playSessionId)) {
-                    SYS_Report("[LibraryView] getTranscodingUrl failed: %s — using fallback\n",
-                               client.lastError().c_str());
-                    char fallback[1024];
-                    if (subIdx >= 0) {
-                        snprintf(fallback, sizeof(fallback),
-                            "%s/Videos/%s/stream?Static=false&MediaSourceId=%s"
-                            "&VideoCodec=mpeg4&AudioCodec=mp3&Container=ts"
-                            "&MaxWidth=640&MaxHeight=480"
-                            "&VideoBitrate=%d&AudioBitrate=128000"
-                            "&AllowVideoStreamCopy=false&AllowAudioStreamCopy=false"
-                            "&AudioStreamIndex=%d&SubtitleStreamIndex=%d&ApiKey=%s",
-                            serverUrl.c_str(), detailItemId.c_str(), detailItemId.c_str(),
-                            client.videoBitrate(), audioIdx, subIdx, auth.accessToken.c_str());
-                    } else {
-                        snprintf(fallback, sizeof(fallback),
-                            "%s/Videos/%s/stream?Static=false&MediaSourceId=%s"
-                            "&VideoCodec=mpeg4&AudioCodec=mp3&Container=ts"
-                            "&MaxWidth=640&MaxHeight=480"
-                            "&VideoBitrate=%d&AudioBitrate=128000"
-                            "&AllowVideoStreamCopy=false&AllowAudioStreamCopy=false"
-                            "&AudioStreamIndex=%d&ApiKey=%s",
-                            serverUrl.c_str(), detailItemId.c_str(), detailItemId.c_str(),
-                            client.videoBitrate(), audioIdx, auth.accessToken.c_str());
-                    }
-                    url = fallback;
-                }
-                pendingPlayUrl            = url;
-                pendingPlayTitle          = detail.name;
-                pendingPlayItemId         = detailItemId;
-                pendingPlayMediaSourceId  = detailItemId;
-                pendingPlaySessionId      = playSessionId;
-                pendingPlayStartTimeTicks = startTicks;
-                pendingPlayRuntimeTicks   = detail.runtimeTicks;
-                pendingPlayAudioStreams    = detail.audioStreams;
-                pendingPlaySubStreams      = detail.subtitleStreams;
-                pendingPlayAudioIdx = (detailAudioSel < (int)detail.audioStreams.size())
-                                      ? detail.audioStreams[detailAudioSel].index : 0;
-                pendingPlaySubIdx   = (detailSubSel >= 0 && detailSubSel < (int)detail.subtitleStreams.size())
-                                      ? detail.subtitleStreams[detailSubSel].index : -1;
-                if (detailIsEpisode && !episodes.empty()) {
-                    pendingPlayEpisodes   = episodes;
-                    pendingPlaySeriesId   = currentSeriesId;
-                    pendingPlayEpisodeIdx = 0;
-                    for (int i = 0; i < (int)episodes.size(); ++i) {
-                        if (episodes[i].id == detailItemId) {
-                            pendingPlayEpisodeIdx = i;
-                            break;
-                        }
-                    }
-                } else {
-                    pendingPlayEpisodes.clear();
-                    pendingPlayEpisodeIdx = 0;
-                    pendingPlaySeriesId.clear();
-                }
+                preparePlay(resumeSel == 0 ? detail.playbackPositionTicks : 0LL);
                 return true;
             }
             return false;
@@ -2777,8 +2746,8 @@ void LibraryView::render(ir_t& ir) {
             Ui::text(LIST_X + 16, ry + 11, name.c_str(), 18, Ui::mix(p.text, p.accentDark, f));
         }
         Ui::scrollbar(614, LIST_Y + 2, ITEMS_VISIBLE * ROW_H - 6, seasonTop, ITEMS_VISIBLE, n);
-        const Ui::Hint l[] = { { "A", "Select" }, { "B", "Back" } };
-        Ui::footer(l, 2);
+        const Ui::Hint l[] = { { "A", "Select" }, { "2", "Shuffle" }, { "B", "Back" } };
+        Ui::footer(l, 3);
     }
 
     // ---- Episode list ----
@@ -2815,8 +2784,8 @@ void LibraryView::render(ir_t& ir) {
             Ui::text(tx, ry + 11, labelStr.c_str(), 18, Ui::mix(p.text, p.accentDark, f));
         }
         Ui::scrollbar(614, LIST_Y + 2, ITEMS_VISIBLE * ROW_H - 6, episodeTop, ITEMS_VISIBLE, n);
-        const Ui::Hint l[] = { { "A", "Details" }, { "B", "Back" } };
-        Ui::footer(l, 2);
+        const Ui::Hint l[] = { { "A", "Details" }, { "2", "Shuffle" }, { "B", "Back" } };
+        Ui::footer(l, 3);
     }
 
     // ---- Music track list ----

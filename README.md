@@ -34,7 +34,7 @@ It provides a lightweight, console-friendly media browsing and playback experien
 - **Library browsing**: movies, TV shows, music libraries with cover art loaded from the server
 - **Detail view**: synopsis, rating, genres, cast, director, audio/subtitle track selection
 - **Continue Watching** and **Next Up** rows
-- **TV shows**: season and episode navigation
+- **TV shows**: season and episode navigation, **shuffle** (button 2: the whole series from the season list, one season from its episode list), next episode plays automatically
 - **Video playback**: server-side transcoding streamed through the integrated MPlayer CE engine
 - **Music playback**: audio libraries, album/track navigation
 - **Player overlay**: seek bar, volume control, next/prev episode, audio & subtitle track switching, intro skip
