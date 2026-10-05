@@ -38,6 +38,8 @@ The patch is in `libs/mplayer-ce/wii_player_patch.diff` and covers:
 - Fix `ov_gx_draw()` loading indicator ordering (before `ov_visible` check)
 - Jellyfin known-duration fallback when MPEG-TS demuxer cannot determine length
 
+> **Video output is provided by WiiFin.** `source/player/vo_wiifin.c` defines `video_out_gx` and the `mpgx*`/`mpviClear` entry points that the rest of the library calls, so the linker never pulls `vo_gx.o` / `gx_supp.o` from `libmplayer.a`. The GX/overlay changes listed above (overlay callbacks, XFB allocation, `ov_gx_draw()`) are therefore unused: WiiFin keeps GRRLIB running, MPlayer runs on its own thread and only hands decoded frames over as textures. If you rebuild the library, keep the `vo_gx.o` and `gx_supp.o` symbol sets unchanged or update `vo_wiifin.c` accordingly.
+
 Apply with:
 
 ```bash
@@ -129,6 +131,8 @@ The `--start-group`/`--end-group` flags in `WiiFin/Makefile` handle circular ref
 ---
 
 ## 6. Add Wii HTTP/HTTPS stream modules
+
+> **Superseded at link time.** `source/player/stream_wiifin.cpp` defines `stream_info_http_wii` / `stream_info_https_wii`, so the archive's `stream_http_wii.o` / `stream_https_wii.o` are no longer linked. Their chunked-transfer parser lost sync when a chunk-size line was split across two reads (common on Wi-Fi or behind a reverse proxy) and ended the stream after a few KB. The steps below only matter if you want the library to stay self-contained.
 
 `libmplayer.a` has no built-in HTTP stream handler (only `stream_ffmpeg` for `ffmpeg://`). WiiFin ships two custom stream modules:
 
