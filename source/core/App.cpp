@@ -1250,6 +1250,7 @@ void App::loop() {
     GRRLIB_FreeTTF(font);
     GRRLIB_FreeTTF(jpFont);
     GRRLIB_Exit();
+    ConnectView::shutdownUsbKeyboard();
     WPAD_Shutdown();
     if (g_app_powerOff)        SYS_ResetSystem(SYS_POWEROFF,    0, 0);
     else if (s_restartApp) exit(0);  // HBC catches exit(0) and reloads the app

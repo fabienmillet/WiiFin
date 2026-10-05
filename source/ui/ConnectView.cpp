@@ -146,9 +146,21 @@ void ConnectView::setFields(const std::string& url, const std::string& uname) {
     serverUrl  = fields[0];
 }
 
+/* USB keyboard: started once for the whole run, stopped before leaving.
+ * KEYBOARD_Init queues USB requests again on every call, and its thread
+ * keeps polling USB: started at each visit of this screen and never
+ * stopped, a request still in flight when IOS shut down for power-off or
+ * exit completed into freed memory (DSI in __usbv0_messageCB). */
+static int s_usbKb = 0;            /* 0 not tried, 1 running, -1 failed */
+
 void ConnectView::initUsbKeyboard() {
-    if (KEYBOARD_Init(usbCallback) >= 0)
-        usbKbInited = true;
+    if (s_usbKb == 0) s_usbKb = KEYBOARD_Init(usbCallback) >= 0 ? 1 : -1;
+    usbKbInited = s_usbKb > 0;
+}
+
+void ConnectView::shutdownUsbKeyboard() {
+    if (s_usbKb > 0) KEYBOARD_Deinit();
+    s_usbKb = 0;
 }
 
 void ConnectView::setStatus(const std::string& msg, bool isError) {

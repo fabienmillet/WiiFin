@@ -60,6 +60,10 @@ private:
     // USB keyboard support
     bool usbKbInited = false;
     void initUsbKeyboard();
+public:
+    /* Before the app leaves (IOS shuts USB down): stops the USB keyboard. */
+    static void shutdownUsbKeyboard();
+private:
 
     // --- Status message ---
     std::string statusMsg;
