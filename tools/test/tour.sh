@@ -23,13 +23,17 @@
 #      MARKER=1    white frame + Start sound 12 s in, audio dump: for measure_av.py
 #      EXTRA_SED   shell command run in out/build before building
 #      REPO        source tree to build (default: this repository)
+#      NOPROFILE=1 no profile or settings built in: they come from wiifin.cfg
+#      BUILD_ONLY=1 stop once out/build/WiiFin.dol is built (no Dolphin run)
 #      DOLPHIN_ARGS, DOLPHIN_INI_EXTRA (lines for Dolphin.ini [Core]),
 #      DOLPHIN (default dolphin-emu; needs a real video backend for the dump)
 #
 # Results: out/frames/*.png (and sheet.png side by side), out/log.txt
 T=$(dirname "$(realpath "$0")"); REPO=$(realpath "${REPO:-$T/../..}")
-[ -f "$T/out/session" ] || { echo "no out/session: start tools/test/server.sh first"; exit 1; }
-{ read -r TOKEN; read -r USERID; } < "$T/out/session"
+if [ -z "$NOPROFILE" ]; then
+    [ -f "$T/out/session" ] || { echo "no out/session: start tools/test/server.sh first"; exit 1; }
+    { read -r TOKEN; read -r USERID; } < "$T/out/session"
+fi
 B=$T/out/build
 rm -rf "$B"; mkdir -p "$B"
 rsync -a --exclude /build --exclude .git --exclude /tools/test/out --exclude /tools/test/media \
@@ -87,9 +91,11 @@ open(p, 'w').write(s)
 
 p = 'source/core/App.cpp'; s = open(p).read()
 old = '    loadSettings();\n'
-assert old in s, 'App::loadSettings call changed: update tools/test/tour.sh'
+if e.get('NOPROFILE'):
+    old = None   # profile and settings come from wiifin.cfg
+assert old is None or old in s, 'App::loadSettings call changed: update tools/test/tour.sh'
 theme = {'light': 'Light', 'flix': 'Flix'}.get(e.get('THEME', ''), 'Dark')
-s = s.replace(old, old + '''    profiles.clear();
+if old: s = s.replace(old, old + '''    profiles.clear();
     { SavedProfile sp; sp.serverUrl = "%s"; sp.username = "wii"; sp.serverName = "Jellyfin Test";
       sp.userId = "%s"; sp.accessToken = "%s"; profiles.push_back(sp); }
     Ui::setTheme(Ui::Theme::%s);
@@ -103,6 +109,7 @@ PY
 export DEVKITPRO=${DEVKITPRO:-/opt/devkitpro} DEVKITPPC=${DEVKITPPC:-/opt/devkitpro/devkitPPC}
 PATH=$DEVKITPRO/tools/bin:$PATH make -j"$(nproc)" 2>&1 | grep -E ' error|error:' | head -5
 [ -f WiiFin.dol ] || { echo "build failed"; exit 1; }
+[ -n "$BUILD_ONLY" ] && { echo "built $B/WiiFin.dol"; exit 0; }
 
 U=$T/out/dolphin; rm -rf "$U"; mkdir -p "$U/Config"
 printf '[Options]\nVerbosity = 3\nWriteToConsole = False\nWriteToFile = True\n[Logs]\nOSREPORT = True\n' \

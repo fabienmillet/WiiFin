@@ -7,11 +7,12 @@ and both folders are ignored by git.
 
 | Script | Purpose |
 |---|---|
-| `make_media.sh` | Generates the test library with ffmpeg (~700 MB, run once). |
+| `make_media.sh [name...]` | Generates the test library with ffmpeg (~700 MB, run once), or only the named parts (`counter`, `xvid`, `shows`, `sync`, `playback`…). |
 | `server.sh [rate]` | Starts Jellyfin in Docker with that library (user `wii` / `wii`). It listens on 18096 directly and on 18080 through nginx, which throttles video to `rate` (default `180k`). `server.sh stop` stops it. `ONLY=sync` serves a single folder. |
 | `tour.sh "<script>" "<seconds>" [duration]` | Builds a patched copy (scripted buttons, no pointer, a profile for the test server), runs it in Dolphin, then saves frames to `out/frames/` and the log to `out/log.txt`. |
 | `measure_av.py` | Measures the picture/sound offset from a `tour.sh` run on Sync Test. |
 | `smoke.sh [WiiFin.wad\|WiiFin.dol]` | Boots the build in Dolphin and checks that it reaches its menu. CI runs it on every build. |
+| `playback.sh [dol]` | Plays Counter Film from the start, seeks +10 s, then resumes Xvid Film at 0:45, with the buttons of `playback.script`. Each stream must start, its video must advance and decode without errors. CI runs it on every build. |
 
 ## Examples
 
@@ -31,6 +32,11 @@ SERVER=http://127.0.0.1:18096 FIRSTRUN=1 THEME=light tools/test/tour.sh "" "5 10
 ONLY=sync tools/test/server.sh
 MARKER=1 tools/test/tour.sh "<script that plays Sync Test>" "" 60
 tools/test/measure_av.py
+
+# The CI playback check
+tools/test/make_media.sh playback && ONLY=playback tools/test/server.sh
+NOPROFILE=1 BUILD_ONLY=1 tools/test/tour.sh "$(cat tools/test/playback.script)"
+tools/test/playback.sh
 
 tools/test/server.sh stop
 ```

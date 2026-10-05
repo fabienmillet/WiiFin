@@ -2,7 +2,8 @@ name: Build
 
 # On every push and pull request: builds WiiFin.dol, WiiFin.wad and the
 # Homebrew Channel package (downloadable artifacts), boots the WAD and the
-# DOL in Dolphin to check WiiFin reaches its menu.
+# DOL in Dolphin to check WiiFin reaches its menu, and plays videos from a
+# Jellyfin in Docker (tools/test/playback.sh).
 #
 # By hand (Actions > Build > Run workflow), a version can be stamped into
 # the build, and with "release" ticked a GitHub release v<version> is
@@ -45,7 +46,7 @@ jobs:
         run: |
           apt-get update -q
           apt-get install -y --no-install-recommends \
-            git make curl tar bzip2 xxd pkg-config python3 python3-venv imagemagick zip
+            git make curl tar bzip2 xxd pkg-config python3 python3-venv imagemagick zip rsync
 
       - name: Version
         id: version
@@ -95,6 +96,20 @@ jobs:
             WiiFin.wad
             WiiFin-hbc.zip
 
+      # The same WiiFin with the button presses of tools/test/playback.script
+      # instead of a controller, for the playback job
+      - name: Playback test build
+        shell: bash
+        run: |
+          NOPROFILE=1 BUILD_ONLY=1 tools/test/tour.sh "$(cat tools/test/playback.script)"
+          cp tools/test/out/build/WiiFin.dol WiiFin-playback.dol
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WiiFin-playback-test
+          path: WiiFin-playback.dol
+          retention-days: 7
+
   smoke:
     needs: build
     runs-on: ubuntu-24.04
@@ -122,9 +137,45 @@ jobs:
       - name: Boot the DOL
         run: dbus-run-session -- xvfb-run -a tools/test/smoke.sh WiiFin.dol 180
 
+  playback:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools/test
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: WiiFin-playback-test
+
+      - name: Dolphin and ffmpeg
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends flatpak xvfb xauth dbus ffmpeg fonts-dejavu-core
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y --noninteractive flathub org.DolphinEmu.dolphin-emu
+
+      # Counter Film (h264) and Xvid Film, served alone by Jellyfin in Docker
+      - name: Jellyfin
+        run: |
+          tools/test/make_media.sh playback
+          ONLY=playback tools/test/server.sh
+
+      - name: Play, seek and resume
+        run: dbus-run-session -- xvfb-run -a tools/test/playback.sh WiiFin-playback.dol 600
+
+      - name: Keep the log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playback-log
+          path: tools/test/out/playback/log.txt
+          retention-days: 7
+
   release:
     if: inputs.release
-    needs: [build, smoke]
+    needs: [build, smoke, playback]
     runs-on: ubuntu-latest
     permissions:
       contents: write
