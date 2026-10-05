@@ -2364,6 +2364,13 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     if (forceReencode) {
         urlReplaceParam(relUrl, "AllowVideoStreamCopy", "false");
         urlReplaceParam(relUrl, "AllowAudioStreamCopy", "false");
+    } else if (startTimeTicks > 0) {
+        // A DivX/Xvid source is copied as is, keyframes included (often 10 s
+        // apart).  Cut mid-file, the stream opens on B-frames referring to
+        // the previous GOP: MPlayer's decoder then fails every picture up to
+        // the next keyframe, the sound playing over a black screen.  A
+        // re-encode starts clean, with a keyframe every half second.
+        urlReplaceParam(relUrl, "AllowVideoStreamCopy", "false");
     }
     outUrl = addScheme(serverUrl) + relUrl;
     {
