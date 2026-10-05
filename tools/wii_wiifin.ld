@@ -56,6 +56,7 @@ SECTIONS {
                 *(SORT(.text.sorted.*))
                 *(.text .iplt .stub .text.* .gnu.linkonce.t.*)
                 KEEP( *(SORT_NONE(.fini)) )
+                . = ALIGN(32);   /* DOL loaders round section sizes up to 32 bytes */
         } :text = 0
 
         . = ALIGN(32);
@@ -129,6 +130,7 @@ SECTIONS {
                 *(.sdata .sdata.* .gnu.linkonce.s.*)
                 *(.lit8)
                 *(.lit4)
+                . = ALIGN(32);   /* DOL loaders round section sizes up to 32 bytes */
         } :data = 0
 
         /* ------------------------------------------------------------------ */
@@ -140,6 +142,21 @@ SECTIONS {
                 *(.sbss .sbss.* .gnu.linkonce.sb.*)
                 *(.scommon)
         } :bss
+
+        /* NAND-loader stub zone (0x80804000-0x80831E40): App copies the stub
+         * back there right before returning to the Wii Menu, overwriting it.
+         * Only buffers that are dead by then (DEAD_AT_EXIT, see
+         * source/core/ExitZone.h) may sit in it; all other BSS starts past
+         * its end.  If the dead buffers don't reach that far, the rest of the
+         * zone is simply left unused. */
+        .bss.dead (NOLOAD) : {
+                *(.bss.dead_at_exit)
+        } :bss
+
+        ASSERT(ADDR(.bss.dead) <= 0x80804000,
+               "data/sbss grew into the NAND-loader stub zone at 0x80804000")
+
+        . = MAX(., 0x80831E40);
 
         .bss (NOLOAD) : {
                 *(.dynbss)
@@ -162,6 +179,7 @@ SECTIONS {
                 *cacert_pem.o(.data .data.*)
                 *music_mp3.o(.data .data.*)
                 *stub_zone.o(.stub_zone)
+                . = ALIGN(32);   /* DOL loaders round section sizes up to 32 bytes */
         } :text2 = 0
 
         . = ADDR(.data.blobs) + SIZEOF(.data.blobs);

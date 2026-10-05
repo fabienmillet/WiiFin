@@ -12,6 +12,8 @@
 #define MBEDTLS_CONFIG_H
 
 /* ---- System / Platform ---- */
+/* PowerPC assembly for bignum multiply (bn_mul.h): ~2x faster RSA / ECDHE */
+#define MBEDTLS_HAVE_ASM
 /* No file system */
 // #define MBEDTLS_FS_IO
 /* No arc4random / getrandom — we provide entropy via libogc HW timer */
@@ -48,6 +50,8 @@
 #define MBEDTLS_ECP_DP_SECP256R1_ENABLED
 #define MBEDTLS_ECP_DP_SECP384R1_ENABLED
 #define MBEDTLS_ECP_DP_SECP521R1_ENABLED
+#define MBEDTLS_ECP_DP_CURVE25519_ENABLED   /* X25519: cheapest key exchange */
+#define MBEDTLS_ECP_NIST_OPTIM              /* fast modular reduction for P-256/384 */
 #define MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
 #define MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED  /* Cloudflare uses ECDSA certs */
 #define MBEDTLS_KEY_EXCHANGE_RSA_ENABLED

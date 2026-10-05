@@ -62,6 +62,8 @@ It provides a lightweight, console-friendly media browsing and playback experien
 
 ### Building:
 
+On a fresh machine, `./setup.sh` installs devkitPro and the portlibs, builds GRRLIB and mbedTLS, then compiles WiiFin (Arch-based distros, or any host with `dkp-pacman`).
+
 ```bash
 ./build.sh
 ```
