@@ -967,6 +967,48 @@ static bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
         }
 }
 
+/* First launch: CRT TVs cut the edges of the picture (overscan) and their
+ * owners rarely find Settings > Screen Area by themselves.  Offered once. */
+void App::offerScreenCalibration(ir_t& ir) {
+    int l, t, r, b;
+    Ui::safeArea(l, t, r, b);
+    if (screenAreaAsked || l || t || r || b) { screenAreaAsked = true; return; }
+    screenAreaAsked = true;
+    const Ui::Palette& p = Ui::pal();
+    for (;;) {
+        Input::update();
+        Input::readIR(ir);
+        if (g_app_powerOff || g_app_reset) return;
+        if (Input::isBackPressed()) break;
+        if (Input::isAJustPressed()) {
+            SoundFX::play(SoundFX::FX::Start);
+            SettingsView sv(btnTex, font, jellyfinClient, musicEnabled);
+            sv.startCalibration();
+            while (sv.isCalibrating() && !g_app_powerOff && !g_app_reset) {
+                Input::update();
+                Input::readIR(ir);
+                sv.update(ir);
+                sv.render(ir);
+                GRRLIB_Render();
+            }
+            break;
+        }
+        Ui::background(false);
+        Ui::card(70, 120, 500, 190, 18, 0.0f);
+        Ui::textCentered(320, 140, "Does the whole picture fit your TV?", 22, p.text);
+        Ui::textCentered(320, 182, "Older TVs (CRT) often cut the edges of the picture.", 15, p.textDim);
+        Ui::textCentered(320, 204, "You can shrink it to fit now, or later in", 15, p.textDim);
+        Ui::textCentered(320, 226, "Settings > Screen Area.", 15, p.textDim);
+        Ui::button(170, 256, 140, 40, "Adjust", 18, Ui::pulse());
+        Ui::button(330, 256, 140, 40, "Not now", 18, 0.0f);
+        const Ui::Hint l2[] = { { "A", "Adjust" } };
+        const Ui::Hint r2[] = { { "B", "Not now" } };
+        Ui::bottomBar(l2, 1, r2, 1);
+        GRRLIB_Render();
+    }
+    saveSettings();
+}
+
 void App::loop() {
     ir_t ir;
     int  selectedIndex = 0;
@@ -1147,6 +1189,8 @@ void App::loop() {
             }
         }
     };
+
+    offerScreenCalibration(ir);
 
     while (running) {
         Input::update();   // calls WPAD_ScanPads() internally
@@ -1336,6 +1380,8 @@ void App::loadSettings() {
             if (v >= 0 && v < Ui::LIBRARY_STYLE_COUNT) Ui::setLibraryStyle((Ui::LibraryStyle)v);
         } else if (strcmp(key, "home_layout") == 0) {
             Ui::setHomeLayout(atoi(val) == 1 ? Ui::HomeLayout::Rows : Ui::HomeLayout::Grid);
+        } else if (strcmp(key, "screen_area_asked") == 0) {
+            screenAreaAsked = atoi(val) != 0;
         } else if (strcmp(key, "safe_area") == 0) {
             int l = 0, t = 0, r = 0, b = 0;
             if (sscanf(val, "%d,%d,%d,%d", &l, &t, &r, &b) == 4) Ui::setSafeArea(l, t, r, b);
@@ -1407,6 +1453,7 @@ void App::saveSettings() {
         Ui::safeArea(l, t, r, b);
         fprintf(f, "safe_area=%d,%d,%d,%d\n", l, t, r, b);
     }
+    fprintf(f, "screen_area_asked=%d\n", screenAreaAsked ? 1 : 0);
     fprintf(f, "profile_count=%d\n",   (int)profiles.size());
     for (int i = 0; i < (int)profiles.size(); i++) {
         const SavedProfile& p = profiles[i];

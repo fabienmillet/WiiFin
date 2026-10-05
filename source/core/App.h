@@ -29,4 +29,6 @@ private:
     ir_t ir;
     JellyfinClient jellyfinClient;
     bool musicEnabled = true;
+    bool screenAreaAsked = false;      // first-launch offer to fit the TV made
+    void offerScreenCalibration(ir_t& ir);
 };

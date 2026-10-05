@@ -11,6 +11,10 @@ public:
     bool update(ir_t& ir);
     void render(ir_t& ir);
 
+    // Opens the screen-area calibration directly (first-launch offer).
+    void startCalibration() { calibrating = true; calCorner = 0; }
+    bool isCalibrating() const { return calibrating; }
+
 private:
     GRRLIB_texImg*  btnTex;
     GRRLIB_ttfFont* font;
