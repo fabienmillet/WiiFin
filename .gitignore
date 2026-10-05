@@ -6,6 +6,9 @@ build/
 *.wad
 !tools/wad/template.wad
 tools/.venv/
+# tools/test: generated media, builds, Dolphin folders, frames
+tools/test/media/
+tools/test/out/
 *.su
 GRRLIB_core.o
 

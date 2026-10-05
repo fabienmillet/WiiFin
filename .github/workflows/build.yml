@@ -1,9 +1,11 @@
 name: Build
 
 # Run by hand (Actions > Build > Run workflow): builds WiiFin.dol, WiiFin.wad
-# and the Homebrew Channel package as downloadable artifacts.  With a
+# and the Homebrew Channel package as downloadable artifacts, then boots the
+# WAD and the DOL in Dolphin to check WiiFin reaches its menu.  With a
 # version, that version is stamped into the build; with "release" ticked, a
-# GitHub release v<version> is published with the three files.
+# GitHub release v<version> is published with the three files once both
+# boot.
 on:
   workflow_dispatch:
     inputs:
@@ -22,8 +24,8 @@ jobs:
     # devkitPPC, libogc and the portlibs come with the image: setup.sh then
     # finds them installed and never calls devkitPro's package server.
     container: devkitpro/devkitppc:latest
-    permissions:
-      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - uses: actions/checkout@v4
@@ -79,12 +81,48 @@ jobs:
             WiiFin.wad
             WiiFin-hbc.zip
 
-      - name: Release
-        if: inputs.release
-        uses: softprops/action-gh-release@v2
+  smoke:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: WiiFin v${{ steps.version.outputs.version }}
+          sparse-checkout: tools/test
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: WiiFin-${{ needs.build.outputs.version }}
+
+      # Dolphin's Linux build is a Flatpak; its Qt front end needs a display
+      # (xvfb-run) and a session bus (dbus-run-session)
+      - name: Dolphin
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends flatpak xvfb xauth dbus
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y --noninteractive flathub org.DolphinEmu.dolphin-emu
+
+      - name: Boot the WAD
+        run: dbus-run-session -- xvfb-run -a tools/test/smoke.sh WiiFin.wad 180
+
+      - name: Boot the DOL
+        run: dbus-run-session -- xvfb-run -a tools/test/smoke.sh WiiFin.dol 180
+
+  release:
+    if: inputs.release
+    needs: [build, smoke]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: WiiFin-${{ needs.build.outputs.version }}
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
+          name: WiiFin v${{ needs.build.outputs.version }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           files: |

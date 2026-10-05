@@ -85,7 +85,7 @@ On a fresh machine, `./setup.sh` installs devkitPro and the portlibs, builds GRR
 ./build.sh wad      # WiiFin.wad, the installable channel (needs libWiiPy, installed by setup.sh)
 ```
 
-The GitHub Actions workflow **Build** (Actions → Build → Run workflow) does the same in devkitPro's Docker image and publishes `WiiFin.dol`, `WiiFin.wad` and the Homebrew Channel zip; give it a version and tick *release* to publish a GitHub release.
+The GitHub Actions workflow **Build** (Actions → Build → Run workflow) does the same in devkitPro's Docker image and publishes `WiiFin.dol`, `WiiFin.wad` and the Homebrew Channel zip. It then boots the WAD and the DOL in Dolphin and checks that WiiFin reaches its menu (`tools/test/smoke.sh`). Give it a version and tick *release* to publish a GitHub release once both boot.
 
 `make wad` puts `WiiFin.dol` into `tools/wad/template.wad` (banner, NAND loader, ticket and TMD of title `WIFN`) and fakesigns it: see `tools/make_wad.py`.
 
@@ -96,6 +96,8 @@ On **Dolphin Emulator**:
 ```bash
 dolphin-emu -e WiiFin.dol
 ```
+
+To test against a local Jellyfin with scripted input and frame captures, see [tools/test](tools/test/README.md).
 
 On **real Wii hardware**: copy `WiiFin.dol` to `SD:/apps/WiiFin/boot.dol`, or install `WiiFin.wad` using a WAD manager (works on vWii too).
 
@@ -112,8 +114,9 @@ WiiFin/
 │   ├── player/      # MPlayer CE integration, player overlay HUD
 │   └── ui/          # All views: Connect, Library, Profile, Settings
 ├── data/            # PNG/TTF graphical assets
-├── libs/            # Bundled mbedTLS
+├── libs/            # Bundled mbedTLS, MPlayer CE build
 ├── tools/           # WAD packager (make_wad.py + template), linker script
+│   └── test/        # Test harness: Jellyfin in Docker, scripted runs in Dolphin
 ├── Makefile         # devkitPro-compatible build script
 └── apps/WiiFin/     # Homebrew Channel metadata
 ```

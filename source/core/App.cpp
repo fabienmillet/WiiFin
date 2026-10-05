@@ -1190,6 +1190,7 @@ void App::loop() {
         }
     };
 
+    SYS_Report("[WiiFin] ready\n");   /* tools/test/smoke.sh waits for this */
     offerScreenCalibration(ir);
 
     while (running) {
