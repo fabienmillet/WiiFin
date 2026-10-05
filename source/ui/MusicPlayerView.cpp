@@ -23,19 +23,18 @@
 #include "../core/Utils.h"
 #include "../player/WiiPlayer.h"
 #include "../core/MusicBGM.h"
+#include "JpegTexture.h"
 
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
-#include <setjmp.h>
 #include <unistd.h>
 #include <ogcsys.h>
 #include <ogc/lwp.h>           /* LWP_CreateThread / LWP_JoinThread */
 #include <ogc/lwp_watchdog.h>  /* gettime(), ticks_to_millisecs()   */
 #include <ogc/video.h>         /* VIDEO_WaitVSync                   */
 #include <wiiuse/wpad.h>
-#include <jpeglib.h>
 
 /* Global power/reset flags (defined in App.cpp) */
 extern volatile bool g_app_powerOff;
@@ -124,123 +123,6 @@ MusicOverlay* MusicOverlay::instance  = nullptr;
 GRRLIB_ttfFont* MusicOverlay::renderFont = nullptr;
 GRRLIB_texImg*  MusicOverlay::renderCursorTex = nullptr;
 GRRLIB_texImg*  MusicOverlay::renderArtTex    = nullptr;
-
-/* -----------------------------------------------------------------------
- * loadJPEGTexture — decode a JPEG image buffer into a GRRLIB texture.
- * Returns nullptr on any error (corrupt data, alloc failure, etc.)
- * Thread-safe: only called from the main thread in MusicPlayerView::run().
- * ----------------------------------------------------------------------- */
-struct MpvJpegErrMgr {
-    struct jpeg_error_mgr pub;
-    jmp_buf               buf;
-};
-static void mpvJpegErrExit(j_common_ptr cinfo) {
-    longjmp(((MpvJpegErrMgr*)cinfo->err)->buf, 1);
-}
-static void mpvJpegNoOp(j_common_ptr) {}
-
-static GRRLIB_texImg* loadJPEGTexture(const u8* data, u32 size)
-{
-    if (size < 3 || data[0] != 0xFF || data[1] != 0xD8 || data[2] != 0xFF)
-        return nullptr;
-
-    struct jpeg_decompress_struct cinfo __attribute__((aligned(32)));
-    MpvJpegErrMgr jerr __attribute__((aligned(32)));
-    unsigned char* strip = nullptr;
-    GRRLIB_texImg* tex   = nullptr;
-
-    cinfo.err = jpeg_std_error(&jerr.pub);
-    jerr.pub.error_exit     = mpvJpegErrExit;
-    jerr.pub.output_message = mpvJpegNoOp;
-
-    if (setjmp(jerr.buf)) {
-        jpeg_destroy_decompress(&cinfo);
-        free(strip);
-        if (tex) { free(tex->data); free(tex); }
-        return nullptr;
-    }
-
-    jpeg_create_decompress(&cinfo);
-    cinfo.progress = nullptr;
-    jpeg_mem_src(&cinfo, data, size);
-    jpeg_read_header(&cinfo, TRUE);
-    cinfo.out_color_space = JCS_RGB;
-    // Speed over exactness: the images are small and already resized by the
-    // server, so the integer DCT and plain chroma upsampling are not visible.
-    cinfo.dct_method          = JDCT_IFAST;
-    cinfo.do_fancy_upsampling = FALSE;
-    jpeg_start_decompress(&cinfo);
-
-    u32 w  = cinfo.output_width;
-    u32 h  = cinfo.output_height;
-    u32 nc = (u32)cinfo.output_components;
-    if (w == 0 || h == 0 || w > 2048 || h > 2048 || nc != 3) {
-        jpeg_abort_decompress(&cinfo);
-        jpeg_destroy_decompress(&cinfo);
-        return nullptr;
-    }
-
-    tex = (GRRLIB_texImg*)calloc(1, sizeof(GRRLIB_texImg));
-    if (!tex) { jpeg_abort_decompress(&cinfo); jpeg_destroy_decompress(&cinfo); return nullptr; }
-
-    u32 bufsize = GX_GetTexBufferSize(w, h, GX_TF_RGBA8, 0, 0);
-    tex->data = memalign(32, bufsize);
-    if (!tex->data) {
-        free(tex); tex = nullptr;
-        jpeg_abort_decompress(&cinfo); jpeg_destroy_decompress(&cinfo); return nullptr;
-    }
-
-    strip = (unsigned char*)malloc(w * 4 * nc);
-    if (!strip) {
-        free(tex->data); free(tex); tex = nullptr;
-        jpeg_abort_decompress(&cinfo); jpeg_destroy_decompress(&cinfo); return nullptr;
-    }
-
-    u8* tileData = (u8*)tex->data;
-    for (u32 by = 0; by < h; by += 4) {
-        int nrows = (int)(h - by);
-        if (nrows > 4) nrows = 4;
-        JSAMPROW rp[4];
-        for (int i = 0; i < 4; i++)
-            rp[i] = strip + (u32)i * w * nc;
-        int done = 0;
-        while (done < nrows && cinfo.output_scanline < h)
-            done += (int)jpeg_read_scanlines(&cinfo, rp + done, (JDIMENSION)(nrows - done));
-        for (u32 bx = 0; bx < w; bx += 4) {
-            for (u8 r = 0; r < 4; r++) {
-                for (u8 c = 0; c < 4; c++) {
-                    u32 sx = bx + c;
-                    u8 red = (sx < w && r < (u8)nrows) ? strip[((u32)r * w + sx) * nc] : 0;
-                    *tileData++ = 0xFF;
-                    *tileData++ = red;
-                }
-            }
-            for (u8 r = 0; r < 4; r++) {
-                for (u8 c = 0; c < 4; c++) {
-                    u32 sx = bx + c;
-                    u8 g = 0, b = 0;
-                    if (sx < w && r < (u8)nrows) {
-                        g = strip[((u32)r * w + sx) * nc + 1];
-                        b = strip[((u32)r * w + sx) * nc + 2];
-                    }
-                    *tileData++ = g;
-                    *tileData++ = b;
-                }
-            }
-        }
-    }
-
-    free(strip);
-    jpeg_finish_decompress(&cinfo);
-    jpeg_destroy_decompress(&cinfo);
-
-    tex->w      = w;
-    tex->h      = h;
-    tex->format = GX_TF_RGBA8;
-    GRRLIB_SetHandle(tex, 0, 0);
-    GRRLIB_FlushTex(tex);
-    return tex;
-}
 
 /* (g_stream_opened_cb sets s_reportNeeded; bgTick queues to async reporter\n * thread which calls reportPlaybackStart without blocking the render loop.) */
 
