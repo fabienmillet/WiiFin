@@ -81,8 +81,13 @@ On-screen hints show the buttons of the controller used last (GameCube: A green,
 On a fresh machine, `./setup.sh` installs devkitPro and the portlibs, builds GRRLIB and mbedTLS, then compiles WiiFin (Arch-based distros, or any host with `dkp-pacman`).
 
 ```bash
-./build.sh
+./build.sh          # WiiFin.dol
+./build.sh wad      # WiiFin.wad, the installable channel (needs libWiiPy, installed by setup.sh)
 ```
+
+The GitHub Actions workflow **Build** (Actions → Build → Run workflow) does the same in devkitPro's Docker image and publishes `WiiFin.dol`, `WiiFin.wad` and the Homebrew Channel zip; give it a version and tick *release* to publish a GitHub release.
+
+`make wad` puts `WiiFin.dol` into `tools/wad/template.wad` (banner, NAND loader, ticket and TMD of title `WIFN`) and fakesigns it: see `tools/make_wad.py`.
 
 ### Running:
 
@@ -108,7 +113,7 @@ WiiFin/
 │   └── ui/          # All views: Connect, Library, Profile, Settings
 ├── data/            # PNG/TTF graphical assets
 ├── libs/            # Bundled mbedTLS
-├── tools/           # WAD packager, banner generator
+├── tools/           # WAD packager (make_wad.py + template), linker script
 ├── Makefile         # devkitPro-compatible build script
 └── apps/WiiFin/     # Homebrew Channel metadata
 ```

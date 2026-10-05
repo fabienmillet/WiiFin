@@ -47,11 +47,14 @@ ok()   { printf '\033[1;32m  ✓\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m  !\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
+# Root already (containers, CI): no sudo, which those images often lack
+if [ "$(id -u)" -eq 0 ]; then SUDO=(); else SUDO=(sudo); fi
+
 # Run a command as root only when the target directory is not writable
 as_root_for() {
 	local dir="$1"; shift
 	while [ ! -e "$dir" ]; do dir="$(dirname "$dir")"; done
-	if [ -w "$dir" ]; then "$@"; else sudo "$@"; fi
+	if [ -w "$dir" ]; then "$@"; else "${SUDO[@]}" "$@"; fi
 }
 
 #---------------------------------------------------------------------------------
@@ -67,7 +70,7 @@ if [ ${#missing[@]} -gt 0 ]; then
 	if command -v pacman >/dev/null 2>&1; then
 		pkgs=(); for t in "${missing[@]}"; do pkgs+=("${HOST_PKG[$t]}"); done
 		info "Installing missing host tools: ${pkgs[*]}"
-		sudo pacman -S --needed --noconfirm "${pkgs[@]}"
+		"${SUDO[@]}" pacman -S --needed --noconfirm "${pkgs[@]}"
 	else
 		die "Missing host tools: ${missing[*]} — install them with your package manager and re-run."
 	fi
@@ -84,10 +87,10 @@ elif command -v pacman >/dev/null 2>&1; then
 	PACMAN=pacman
 	if ! grep -q '^\[dkp-libs\]' /etc/pacman.conf; then
 		info "Adding devkitPro repositories to /etc/pacman.conf"
-		sudo pacman-key --recv "$DKP_KEY" --keyserver keyserver.ubuntu.com
-		sudo pacman-key --lsign "$DKP_KEY"
-		sudo pacman -U --noconfirm https://pkg.devkitpro.org/devkitpro-keyring.pkg.tar.zst
-		sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
+		"${SUDO[@]}" pacman-key --recv "$DKP_KEY" --keyserver keyserver.ubuntu.com
+		"${SUDO[@]}" pacman-key --lsign "$DKP_KEY"
+		"${SUDO[@]}" pacman -U --noconfirm https://pkg.devkitpro.org/devkitpro-keyring.pkg.tar.zst
+		"${SUDO[@]}" tee -a /etc/pacman.conf >/dev/null <<'EOF'
 
 [dkp-libs]
 Server = https://pkg.devkitpro.org/packages
@@ -103,9 +106,19 @@ else
 	die "No pacman found. Install devkitPro first: https://devkitpro.org/wiki/Getting_Started"
 fi
 
-# Arch does not support partial upgrades, so sync + upgrade + install in one go
-info "Installing ${DKP_PACKAGES[*]} (this also upgrades the system on Arch)"
-sudo "$PACMAN" -Syu --needed --noconfirm "${DKP_PACKAGES[@]}"
+# Nothing to do when everything is there (devkitPro's Docker images, CI: their
+# package server rejects too many requests from shared CI machines).
+missing_pkgs=()
+for p in "${DKP_PACKAGES[@]}"; do
+	"$PACMAN" -Q "$p" >/dev/null 2>&1 || "$PACMAN" -Qg "$p" >/dev/null 2>&1 || missing_pkgs+=("$p")
+done
+if [ ${#missing_pkgs[@]} -eq 0 ]; then
+	ok "devkitPro packages already installed"
+else
+	# Arch does not support partial upgrades, so sync + upgrade + install in one go
+	info "Installing ${missing_pkgs[*]} (this also upgrades the system on Arch)"
+	"${SUDO[@]}" "$PACMAN" -Syu --needed --noconfirm "${missing_pkgs[@]}"
+fi
 
 export DEVKITPRO="${DEVKITPRO:-/opt/devkitpro}"
 export DEVKITPPC="${DEVKITPPC:-$DEVKITPRO/devkitPPC}"
@@ -121,7 +134,9 @@ mkdir -p "$DEPS_DIR"
 # 2. GRRLIB + libpngu
 #---------------------------------------------------------------------------------
 PORTLIBS_WII="$DEVKITPRO/portlibs/wii"
-if [ -f "$PORTLIBS_WII/lib/libgrrlib.a" ] && [ -f "$PORTLIBS_WII/lib/libpngu.a" ]; then
+# GRRLIB's install puts libpngu.a in portlibs/ppc, libgrrlib.a in portlibs/wii
+if [ -f "$PORTLIBS_WII/lib/libgrrlib.a" ] &&
+   { [ -f "$PORTLIBS_WII/lib/libpngu.a" ] || [ -f "$DEVKITPRO/portlibs/ppc/lib/libpngu.a" ]; }; then
 	ok "GRRLIB already installed"
 else
 	info "Building GRRLIB + libpngu"
@@ -169,7 +184,20 @@ else
 fi
 
 #---------------------------------------------------------------------------------
-# 4. Sanity checks
+# 4. libWiiPy, for `make wad` (in tools/.venv: no system-wide pip install)
+#---------------------------------------------------------------------------------
+WAD_VENV="$REPO_DIR/tools/.venv"
+if [ -x "$WAD_VENV/bin/python" ] && "$WAD_VENV/bin/python" -c "import libWiiPy" 2>/dev/null; then
+	ok "libWiiPy already installed (tools/.venv)"
+else
+	info "Installing libWiiPy into tools/.venv (WAD packaging)"
+	python3 -m venv "$WAD_VENV" && "$WAD_VENV/bin/pip" install --quiet libWiiPy \
+		&& ok "libWiiPy installed" \
+		|| warn "libWiiPy could not be installed: \`make wad\` will not work"
+fi
+
+#---------------------------------------------------------------------------------
+# 5. Sanity checks
 #---------------------------------------------------------------------------------
 info "Checking portlibs"
 PKG_CONFIG_LIBDIR="$DEVKITPRO/portlibs/ppc/lib/pkgconfig" pkg-config --exists freetype2 libpng libjpeg \
@@ -183,12 +211,15 @@ else
 fi
 
 #---------------------------------------------------------------------------------
-# 5. Build
+# 6. Build
 #---------------------------------------------------------------------------------
 if [ "$DO_BUILD" -eq 1 ]; then
 	info "Building WiiFin"
 	"$REPO_DIR/build.sh"
 	ok "Built $REPO_DIR/WiiFin.dol"
+	if "$REPO_DIR/build.sh" wad >/dev/null; then
+		ok "Built $REPO_DIR/WiiFin.wad"
+	fi
 fi
 
 echo

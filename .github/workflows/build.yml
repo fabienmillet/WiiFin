@@ -1,0 +1,93 @@
+name: Build
+
+# Run by hand (Actions > Build > Run workflow): builds WiiFin.dol, WiiFin.wad
+# and the Homebrew Channel package as downloadable artifacts.  With a
+# version, that version is stamped into the build; with "release" ticked, a
+# GitHub release v<version> is published with the three files.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version, e.g. 0.1.3 (empty: the one in source/version.h + commit)'
+        required: false
+        default: ''
+      release:
+        description: 'Publish a GitHub release v<version> (needs a version)'
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # devkitPPC, libogc and the portlibs come with the image: setup.sh then
+    # finds them installed and never calls devkitPro's package server.
+    container: devkitpro/devkitppc:latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Host tools
+        run: |
+          apt-get update -q
+          apt-get install -y --no-install-recommends \
+            git make curl tar bzip2 xxd pkg-config python3 python3-venv imagemagick zip
+
+      - name: Version
+        id: version
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_RELEASE: ${{ inputs.release }}
+        run: |
+          v="${INPUT_VERSION#v}"
+          if [ -n "$v" ]; then
+            [[ "$v" =~ ^[0-9A-Za-z.+-]+$ ]] || { echo "::error::bad version: $v"; exit 1; }
+            sed -i "s|#define WIIFIN_VERSION \".*\"|#define WIIFIN_VERSION \"$v\"|" source/version.h
+          else
+            [ "$INPUT_RELEASE" = "true" ] && { echo "::error::a release needs a version"; exit 1; }
+            v="$(sed -n 's/.*WIIFIN_VERSION "\(.*\)".*/\1/p' source/version.h)-${GITHUB_SHA::7}"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "WiiFin $v"
+
+      # GRRLIB, mbedTLS (with WiiFin's config) and libWiiPy, then the .dol and .wad
+      - name: Build
+        run: ./setup.sh
+
+      - name: Homebrew Channel package
+        shell: bash
+        run: |
+          v="${{ steps.version.outputs.version }}"
+          mkdir -p pkg/apps/WiiFin
+          cp WiiFin.dol pkg/apps/WiiFin/boot.dol
+          cp apps/WiiFin/meta.xml pkg/apps/WiiFin/meta.xml
+          sed -i "s|<version>.*</version>|<version>$v</version>|" pkg/apps/WiiFin/meta.xml
+          sed -i "s|<release_date>.*</release_date>|<release_date>$(date -u +%Y%m%d%H%M%S)</release_date>|" \
+            pkg/apps/WiiFin/meta.xml
+          # HBC icon: 128x48, the logo centred on transparency
+          convert assets/logo_wiifin.png -trim +repage -resize 128x48 \
+            -background none -gravity center -extent 128x48 pkg/apps/WiiFin/icon.png
+          (cd pkg && zip -qr ../WiiFin-hbc.zip apps)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WiiFin-${{ steps.version.outputs.version }}
+          path: |
+            WiiFin.dol
+            WiiFin.wad
+            WiiFin-hbc.zip
+
+      - name: Release
+        if: inputs.release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: WiiFin v${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: |
+            WiiFin.dol
+            WiiFin.wad
+            WiiFin-hbc.zip

@@ -213,8 +213,19 @@ $(BUILD)/icon_user_png.o: data/images/icon_user.png
 # Safe inclusion of dependency files
 -include $(DEPFILES)
 
+# Installable channel (title WIFN): see tools/make_wad.py.  Needs libWiiPy;
+# setup.sh installs it into tools/.venv, which is used when present.
+WADPY := $(if $(wildcard $(CURDIR)/tools/.venv/bin/python),$(CURDIR)/tools/.venv/bin/python,python3)
+
+wad: $(TARGET).wad
+
+$(TARGET).wad: $(TARGET).dol tools/make_wad.py tools/wad/template.wad tools/stub_zone.bin
+	$(WADPY) tools/make_wad.py $(TARGET).dol $@
+
 clean:
-	rm -rf $(BUILD) $(TARGET).elf $(TARGET).dol $(TARGET).map
+	rm -rf $(BUILD) $(TARGET).elf $(TARGET).dol $(TARGET).map $(TARGET).wad
+
+.PHONY: wad clean run
 
 run: $(TARGET).dol
 	wiiload $(TARGET).dol

@@ -4,6 +4,8 @@ build/
 *.dol
 *.map
 *.wad
+!tools/wad/template.wad
+tools/.venv/
 *.su
 GRRLIB_core.o
 
