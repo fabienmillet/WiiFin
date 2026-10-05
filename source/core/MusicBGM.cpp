@@ -14,7 +14,7 @@ extern unsigned int  data_music_mp3_len;
 static lwp_t         s_thread      = LWP_THREAD_NULL;
 static volatile bool s_running     = false;
 static bool          s_asndRunning = false; /* true while ASND_Init has been called and ASND_End has not */
-static u8            s_stack[16 * 1024];
+static u8            s_stack[16 * 1024] ATTRIBUTE_ALIGN(32);
 
 /* --- MP3Player_Stop with timeout ---
  * MP3Player_Stop can deadlock when the ASND DMA callback state is
@@ -149,7 +149,10 @@ void MusicBGM::resume() {
     SYS_Report("[DBG] MusicBGM::resume ENTER asnd=%d running=%d thread=%p self=%p\n",
                (int)s_asndRunning, (int)s_running, (void*)s_thread,
                (void*)(uintptr_t)LWP_GetSelf());
-    ASND_End();
+    if (s_asndRunning) {   /* pause() normally ended it: never end ASND twice */
+        ASND_End();
+        s_asndRunning = false;
+    }
     ASND_Init();
     ASND_Pause(0);     /* See comment in init() — must unpause after reinit */
     s_asndRunning = true;
