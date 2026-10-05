@@ -1,4 +1,7 @@
 #include "App.h"
+#include "ExitZone.h"
+#include "Text.h"
+#include "../ui/Ui.h"
 #include "Utils.h"
 #include "Input.h"
 #include "MusicBGM.h"
@@ -23,66 +26,32 @@
 #include <sys/stat.h>
 #include <string>
 #include "../player/WiiPlayer.h"
-#include "../player/PlayerOverlay.h"
+#include "../player/PlayerView.h"
+#include "../player/VideoSurface.h"
+#include "Log.h"
+#include "../version.h"
+#include <ogc/ios.h>
+#include "../player/vo_wiifin.h"
+#include "../player/stream_wiifin.h"
+#include <functional>
+#include <ogc/lwp_watchdog.h>
 
-/* Ring spinner PNG embedded asset (declared here for use in runPlaySession) */
+/* Ring spinner PNG embedded asset (music player transition frames) */
 extern unsigned char data_ring_png[];
 extern unsigned int  data_ring_png_len;
-
-/* Assets used by runPlaySession's HOME suspend overlay and doShowHomeOverlay */
-extern unsigned char data_wii_font_ttf[];
-extern unsigned int  data_wii_font_ttf_len;
-extern unsigned char data_button_start_png[];
-extern unsigned int  data_button_start_png_len;
-extern unsigned char data_cursors_PointerP1_64_png[];
-extern unsigned int  data_cursors_PointerP1_64_png_len;
 
 /* Forward declaration — defined later in this file, before App::loop() */
 static bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
                                GRRLIB_texImg* cursorPointerTex, bool musicEnabled);
 
-/* --- GRRLIB loading spinner for the pre-GX phase ---
- * While MPlayer opens the stream, GRRLIB stays active and bgThread
- * calls grrlibSpinnerRender() every frame to draw ring.png rotating. */
-static GRRLIB_texImg* s_loadingRingTex = nullptr;
-static float          s_ringAngle      = 0.0f;
-
-static void grrlibSpinnerRender(void)
-{
-    static int render_count = 0;
-    render_count++;
-    if (render_count <= 3 || (render_count % 60) == 0)
-        SYS_Report("[GRRLIB_spinner] render #%d tex=%p angle=%.0f\n",
-                   render_count, s_loadingRingTex, s_ringAngle);
-    GRRLIB_FillScreen(0x0A1628FF);
-    if (s_loadingRingTex) {
-        GRRLIB_SetMidHandle(s_loadingRingTex, true);
-        GRRLIB_DrawImg(320, 240, s_loadingRingTex, s_ringAngle,
-                       1.0f, 1.0f, 0xFFFFFFFF);
-        GRRLIB_SetMidHandle(s_loadingRingTex, false);
-    }
-    GRRLIB_Render();
-    s_ringAngle += 4.0f;
-    if (s_ringAngle >= 360.0f) s_ringAngle -= 360.0f;
-}
-
-static void grrlibSpinnerCleanup(void)
-{
-    if (s_loadingRingTex) {
-        GRRLIB_FreeTexture(s_loadingRingTex);
-        s_loadingRingTex = nullptr;
-    }
-    GRRLIB_Exit();
-}
-
-/* State captured before wii_player_play() so the mplayer callback can send
- * POST /Sessions/Playing after the stream is opened on the server. */
 volatile bool g_app_powerOff = false;
 volatile bool g_app_reset    = false;
 static volatile bool s_restartApp = false;
 static void onPower() { g_app_powerOff = true; }
 static void onReset(u32, void*) { g_app_reset = true; }
 
+/* State captured before starting a stream so the MPlayer callback can send
+ * POST /Sessions/Playing once the stream is opened on the server. */
 struct {
     JellyfinClient* client;
     std::string serverUrl;
@@ -102,429 +71,466 @@ static void onStreamOpened() {
 }
 
 /* -----------------------------------------------------------------------
- * sanitizeTrackLabel — copies src into dst (max dstSize bytes) converting
- * UTF-8 accented characters to their ASCII base letters so they render
- * correctly on the ASCII-only bitmap font used by vo_gx.c.
- * Any other non-ASCII byte sequence is silently skipped.
+ * runWithPlayerUI — run a blocking Jellyfin call on a worker thread while
+ * the player keeps drawing (last frame + spinner + msg).  The worker runs
+ * below the main thread, i.e. while GRRLIB_Render() waits for vsync.
  * ----------------------------------------------------------------------- */
-static void sanitizeTrackLabel(const char* src, char* dst, size_t dstSize)
+static u8                    s_playWorkStack[64 * 1024] DEAD_AT_EXIT ATTRIBUTE_ALIGN(32);
+static volatile bool         s_playWorkDone;
+static std::function<void()> s_playWorkFn;
+
+static void* playWorker(void*) {
+    s_playWorkFn();
+    s_playWorkDone = true;
+    return nullptr;
+}
+
+static void runWithPlayerUI(PlayerView& view, ir_t& ir, const char* msg,
+                            std::function<void()> fn)
 {
-    if (!dstSize) return;
-    size_t di = 0;
-    const unsigned char* s = (const unsigned char*)src;
-    while (*s && di + 1 < dstSize) {
-        unsigned char c = *s;
-        if (c < 0x80) {
-            dst[di++] = (char)c;
-            s++;
-        } else if (c == 0xC3) {
-            /* U+00C0–U+00FF: Latin-1 Supplement (most French/Spanish/German) */
-            s++;
-            if (!*s) break;
-            unsigned char c2 = *s++;
-            char m = '\0';
-            if      (c2 >= 0x80 && c2 <= 0x85) m = 'a'; /* à á â ã ä å */
-            else if (c2 == 0x87)                m = 'c'; /* ç */
-            else if (c2 >= 0x88 && c2 <= 0x8B) m = 'e'; /* è é ê ë */
-            else if (c2 >= 0x8C && c2 <= 0x8F) m = 'i'; /* ì í î ï */
-            else if (c2 == 0x91)                m = 'n'; /* ñ */
-            else if (c2 >= 0x92 && c2 <= 0x96) m = 'o'; /* ò ó ô õ ö */
-            else if (c2 == 0x98)                m = 'o'; /* ø */
-            else if (c2 >= 0x99 && c2 <= 0x9C) m = 'u'; /* ù ú û ü */
-            else if (c2 == 0x9D || c2 == 0x9F) m = 'y'; /* ý ÿ */
-            else if (c2 >= 0xA0 && c2 <= 0xA5) m = 'A'; /* À Á Â Ã Ä Å */
-            else if (c2 == 0xA7)                m = 'C'; /* Ç */
-            else if (c2 >= 0xA8 && c2 <= 0xAB) m = 'E'; /* È É Ê Ë */
-            else if (c2 >= 0xAC && c2 <= 0xAF) m = 'I'; /* Ì Í Î Ï */
-            else if (c2 == 0xB1)                m = 'N'; /* Ñ */
-            else if (c2 >= 0xB2 && c2 <= 0xB6) m = 'O'; /* Ò Ó Ô Õ Ö */
-            else if (c2 == 0xB8)                m = 'O'; /* Ø */
-            else if (c2 >= 0xB9 && c2 <= 0xBC) m = 'U'; /* Ù Ú Û Ü */
-            else if (c2 == 0xBD || c2 == 0xBE) m = 'Y'; /* Ý Þ */
-            if (m) dst[di++] = m;
-        } else {
-            /* Skip full multi-byte sequence (2–4 bytes) */
-            int extra = (c < 0xE0) ? 1 : (c < 0xF0) ? 2 : 3;
-            s++;
-            for (int k = 0; k < extra && *s; ++k) s++;
-        }
+    view.setBusy(msg);
+    s_playWorkFn   = std::move(fn);
+    s_playWorkDone = false;
+    lwp_t thread;
+    LWP_CreateThread(&thread, playWorker, nullptr,
+                     s_playWorkStack, sizeof(s_playWorkStack), 50);
+    while (!s_playWorkDone) {
+        Input::update();
+        Input::readIR(ir);
+        view.render(ir);
+        GRRLIB_Render();
+        VideoSurface::endFrame();
     }
-    dst[di] = '\0';
+    LWP_JoinThread(thread, nullptr);
+    s_playWorkFn = nullptr;
+}
+
+/* getTranscodingUrl() starts the transcode 3 s before the requested position
+ * (RESUME_PAD) once that position is past 3 s, otherwise at 0. */
+static const long long RESUME_PAD_TICKS = 30000000LL;
+
+static float streamOriginSecs(long long startTicks) {
+    return startTicks > RESUME_PAD_TICKS
+           ? (float)((startTicks - RESUME_PAD_TICKS) / 10000000.0)
+           : 0.0f;
+}
+
+static std::string episodeTitle(const JellyfinEpisode& ep) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "S%d E%d - ", ep.seasonNumber, ep.indexNumber);
+    return buf + ep.name;
+}
+
+/* Full-screen error card: title, two lines of explanation.  With retry, A
+ * retries (returns true) and B goes back; without, A or B closes it. */
+static bool showErrorScreen(const char* title, const std::string& line1,
+                            const std::string& line2, bool retry, ir_t& ir)
+{
+    const Ui::Palette& p = Ui::pal();
+    for (;;) {
+        Input::update();
+        Input::readIR(ir);
+        if (g_app_powerOff || g_app_reset) return false;
+        if (Input::isBackPressed() || (!retry && Input::isAJustPressed())) return false;
+        if (retry && Input::isAJustPressed()) { SoundFX::play(SoundFX::FX::Start); return true; }
+        Ui::background(false);
+        Ui::card(80, 150, 480, 130, 18, 0.0f);
+        Ui::circle(114, 182, 13, p.danger);
+        Ui::textCentered(114, 172, "!", 18, 0xFFFFFFFF);
+        Ui::text(138, 170, title, 20, p.danger);
+        Ui::text(100, 210, line1.c_str(), 15, p.text);
+        Ui::text(100, 236, line2.c_str(), 13, p.textDim);
+        if (retry) {
+            const Ui::Hint l[] = { { "A", "Retry" } };
+            const Ui::Hint r[] = { { "B", "Back" } };
+            Ui::bottomBar(l, 1, r, 1);
+        } else {
+            const Ui::Hint r[] = { { "A", "OK" } };
+            Ui::bottomBar(nullptr, 0, r, 1);
+        }
+        GRRLIB_Render();
+    }
 }
 
 /* -----------------------------------------------------------------------
- * runPlaySession — encapsulates the full play loop for one item.
+ * runPlaySession — plays lv.pendingPlay* and everything chained from it:
+ * next/previous episode, audio/subtitle switches, seeks, automatic retries.
  *
- * It handles:
- *   - building the PlayerOverlayContext
- *   - fetching intro timestamps (for TV episodes)
- *   - the next/prev/audio/sub restart loop
- *
- * Returns true if the user chose "Wii Menu" from the HOME overlay,
- * false for all other stop reasons (EOF, error, back to library).
- * GRRLIB must be active on entry; the function temporarily exits/re-inits
- * GRRLIB around each wii_player_play() call.
+ * GRRLIB stays up the whole time: MPlayer decodes on its own thread and
+ * PlayerView draws the frames together with the player UI.
+ * lastItemId receives the item that was playing when the session ended.
+ * Returns true if the user chose "Wii Menu" or "Reset" from the HOME menu.
  * ----------------------------------------------------------------------- */
 static bool runPlaySession(JellyfinClient& client,
                            const JellyfinAuth& auth,
                            const std::string& serverUrl,
-                           LibraryView& lv)
+                           LibraryView& lv,
+                           GRRLIB_ttfFont* font,
+                           GRRLIB_texImg* btnTex,
+                           GRRLIB_texImg* cursorTex,
+                           GRRLIB_texImg* ringTex,
+                           std::string& lastItemId)
 {
-    /* Working copies of play parameters — updated on next/prev/track change */
-    std::string           itemId        = lv.pendingPlayItemId;
-    std::string           mediaSourceId = lv.pendingPlayMediaSourceId;
-    std::string           playSessionId = lv.pendingPlaySessionId;
-    std::string           url           = lv.pendingPlayUrl;
-    std::vector<JellyfinEpisode> episodes    = lv.pendingPlayEpisodes;
-    int                          episodeIdx  = lv.pendingPlayEpisodeIdx;
+    /* Working copies — updated on next/prev/track change/seek */
+    std::string itemId        = lv.pendingPlayItemId;
+    std::string mediaSourceId = lv.pendingPlayMediaSourceId;
+    std::string playSessionId = lv.pendingPlaySessionId;
+    std::string url           = lv.pendingPlayUrl;
+    std::string title         = lv.pendingPlayTitle;
+    std::vector<JellyfinEpisode> episodes     = lv.pendingPlayEpisodes;
+    int                          episodeIdx   = lv.pendingPlayEpisodeIdx;
     std::vector<MediaStream>     audioStreams = lv.pendingPlayAudioStreams;
     std::vector<MediaStream>     subStreams   = lv.pendingPlaySubStreams;
     int audioIdx = lv.pendingPlayAudioIdx;
     int subIdx   = lv.pendingPlaySubIdx;
+    long long startTicks   = lv.pendingPlayStartTimeTicks;
+    long long runtimeTicks = lv.pendingPlayRuntimeTicks;
 
-    /* The seek offset (100-ns ticks) passed to the Jellyfin transcoder.
-     * Preserved across retries so a premature-EOF retry resumes from the
-     * same position rather than restarting from the beginning. */
-    long long startTimeTicks = lv.pendingPlayStartTimeTicks;
-    /* Known duration from Jellyfin metadata — used as g_wiifin_known_duration
-     * to drive the progress bar when the MPEG-TS demuxer returns 0 for length. */
-    long long runtimeTicks   = lv.pendingPlayRuntimeTicks;
-
-    /* Capture BGM state ONCE before any play session in this call.
-     * Must not be re-captured inside the outer loop: after a track switch
-     * (PLAYER_STOP_AUDIO/SUB) the inner loop skips MusicBGM::resume(), so on
-     * the next outer iteration isRunning() would return false even though BGM
-     * was originally active — causing resume() to be skipped again when the
-     * user finally presses B, leaving ASND dead and all sounds silent. */
+    /* ao_gekko needs the DSP: no menu music while a video plays. */
     bool musicWasRunning = MusicBGM::isRunning();
-    SYS_Report("[runPlay] start music=%d itemId=%s ep=%d\n",
-               (int)musicWasRunning, lv.pendingPlayItemId.c_str(),
-               (int)lv.pendingPlayEpisodes.size());
+    MusicBGM::pause();
+
+    PlayerView view(font, cursorTex, ringTex);
+    ir_t ir;
+    ir.valid = false;
+
+    /* Adaptive quality: repeated rebuffering on this session lowers the
+     * bitrate for the rest of it (the saved setting is left untouched). */
+    const int savedQuality = client.videoQuality;
+    std::vector<u64> rebufferTimes;
+    float qualityRestartAt = -1.0f;
+    IntroInfo intro;
+    bool introFetched = false;
+    int  retries      = 0;
+    bool everPlayed   = false;   /* this item showed something */
+    std::string failWhy;         /* set when giving up: shown to the user */
+    int  reason       = PLAYER_STOP_EOF;
+    bool reported     = false;   /* reportPlaybackStopped already sent */
+    long long posTicks = 0;
 
     for (;;) {
-        /* Pause BGM at the start of every outer iteration so ao_gekko can take
-         * over the AI DMA.  On the first iteration this is the initial pause;
-         * on NEXT/PREV iterations it re-pauses BGM that was resumed at the end
-         * of the previous inner loop.  On AUDIO/SUB iterations it is a no-op
-         * (BGM was never resumed because isTrackSwitch==true). */
-        MusicBGM::pause();
-        SYS_Report("[runPlay] music paused\n");
-
-        /* Build overlay context for this play */
-        PlayerOverlayContext ctx;
-        ctx.episodes     = episodes;
-        ctx.episodeIdx   = episodeIdx;
-        ctx.audioStreams  = audioStreams;
-        ctx.subStreams    = subStreams;
-        ctx.currentAudio = audioIdx;
-        ctx.currentSub   = subIdx;
-        ctx.selectedAudio = audioIdx;
-        ctx.selectedSub   = subIdx;
-        if (!episodes.empty() && episodeIdx < (int)episodes.size())
-            ctx.episodeTitle = episodes[episodeIdx].name;
-
-        /* Try to fetch intro timestamps (for TV episodes) */
-        if (!episodes.empty()) {
-            SYS_Report("[runPlay] getIntroTimestamps start\n");
-            client.getIntroTimestamps(serverUrl, auth, itemId, ctx.intro);
-            SYS_Report("[runPlay] getIntroTimestamps done\n");
+        if (!episodes.empty() && episodeIdx < (int)episodes.size()) {
+            title = episodeTitle(episodes[episodeIdx]);
+            if (!introFetched) {
+                runWithPlayerUI(view, ir, "Loading...", [&]() {
+                    intro = IntroInfo();
+                    client.getIntroTimestamps(serverUrl, auth, itemId, intro);
+                });
+                introFetched = true;
+            }
         }
 
-        PlayerOverlay overlay(ctx);
-        wii_player_set_overlay(&overlay);
+        PlayerViewContext ctx;
+        ctx.title        = title;
+        ctx.episodes     = episodes;
+        ctx.episodeIdx   = episodeIdx;
+        ctx.audioStreams = audioStreams;
+        ctx.subStreams   = subStreams;
+        ctx.currentAudio = audioIdx;
+        ctx.currentSub   = subIdx;
+        ctx.intro        = intro;
+        ctx.streamOrigin = streamOriginSecs(startTicks);
+        /* Skip the RESUME_PAD at demuxer level so output starts on target */
+        ctx.startSkip    = startTicks > RESUME_PAD_TICKS ? 3.0f : 0.0f;
+        ctx.runtime      = (float)(runtimeTicks / 10000000.0);
+        view.setContext(ctx);
 
-        /* Wire up playback-start reporting */
+        /* Fallback stream length when the MPEG-TS demuxer can't find it */
+        g_wiifin_known_duration = ctx.runtime > ctx.streamOrigin
+                                  ? ctx.runtime - ctx.streamOrigin : 0.0f;
+        g_wiifin_ss_secs = ctx.startSkip;
+        g_wiifin_stream_tls_verify = client.sslVerify;
+
         s_pendingReport.client        = &client;
         s_pendingReport.serverUrl     = serverUrl;
         s_pendingReport.auth          = auth;
         s_pendingReport.itemId        = itemId;
         s_pendingReport.mediaSourceId = mediaSourceId;
+        s_pendingReport.playSessionId = playSessionId;
         g_stream_opened_cb = onStreamOpened;
 
-        /* ---- Inner play-retry loop ------------------------------------------
-         * On PLAYER_STOP_ERROR (premature EOF detected in WiiPlayer.cpp), the
-         * Jellyfin transcoder session has most likely expired during the TLS
-         * connection's 504-retry cycle.  Re-acquire a fresh PlaybackInfo session
-         * at the same seek position and retry, up to 3 times total.
-         * -------------------------------------------------------------------- */
-        int reason     = PLAYER_STOP_EOF;
-        int playRetries = 0;
-        for (;;) {
-            /* Update the session id for the playback-start callback */
-            s_pendingReport.playSessionId = playSessionId;
+        view.setBusy("");
+        client.dropConnection();   /* MPlayer closes every socket when it stops */
+        if (!wii_player_start(url.c_str())) break;
 
-            /* ---- Populate GX overlay track lists --------------------------------
-             * Fill audio / sub track arrays so vo_gx.c can draw the pickers.     */
-            {
-                g_wiifin_audio_count   = 0;
-                g_wiifin_current_audio = audioIdx;
-                g_wiifin_selected_audio = audioIdx;
-                int n = (int)audioStreams.size();
-                if (n > WIIFIN_TRACK_MAX) n = WIIFIN_TRACK_MAX;
-                for (int ti = 0; ti < n; ++ti) {
-                    sanitizeTrackLabel(audioStreams[ti].displayTitle.c_str(),
-                                       g_wiifin_audio_tracks[ti].label,
-                                       sizeof(g_wiifin_audio_tracks[ti].label));
-                    g_wiifin_audio_tracks[ti].index = audioStreams[ti].index;
+        /* ---- Playback: UI and MPlayer run side by side ---- */
+        bool stopRequested = false;
+        auto requestStop = [&](int r, const char* msg) {
+            if (stopRequested) return;
+            wii_player_request_stop(r);
+            stopRequested = true;
+            view.setBusy(msg);
+        };
+        /* Watchdog: if MPlayer stops making progress near the end (or for a
+         * long time anywhere), end or restart the stream ourselves. */
+        u64   lastProgressMs = ticks_to_millisecs(gettime());
+        float lastTimePos    = -1.0f;
+        u64   stopAtMs       = 0;
+        bool  ioAborted      = false;
+
+        /* Rebuffering: after its cache ran dry MPlayer resumes as soon as a
+         * few bytes arrive, which stutters endlessly on a link slower than
+         * the stream.  Pause it before the cache is empty and hold it until
+         * a real margin is buffered.
+         * Any command reaching this MPlayer build while it is blocked on an
+         * empty cache aborts the stream, so "pause" is only sent while some
+         * data is left (REBUF_SAFE..REBUF_LOW), and since it is a toggle,
+         * every step acts on the observed g_mplayer_paused. */
+        enum class Rebuf { Idle, PauseSent, Waiting, ResumeSent };
+        const float REBUF_TARGET = 25.0f;   /* % of the 8 MB cache ≈ 10 s      */
+        const float REBUF_LOW    = 3.0f;    /* ≈ 1 s of video ahead: pause now */
+        const float REBUF_SAFE   = 0.5f;    /* below: MPlayer may be blocked   */
+        Rebuf rebuf   = Rebuf::Idle;
+        u64   rebufMs = 0;
+        while (wii_player_is_running()) {
+            Input::update();
+            Input::readIR(ir);
+            if (g_app_powerOff || g_app_reset) requestStop(PLAYER_STOP_EOF, "Stopping...");
+
+            u64 now = ticks_to_millisecs(gettime());
+
+            float fill = cache_fill_status;
+            switch (rebuf) {
+            case Rebuf::Idle:
+                if (g_mplayer_paused && rebufMs && now - rebufMs < 5000) {
+                    rebuf = Rebuf::Waiting;   /* our pause landed after all */
+                    break;
                 }
-                g_wiifin_audio_count = n;
-
-                g_wiifin_sub_count     = 0;
-                g_wiifin_current_sub   = subIdx;
-                g_wiifin_selected_sub  = subIdx;
-                /* Entry 0 is always "Off" */
-                snprintf(g_wiifin_sub_tracks[0].label,
-                         sizeof(g_wiifin_sub_tracks[0].label), "Off");
-                g_wiifin_sub_tracks[0].index = -1;
-                int ns = (int)subStreams.size();
-                if (ns > WIIFIN_TRACK_MAX - 1) ns = WIIFIN_TRACK_MAX - 1;
-                for (int ti = 0; ti < ns; ++ti) {
-                    sanitizeTrackLabel(subStreams[ti].displayTitle.c_str(),
-                                       g_wiifin_sub_tracks[ti + 1].label,
-                                       sizeof(g_wiifin_sub_tracks[ti + 1].label));
-                    g_wiifin_sub_tracks[ti + 1].index = subStreams[ti].index;
+                /* Running low while still playing */
+                if (!stopRequested && !g_mplayer_paused && !g_wiifin_loading_active &&
+                    !view.buffering() && fill >= REBUF_SAFE && fill < REBUF_LOW) {
+                    SYS_Report("[rebuf] cache %.1f%% at %.1f s: pausing\n",
+                               (double)fill, (double)view.position());
+                    wii_player_pause_toggle();
+                    rebuf   = Rebuf::PauseSent;
+                    rebufMs = now;
+                    rebufferTimes.push_back(now);
                 }
-                g_wiifin_sub_count = ns + 1; /* includes "Off" entry */
-            }
-
-            /* Set the known duration so the progress bar works when the
-             * MPEG-TS demuxer cannot determine stream length itself. */
-            g_wiifin_known_duration = (runtimeTicks > 0)
-                                      ? (float)(runtimeTicks / 10000000LL)
-                                      : 0.0f;
-
-            /* Load ring.png and set up GRRLIB spinner callbacks.
-             * GRRLIB stays active — bgThread renders ring.png via
-             * grrlibSpinnerRender() until mpgxInit() calls
-             * grrlibSpinnerCleanup() → GRRLIB_Exit(). */
-            s_loadingRingTex = GRRLIB_LoadTexture(data_ring_png);
-            s_ringAngle = 0.0f;
-            SYS_Report("[App] GRRLIB spinner: tex=%p ringLen=%u\n",
-                       s_loadingRingTex, data_ring_png_len);
-            g_wiifin_grrlib_render_cb  = grrlibSpinnerRender;
-            g_wiifin_grrlib_cleanup_cb = grrlibSpinnerCleanup;
-
-            /* Render one frame immediately so the ring is visible right away */
-            grrlibSpinnerRender();
-
-            /* Tell MPlayer to skip the RESUME_PAD (3 s) at demuxer level when
-             * the Jellyfin URL was back-shifted by that amount — eliminates the
-             * initial 6-second A/V desync produced by Jellyfin's live transcoder
-             * on track switches and position resumes.  Fresh playback from the
-             * start (startTimeTicks == 0) never has a pad, so skip is 0. */
-            g_wiifin_ss_secs = (startTimeTicks > 30000000LL) ? 3.0f : 0.0f;
-            SYS_Report("[App] wii_player_play: startTicks=%lld ss=%.1f\n",
-                       startTimeTicks, (double)g_wiifin_ss_secs);
-            reason = wii_player_play(url.c_str());
-            SYS_Report("[DBG] wii_player_play RETURNED reason=%d loading=%d\n",
-                       reason, (int)g_wiifin_loading_active);
-
-            /* After play returns, GRRLIB was exited by mpgxInit's cleanup.
-             * Re-init it for the app UI. */
-            g_wiifin_grrlib_render_cb  = nullptr;
-            g_wiifin_grrlib_cleanup_cb = nullptr;
-            s_loadingRingTex = nullptr;
-            WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR);
-            WPAD_SetVRes(WPAD_CHAN_0, 640, 480);
-            SYS_Report("[DBG] GRRLIB_Init() CALLING @ runPlaySession return\\n");
-            GRRLIB_Init();
-            SYS_Report("[DBG] GRRLIB_Init() DONE\\n");
-            /* GRRLIB_Init internally calls VIDEO_SetBlack(false).  Re-blank
-             * immediately so the uninitialised XFBs are never visible. */
-            VIDEO_SetBlack(true);
-            VIDEO_Flush();
-            /* Show the loading spinner in both GX framebuffers so there is
-             * no flash while the app is tearing down the play session. */
-            {
-                GRRLIB_texImg* tmpRing = GRRLIB_LoadTexture(data_ring_png);
-                for (int _fi = 0; _fi < 2; ++_fi) {
-                    GRRLIB_FillScreen(0x0A1628FF);
-                    if (tmpRing) {
-                        GRRLIB_SetMidHandle(tmpRing, true);
-                        GRRLIB_DrawImg(320, 240, tmpRing, 0, 1.0f, 1.0f, 0xFFFFFFFF);
-                        GRRLIB_SetMidHandle(tmpRing, false);
-                    }
-                    GRRLIB_Render();
+                break;
+            case Rebuf::PauseSent:
+                if (g_mplayer_paused)                                rebuf = Rebuf::Waiting;
+                else if (!view.buffering() && now - rebufMs > 1500) {
+                    SYS_Report("[rebuf] pause was dropped\n");
+                    rebuf = Rebuf::Idle;
                 }
-                GRRLIB_FreeTexture(tmpRing);
-            }
-            /* Both framebuffers now contain the spinner — safe to unblank. */
-            VIDEO_SetBlack(false);
-            VIDEO_Flush();
-
-            long long positionTicks = (long long)(g_mplayer_time_pos * 10000000.0f);
-
-            /* Retry on premature EOF (transcoder session expired mid-connect).
-             * Skip reportPlaybackStopped on retry attempts: position is 0,
-             * nothing meaningful to report, and the call blocks ~3 minutes
-             * on a busy server. We always delete the stale encoding first so
-             * the server reclaims the transcoder slot immediately. */
-            bool willRetry = (reason == PLAYER_STOP_ERROR && playRetries < 3);
-
-            /* For track switches we immediately restart at the same position:
-             * skip reportPlaybackStopped (saves one full TLS+HTTP round-trip,
-             * ~2-4 s) and skip BGM resume (we'll pause it again on the next
-             * loop iteration anyway). */
-            bool isTrackSwitch = (reason == PLAYER_STOP_AUDIO || reason == PLAYER_STOP_SUB);
-            bool isHomeSuspend = (reason == PLAYER_STOP_HOME);
-
-            /* Restart BGM now — before the blocking network calls — so the
-             * user hears music while session cleanup (report + delete) runs.
-             * Only done when we are NOT about to retry (which calls
-             * wii_player_play again, requiring ASND to stay ended), and NOT
-             * for track switches (immediately restarted, BGM paused again).
-             * When BGM was not running, still reinitAudio() so that ASND
-             * (and therefore SoundFX) is alive after AESND_Reset().
-             * Also skip for HOME suspend: we will either resume MPlayer
-             * immediately (BGM stays paused) or exit (BGM not needed). */
-            if (!willRetry && !isTrackSwitch && !isHomeSuspend) {
-                SYS_Report("[DBG] BGM restore: musicWasRunning=%d\n", (int)musicWasRunning);
-                MusicBGM::stop();
-                MusicBGM::init(musicWasRunning);
-                SYS_Report("[DBG] BGM restore DONE\n");
-            }
-
-            /* Only report stopped if something actually played (position > 0).
-             * When positionTicks == 0, nothing was played — skip the call to
-             * avoid blocking for minutes on a slow/busy server.
-             * Also skip for track switches: playback resumes immediately at
-             * the same position so the "stopped" report is both misleading
-             * and a source of unnecessary multi-second loader freeze. */
-            if (!willRetry && !isTrackSwitch && !isHomeSuspend && positionTicks > 0) {
-                client.reportPlaybackStopped(serverUrl, auth, itemId, mediaSourceId,
-                                             playSessionId, positionTicks);
-            }
-            if (!isHomeSuspend)
-                client.deleteActiveEncoding(serverUrl, auth, playSessionId);
-
-            if (willRetry) {
-                long long retryTicks = startTimeTicks + positionTicks;
-                std::string retryUrl, retrySession;
-                if (client.getTranscodingUrl(serverUrl, auth, itemId, mediaSourceId,
-                                             audioIdx, subIdx, retryTicks,
-                                             retryUrl, retrySession)) {
-                    ++playRetries;
-                    SYS_Report("[App] premature EOF retry %d/3 from tick=%lld\n",
-                               playRetries, retryTicks);
-                    url           = retryUrl;
-                    playSessionId = retrySession;
-                    continue;
+                break;
+            case Rebuf::Waiting:
+                if (!g_mplayer_paused) { rebuf = Rebuf::Idle; break; }   /* user resumed */
+                if (fill < 0.0f || fill >= REBUF_TARGET || now - rebufMs > 60000) {
+                    SYS_Report("[rebuf] cache %.1f%% after %llu ms: resuming\n",
+                               (double)fill, now - rebufMs);
+                    wii_player_pause_toggle();
+                    rebuf   = Rebuf::ResumeSent;
+                    rebufMs = now;
                 }
-                /* URL re-acquisition failed; fall through as final stop */
-                reason = PLAYER_STOP_EOF;
+                break;
+            case Rebuf::ResumeSent:
+                if (!g_mplayer_paused)              { rebuf = Rebuf::Idle; rebufMs = 0; }
+                else if (now - rebufMs > 1500) {
+                    SYS_Report("[rebuf] still paused, resending\n");
+                    wii_player_pause_toggle();
+                    rebufMs = now;
+                }
+                break;
             }
-            break;
+            int pct = (int)((fill < 0.0f ? REBUF_TARGET : fill) * 100.0f / REBUF_TARGET);
+            view.setRebuffering(rebuf == Rebuf::PauseSent || rebuf == Rebuf::Waiting
+                                ? (pct > 99 ? 99 : pct) : -1);
+
+            /* Two rebuffers within two minutes: the link can't sustain this
+             * bitrate, restart one quality step lower from here. */
+            while (!rebufferTimes.empty() && now - rebufferTimes.front() > 120000)
+                rebufferTimes.erase(rebufferTimes.begin());
+            if (!stopRequested && rebufferTimes.size() >= 2 && client.videoQuality > 0) {
+                --client.videoQuality;
+                rebufferTimes.clear();
+                qualityRestartAt = view.position();
+                SYS_Report("[runPlay] slow link, lowering quality to %s\n",
+                           JellyfinClient::videoQualityName(client.videoQuality));
+                requestStop(PLAYER_STOP_SEEK, "Slow connection: lowering quality...");
+            }
+
+            if (g_mplayer_time_pos != lastTimePos || g_mplayer_paused || g_wiifin_loading_active) {
+                lastTimePos    = g_mplayer_time_pos;
+                if (g_mplayer_time_pos > 0.5f) everPlayed = true;
+                lastProgressMs = now;
+            } else if (!stopRequested && now - lastProgressMs > 3000) {
+                bool atEnd = ctx.runtime > 0.0f && view.position() >= ctx.runtime - 10.0f;
+                if (atEnd)
+                    requestStop(PLAYER_STOP_EOF, "");
+                else if (now - lastProgressMs > 20000)
+                    requestStop(ctx.runtime > 0.0f ? PLAYER_STOP_ERROR : PLAYER_STOP_EOF,
+                                "Reconnecting...");
+            }
+            /* MPlayer waits for its cache thread before quitting; unblock
+             * it if it is stuck in a network read. */
+            if (stopRequested) {
+                if (!stopAtMs) stopAtMs = now;
+                else if (!ioAborted && now - stopAtMs > 1500) {
+                    SYS_Report("[runPlay] MPlayer slow to stop, closing its sockets\n");
+                    wii_player_abort_io();
+                    ioAborted = true;
+                }
+            }
+
+            switch (view.update(WPAD_ButtonsDown(0), ir)) {
+            case PlayerView::Action::Back:   requestStop(PLAYER_STOP_EOF,   "Stopping...");             break;
+            case PlayerView::Action::Next:   requestStop(PLAYER_STOP_NEXT,  "Loading next episode..."); break;
+            case PlayerView::Action::Prev:   requestStop(PLAYER_STOP_PREV,  "Loading previous episode..."); break;
+            case PlayerView::Action::Audio:  requestStop(PLAYER_STOP_AUDIO, "Switching audio track..."); break;
+            case PlayerView::Action::Sub:    requestStop(PLAYER_STOP_SUB,   "Switching subtitles...");  break;
+            case PlayerView::Action::SeekTo: requestStop(PLAYER_STOP_SEEK,  "Seeking...");              break;
+            case PlayerView::Action::Home: {
+                bool wasPaused = g_mplayer_paused;
+                if (!wasPaused) wii_player_pause_toggle();
+                if (doShowHomeOverlay(font, btnTex, cursorTex, false))
+                    requestStop(PLAYER_STOP_WIIMENU, "Stopping...");
+                else if (!wasPaused)
+                    wii_player_pause_toggle();
+                break;
+            }
+            case PlayerView::Action::None:
+                break;
+            }
+
+            view.render(ir);
+            GRRLIB_Render();
+            VideoSurface::endFrame();
         }
+        reason = wii_player_wait();
+        wiifin_video_report("session");
+        g_stream_opened_cb = nullptr;
+        client.dropConnection();
+        float posSecs = view.position();
+        posTicks = (long long)(posSecs * 10000000.0);
 
-        wii_player_set_overlay(nullptr);
-
-        /* --- Handle stop reason --- */
-        if (reason == PLAYER_STOP_HOME) {
-            /* HOME was pressed during playback.  Show the clean GRRLIB HOME
-             * overlay (same as the rest of the app).  B = resume playback;
-             * Wii Menu / Reset = exit as usual. */
-            long long suspendTicks = startTimeTicks +
-                                     (long long)(g_mplayer_time_pos * 10000000.0f);
-
-            /* Load minimal assets — GRRLIB was reinit'd above. */
-            GRRLIB_ttfFont* hmFont   = GRRLIB_LoadTTF(data_wii_font_ttf, data_wii_font_ttf_len);
-            GRRLIB_texImg*  hmBtn    = GRRLIB_LoadTexture(data_button_start_png);
-            GRRLIB_texImg*  hmCursor = GRRLIB_LoadTexture(data_cursors_PointerP1_64_png);
-
-            /* musicEnabled = false: BGM is already paused for this play session
-             * and should not auto-resume when the user presses B (resume). */
-            bool wantsExit = doShowHomeOverlay(hmFont, hmBtn, hmCursor, false);
-
-            GRRLIB_FreeTTF(hmFont);
-            GRRLIB_FreeTexture(hmBtn);
-            GRRLIB_FreeTexture(hmCursor);
-
-            if (!wantsExit) {
-                /* User pressed B (resume): delete old session, restart from
-                 * suspended position.  getTranscodingUrl adds a RESUME_PAD
-                 * back-off automatically. */
-                client.deleteActiveEncoding(serverUrl, auth, playSessionId);
-                std::string newUrl, newSession;
-                if (client.getTranscodingUrl(serverUrl, auth, itemId, mediaSourceId,
-                                             audioIdx, subIdx, suspendTicks,
-                                             newUrl, newSession)) {
-                    url            = newUrl;
-                    playSessionId  = newSession;
-                    startTimeTicks = suspendTicks;
-                    continue;
-                }
-                /* Re-acquisition failed — report and fall through to EOF. */
-                if (suspendTicks > 0)
-                    client.reportPlaybackStopped(serverUrl, auth, itemId, mediaSourceId,
-                                                 playSessionId, suspendTicks);
-                return false;
+        /* The stream died on its own (transcoder session expired, network
+         * drop): pick up where it stopped, up to 3 times. */
+        bool dropped = !stopRequested && reason == PLAYER_STOP_EOF &&
+                       ctx.runtime > 0.0f && posSecs < ctx.runtime - 30.0f;
+        /* If nothing played, retry from where this stream was meant to start */
+        float startSecs = (float)(startTicks / 10000000.0);
+        float restartAt = posSecs > startSecs ? posSecs : startSecs;
+        /* The server refused the stream: one retry (re-encoding everything
+         * after a 500, see forceReencode), not three slow ones. */
+        const int httpFail = g_wiifin_stream_fail_status;
+        if (httpFail == 500) client.forceReencode = true;
+        const int maxRetries = httpFail >= 400 ? 1 : 3;
+        if ((reason == PLAYER_STOP_ERROR || dropped) && retries < maxRetries) {
+            ++retries;
+            SYS_Report("[runPlay] stream ended early at %.1f s, retry %d/%d\n",
+                       (double)posSecs, retries, maxRetries);
+            reason = PLAYER_STOP_SEEK;
+        } else if (reason == PLAYER_STOP_ERROR || dropped) {
+            if (httpFail >= 400) {
+                char buf[96];
+                snprintf(buf, sizeof(buf), "The server could not start this video (HTTP %d).", httpFail);
+                failWhy = buf;
+            } else if (!everPlayed) {
+                failWhy = "The video stream could not be opened.";
             } else {
-                /* User chose Wii Menu or Reset — report and clean up. */
-                if (suspendTicks > 0)
-                    client.reportPlaybackStopped(serverUrl, auth, itemId, mediaSourceId,
-                                                 playSessionId, suspendTicks);
-                client.deleteActiveEncoding(serverUrl, auth, playSessionId);
-                return true;
+                failWhy = "The connection to the server keeps dropping.";
             }
+            SYS_Report("[runPlay] giving up: %s\n", failWhy.c_str());
+        } else if (reason == PLAYER_STOP_SEEK) {
+            restartAt = qualityRestartAt >= 0.0f ? qualityRestartAt : view.seekTarget();
+            qualityRestartAt = -1.0f;
         }
 
+        /* ---- Same item, new transcode (seek / track switch / retry) ---- */
+        if (reason == PLAYER_STOP_SEEK || reason == PLAYER_STOP_AUDIO ||
+            reason == PLAYER_STOP_SUB) {
+            int newAudio = (reason == PLAYER_STOP_AUDIO) ? view.chosenAudio() : audioIdx;
+            int newSub   = (reason == PLAYER_STOP_SUB)   ? view.chosenSub()   : subIdx;
+            long long fromTicks = (long long)(restartAt * 10000000.0);
+            std::string newUrl, newSession;
+            bool ok = false;
+            runWithPlayerUI(view, ir, "Loading...", [&]() {
+                client.deleteActiveEncoding(serverUrl, auth, playSessionId);
+                ok = client.getTranscodingUrl(serverUrl, auth, itemId, mediaSourceId,
+                                              newAudio, newSub, fromTicks,
+                                              newUrl, newSession);
+            });
+            if (ok) {
+                url           = newUrl;
+                playSessionId = newSession;
+                audioIdx      = newAudio;
+                subIdx        = newSub;
+                startTicks    = fromTicks;
+                continue;
+            }
+            failWhy = "The server did not answer: " + client.lastError();
+            SYS_Report("[runPlay] giving up: %s\n", failWhy.c_str());
+            reason = PLAYER_STOP_EOF;
+        }
+
+        /* ---- Next / previous episode ---- */
         if (reason == PLAYER_STOP_NEXT || reason == PLAYER_STOP_PREV) {
             int nextIdx = (reason == PLAYER_STOP_NEXT) ? episodeIdx + 1 : episodeIdx - 1;
-            if (nextIdx < 0 || nextIdx >= (int)episodes.size()) return false;
-
-            /* Fetch item detail for the next episode to get its stream list */
-            JellyfinItemDetail nextDetail;
-            if (!client.getItemDetail(serverUrl, auth, episodes[nextIdx].id, nextDetail)) return false;
-
-            /* Get the transcoding URL for the next episode */
-            std::string nextUrl, nextSession;
-            if (!client.getTranscodingUrl(serverUrl, auth,
-                                          episodes[nextIdx].id, episodes[nextIdx].id,
-                                          0, -1, 0, nextUrl, nextSession)) return false;
-
-            episodeIdx    = nextIdx;
-            itemId        = episodes[nextIdx].id;
-            mediaSourceId = itemId;
-            playSessionId = nextSession;
-            url           = nextUrl;
-            audioStreams   = nextDetail.audioStreams;
-            subStreams     = nextDetail.subtitleStreams;
-            audioIdx       = 0;
-            subIdx         = -1;
-            startTimeTicks = 0;  /* new episode: start from beginning */
-            runtimeTicks   = nextDetail.runtimeTicks;  /* update known duration */
-            continue;
+            if (nextIdx >= 0 && nextIdx < (int)episodes.size()) {
+                JellyfinItemDetail nextDetail;
+                std::string nextUrl, nextSession;
+                bool ok = false;
+                runWithPlayerUI(view, ir, "Loading episode...", [&]() {
+                    if (posTicks > 0)
+                        client.reportPlaybackStopped(serverUrl, auth, itemId, mediaSourceId,
+                                                     playSessionId, posTicks);
+                    client.deleteActiveEncoding(serverUrl, auth, playSessionId);
+                    ok = client.getItemDetail(serverUrl, auth, episodes[nextIdx].id, nextDetail) &&
+                         client.getTranscodingUrl(serverUrl, auth,
+                                                  episodes[nextIdx].id, episodes[nextIdx].id,
+                                                  0, -1, 0, nextUrl, nextSession);
+                });
+                reported = true;
+                if (ok) {
+                    episodeIdx    = nextIdx;
+                    itemId        = episodes[nextIdx].id;
+                    mediaSourceId = itemId;
+                    playSessionId = nextSession;
+                    url           = nextUrl;
+                    audioStreams  = nextDetail.audioStreams;
+                    subStreams    = nextDetail.subtitleStreams;
+                    audioIdx      = 0;
+                    subIdx        = -1;
+                    startTicks    = 0;
+                    runtimeTicks  = nextDetail.runtimeTicks;
+                    introFetched  = false;
+                    retries       = 0;
+                    everPlayed    = false;
+                    reported      = false;
+                    wiifin_video_clear();   /* don't show the old episode while loading */
+                    continue;
+                }
+            }
         }
-
-        if (reason == PLAYER_STOP_AUDIO || reason == PLAYER_STOP_SUB) {
-            /* Re-transcode same episode with new audio/sub track, resuming
-             * from current playback position (g_mplayer_time_pos is the tick
-             * at which the user triggered the switch). */
-            /* Read back selection from GX overlay globals (set by vo_gx.c picker) */
-            int newAudio = (int)g_wiifin_selected_audio;
-            int newSub   = (int)g_wiifin_selected_sub;
-            /* Also sync back to PlayerOverlayContext for consistency */
-            ctx.selectedAudio = newAudio;
-            ctx.selectedSub   = newSub;
-            long long switchTicks = (long long)(g_mplayer_time_pos * 10000000.0f);
-
-            std::string newUrl, newSession;
-            if (!client.getTranscodingUrl(serverUrl, auth,
-                                          itemId, mediaSourceId,
-                                          newAudio, newSub, switchTicks, newUrl, newSession)) return false;
-            url            = newUrl;
-            playSessionId  = newSession;
-            audioIdx       = newAudio;
-            subIdx         = newSub;
-            startTimeTicks = switchTicks;  /* for premature-EOF retry on new session */
-            g_wiifin_track_switch = 1;     /* suppress loading overlay on restart */
-            continue;
-        }
-
-        /* Return true if user chose Wii Menu or Reset (both exit playback) */
-        if (reason == PLAYER_STOP_RESET) s_restartApp = true;
-        return (reason == PLAYER_STOP_WIIMENU || reason == PLAYER_STOP_RESET);
+        break;
     }
+
+    /* ---- Leave the player ---- */
+    client.videoQuality = savedQuality;
+    lastItemId = itemId;
+    /* Bring the menu music back now so it plays during the final requests. */
+    MusicBGM::stop();
+    MusicBGM::init(musicWasRunning);
+    runWithPlayerUI(view, ir, "Stopping...", [&]() {
+        if (!reported && posTicks > 0)
+            client.reportPlaybackStopped(serverUrl, auth, itemId, mediaSourceId,
+                                         playSessionId, posTicks);
+        client.deleteActiveEncoding(serverUrl, auth, playSessionId);
+    });
+    wiifin_video_clear();
+    if (!failWhy.empty() && !g_app_powerOff && !g_app_reset) {
+        std::string detail = g_wiifin_stream_fail_status >= 400 && g_wiifin_stream_fail_body[0]
+            ? std::string("Server says: ") + g_wiifin_stream_fail_body
+            : std::string("Details are in wiifin.log on the SD card.");
+        if (detail.size() > 70) detail = detail.substr(0, 67) + "...";
+        if (g_wiifin_stream_fail_status == 500)
+            showErrorScreen("Can't play this video", failWhy,
+                            "Check the server's FFmpeg log (Dashboard > Logs).", false, ir);
+        else
+            showErrorScreen("Can't play this video", failWhy, detail, false, ir);
+    }
+    return reason == PLAYER_STOP_WIIMENU;
 }
 
 extern unsigned char data_logo_wiifin_png[];
@@ -554,28 +560,11 @@ extern unsigned int data_jp_font_ttf_len;
 // --- Button layout constants ---
 // btnTex is 512x128 (power-of-2 required by GX/GRRLIB).
 // Display at 280x70 (4:1 ratio preserved, sx=sy=0.547).
-static const int BX        = 180;
-static const int BW        = 280;
-static const int BH        = 70;
-static const int BY_START  = 125;
-static const int B_SPACING = 78;
-
-void App::reloadAssets() {
-    SYS_Report("[DBG] reloadAssets ENTER\n");
-    GRRLIB_FreeTexture(logoTex);   logoTex   = GRRLIB_LoadTexture(logo_wiifin_png);
-    GRRLIB_FreeTexture(btnTex);    btnTex    = GRRLIB_LoadTexture(button_start_png);
-    GRRLIB_FreeTexture(cursorPointerTex);    cursorPointerTex    = GRRLIB_LoadTexture(data_cursors_PointerP1_64_png);
-    if (cursorPointerTex)
-        wii_player_set_cursor_tex(cursorPointerTex->data,
-                                  (u16)cursorPointerTex->w, (u16)cursorPointerTex->h,
-                                  (u8)cursorPointerTex->format);
-    GRRLIB_FreeTexture(ringTex);   ringTex   = GRRLIB_LoadTexture(data_ring_png);
-    // FreeType was wiped by GRRLIB_Exit() — reload fonts without FreeTTF
-    font   = GRRLIB_LoadTTF(wii_font_ttf, wii_font_ttf_len);
-    jpFont = GRRLIB_LoadTTF(jp_font_ttf, jp_font_ttf_len);
-    SYS_Report("[DBG] reloadAssets EXIT logo=%p btn=%p cursor=%p ring=%p font=%p jpFont=%p\n",
-               logoTex, btnTex, cursorPointerTex, ringTex, font, jpFont);
-}
+static const int BX        = 170;
+static const int BW        = 300;
+static const int BH        = 58;
+static const int BY_START  = 168;
+static const int B_SPACING = 74;
 
 void App::init(const char* argv0) {
     SYS_SetPowerCallback(onPower);
@@ -587,6 +576,11 @@ void App::init(const char* argv0) {
         VIDEO_Init();
         SYS_Report("[WiiFin] VIDEO_Init done\n");
         GXRModeObj* m = VIDEO_GetPreferredMode(NULL);
+        /* TV standard (0 NTSC, 1 PAL 50 Hz, 2 MPAL, 5 PAL 60 Hz) and sizes */
+        SYS_Report("[WiiFin] video mode: tv=%u fb=%ux%u efb=%u vi=%ux%u%s\n",
+                   (unsigned)(m->viTVMode >> 2), (unsigned)m->fbWidth, (unsigned)m->xfbHeight,
+                   (unsigned)m->efbHeight, (unsigned)m->viWidth, (unsigned)m->viHeight,
+                   (m->viTVMode & 3) == VI_PROGRESSIVE ? " progressive" : "");
         void* xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(m));
         VIDEO_ClearFrameBuffer(m, xfb, 0x00800080); // YCbCr black — prevents green garbage frame
         VIDEO_Configure(m);
@@ -598,7 +592,7 @@ void App::init(const char* argv0) {
     }
 
     {
-        static u8 s_pre_fifo[256 * 1024] ATTRIBUTE_ALIGN(32);
+        static u8 s_pre_fifo[256 * 1024] DEAD_AT_EXIT ATTRIBUTE_ALIGN(32);
         SYS_Report("[WiiFin] GX_Init start\n");
         GX_Init(s_pre_fifo, sizeof(s_pre_fifo));
         SYS_Report("[WiiFin] GX_AbortFrame start\n");
@@ -618,23 +612,20 @@ void App::init(const char* argv0) {
     GRRLIB_Render();
 
     WiiUtils::detectAspect();
+    Ui::initScreen(WiiUtils::widescreen);
 
     // Load textures and fonts from embedded data (no file I/O, always fast)
     logoTex   = GRRLIB_LoadTexture(logo_wiifin_png);
     btnTex    = GRRLIB_LoadTexture(button_start_png);
     cursorPointerTex    = GRRLIB_LoadTexture(data_cursors_PointerP1_64_png);
-    // Register cursor PNG with WiiPlayer so vo_gx.c can draw it as the IR cursor
-    if (cursorPointerTex)
-        wii_player_set_cursor_tex(cursorPointerTex->data,
-                                  (u16)cursorPointerTex->w, (u16)cursorPointerTex->h,
-                                  (u8)cursorPointerTex->format);
     font   = GRRLIB_LoadTTF(wii_font_ttf, wii_font_ttf_len);
     jpFont = GRRLIB_LoadTTF(jp_font_ttf, jp_font_ttf_len);
+    Ui::setFont(font);
     ringTex = GRRLIB_LoadTexture(data_ring_png);
 
     // Show a splash frame immediately so the user sees something during init.
     if (logoTex) {
-        GRRLIB_FillScreen(0x0A1628FF);   // dark navy (app brand colour, clearly NOT pure black)
+        Ui::background(false);
         float ls = 0.60f;
         int lw = (int)(logoTex->w * ls);
         GRRLIB_DrawImg((640 - lw) / 2, (480 - (int)(logoTex->h * ls)) / 2,
@@ -718,7 +709,16 @@ void App::init(const char* argv0) {
         if (f) { fclose(f); settingsPath = probes[i]; break; }
     }
 
+    if (!settingsPath.empty())
+        Log::open(settingsPath.substr(0, settingsPath.rfind('/') + 1));
+    SYS_Report("[WiiFin] v%s, IOS%d v%d, %s, MEM1 %u KB / MEM2 %u KB free, settings %s\n",
+               WIIFIN_VERSION, (int)IOS_GetVersion(), (int)IOS_GetRevision(),
+               WiiUtils::widescreen ? "16:9" : "4:3",
+               (unsigned)(SYS_GetArena1Size() / 1024), (unsigned)(SYS_GetArena2Size() / 1024),
+               settingsPath.empty() ? "(none)" : settingsPath.c_str());
     loadSettings();
+    /* DHCP takes a few seconds: get it going while the menus show */
+    jellyfinClient.startNetwork();
     MusicBGM::init(musicEnabled);
     SoundFX::init();
 }
@@ -776,7 +776,7 @@ static bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
 
         while (true) {
             Input::update();
-            WPAD_IR(WPAD_CHAN_0, &ir);
+            Input::readIR(ir);
             orient_t orient; WPAD_Orientation(WPAD_CHAN_0, &orient);
             if (g_app_powerOff || g_app_reset) return true;
 
@@ -805,7 +805,10 @@ static bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
                     SoundFX::play(SoundFX::FX::Select);
                 prevHoverMain = hover;
 
-                if (Input::isAJustPressed()) {
+                if (hover >= 0) hmSel = hover;    /* one highlight: the pointer's */
+                /* With the pointer on screen only a button under it counts;
+                 * the d-pad selection is used when pointing away. */
+                if (Input::isAJustPressed() && (!ir.valid || hover >= 0)) {
                     SoundFX::play(SoundFX::FX::Start); /* clicking Wii Menu / Reset */
                     confirmFor = (hover >= 0) ? hover : hmSel;
                     state      = 1;
@@ -833,7 +836,8 @@ static bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
                     SoundFX::play(SoundFX::FX::Select);
                 prevHoverPop = popHover;
 
-                if (Input::isAJustPressed()) {
+                if (popHover >= 0) popSel = popHover;
+                if (Input::isAJustPressed() && (!ir.valid || popHover >= 0)) {
                     int sel = (popHover >= 0) ? popHover : popSel;
                     if (sel == 0) { /* Yes */
                         SoundFX::play(SoundFX::FX::MenuExit);
@@ -864,150 +868,76 @@ static bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
             }
             float pc = popAnim * popAnim * (3.0f - 2.0f * popAnim);
 
-            u8  fa     = (u8)(oc * 255);
-            int slideH = (int)((1.0f - oc) * 50);
-            int slideF = (int)((1.0f - oc) * 50);
-
-            auto CA = [&](u32 col) -> u32 {
-                return (col & 0xFFFFFF00u) | (u8)((col & 0xFF) * oc);
-            };
+            int slideH = (int)((1.0f - oc) * 90);
+            int slideF = (int)((1.0f - oc) * 60);
 
             /* ---- Draw HOME menu ---- */
+            const Ui::Palette& P = Ui::pal();
+            Ui::background(false);
+
+            /* Top bar slides down, bottom bar (clock) slides up */
+            Ui::pushOffset(0, -slideH);
+            Ui::shadow(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, 92, 22, 8.0f, P.shadow);
+            Ui::roundRect(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, 92, 22, P.barTop, P.barBottom);
+            Ui::roundBorder(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, 92, 22, 1.5f, P.barBorder);
+            Ui::text(28, 17, "HOME Menu", 26, P.text);
             {
-                const int BANDS = 20, BH = 480 / BANDS;
-                for (int i = 0; i < BANDS; i++) {
-                    float t  = i / (float)(BANDS - 1);
-                    int rc = (int)(0x08 + (0x04 - 0x08) * t);
-                    int gc = (int)(0x0D + (0x06 - 0x0D) * t);
-                    int bc = (int)(0x28 + (0x18 - 0x28) * t);
-                    GRRLIB_Rectangle(0, i * BH, 640, BH + 1,
-                        ((u32)rc<<24)|((u32)gc<<16)|((u32)bc<<8)|fa, 1);
-                }
+                const Ui::Hint close = { "B", "Close" };
+                Ui::hint(626 - Ui::hintWidth(close), 22, close);
             }
-            for (int y = 0; y < 480; y += 4)
-                GRRLIB_Rectangle(0, y, 640, 1, CA(0x00000020), 1);
+            Ui::popOffset();
 
-            GRRLIB_Rectangle(0,  0 - slideH, 640, 62, CA(0x0A1840FF), 1);
-            GRRLIB_Rectangle(0, 61 - slideH, 640,  2, CA(0x2255AAFF), 1);
-            GRRLIB_Rectangle(0, 438 + slideF, 640,  2, CA(0x2255AAFF), 1);
-            GRRLIB_Rectangle(0, 440 + slideF, 640, 40, CA(0x0A1840FF), 1);
-
-            if (font && fa > 8) {
-                int ty0 = 18 - slideH;
-                if (ty0 >= 0) {
-                    GRRLIB_PrintfTTF(28, ty0, font, "HOME Menu", 26,
-                                     0xFFFFFF00u | fa);
-                    const char* close = "B: Close";
-                    int cw = GRRLIB_WidthTTF(font, close, 15);
-                    GRRLIB_PrintfTTF(640 - cw - 22, 23 - slideH, font, close, 15,
-                                     0x8899BB00u | fa);
-                }
-                int ty1 = 453 + slideF;
-                if (ty1 < 480) {
-                    const char* hint = "A: Confirm     B: Close";
-                    int hw = GRRLIB_WidthTTF(font, hint, 13);
-                    GRRLIB_PrintfTTF((640 - hw) / 2, ty1, font, hint, 13,
-                                     0x6677AA00u | fa);
-                }
+            Ui::pushOffset(0, slideF);
+            {
+                const Ui::Hint l[] = { { "A", "Confirm" } };
+                const Ui::Hint r[] = { { "B", "Close" } };
+                Ui::bottomBar(l, 1, r, 1);
             }
+            Ui::popOffset();
 
-            if (btnTex) {
-                for (int i = 0; i < 2; i++) {
-                    float sc  = hoverSc[i];
-                    float dw  = BTN_W * sc;
-                    float dh  = BTN_H * sc;
-                    float tsx = dw / btnTex->w;
-                    float tsy = dh / btnTex->h;
-                    int   dx  = (int)(bcx[i] - dw * 0.5f);
-                    int   dy  = (int)(bcy    - dh * 0.5f);
-                    bool  sel = (hover == i || hmSel == i);
-
-                    u8 shA = (u8)(fa * 0.45f);
-                    GRRLIB_DrawImg(dx + 7, dy + 7, btnTex, 0, tsx, tsy,
-                                   0x00000000u | shA);
-                    u32 tint = sel ? 0xFFFFFFu : 0xE8F0F8u;
-                    GRRLIB_DrawImg(dx, dy, btnTex, 0, tsx, tsy, (tint << 8) | fa);
-
-                    if (font && fa > 8) {
-                        const char* lbl = (i == 0) ? "Wii Menu" : "Reset";
-                        int fs = (int)(22 * sc);
-                        if (fs < 12) fs = 12;
-                        int tw = GRRLIB_WidthTTF(font, lbl, fs);
-                        int tx = (int)(bcx[i]) - tw / 2;
-                        int ty = (int)(bcy)    - fs / 2 - 1;
-                        u32 lc = sel ? 0x0D1B3Eu : 0x2A4070u;
-                        GRRLIB_PrintfTTF(tx, ty, font, lbl, fs, (lc << 8) | fa);
-                    }
-                }
+            /* Wii Menu / Reset buttons */
+            for (int i = 0; i < 2; i++) {
+                float sc = hoverSc[i];
+                float dw = BTN_W * sc, dh = BTN_H * sc;
+                bool  sel = (hmSel == i);
+                Ui::button(bcx[i] - dw * 0.5f, bcy - dh * 0.5f, dw, dh,
+                           i == 0 ? "Wii Menu" : "Reset", (int)(22 * sc),
+                           sel ? Ui::pulse() : 0.0f);
             }
 
             /* ---- Draw confirmation popup (state == 1) ---- */
             if (state == 1 && pc > 0.01f) {
-                u8 da = (u8)(pc * 255);
-
-                /* Dark scrim */
-                GRRLIB_Rectangle(0, 0, 640, 480,
-                                 0x00000000u | (u8)(pc * 150), 1);
+                GRRLIB_Rectangle(Ui::screenLeft(), 0, Ui::screenWidth(), 480, Ui::alpha(P.dim, pc), 1);
 
                 /* Pop-in: scale from 0.82 → 1.0 around screen centre */
                 float psc = 0.82f + 0.18f * pc;
-                int adw = (int)(DW * psc), adh = (int)(DH * psc);
-                int adx = 320 - adw / 2,   ady = 240 - adh / 2;
+                float adw = DW * psc, adh = DH * psc;
+                float adx = 320 - adw * 0.5f, ady = 240 - adh * 0.5f;
+                Ui::card(adx, ady, adw, adh, 20 * psc, 0.0f);
 
-                /* Border then white fill */
-                GRRLIB_Rectangle(adx - 2, ady - 2, adw + 4, adh + 4,
-                                 (0xAABBCCu << 8) | da, 1);
-                GRRLIB_Rectangle(adx, ady, adw, adh,
-                                 (0xF2F4F8u << 8) | da, 1);
-
-                /* Question text */
-                if (font && da > 8) {
-                    const char* line1 = (confirmFor == 0)
-                        ? "Return to the Wii Menu?"
-                        : "Reset the application?";
-                    const char* line2 = "(Anything not saved will be lost.)";
-                    int l1w = GRRLIB_WidthTTF(font, line1, 20);
-                    int l2w = GRRLIB_WidthTTF(font, line2, 14);
-                    GRRLIB_PrintfTTF(320 - l1w / 2, ady + 32, font, line1, 20,
-                                     (0x222244u << 8) | da);
-                    GRRLIB_PrintfTTF(320 - l2w / 2, ady + 60, font, line2, 14,
-                                     (0x667799u << 8) | da);
-                }
+                const char* line1 = (confirmFor == 0)
+                    ? "Return to the Wii Menu?"
+                    : "Reset the application?";
+                Ui::textCentered(320, ady + 32 * psc, line1, (int)(20 * psc), P.text);
+                Ui::textCentered(320, ady + 62 * psc, "(Anything not saved will be lost.)",
+                                 (int)(14 * psc), P.textDim);
 
                 /* Yes / No buttons */
-                if (btnTex) {
-                    for (int i = 0; i < 2; i++) {
-                        float bsc = popHoverSc[i] * psc;
-                        float bdw = PBW * bsc, bdh = PBH * bsc;
-                        float tsx = bdw / btnTex->w;
-                        float tsy = bdh / btnTex->h;
-                        /* Scale positions relative to screen centre */
-                        float relX = pbcx[i] - 320.0f;
-                        float relY = pbcy    - 240.0f;
-                        int   bdx  = 320 + (int)(relX * psc) - (int)(bdw * 0.5f);
-                        int   bdy  = 240 + (int)(relY * psc) - (int)(bdh * 0.5f);
-                        bool  bsel = (popHover == i || popSel == i);
-
-                        u8 shA = (u8)(da * 0.38f);
-                        GRRLIB_DrawImg(bdx + 5, bdy + 5, btnTex, 0, tsx, tsy,
-                                       0x00000000u | shA);
-                        u32 tint = bsel ? 0xFFFFFFu : 0xDDEEF8u;
-                        GRRLIB_DrawImg(bdx, bdy, btnTex, 0, tsx, tsy,
-                                       (tint << 8) | da);
-
-                        if (font && da > 8) {
-                            const char* lbl = (i == 0) ? "Yes" : "No";
-                            int fs = (int)(19 * psc);
-                            if (fs < 10) fs = 10;
-                            int tw = GRRLIB_WidthTTF(font, lbl, fs);
-                            int lx = bdx + ((int)(PBW * psc) - tw) / 2;
-                            int ly = bdy + ((int)(PBH * psc) - fs) / 2 - 1;
-                            u32 lc = bsel ? 0x0D1B3Eu : 0x2A4070u;
-                            GRRLIB_PrintfTTF(lx, ly, font, lbl, fs, (lc << 8) | da);
-                        }
-                    }
+                for (int i = 0; i < 2; i++) {
+                    float bsc = popHoverSc[i] * psc;
+                    float bdw = PBW * bsc, bdh = PBH * bsc;
+                    /* Scale positions relative to screen centre */
+                    float bx = 320 + (pbcx[i] - 320.0f) * psc - bdw * 0.5f;
+                    float by = 240 + (pbcy    - 240.0f) * psc - bdh * 0.5f;
+                    bool  bsel = (popSel == i);
+                    Ui::button(bx, by, bdw, bdh, i == 0 ? "Yes" : "No", (int)(19 * psc),
+                               bsel ? Ui::pulse() : 0.0f);
                 }
             }
+
+            /* Fade in from black while opening */
+            if (oc < 1.0f)
+                GRRLIB_Rectangle(Ui::screenLeft(), 0, Ui::screenWidth(), 480, (u32)((1.0f - oc) * 255.0f), 1);
 
             /* IR cursor — always on top */
             if (ir.valid && cursorPointerTex)
@@ -1024,6 +954,7 @@ void App::loop() {
     bool irMode        = false;
     int  prevIrBtn     = -1;  /* last button index hovered via IR; -1 = none */
     const int MENU_COUNT = 3;
+    float menuFocus[MENU_COUNT] = {};
     const std::string menuItems[] = {
         "Connect To Jellyfin",
         "Settings",
@@ -1035,19 +966,65 @@ void App::loop() {
         return doShowHomeOverlay(font, btnTex, cursorPointerTex, musicEnabled);
     };
 
+    /* ---- Helper: wait for the network (started at boot), offering a retry
+     * when it failed.  Returns false when the user backs out. ---- */
+    auto waitForNetwork = [&]() -> bool {
+        const Ui::Palette& p = Ui::pal();
+        for (;;) {
+            jellyfinClient.startNetwork();
+            /* B leaves: the attempt keeps going in the background (IOS can
+             * take very long to answer) and the next try picks it up */
+            u64 t0 = ticks_to_millisecs(gettime());
+            while (jellyfinClient.networkBusy()) {
+                Input::update();
+                if (g_app_powerOff || g_app_reset) { running = false; return false; }
+                if (Input::isBackPressed()) return false;
+                bool slow = ticks_to_millisecs(gettime()) - t0 > 10000;
+                Ui::background(false);
+                Ui::spinner(ringTex, 320, 220);
+                Ui::textCentered(320, 274, "Connecting to the network...", 18, p.textDim);
+                if (slow)
+                    Ui::textCentered(320, 300, "This is taking long: the Wii's network may need a restart.", 13, p.textDim);
+                const Ui::Hint r[] = { { "B", "Back" } };
+                Ui::bottomBar(nullptr, 0, r, 1);
+                GRRLIB_Render();
+            }
+            if (jellyfinClient.takeNetworkResult()) return true;
+            if (!showErrorScreen("No network connection",
+                                 "Check the Wii's Internet settings, then try again.",
+                                 jellyfinClient.lastError(), true, ir)) {
+                if (g_app_powerOff || g_app_reset) running = false;
+                return false;
+            }
+        }
+    };
+
     /* ---- Helper: launch LibraryView for a saved profile ---- */
     auto runLibraryWithProfile = [&](const SavedProfile& p) {
         JellyfinAuth auth;
         auth.userId      = p.userId;
         auth.accessToken = p.accessToken;
         auth.serverName  = p.serverName;
-        if (!jellyfinClient.initNetwork()) return; /* DNS won't work without this */
+        {
+            /* server kind only: the log may be posted publicly */
+            const std::string& u = p.serverUrl;
+            size_t hs = u.find("://"); hs = hs == std::string::npos ? 0 : hs + 3;
+            std::string host = u.substr(hs, u.find_first_of(":/", hs) - hs);
+            bool ip = !host.empty() && host.find_first_not_of("0123456789.") == std::string::npos;
+            Log::addPrivate(host);
+            SYS_Report("[WiiFin] open profile: %s, %s host%s%s\n",
+                       u.compare(0, 8, "https://") == 0 ? "https" : "http",
+                       ip ? "IP" : "name", ip ? "" : " .", ip ? "" :
+                       (host.rfind('.') == std::string::npos ? "(none)" : host.substr(host.rfind('.') + 1).c_str()));
+        }
+        if (!waitForNetwork()) return; /* DNS won't work without this */
         LibraryView lv(font, jpFont, cursorPointerTex, ringTex,
                        jellyfinClient, auth, p.serverUrl);
+        lv.setUserName(p.username);
         for (;;) {
             while (true) {
                 Input::update();
-                WPAD_IR(WPAD_CHAN_0, &ir);
+                Input::readIR(ir);
                 if (g_app_powerOff || g_app_reset) { running = false; break; }
                 if (Input::isHomePressed() && showHomeOverlay()) { running = false; break; }
                 if (lv.update(ir)) break;
@@ -1064,41 +1041,16 @@ void App::loop() {
                 bool wantsExit = mpv.run();
                 if (g_app_powerOff || g_app_reset) { running = false; return; }
                 SoundFX::play(SoundFX::FX::Back);
-                {
-                    GRRLIB_texImg* tmpRing = GRRLIB_LoadTexture(data_ring_png);
-                    for (int _fi = 0; _fi < 2; ++_fi) {
-                        GRRLIB_FillScreen(0x0A1628FF);
-                        if (tmpRing) {
-                            GRRLIB_SetMidHandle(tmpRing, true);
-                            GRRLIB_DrawImg(320, 240, tmpRing, 0, 1.0f, 1.0f, 0xFFFFFFFF);
-                            GRRLIB_SetMidHandle(tmpRing, false);
-                        }
-                        GRRLIB_Render();
-                    }
-                    GRRLIB_FreeTexture(tmpRing);
-                }
-                reloadAssets();
                 if (wantsExit) { running = false; return; }
-                lv.reinitAfterPlayback(font, jpFont, cursorPointerTex, ringTex);
+                lv.onPlaybackFinished("");
             } else if (!lv.pendingPlayUrl.empty()) {
-                SYS_Report("[DBG] runLibrary: entering runPlaySession\n");
-                lv.releaseForPlayback();
-                bool wantsExit = runPlaySession(jellyfinClient, auth, p.serverUrl, lv);
-                SYS_Report("[DBG] runLibrary: runPlaySession returned wantsExit=%d\n", (int)wantsExit);
-                reloadAssets();
-                /* Ensure ASND is alive after returning from the player.
-                 * Full stop + init from scratch — avoids stale audio state
-                 * left behind by ao_gekko / AESND after MPlayer exits. */
-                if (!MusicBGM::isRunning()) {
-                    SYS_Report("[DBG] runLibrary: stop+init (BGM not running)\n");
-                    MusicBGM::stop();
-                    MusicBGM::init(false);
-                } else {
-                    SYS_Report("[DBG] runLibrary: skip reinit (BGM already running)\n");
-                }
-                SYS_Report("[DBG] runLibrary: reloadAssets done\n");
-                if (wantsExit) { running = false; return; }
-                lv.reinitAfterPlayback(font, jpFont, cursorPointerTex, ringTex);
+                std::string lastItemId;
+                bool wantsExit = runPlaySession(jellyfinClient, auth, p.serverUrl, lv,
+                                                font, btnTex, cursorPointerTex, ringTex,
+                                                lastItemId);
+                if (wantsExit || g_app_powerOff || g_app_reset) { running = false; return; }
+                saveSettings();   /* the zoom may have changed during playback */
+                lv.onPlaybackFinished(lastItemId);
             } else {
                 break; // user navigated back (B from libraries grid) — no play requested
             }
@@ -1111,7 +1063,7 @@ void App::loop() {
         ConnectResult res = ConnectResult::None;
         while (res == ConnectResult::None && running) {
             Input::update();
-            WPAD_IR(WPAD_CHAN_0, &ir);
+            Input::readIR(ir);
             if (g_app_powerOff || g_app_reset) { running = false; break; }
             if (Input::isHomePressed() && showHomeOverlay()) { running = false; break; }
             res = cv.update(ir);
@@ -1153,7 +1105,7 @@ void App::loop() {
             ProfileResult res = ProfileResult::None;
             while (res == ProfileResult::None && running) {
                 Input::update();
-                WPAD_IR(WPAD_CHAN_0, &ir);
+                Input::readIR(ir);
                 if (g_app_powerOff || g_app_reset) { running = false; return; }
                 if (Input::isHomePressed() && showHomeOverlay()) { running = false; return; }
                 res = pv.update(ir);
@@ -1179,7 +1131,7 @@ void App::loop() {
 
     while (running) {
         Input::update();   // calls WPAD_ScanPads() internally
-        WPAD_IR(WPAD_CHAN_0, &ir);
+        Input::readIR(ir);
 
         // --- Input: D-pad navigation ---
         if (g_app_reset) running = false;
@@ -1225,7 +1177,7 @@ void App::loop() {
                     SettingsView sv(btnTex, font, jellyfinClient, musicEnabled);
                     while (true) {
                         Input::update();
-                        WPAD_IR(WPAD_CHAN_0, &ir);
+                        Input::readIR(ir);
                         if (g_app_powerOff || g_app_reset) { running = false; break; }
                         if (Input::isHomePressed() && showHomeOverlay()) { running = false; break; }
                         if (sv.update(ir)) break;
@@ -1245,83 +1197,28 @@ void App::loop() {
         }
 
         // ===================== RENDER =====================
+        Ui::background(false);
 
-        // --- Background: vertical gradient #0E2440 -> #1A3A60 (clearly dark navy, not black) ---
-        {
-            const int r1 = 0x0E, g1 = 0x24, b1 = 0x40;
-            const int r2 = 0x1A, g2 = 0x3A, b2 = 0x60;
-            const int bands = 16;
-            const int bh    = 480 / bands;  // 30px per band
-            for (int i = 0; i < bands; i++) {
-                float t  = i / (float)(bands - 1);
-                int rc   = r1 + (int)((r2 - r1) * t);
-                int gc   = g1 + (int)((g2 - g1) * t);
-                int bc   = b1 + (int)((b2 - b1) * t);
-                u32 col  = ((u32)rc << 24) | ((u32)gc << 16) | ((u32)bc << 8) | 0xFF;
-                GRRLIB_Rectangle(0, i * bh, 640, bh, col, 1);
-            }
-        }
-
-        // --- Logo: centered horizontally, y=18, scaled to 60% ---
         if (logoTex) {
-            float ls = 0.60f;
+            float ls = 0.62f;
             int lw = (int)(logoTex->w * ls);
-            int lx = (640 - lw) / 2;
-            GRRLIB_DrawImg(lx, 18, logoTex, 0, ls, ls, 0xFFFFFFFF);
+            GRRLIB_DrawImg((640 - lw) / 2, 40, logoTex, 0, ls, ls, 0xFFFFFFFF);
         }
 
-        // --- Menu buttons ---
         for (int i = 0; i < MENU_COUNT; ++i) {
-            int byCtr = BY_START + i * B_SPACING + BH / 2;  // vertical center
-
-            bool isSelected = (i == selectedIndex);
-            bool isHover    = ir.valid &&
-                              ir.x >= BX && ir.x <= BX + BW &&
-                              ir.y >= (BY_START + i * B_SPACING) &&
-                              ir.y <= (BY_START + i * B_SPACING + BH);
-
-            // Zoom only on IR hover, no tint change ever
-            float zoom = isHover ? 1.06f : 1.0f;
-            int drawW  = (int)(BW * zoom);
-            int drawH  = (int)(BH * zoom);
-            int drawX  = (640 / 2) - drawW / 2;
-            int drawY  = byCtr - drawH / 2;
-
-            if (btnTex) {
-                float sx = (float)drawW / (float)btnTex->w;
-                float sy = (float)drawH / (float)btnTex->h;
-                GRRLIB_DrawImg(drawX, drawY, btnTex, 0, sx, sy, 0xFFFFFFFF);
-            } else {
-                // Fallback button: filled rect (dark navy tint) with bright border
-                u32 fillCol   = isSelected ? 0x1A4A8AFF : 0x0D2A50FF;
-                u32 borderCol = isSelected ? 0x4A90D9FF : 0x2A5A90FF;
-                GRRLIB_Rectangle(drawX,     drawY,     drawW,     drawH,     fillCol,   1);
-                GRRLIB_Rectangle(drawX,     drawY,     drawW,     2,         borderCol, 1);
-                GRRLIB_Rectangle(drawX,     drawY+drawH-2, drawW, 2,         borderCol, 1);
-                GRRLIB_Rectangle(drawX,     drawY,     2,         drawH,     borderCol, 1);
-                GRRLIB_Rectangle(drawX+drawW-2, drawY, 2,         drawH,     borderCol, 1);
-            }
-
-            // Text: white on dark button bg (readable on both texture and fallback rect)
-            const char* label    = menuItems[i].c_str();
-            const int   fontSize = 20;
-            int tw = GRRLIB_WidthTTF(font, label, fontSize);
-            int tx = (640 / 2) - tw / 2;
-            int ty = byCtr - fontSize / 2;
-            // Dark text on white button texture; bright text on fallback dark rect
-            u32 textColor = btnTex
-                ? (isSelected ? (u32)0x003A80FF : (u32)0x1A3A5AFF)
-                : (isSelected ? (u32)0xFFFFFFFF : (u32)0xCCDDEEFF);
-            GRRLIB_PrintfTTF(tx, ty, font, label, fontSize, textColor);
+            int by = BY_START + i * B_SPACING;
+            bool hover = ir.valid && ir.x >= BX && ir.x <= BX + BW && ir.y >= by && ir.y <= by + BH;
+            bool focus = ir.valid ? hover : (i == selectedIndex);
+            menuFocus[i] = Ui::approach(menuFocus[i], focus ? 1.0f : 0.0f);
+            float grow = 8.0f * menuFocus[i];
+            Ui::button(BX - grow, by - grow * 0.25f, BW + grow * 2, BH + grow * 0.5f,
+                       menuItems[i].c_str(), 22, menuFocus[i]);
         }
 
-        // --- Footer ---
         {
-            const char* footer   = "A Select  B Back  HOME Menu";
-            const int   fSize    = 16;
-            int fw = GRRLIB_WidthTTF(font, footer, fSize);
-            int fx = (640 - fw) / 2;
-            GRRLIB_PrintfTTF(fx, 455, font, footer, fSize, 0xAAAAAAFF);
+            static const Ui::Hint left[]  = { { "A", "Select" } };
+            static const Ui::Hint right[] = { { "HOME", "Menu" } };
+            Ui::bottomBar(left, 1, right, 1);
         }
 
         // --- IR Cursor: rendered last ---
@@ -1339,6 +1236,7 @@ void App::loop() {
 
     // --- Cleanup ---
     saveSettings();
+    Log::close();        // its writer thread must not touch the card past here
     MusicBGM::pause();   // stop audio thread/ASND callbacks before tearing down GX
     // Blank the VI output before GX teardown to avoid purple/pink artefact frame
     VIDEO_SetBlack(true);
@@ -1348,6 +1246,7 @@ void App::loop() {
     GRRLIB_FreeTexture(btnTex);
     GRRLIB_FreeTexture(cursorPointerTex);
     GRRLIB_FreeTexture(ringTex);
+    Text::clearCache();
     GRRLIB_FreeTTF(font);
     GRRLIB_FreeTTF(jpFont);
     GRRLIB_Exit();
@@ -1400,6 +1299,29 @@ void App::loadSettings() {
             jellyfinClient.sslVerify = atoi(val) != 0;
         } else if (strcmp(key, "music_enabled") == 0) {
             musicEnabled = atoi(val) != 0;
+        } else if (strcmp(key, "ui_theme") == 0) {
+            {
+                int t = atoi(val);
+                Ui::setTheme(t >= 0 && t < Ui::THEME_COUNT ? (Ui::Theme)t : Ui::Theme::Dark);
+                /* settings saved before home_layout existed: Flix meant rows
+                 * (home_layout, written after ui_theme, overrides this) */
+                if (Ui::theme() == Ui::Theme::Flix) Ui::setHomeLayout(Ui::HomeLayout::Rows);
+            }
+        } else if (strcmp(key, "smooth_motion") == 0) {
+            g_wiifin_smooth_motion = atoi(val) != 0;
+        } else if (strcmp(key, "video_zoom") == 0) {
+            VideoSurface::setZoom(atoi(val) == 1 ? VideoSurface::Zoom::Fill : VideoSurface::Zoom::Fit);
+        } else if (strcmp(key, "library_view") == 0) {
+            int v = atoi(val);
+            if (v >= 0 && v < Ui::LIBRARY_STYLE_COUNT) Ui::setLibraryStyle((Ui::LibraryStyle)v);
+        } else if (strcmp(key, "home_layout") == 0) {
+            Ui::setHomeLayout(atoi(val) == 1 ? Ui::HomeLayout::Rows : Ui::HomeLayout::Grid);
+        } else if (strcmp(key, "safe_area") == 0) {
+            int l = 0, t = 0, r = 0, b = 0;
+            if (sscanf(val, "%d,%d,%d,%d", &l, &t, &r, &b) == 4) Ui::setSafeArea(l, t, r, b);
+        } else if (strcmp(key, "video_quality") == 0) {
+            int q = atoi(val);
+            if (q >= 0 && q < JellyfinClient::VIDEO_QUALITY_COUNT) jellyfinClient.videoQuality = q;
         } else if (strcmp(key, "profile_count") == 0) {
             profileCount = atoi(val);
             if (profileCount > 0 && profileCount <= 32) profiles.resize((size_t)profileCount);
@@ -1454,6 +1376,17 @@ void App::saveSettings() {
     if (!f) return;
     fprintf(f, "ssl_verify=%d\n",      jellyfinClient.sslVerify ? 1 : 0);
     fprintf(f, "music_enabled=%d\n",    musicEnabled ? 1 : 0);
+    fprintf(f, "video_quality=%d\n",    jellyfinClient.videoQuality);
+    fprintf(f, "ui_theme=%d\n",         (int)Ui::theme());
+    fprintf(f, "home_layout=%d\n",      (int)Ui::homeLayout());
+    fprintf(f, "library_view=%d\n",     (int)Ui::libraryStyle());
+    fprintf(f, "smooth_motion=%d\n",    g_wiifin_smooth_motion ? 1 : 0);
+    fprintf(f, "video_zoom=%d\n",       (int)VideoSurface::zoom());
+    {
+        int l, t, r, b;
+        Ui::safeArea(l, t, r, b);
+        fprintf(f, "safe_area=%d,%d,%d,%d\n", l, t, r, b);
+    }
     fprintf(f, "profile_count=%d\n",   (int)profiles.size());
     for (int i = 0; i < (int)profiles.size(); i++) {
         const SavedProfile& p = profiles[i];

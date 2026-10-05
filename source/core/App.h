@@ -19,7 +19,6 @@ private:
     void loop();
     void loadSettings();
     void saveSettings();
-    void reloadAssets();
 
     GRRLIB_texImg* logoTex = nullptr;
     GRRLIB_texImg* btnTex = nullptr;

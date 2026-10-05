@@ -66,12 +66,15 @@ OFILES      := $(ASSET_OFILES) $(SRC_OFILES)
 INCLUDE := $(foreach dir,$(INCLUDES), -I$(CURDIR)/$(dir)) \
            -I$(LIBOGC_INC) -I$(BUILD) \
            -I/opt/devkitpro/portlibs/ppc/include \
+           -I/opt/devkitpro/portlibs/ppc/include/freetype2 \
            -I/opt/devkitpro/portlibs/wii/include \
            -I$(CURDIR)/libs/mbedtls/include
 
 CFLAGS      := -g -O2 -Wall -MMD -MP $(MACHDEP) $(INCLUDE)
 CXXFLAGS    := $(CFLAGS)
-LDFLAGS     := -g $(MACHDEP) -Wl,-Map,$(TARGET).map -T $(CURDIR)/tools/wii_wiifin.ld
+LDFLAGS     := -g $(MACHDEP) -Wl,-Map,$(TARGET).map -T $(CURDIR)/tools/wii_wiifin.ld \
+               -Wl,--wrap=LWP_JoinThread \
+               -Wl,--wrap=SYS_Report       # see source/core/LwpJoinFix.cpp, Log.cpp
 LIBPATHS    := -L$(LIBOGC_LIB) -L/opt/devkitpro/portlibs/wii/lib -L/opt/devkitpro/portlibs/ppc/lib \
                -L$(CURDIR)/libs/mbedtls/lib
 
@@ -117,6 +120,9 @@ $(BUILD)/%.o: source/jellyfin/%.cpp
 
 $(BUILD)/%.o: source/player/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(BUILD)/%.o: source/player/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # Explicit asset rules
 $(BUILD)/cursor_pointer_png.o: data/cursors/PointerP1-64.png
