@@ -221,12 +221,12 @@ private:
     GRRLIB_texImg*            nextUpTextures[3]  = {};
     int  continueSel         = 0;
     int  nextUpSel           = 0;
-    int  homePage            = 0; // 0=libs, 1=activite
+    int  homePage            = 0; // 0=libs, 1=activity
     int  actRow              = 0; // 0=CW row, 1=NextUp row (activity page)
     bool detailIsEpisodeHint = false;
 
     // Movie tabs (only active when currentLibType == "movies")
-    int         movieTab          = 0;    // 0=Films, 1=Collections, 2=Favoris, 3=Suggestions
+    int         movieTab          = 0;    // 0=Movies, 1=Collections, 2=Favorites, 3=Suggestions
     std::string movieLibId;               // root movies library id (preserved across BoxSet drilldown)
     bool        inBoxSetDrilldown = false;// true when inside a collection's movies
 

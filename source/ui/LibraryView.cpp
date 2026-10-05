@@ -2594,7 +2594,7 @@ void LibraryView::render(ir_t& ir) {
                                 i == continueSel && actRow == 0, true,
                                 cwDisplayMain[i], cwDisplaySub[i]);
             } else {
-                Ui::text(ACT_X0 + 20, ACT_ROW0_Y + 40, "Rien en cours", 14, p.textDim);
+                Ui::text(ACT_X0 + 20, ACT_ROW0_Y + 40, "Nothing in progress", 14, p.textDim);
             }
 
             // Next Up row
@@ -2893,7 +2893,7 @@ void LibraryView::render(ir_t& ir) {
 
         // Count top-right
         if (itemTotal > 0) drawCount(itemPage, POSTERS_PER_PAGE, (int)items.size(), itemTotal);
-        else               Ui::textRight(620, 18, "Pas de favoris", 15, headerDim());
+        else               Ui::textRight(620, 18, "No favorites", 15, headerDim());
 
         int n = (int)items.size();
         const int GF_Y0 = POSTER_Y0 + 12; // header is 52px tall vs 46px for library sub-pages
@@ -2969,7 +2969,7 @@ void LibraryView::render(ir_t& ir) {
             drawSugRow(SG_ROW0_Y, movieContItems, movieContTex, movieSuggestContOff,
                        movieSuggestContSel, movieSuggestRow == 0, false, true);
         else
-            Ui::text(SG_X0 + 20, SG_ROW0_Y + 60, "Aucun film en cours", 14, p.textDim);
+            Ui::text(SG_X0 + 20, SG_ROW0_Y + 60, "No movie in progress", 14, p.textDim);
 
         sectionLabel(SG_X0, 252, "RECENTLY ADDED", nr > 0);
         if (nr > 0)
@@ -3481,7 +3481,7 @@ void LibraryView::renderSearchResults(ir_t& ir) {
         }
     }
 
-    const Ui::Hint l[] = { { "A", "Open" }, { "1", "Nouvelle recherche" } };
+    const Ui::Hint l[] = { { "A", "Open" }, { "1", "New search" } };
     const Ui::Hint r[] = { { "B", "Back" } };
     Ui::footer(l, 2, r, 1);
 }

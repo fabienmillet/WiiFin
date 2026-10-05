@@ -553,7 +553,7 @@ void ConnectView::renderBackground() {
         Ui::roundBorder(320 - w / 2 - 16, 420, w + 32, 26, 13, 1.5f, p.accent);
         Ui::text(320 - w / 2, 425, msg, 14, p.accentDark);
     } else
-    // Status (deux lignes si le message est trop large)
+    // Status (on two lines when the message is too wide)
     if (statusTimer > 0) {
         u32 sc = statusError ? p.danger : p.ok;
         const std::string& msg = statusMsg;

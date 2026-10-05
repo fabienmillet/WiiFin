@@ -16,11 +16,11 @@ namespace SoundFX {
         Start,      // button click  (button_start.png texture)
         Select,     // cursor hover over button_start button
         PressKey,   // VKB key press in ConnectView
-        MenuExit,   // "Oui" in HOME-menu confirmation popup
+        MenuExit,   // "Yes" in HOME-menu confirmation popup
         MenuEnter,  // HOME button pressed → overlay opens
         Loading,    // loading spinner (looped; call stopLoading() to end)
         Backspace,  // backspace key on VKB
-        Back,       // "Non" in HOME-menu confirmation popup
+        Back,       // "No" in HOME-menu confirmation popup
         COUNT_      // internal sentinel — not a playable sound
     };
 
