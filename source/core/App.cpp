@@ -229,9 +229,14 @@ static bool runPlaySession(JellyfinClient& client,
         ctx.currentAudio = audioIdx;
         ctx.currentSub   = subIdx;
         ctx.intro        = intro;
-        ctx.streamOrigin = streamOriginSecs(startTicks);
+        /* Burned-in subtitles are transcoded with CopyTimestamps (see
+         * getTranscodingUrl): the stream keeps the item's own timestamps, so
+         * the position needs no origin, and MPlayer's -ss would land before
+         * the stream: playback then starts at the RESUME_PAD, 3 s early. */
+        const bool itemTimestamps = subIdx >= 0;
+        ctx.streamOrigin = itemTimestamps ? 0.0f : streamOriginSecs(startTicks);
         /* Skip the RESUME_PAD at demuxer level so output starts on target */
-        ctx.startSkip    = startTicks > RESUME_PAD_TICKS ? 3.0f : 0.0f;
+        ctx.startSkip    = !itemTimestamps && startTicks > RESUME_PAD_TICKS ? 3.0f : 0.0f;
         ctx.runtime      = (float)(runtimeTicks / 10000000.0);
         view.setContext(ctx);
 
@@ -239,6 +244,7 @@ static bool runPlaySession(JellyfinClient& client,
         g_wiifin_known_duration = ctx.runtime > ctx.streamOrigin
                                   ? ctx.runtime - ctx.streamOrigin : 0.0f;
         g_wiifin_ss_secs = ctx.startSkip;
+        g_wiifin_burned_subs = subIdx >= 0;
         g_wiifin_stream_tls_verify = client.sslVerify;
 
         s_pendingReport.client        = &client;

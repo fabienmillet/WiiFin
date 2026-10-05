@@ -90,6 +90,11 @@ void wii_player_vol_down(void);
  * Set to 3.0f with JellyfinClient's 3 s RESUME_PAD (startTimeTicks > 3 s). */
 extern volatile float g_wiifin_ss_secs;
 
+/* 1 when the server burns subtitles into the picture.  Its stream then
+ * starts with seconds of audio before the first video frame, more than the
+ * quick stream probe reads, and MPlayer started without video. */
+extern volatile int g_wiifin_burned_subs;
+
 /* One-shot callback fired once the stream is opened (on the player thread). */
 extern void (*g_stream_opened_cb)(void);
 

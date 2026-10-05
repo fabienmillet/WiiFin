@@ -70,6 +70,7 @@ extern "C" {
     volatile int   g_wiifin_vol_delta  = 0;
 
     volatile float g_wiifin_ss_secs = 0.0f;
+    volatile int   g_wiifin_burned_subs = 0;
 }
 
 volatile int   g_player_stop_reason       = PLAYER_STOP_EOF;
@@ -178,7 +179,11 @@ static void* playThreadFunc(void*)
     addArg("-demuxer"); addArg("lavf"); /* MPlayer's native TS demuxer fails to find
                                         * the video PID in Jellyfin live-transcoded
                                         * streams; FFmpeg's lavf parses PAT/PMT. */
-    addArg("-lavfdopts"); addArg("format=mpegts:probesize=32768:analyzeduration=1");
+    /* Probe little so playback starts fast, except with burned-in subtitles:
+     * there the first video frame came 5 s (95 KB) after the audio. */
+    addArg("-lavfdopts");
+    addArg(g_wiifin_burned_subs ? "format=mpegts:probesize=1048576:analyzeduration=10"
+                                : "format=mpegts:probesize=32768:analyzeduration=1");
     addArg("-vo"); addArg("gx");        /* vo_wiifin.c */
     addArg("-ao"); addArg("gekko");
     /* 8 MB cache, playback starts (and resumes after an underrun) once 8%

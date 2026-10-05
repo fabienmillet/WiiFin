@@ -2212,6 +2212,12 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     if (subtitleStreamIndex < 0) {
         urlRemoveParam(relUrl, "SubtitleStreamIndex");
         urlRemoveParam(relUrl, "SubtitleMethod");
+    } else {
+        // Burning subtitles from a start position, Jellyfin shifts the
+        // timestamps back (setpts=PTS-start) as if -copyts were on, but only
+        // adds -copyts when asked: without it the subtitles came ~start
+        // seconds late, and the audio that much ahead of the first frame.
+        urlReplaceParam(relUrl, "CopyTimestamps", "true");
     }
 
     // Always enforce StartTimeTicks in the final URL so Jellyfin's transcoder
