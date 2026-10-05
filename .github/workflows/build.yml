@@ -1,12 +1,17 @@
 name: Build
 
-# Run by hand (Actions > Build > Run workflow): builds WiiFin.dol, WiiFin.wad
-# and the Homebrew Channel package as downloadable artifacts, then boots the
-# WAD and the DOL in Dolphin to check WiiFin reaches its menu.  With a
-# version, that version is stamped into the build; with "release" ticked, a
-# GitHub release v<version> is published with the three files once both
-# boot.
+# On every push and pull request: builds WiiFin.dol, WiiFin.wad and the
+# Homebrew Channel package (downloadable artifacts), boots the WAD and the
+# DOL in Dolphin to check WiiFin reaches its menu.
+#
+# By hand (Actions > Build > Run workflow), a version can be stamped into
+# the build, and with "release" ticked a GitHub release v<version> is
+# published with the three files once every check passes.
 on:
+  push:
+    paths-ignore: ['**.md', 'README/**', 'assets/preview*']
+  pull_request:
+    paths-ignore: ['**.md', 'README/**', 'assets/preview*']
   workflow_dispatch:
     inputs:
       version:
@@ -17,6 +22,12 @@ on:
         description: 'Publish a GitHub release v<version> (needs a version)'
         type: boolean
         default: false
+
+# A newer push to the same branch cancels the run in progress (not a run
+# started by hand, which may publish a release)
+concurrency:
+  group: build-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   build:

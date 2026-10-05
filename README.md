@@ -85,7 +85,7 @@ On a fresh machine, `./setup.sh` installs devkitPro and the portlibs, builds GRR
 ./build.sh wad      # WiiFin.wad, the installable channel (needs libWiiPy, installed by setup.sh)
 ```
 
-The GitHub Actions workflow **Build** (Actions → Build → Run workflow) does the same in devkitPro's Docker image and publishes `WiiFin.dol`, `WiiFin.wad` and the Homebrew Channel zip. It then boots the WAD and the DOL in Dolphin and checks that WiiFin reaches its menu (`tools/test/smoke.sh`). Give it a version and tick *release* to publish a GitHub release once both boot.
+The GitHub Actions workflow **Build** runs on every push and pull request. It does the same in devkitPro's Docker image (a compiler warning fails it) and publishes `WiiFin.dol`, `WiiFin.wad` and the Homebrew Channel zip, then boots the WAD and the DOL in Dolphin and checks that WiiFin reaches its menu (`tools/test/smoke.sh`). Run it by hand (Actions → Build → Run workflow) with a version and *release* ticked to publish a GitHub release once both boot.
 
 `make wad` puts `WiiFin.dol` into `tools/wad/template.wad` (banner, NAND loader, ticket and TMD of title `WIFN`) and fakesigns it: see `tools/make_wad.py`.
 
