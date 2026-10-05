@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <functional>
 #include <grrlib.h>
 #include "Keyboard.h"
 #include <wiiuse/wpad.h>
@@ -63,7 +64,9 @@ private:
 public:
     /* Before the app leaves (IOS shuts USB down): stops the USB keyboard. */
     static void shutdownUsbKeyboard();
+    struct Job;                  /* a background request, see ConnectView.cpp */
 private:
+    Job* job = nullptr;
 
     // --- Status message ---
     std::string statusMsg;
@@ -73,16 +76,19 @@ private:
     // --- Networking ---
     bool netReady = false;
     /* Slow steps run off the main thread so the screen never freezes (the
-     * Wii's network can take very long to come up, a sign-in waits on the
+     * Wii's network can take very long to come up, requests wait on the
      * server): Network waits for JellyfinClient's start-up thread (B gives
-     * up), Login waits for the sign-in thread. */
-    enum class Busy { None, Network, Login };
+     * up), Job for a background request (sign-in, Quick Connect). */
+    enum class Busy { None, Network, Job };
     enum class AfterNet { Login, QuickConnect, Discover };
     Busy     busy     = Busy::None;
     AfterNet afterNet = AfterNet::Login;
     bool     autoQuickConnect = false, autoDiscover = false;   /* run once the network is up */
-    lwp_t    loginThread = LWP_THREAD_NULL;
-    struct LoginJob* loginJob = nullptr;
+    lwp_t       jobThread = LWP_THREAD_NULL;
+    const char* busyLabel = "";
+    void startJob(const char* label, bool quiet, std::function<void()> work,
+                  std::function<ConnectResult()> done);
+    ConnectResult finishJob();
     /* true if the network is up; otherwise starts it and runs `then` later */
     bool needNetwork(AfterNet then);
     void startLogin();

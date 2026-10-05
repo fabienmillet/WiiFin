@@ -8,6 +8,8 @@
 #include <ogc/lwp.h>
 #include <string.h>
 #include <stdio.h>
+#include <memory>
+#include <functional>
 #include <ogc/lwp_watchdog.h>
 
 
@@ -38,29 +40,21 @@ static void* discoverWorker(void* arg) {
 }
 
 // ---------------------------------------------------------------------------
-// Background sign-in thread
+// Background requests (sign-in, Quick Connect)
 // ---------------------------------------------------------------------------
-/* Not DEAD_AT_EXIT: HOME can quit while a sign-in is still running. */
-static u8 s_loginStack[64 * 1024] __attribute__((aligned(32)));   /* mbedTLS handshake */
+/* Not DEAD_AT_EXIT: HOME can quit while a request is still running. */
+static u8 s_jobStack[64 * 1024] __attribute__((aligned(32)));   /* mbedTLS handshake */
 
-struct LoginJob {
-    JellyfinClient* client;
-    std::string     url, user, pass;
-    volatile bool   running = true;
-    bool            ok = false;
-    JellyfinAuth    auth;
-    std::string     err;
+struct ConnectView::Job {
+    std::function<void()>          work;   /* job thread */
+    std::function<ConnectResult()> done;   /* main thread, once work returned */
+    bool                           quiet;  /* the screen stays usable meanwhile */
+    volatile bool                  running = true;
 };
 
-static void* loginWorker(void* arg) {
-    LoginJob* j = static_cast<LoginJob*>(arg);
-    j->ok = j->client->authenticate(j->url, j->user, j->pass, j->auth);
-    if (j->ok) {
-        std::string sn;
-        if (j->client->getServerName(j->url, j->auth, sn)) j->auth.serverName = sn;
-    } else {
-        j->err = j->client->lastError();
-    }
+static void* jobWorker(void* arg) {
+    ConnectView::Job* j = static_cast<ConnectView::Job*>(arg);
+    j->work();
     j->running = false;
     return nullptr;
 }
@@ -68,8 +62,8 @@ static void* loginWorker(void* arg) {
 // ---------------------------------------------------------------
 ConnectView::~ConnectView() {
     /* the threads use this view's members: let them finish first */
-    if (loginThread != LWP_THREAD_NULL) LWP_JoinThread(loginThread, nullptr);
-    delete loginJob;
+    if (jobThread != LWP_THREAD_NULL) LWP_JoinThread(jobThread, nullptr);
+    delete job;
     if (discoverThread != LWP_THREAD_NULL) LWP_JoinThread(discoverThread, nullptr);
     delete discoverCtx;
 }
@@ -82,20 +76,55 @@ bool ConnectView::needNetwork(AfterNet then) {
     return false;
 }
 
+/* Runs work() off the main thread (every request times out on its own),
+ * then done() on the main thread.  Unless quiet, the screen shows `label`
+ * and ignores input meanwhile. */
+void ConnectView::startJob(const char* label, bool quiet, std::function<void()> work,
+                           std::function<ConnectResult()> done) {
+    job = new Job{ std::move(work), std::move(done), quiet };
+    busyLabel = label;
+    if (LWP_CreateThread(&jobThread, jobWorker, job, s_jobStack, sizeof(s_jobStack), 50) < 0) {
+        jobThread = LWP_THREAD_NULL;
+        jobWorker(job);                     /* no thread: run it here */
+    }
+    busy = quiet ? Busy::None : Busy::Job;
+}
+
+/* A finished job: its done() result, else None. */
+ConnectResult ConnectView::finishJob() {
+    if (!job || job->running) return ConnectResult::None;
+    if (jobThread != LWP_THREAD_NULL) LWP_JoinThread(jobThread, nullptr);
+    jobThread = LWP_THREAD_NULL;
+    Job* j = job;
+    job = nullptr;
+    if (busy == Busy::Job) busy = Busy::None;
+    ConnectResult r = j->done();
+    delete j;
+    return r;
+}
+
 void ConnectView::startLogin() {
     while (fields[0].size() > 1 && fields[0].back() == '/') fields[0].pop_back();
     serverUrl = fields[0];
-    loginJob = new LoginJob;
-    loginJob->client = &client;
-    loginJob->url  = fields[0];
-    loginJob->user = fields[1];
-    loginJob->pass = fields[2];
-    if (LWP_CreateThread(&loginThread, loginWorker, loginJob,
-                         s_loginStack, sizeof(s_loginStack), 50) < 0) {
-        loginThread = LWP_THREAD_NULL;
-        loginWorker(loginJob);              /* no thread: sign in here */
-    }
-    busy = Busy::Login;
+    struct Out { bool ok = false; JellyfinAuth auth; std::string err; };
+    auto out = std::make_shared<Out>();
+    std::string url = fields[0], user = fields[1], pass = fields[2];
+    startJob("Signing in", false,
+        [this, out, url, user, pass]() {
+            out->ok = client.authenticate(url, user, pass, out->auth);
+            if (out->ok) {
+                std::string sn;
+                if (client.getServerName(url, out->auth, sn)) out->auth.serverName = sn;
+            } else {
+                out->err = client.lastError();
+            }
+        },
+        [this, out, user]() {
+            if (!out->ok) { setStatus(out->err, true); return ConnectResult::None; }
+            auth = out->auth;
+            username = user;
+            return ConnectResult::Success;
+        });
 }
 
 /* While a slow step runs: keep the screen alive, collect its result. */
@@ -115,17 +144,7 @@ ConnectResult ConnectView::updateBusy() {
         else                                         autoDiscover = true;
         return ConnectResult::None;
     }
-    /* Login: every request times out on its own, B waits for it */
-    if (loginJob->running) return ConnectResult::None;
-    if (loginThread != LWP_THREAD_NULL) LWP_JoinThread(loginThread, nullptr);
-    loginThread = LWP_THREAD_NULL;
-    busy = Busy::None;
-    bool ok = loginJob->ok;
-    if (ok) { auth = loginJob->auth; username = loginJob->user; }
-    else    setStatus(loginJob->err, true);
-    delete loginJob;
-    loginJob = nullptr;
-    return ok ? ConnectResult::Success : ConnectResult::None;
+    return finishJob();
 }
 
 ConnectView::ConnectView(GRRLIB_texImg* btn, GRRLIB_texImg* cursor,
@@ -207,6 +226,10 @@ ConnectResult ConnectView::update(ir_t& ir) {
     if (statusTimer > 0) statusTimer--;
 
     if (busy != Busy::None) return updateBusy();
+    if (job) {                                   /* a quiet job (Quick Connect polling) */
+        ConnectResult r = finishJob();
+        if (r != ConnectResult::None) return r;
+    }
 
     // B = cancel (or close VKB)
     if (Input::isBackPressed() && !kbActive) {
@@ -305,36 +328,60 @@ ConnectResult ConnectView::update(ir_t& ir) {
                     if (!needNetwork(AfterNet::QuickConnect)) break;
                     while (fields[0].size() > 1 && fields[0].back() == '/') fields[0].pop_back();
                     serverUrl = fields[0];
-                    if (client.quickConnectInitiate(serverUrl, qcResult)) {
-                        qcState = QCState::Waiting;
-                        qcPollTimer = 90;
-                        setStatus("Enter code on another device:");
-                    } else {
-                        setStatus(client.lastError(), true);
-                    }
+                    auto ok = std::make_shared<bool>(false);
+                    auto res = std::make_shared<QuickConnectResult>();
+                    auto err = std::make_shared<std::string>();
+                    std::string url = serverUrl;
+                    startJob("Contacting the server", false,
+                        [this, ok, res, err, url]() {
+                            *ok = client.quickConnectInitiate(url, *res);
+                            if (!*ok) *err = client.lastError();
+                        },
+                        [this, ok, res, err]() {
+                            if (!*ok) { setStatus(*err, true); return ConnectResult::None; }
+                            qcResult    = *res;
+                            qcState     = QCState::Waiting;
+                            qcPollTimer = 90;
+                            setStatus("Enter code on another device:");
+                            return ConnectResult::None;
+                        });
                 }
                 break;
             }
             case QCState::Waiting:
-                qcPollTimer--;
-                if (qcPollTimer <= 0) {
+                /* Poll every ~1.5 s in the background: the code stays on
+                 * screen and B still cancels. */
+                if (!job && --qcPollTimer <= 0) {
                     qcPollTimer = 90;
-                    if (client.quickConnectCheck(serverUrl, qcResult.secret, qcResult)) {
-                        if (qcResult.authenticated) {
-                            qcState = QCState::Done;
-                            JellyfinAuth a;
-                            if (client.quickConnectAuthenticate(serverUrl, qcResult.secret, a)) {
-                                username = a.serverName; /* "Name" field = user display name, before overwrite */
-                                std::string sn;
-                                if (client.getServerName(serverUrl, a, sn)) a.serverName = sn;
-                                auth = a;
-                                return ConnectResult::Success;
-                            } else {
-                                setStatus(client.lastError(), true);
+                    auto approved = std::make_shared<bool>(false);
+                    auto signedIn = std::make_shared<bool>(false);
+                    auto a   = std::make_shared<JellyfinAuth>();
+                    auto err = std::make_shared<std::string>();
+                    auto user = std::make_shared<std::string>();
+                    std::string url = serverUrl, secret = qcResult.secret;
+                    startJob("Waiting for approval", true,
+                        [this, approved, signedIn, a, err, user, url, secret]() {
+                            QuickConnectResult r;
+                            if (!client.quickConnectCheck(url, secret, r) || !r.authenticated) return;
+                            *approved = true;
+                            *signedIn = client.quickConnectAuthenticate(url, secret, *a);
+                            if (!*signedIn) { *err = client.lastError(); return; }
+                            std::string sn;
+                            *user = a->serverName;  /* "Name" field = user display name, before overwrite */
+                            if (client.getServerName(url, *a, sn)) a->serverName = sn;
+                        },
+                        [this, approved, signedIn, a, err, user]() {
+                            if (qcState != QCState::Waiting || !*approved) return ConnectResult::None;
+                            if (!*signedIn) {
+                                setStatus(*err, true);
                                 qcState = QCState::Error;
+                                return ConnectResult::None;
                             }
-                        }
-                    }
+                            qcState  = QCState::Done;
+                            auth     = *a;
+                            username = *user;
+                            return ConnectResult::Success;
+                        });
                 }
                 if (Input::isBPressed()) { qcState = QCState::Idle; }
                 break;
@@ -499,7 +546,7 @@ void ConnectView::renderBackground() {
         static const char* const dots[4] = { "", ".", "..", "..." };
         char msg[64];
         snprintf(msg, sizeof(msg), "%s%s",
-                 busy == Busy::Network ? "Connecting to the network" : "Signing in",
+                 busy == Busy::Network ? "Connecting to the network" : busyLabel,
                  dots[(ticks_to_millisecs(gettime()) / 400) % 4]);
         int w = Ui::textWidth("Connecting to the network...", 14);
         Ui::roundRect(320 - w / 2 - 16, 420, w + 32, 26, 13, p.cardTop, p.cardBottom);
