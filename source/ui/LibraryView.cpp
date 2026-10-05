@@ -481,7 +481,7 @@ void LibraryView::buildActDisplayStrings() {
             } else {
                 mains[i] = filterDejaVu(item.name, 22);
                 if (item.year > 0) {
-                    char tmp[8]; snprintf(tmp, sizeof(tmp), "%d", item.year);
+                    char tmp[12]; snprintf(tmp, sizeof(tmp), "%d", item.year);
                     subs[i] = tmp;
                 }
             }

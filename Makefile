@@ -70,7 +70,9 @@ INCLUDE := $(foreach dir,$(INCLUDES), -I$(CURDIR)/$(dir)) \
            -I/opt/devkitpro/portlibs/wii/include \
            -I$(CURDIR)/libs/mbedtls/include
 
-CFLAGS      := -g -O2 -Wall -MMD -MP $(MACHDEP) $(INCLUDE)
+# WERROR=-Werror (set by the CI) turns warnings into errors
+WERROR      ?=
+CFLAGS      := -g -O2 -Wall $(WERROR) -MMD -MP $(MACHDEP) $(INCLUDE)
 CXXFLAGS    := $(CFLAGS)
 LDFLAGS     := -g $(MACHDEP) -Wl,-Map,$(TARGET).map -T $(CURDIR)/tools/wii_wiifin.ld \
                -Wl,--wrap=LWP_JoinThread \

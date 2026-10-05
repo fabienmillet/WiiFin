@@ -492,7 +492,7 @@ void LibraryView::renderPosterGrid(ir_t& ir) {
 
     // Footer: selected title centred, page on the right
     const Ui::Hint l[] = { { "B", "Back" } };
-    char pageStr[24];
+    char pageStr[32];
     snprintf(pageStr, sizeof(pageStr), "Page %d / %d", itemPage + 1, totalPages);
     const Ui::Hint r[] = { { "", pageStr } };
     const char* center = (posterSel >= 0 && posterSel < n) ? items[posterSel].name.c_str() : nullptr;

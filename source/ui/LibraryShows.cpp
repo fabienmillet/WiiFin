@@ -116,7 +116,7 @@ void LibraryView::renderEpisodes(ir_t& ir) {
         int tx = LIST_X + 16;
         // Episode number badge
         if (episodes[idx].indexNumber > 0) {
-            char num[8];
+            char num[16];
             snprintf(num, sizeof(num), "E%02d", episodes[idx].indexNumber);
             int bw = Ui::textWidth(num, 12) + 14;
             Ui::roundRect(tx, ry + 12, bw, 20, 10, Ui::mix(p.accent, 0xFFFFFFFF, 0.2f), p.accentDark);

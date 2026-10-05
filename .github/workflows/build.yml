@@ -54,8 +54,11 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "WiiFin $v"
 
-      # GRRLIB, mbedTLS (with WiiFin's config) and libWiiPy, then the .dol and .wad
+      # GRRLIB, mbedTLS (with WiiFin's config) and libWiiPy, then the .dol and
+      # .wad; a compiler warning fails the build
       - name: Build
+        env:
+          WERROR: -Werror
         run: ./setup.sh
 
       - name: Homebrew Channel package

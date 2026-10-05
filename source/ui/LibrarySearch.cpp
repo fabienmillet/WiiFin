@@ -202,7 +202,7 @@ void LibraryView::renderSearchResults(ir_t& ir) {
 
     // Header
     {
-        char sc[16] = "";
+        char sc[32] = "";
         if (n > SEARCH_VISIBLE) snprintf(sc, sizeof(sc), "%d / %d", searchSel + 1, n);
         std::string hdr = fitText(font, "Results: " + filterDejaVu(searchQuery, 40), 24, 460);
         Ui::header(hdr.c_str(), sc[0] ? sc : nullptr);

@@ -86,7 +86,7 @@ void LibraryView::renderMusicTracks(ir_t& ir) {
         // Track number in a circle
         int tx = LIST_X + 14;
         if (at.trackNumber > 0) {
-            char num[8];
+            char num[12];
             snprintf(num, sizeof(num), "%d", at.trackNumber);
             Ui::circle(tx + 11, ry + 22, 11, sel ? p.accent : Ui::alpha(p.cardBorder, 0.6f));
             Ui::textCentered(tx + 11, ry + 15, num, 12, sel ? p.textOnAccent : p.text);
@@ -96,7 +96,7 @@ void LibraryView::renderMusicTracks(ir_t& ir) {
         int dw = 0;
         if (at.runtimeTicks > 0) {
             int secs = (int)(at.runtimeTicks / 10000000LL);
-            char dur[12];
+            char dur[24];
             snprintf(dur, sizeof(dur), "%d:%02d", secs / 60, secs % 60);
             dw = Ui::textWidth(dur, 15) + 12;
             Ui::textRight(LIST_X + LIST_W - 14, ry + 13, dur, 15, p.textDim);
