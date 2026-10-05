@@ -1,4 +1,5 @@
 #include "LibraryView.h"
+#include "../version.h"
 #include "../core/ExitZone.h"
 #include "../core/Text.h"
 #include "Ui.h"
@@ -2492,6 +2493,7 @@ void LibraryView::render(ir_t& ir) {
         Ui::text(EX + 58, EY + 20, "Error", 20, p.danger);
         for (size_t i = 0; i < lines.size(); ++i)
             Ui::text(EX + 20, EY + 58 + i * 20, lines[i].c_str(), 15, p.text);
+        Ui::textRight(EX + EW - 16, EY + 22, "WiiFin v" WIIFIN_VERSION, 11, p.textDim);   /* for bug reports */
         const Ui::Hint h[] = { { "A", "Back" } };
         Ui::footer(h, 1);
         drawCursor(ir);

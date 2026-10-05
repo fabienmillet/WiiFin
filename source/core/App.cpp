@@ -140,6 +140,7 @@ static bool showErrorScreen(const char* title, const std::string& line1,
         Ui::text(138, 170, title, 20, p.danger);
         Ui::text(100, 210, line1.c_str(), 15, p.text);
         Ui::text(100, 236, line2.c_str(), 13, p.textDim);
+        Ui::textRight(546, 258, "WiiFin v" WIIFIN_VERSION, 11, p.textDim);   /* for bug reports */
         if (retry) {
             const Ui::Hint l[] = { { "A", "Retry" } };
             const Ui::Hint r[] = { { "B", "Back" } };
