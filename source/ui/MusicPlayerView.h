@@ -19,6 +19,8 @@
  * ----------------------------------------------------------------------- */
 class MusicOverlay {
 public:
+    static const int VIZ_BARS = 24;   /* visualizer bar count */
+
     struct Track {
         std::string id;
         std::string title;
@@ -77,7 +79,6 @@ private:
     bool     timingActive   = false;/* true once g_mplayer_duration>0 (audio started) */
 
     /* ---- Visualizer state: 24 animated bars                              */
-    static const int VIZ_BARS = 24;
     float vizHeight[VIZ_BARS];   /* current height [0..1]                    */
     float vizTarget[VIZ_BARS];   /* target height (drives smooth animation)  */
     float vizPhase          = 0.0f;

@@ -1,8 +1,9 @@
 #include "LibraryView.h"
+#include "../core/ExitZone.h"
+#include "../core/Text.h"
+#include "Ui.h"
 #include "../input/Input.h"
 
-extern unsigned char data_icon_user_png[];
-extern unsigned int  data_icon_user_png_len;
 #include "../jellyfin/JellyfinClient.h"
 #include "../core/SoundFX.h"
 #include <ogcsys.h>
@@ -33,7 +34,7 @@ static void jpegErrExit(j_common_ptr cinfo) {
 // from the worker thread and corrupts the heap allocator state.
 static void jpegNoOp(j_common_ptr) {}
 
-static GRRLIB_texImg* loadJPEGTexture(const u8* data, u32 size) {
+GRRLIB_texImg* loadJPEGTexture(const u8* data, u32 size) {
     // Reject immediately if data doesn't start with the JPEG SOI marker.
     if (size < 3 || data[0] != 0xFF || data[1] != 0xD8 || data[2] != 0xFF)
         return nullptr;
@@ -64,6 +65,10 @@ static GRRLIB_texImg* loadJPEGTexture(const u8* data, u32 size) {
     jpeg_read_header(&cinfo, TRUE);
     // Always request RGB output regardless of source color space.
     cinfo.out_color_space = JCS_RGB;
+    // Speed over exactness: the images are small and already resized by the
+    // server, so the integer DCT and plain chroma upsampling are not visible.
+    cinfo.dct_method          = JDCT_IFAST;
+    cinfo.do_fancy_upsampling = FALSE;
     jpeg_start_decompress(&cinfo);
 
     u32 w  = cinfo.output_width;
@@ -162,8 +167,8 @@ LibraryView::LibraryView(GRRLIB_ttfFont* f, GRRLIB_ttfFont* jf, GRRLIB_texImg* c
                           GRRLIB_texImg* ring,
                           JellyfinClient& c,
                           const JellyfinAuth& a, const std::string& url)
-    : font(f), jpFont(jf), cursorTex(cursor), ringTex(ring), client(c), auth(a), serverUrl(url) {
-    userIconTex = GRRLIB_LoadTexture(data_icon_user_png);
+    : font(f), jpFont(jf), cursorTex(cursor), ringTex(ring), client(c), auth(a), serverUrl(url),
+      browse(c, url, a), catalog(c, url, a, BrowseHome::Mode::Catalog), feed(c, url, a) {
 }
 
 // ---------------------------------------------------------------------------
@@ -200,7 +205,7 @@ static std::string filterDejaVu(const std::string& s, int maxCp) {
 // ---------------------------------------------------------------------------
 // Background fetch: worker thread does network I/O, main thread spins loader.
 // ---------------------------------------------------------------------------
-static u8               s_fetchStack[64 * 1024];
+static u8               s_fetchStack[64 * 1024] DEAD_AT_EXIT;
 static volatile bool    s_fetchDone;
 struct FetchCtx { std::function<void()> fn; };
 static FetchCtx         s_fetchCtx;
@@ -229,27 +234,6 @@ void LibraryView::runWithLoading(std::function<void()> fn) {
 }
 
 // ---------------------------------------------------------------
-void LibraryView::drawGradientBG() {
-    const int r1=0x1a, g1=0x1a, b1=0x2e;
-    const int r2=0x16, g2=0x21, b2=0x3e;
-    const int bands=16, bh=480/bands;
-    for (int i=0; i<bands; i++) {
-        float t = i / (float)(bands - 1);
-        u32 col = (((int)(r1+(r2-r1)*t)) << 24)
-                | (((int)(g1+(g2-g1)*t)) << 16)
-                | (((int)(b1+(b2-b1)*t)) << 8) | 0xFF;
-        GRRLIB_Rectangle(0, i*bh, 640, bh, col, 1);
-    }
-}
-
-void LibraryView::drawCenteredText(int x, int y, int w,
-                                    const char* text, int sz, u32 col) {
-    int tw = (int)GRRLIB_WidthTTF(font, text, sz);
-    int tx = x + (w - tw) / 2;
-    if (tx < x) tx = x;
-    GRRLIB_PrintfTTF(tx, y, font, text, sz, col);
-}
-
 void LibraryView::drawCursor(ir_t& ir) {
     if (ir.valid && cursorTex) {
         orient_t orient;
@@ -296,14 +280,8 @@ const char* LibraryView::labelForType(const std::string& type) {
 }
 
 void LibraryView::drawLoadingFrame() {
-    // Time-based angle: one full rotation per 1.5 seconds, independent of vsync/network speed.
-    float angle = (float)(ticks_to_millisecs(gettime()) % 1500) * (360.0f / 1500.0f);
-    drawGradientBG();
-    if (ringTex) {
-        GRRLIB_SetMidHandle(ringTex, true);
-        GRRLIB_DrawImg(320, 240, ringTex, angle, 1.0f, 1.0f, 0xFFFFFFFF);
-        GRRLIB_SetMidHandle(ringTex, false);
-    }
+    Ui::background(false);
+    Ui::spinner(ringTex, 320, 240);
     SoundFX::tickLoading();
     // Flush to screen and block on vsync. This serves two purposes:
     // 1. The spinner actually appears and animates on screen.
@@ -312,13 +290,18 @@ void LibraryView::drawLoadingFrame() {
     GRRLIB_Render();
 }
 
-void LibraryView::clampScroll() {
-    int n = (int)items.size();
+void LibraryView::clampScroll() {           // text list (ItemsReady)
+    int n = feed.total();
     if (itemSel < 0) itemSel = 0;
     if (n > 0 && itemSel >= n) itemSel = n - 1;
     if (itemSel < viewTop) viewTop = itemSel;
-    if (itemSel >= viewTop + ITEMS_VISIBLE) viewTop = itemSel - ITEMS_VISIBLE + 1;
+    if (itemSel >= viewTop + LIST_ROWS) viewTop = itemSel - LIST_ROWS + 1;
+    if (viewTop > n - LIST_ROWS) viewTop = n - LIST_ROWS;
     if (viewTop < 0) viewTop = 0;
+}
+
+int LibraryView::listWidth() const {
+    return Ui::libraryStyle() == Ui::LibraryStyle::ListCover ? 384 : LIST_W;
 }
 
 void LibraryView::freePosters() {
@@ -366,13 +349,13 @@ void LibraryView::loadPosters() {
         int   visW = (int)(POSTER_W * ws + 0.5f);
         for (int i = 0; i < n; i++) {
             std::string name = items[i].name;
-            if (GRRLIB_WidthTTF(font, name.c_str(), 12) > (u32)visW) {
+            if (Text::width(font, name.c_str(), 12) > (u32)visW) {
                 auto popCodePoint = [](std::string &s) {
                     while (!s.empty() && (s.back() & 0xC0) == 0x80) s.pop_back();
                     if (!s.empty()) s.pop_back();
                 };
                 while (!name.empty() &&
-                       GRRLIB_WidthTTF(font, (name + "...").c_str(), 12) > (u32)visW)
+                       Text::width(font, (name + "...").c_str(), 12) > (u32)visW)
                     popCodePoint(name);
                 name += "...";
             }
@@ -475,42 +458,9 @@ void LibraryView::freeNextUpTextures() {
     }
 }
 
-// Free all textures and bulk heap data before handing control to wii_player_play().
-// MPlayer CE needs ~9 MB of contiguous heap (8 MB read-ahead cache + codec buffers).
-// Keeping poster / detail / activity textures alive while the player starts causes
-// Balloc() to fail inside _dtoa_r (called by MPlayer's diagnostic printf), producing
-// an "Invalid read from 0x00000010" DSI crash. Releasing them here frees ~1–2 MB.
-void LibraryView::releaseForPlayback() {
-    if (userIconTex) { GRRLIB_FreeTexture(userIconTex); userIconTex = nullptr; }
-    freePosters();
-    freeCWTextures();
-    freeNextUpTextures();
-    freeMovieSuggestions();
-    freeTVSuggestions();
-    freeTVUpcoming();
-    freeMusicSuggestions();
-    if (detailTex) { GRRLIB_FreeTexture(detailTex); detailTex = nullptr; }
-    detail = JellyfinItemDetail();
-    detailLines.clear();
-    /* Keep items, seasons, episodes, continueItems, nextUpItems:
-     * they are lightweight metadata (a few KB total) and preserving them
-     * lets reinitAfterPlayback() skip the network refetch, going straight
-     * to PostersLoad instead of LibsReady → ItemsInit → ItemsLoad. */
-}
-
-void LibraryView::reinitAfterPlayback(GRRLIB_ttfFont* f, GRRLIB_ttfFont* jf,
-                                       GRRLIB_texImg* cursor, GRRLIB_texImg* ring) {
-    font      = f;
-    jpFont    = jf;
-    cursorTex = cursor;
-    ringTex   = ring;
-
-    // Reload the user icon (freed by releaseForPlayback → freePosters path or destructor)
-    if (!userIconTex)
-        userIconTex = GRRLIB_LoadTexture(data_icon_user_png);
-
-    // Reset pending play fields
+void LibraryView::clearPendingPlay() {
     pendingPlayUrl.clear();
+    pendingPlayTitle.clear();
     pendingPlayItemId.clear();
     pendingPlayMediaSourceId.clear();
     pendingPlaySessionId.clear();
@@ -526,36 +476,16 @@ void LibraryView::reinitAfterPlayback(GRRLIB_ttfFont* f, GRRLIB_ttfFont* jf,
     pendingPlaySubStreams.clear();
     pendingPlayAudioIdx = 0;
     pendingPlaySubIdx   = -1;
+}
 
-    // Restore to the deepest safe state — items[] (and sometimes
-    // seasons/episodes) are still populated so skip the network fetch.
-    // Go straight to the Ready state so no loading spinner is shown.
-    // Poster textures were freed by releaseForPlayback(); the render
-    // path draws dark placeholder tiles for null textures, so the grid
-    // is immediately usable — posters will reload on the next page change.
-    spinAngle = 0.0f;
-    if (!items.empty() && posterMode) {
-        // Poster grid — show immediately with placeholder tiles (no spinner)
-        posterSel = 0;
-        state = State::PostersReady;
-    } else if (!items.empty()) {
-        // Text list — no images needed, show immediately
-        state = State::ItemsReady;
-        viewTop = 0;
-        itemSel = 0;
-    } else {
-        // No items cached — fall back to library grid
-        state    = State::LibsReady;
-        libSel   = 0;
-        homePage = 0;
-        actRow   = 0;
+void LibraryView::onPlaybackFinished(const std::string& lastItemId) {
+    clearPendingPlay();
+    browse.invalidate();   // resume positions / next up changed
+    catalog.invalidate();
+    if (state == State::DetailReady || state == State::ResumePrompt) {
+        if (!lastItemId.empty()) detailItemId = lastItemId;
+        state = State::DetailLoad;
     }
-
-    // Activity textures (continue watching / next up) were freed by
-    // releaseForPlayback().  Re-download them now so the Activity tab
-    // has images again.  The metadata vectors are still populated, so
-    // we only need to refetch the backdrop bytes and rebuild textures.
-    reloadActivityTextures();
 }
 
 void LibraryView::loadContinueWatching() {
@@ -590,29 +520,6 @@ void LibraryView::loadNextUp() {
     });
 }
 
-void LibraryView::reloadActivityTextures() {
-    // Re-fetch backdrop images for continue-watching and next-up items whose
-    // metadata is still cached but whose textures were freed for playback.
-    runWithLoading([&]() {
-        for (int i = 0; i < (int)continueItems.size() && i < 3; i++) {
-            if (!cwTextures[i]) {
-                std::string imgBytes;
-                client.getItemBackdropBytes(serverUrl, auth, continueItems[i], 190, 107, imgBytes);
-                if (!imgBytes.empty())
-                    cwTextures[i] = loadJPEGTexture((const u8*)imgBytes.data(), (u32)imgBytes.size());
-            }
-        }
-        for (int i = 0; i < (int)nextUpItems.size() && i < 3; i++) {
-            if (!nextUpTextures[i]) {
-                std::string imgBytes;
-                client.getItemBackdropBytes(serverUrl, auth, nextUpItems[i], 190, 107, imgBytes);
-                if (!imgBytes.empty())
-                    nextUpTextures[i] = loadJPEGTexture((const u8*)imgBytes.data(), (u32)imgBytes.size());
-            }
-        }
-    });
-}
-
 // Pre-compute truncated display strings for activity cards so the render loop
 // never calls GRRLIB_WidthTTF (a costly FreeType operation) per frame.
 void LibraryView::buildActDisplayStrings() {
@@ -643,13 +550,13 @@ void LibraryView::buildActDisplayStrings() {
             }
             // Trim mainTitle to fit cell width
             std::string& mt = mains[i];
-            while (!mt.empty() && (int)GRRLIB_WidthTTF(font, mt.c_str(), 13) > visW) {
+            while (!mt.empty() && (int)Text::width(font, mt.c_str(), 13) > visW) {
                 while (!mt.empty() && (mt.back() & 0xC0) == 0x80) mt.pop_back();
                 if (!mt.empty()) mt.pop_back();
             }
             // Trim subTitle to fit cell width
             std::string& st = subs[i];
-            while (!st.empty() && (int)GRRLIB_WidthTTF(font, st.c_str(), 11) > visW) {
+            while (!st.empty() && (int)Text::width(font, st.c_str(), 11) > visW) {
                 while (!st.empty() && (st.back() & 0xC0) == 0x80) st.pop_back();
                 if (!st.empty()) st.pop_back();
             }
@@ -743,6 +650,21 @@ void LibraryView::loadMovieSuggestions() {
 }
 
 void LibraryView::loadItems() {
+    if (!posterMode) {
+        // Text list: the whole library, fetched as it scrolls (ListFeed)
+        std::string filter = (currentLibType == "music" && inItemsDrilldown)
+            ? "AlbumArtistIds=" + currentLibId + "&IncludeItemTypes=MusicAlbum&Recursive=true"
+            : "ParentId=" + currentLibId;
+        bool ok = false; std::string err;
+        runWithLoading([&]() { ok = feed.open(filter, err); });
+        if (!ok) { errMsg = err; state = State::Error; return; }
+        itemTotal = feed.total();
+        globFavMode = false;
+        itemSel = 0; viewTop = 0;
+        if (listRestoreSel >= 0) { itemSel = listRestoreSel; listRestoreSel = -1; clampScroll(); }
+        state = State::ItemsReady;
+        return;
+    }
     items.clear();
     int limit      = posterMode ? POSTERS_PER_PAGE : ITEMS_PER_PAGE;
     int startIndex = itemPage * limit;
@@ -915,7 +837,90 @@ void LibraryView::clampMusicTrackScroll() {
 // ---------------------------------------------------------------
 // update() — returns true when the user exits to the main menu
 // ---------------------------------------------------------------
+bool LibraryView::flixHome() const {
+    return Ui::homeLayout() == Ui::HomeLayout::Rows;
+}
+
 bool LibraryView::update(ir_t& ir) {
+    bool done = updateState(ir);
+    if (state == State::Error && errMsg != loggedErr) {
+        SYS_Report("[Library] error screen: %s\n", errMsg.c_str());
+        loggedErr = errMsg;
+    }
+    // The carousel's poster loader shares the HTTP connection: stop it as
+    // soon as anything else may need the network.
+    bool rowsShown = !done && state == State::LibsReady && flixHome();
+    if (!rowsShown || browsePage)  browse.stopLoader();
+    if (!rowsShown || !browsePage) catalog.stopLoader();
+    if (done || state != State::ItemsReady) feed.stopWorker();   // same connection
+    return done;
+}
+
+// Open an item picked on a mixed list (carousel home): series go to their
+// seasons, albums and playlists to their tracks, the rest to the detail page.
+void LibraryView::openItem(const JellyfinItem& it, State returnState) {
+    if (it.type == "Series") {
+        currentSeriesId    = it.id;
+        currentSeriesName  = it.name;
+        seasonsCallerState = returnState;
+        seasons.clear(); seasonSel = 0; seasonTop = 0;
+        state = State::SeasonsLoad;
+    } else if (it.type == "Season" && !it.seriesId.empty()) {
+        // a new season shows up as its own item: go straight to its episodes
+        currentSeriesId   = it.seriesId;
+        currentSeriesName = it.seriesName;
+        currentSeasonId   = it.id;
+        currentSeasonName = it.name;
+        episodesFromHome  = (returnState == State::LibsReady);
+        state = State::EpisodesLoad;
+    } else if (it.type == "MusicAlbum" || it.type == "Playlist") {
+        musicAlbumId     = it.id;
+        musicAlbumName   = it.name;
+        musicAlbumArtist.clear();
+        musicTracks.clear();
+        musicTrackSel   = 0;
+        musicTrackTop   = 0;
+        musicIsPlaylist = (it.type == "Playlist");
+        tracksFromHome  = (returnState == State::LibsReady);
+        state = State::MusicTracksLoad;
+    } else {
+        detailItemId        = it.id;
+        detailReturnState   = returnState;
+        detailIsEpisodeHint = (it.type == "Episode");
+        state = State::DetailLoad;
+    }
+}
+
+// Open library `index` (tile grid or the "Libraries" row of the browse page).
+void LibraryView::openLibrary(int index) {
+    currentLibId     = libraries[index].id;
+    currentLibName   = libraries[index].name;
+    currentLibType   = libraries[index].collectionType;
+    posterMode       = !Ui::listMode() &&
+                       (currentLibType == "movies" || currentLibType == "tvshows" || currentLibType == "boxsets");
+    inItemsDrilldown = false;
+    if (currentLibType == "movies") {
+        movieTab          = 0;
+        movieLibId        = currentLibId;
+        inBoxSetDrilldown = false;
+    }
+    if (currentLibType == "boxsets") {
+        inBoxSetDrilldown = false;
+    }
+    if (currentLibType == "tvshows") {
+        tvTab   = 0;
+        tvLibId = currentLibId;
+    }
+    if (currentLibType == "music") {
+        musicTab        = 0;
+        musicLibId      = currentLibId;
+        musicIsPlaylist = false;
+    }
+    itemPage = 0;
+    state = State::ItemsInit;
+}
+
+bool LibraryView::updateState(ir_t& ir) {
     bool aPressed = Input::isAJustPressed();
 
     // Detect IR cursor movement: if the pointer moves significantly, switch to IR mode.
@@ -943,6 +948,48 @@ bool LibraryView::update(ir_t& ir) {
             int n = (int)libraries.size();
             if (n == 0) return true;
 
+            if (flixHome()) {
+                BrowseHome& page = browsePage ? catalog : browse;
+                if (!page.built())
+                    runWithLoading([&]() { page.build(libraries); });
+                page.startLoader();
+                switch (page.update(ir, irMode)) {
+                case BrowseHome::Action::Open:
+                    if (const JellyfinItem* it = page.selectedItem()) {
+                        JellyfinItem copy = *it;
+                        if (copy.type == "CollectionFolder") {
+                            for (int i = 0; i < n; i++)
+                                if (libraries[i].id == copy.id) { libSel = i; openLibrary(i); break; }
+                        } else {
+                            openItem(copy, State::LibsReady);
+                        }
+                    }
+                    break;
+                case BrowseHome::Action::Search:
+                    searchQuery.clear();
+                    searchResults.clear();
+                    searchSel = 0; searchTop = 0;
+                    searchKb.reset();
+                    searchReturnState = State::LibsReady;
+                    state = State::SearchInput;
+                    irMode = false;
+                    break;
+                case BrowseHome::Action::Browse:      // "browse" <-> "home"
+                    browsePage = !browsePage;
+                    irMode = false;
+                    break;
+                case BrowseHome::Action::Back:        // B on the browse page
+                    browsePage = false;
+                    irMode = false;
+                    break;
+                case BrowseHome::Action::Profiles:
+                    SoundFX::play(SoundFX::FX::Back);
+                    return true;
+                default: break;
+                }
+                return false;
+            }
+
             // User icon click (top right of header) → return to profile picker
             if (aPressed && irMode && ir.valid &&
                 fabsf(ir.x - 614.0f) < 24.0f && fabsf(ir.y - 26.0f) < 24.0f) {
@@ -961,10 +1008,7 @@ bool LibraryView::update(ir_t& ir) {
                     searchResults.clear();
                     searchSel       = 0;
                     searchTop       = 0;
-                    srchKbRow       = 0;
-                    srchKbCol       = 0;
-                    srchKbPage      = 0;
-                    srchKbShift     = false;
+                    searchKb.reset();
                     searchReturnState = State::LibsReady;
                     state = State::SearchInput;
                     irMode = false;
@@ -996,32 +1040,7 @@ bool LibraryView::update(ir_t& ir) {
                     }
                 }
 
-                if (aPressed) {
-                    currentLibId     = libraries[libSel].id;
-                    currentLibName   = libraries[libSel].name;
-                    currentLibType   = libraries[libSel].collectionType;
-                    posterMode       = (currentLibType == "movies" || currentLibType == "tvshows" || currentLibType == "boxsets");
-                    inItemsDrilldown = false;
-                    if (currentLibType == "movies") {
-                        movieTab          = 0;
-                        movieLibId        = currentLibId;
-                        inBoxSetDrilldown = false;
-                    }
-                    if (currentLibType == "boxsets") {
-                        inBoxSetDrilldown = false;
-                    }
-                    if (currentLibType == "tvshows") {
-                        tvTab   = 0;
-                        tvLibId = currentLibId;
-                    }
-                    if (currentLibType == "music") {
-                        musicTab        = 0;
-                        musicLibId      = currentLibId;
-                        musicIsPlaylist = false;
-                    }
-                    itemPage = 0;
-                    state = State::ItemsInit;
-                }
+                if (aPressed) openLibrary(libSel);
             } else {
                 // ---- Activity page ----
                 if (Input::isBackPressed()) { homePage = 0; irMode = false; return false; }
@@ -1104,7 +1123,11 @@ bool LibraryView::update(ir_t& ir) {
             return false;
 
         case State::ItemsReady: {
-            int n = (int)items.size();
+            // Text list of a whole library (ListFeed): no pages, chunks are
+            // fetched in the background as it scrolls.
+            int n = feed.total();
+            feed.startWorker();
+            const int LW = listWidth();
 
             if (Input::isBackPressed()) {
                 if (inItemsDrilldown) {
@@ -1115,7 +1138,7 @@ bool LibraryView::update(ir_t& ir) {
                     } else {
                         currentLibId   = parentLibId;
                         currentLibName = parentLibName;
-                        itemPage       = parentItemPage;
+                        listRestoreSel = parentItemPage;   // selection in the parent list
                         state          = State::ItemsInit;
                     }
                 } else {
@@ -1126,18 +1149,25 @@ bool LibraryView::update(ir_t& ir) {
 
             if (Input::isUpPressed())   { itemSel--; irMode = false; clampScroll(); }
             if (Input::isDownPressed()) { itemSel++; irMode = false; clampScroll(); }
-            // Music library: -/+ switches tabs instead of paginating
-            if (currentLibType == "music" && !inItemsDrilldown) {
-                if (Input::isLPressed()) {
-                    musicTab = (musicTab + 2) % 3;
-                    itemPage = 0;
-                    if      (musicTab == 0) state = State::ItemsInit;
-                    else if (musicTab == 1) state = State::MusicSuggestionsLoad;
-                    else                   state = State::PlaylistsLoad;
-                    return false;
+            // Left/Right: previous/next letter
+            if (Input::isLeftPressed())  { feed.requestJump(-1, itemSel); irMode = false; }
+            if (Input::isRightPressed()) { feed.requestJump(+1, itemSel); irMode = false; }
+            {
+                int idx;
+                if (feed.takeJump(idx) && idx >= 0) {
+                    itemSel = idx;
+                    viewTop = idx;            /* the letter starts at the top */
+                    clampScroll();
+                    JellyfinItem it;
+                    letterFlash   = feed.get(idx, it) ? ListFeed::letterOf(it) : 0;
+                    letterFlashMs = ticks_to_millisecs(gettime());
                 }
-                if (Input::isRPressed()) {
-                    musicTab = (musicTab + 1) % 3;
+            }
+
+            // Music library: -/+ switches tabs; elsewhere -/+ scroll a screen
+            if (currentLibType == "music" && !inItemsDrilldown) {
+                if (Input::isLPressed() || Input::isRPressed()) {
+                    musicTab = Input::isLPressed() ? (musicTab + 2) % 3 : (musicTab + 1) % 3;
                     itemPage = 0;
                     if      (musicTab == 0) state = State::ItemsInit;
                     else if (musicTab == 1) state = State::MusicSuggestionsLoad;
@@ -1145,71 +1175,59 @@ bool LibraryView::update(ir_t& ir) {
                     return false;
                 }
             } else {
-                if (Input::isLPressed() && itemPage > 0) {
-                    itemPage--;
-                    state = State::ItemsInit;
-                }
-                if (Input::isRPressed()) {
-                    int totalPages = (itemTotal + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE;
-                    if (itemPage + 1 < totalPages) {
-                        itemPage++;
-                        state = State::ItemsInit;
-                    }
-                }
+                if (Input::isLPressed()) { itemSel -= LIST_ROWS; viewTop -= LIST_ROWS; irMode = false; clampScroll(); }
+                if (Input::isRPressed()) { itemSel += LIST_ROWS; viewTop += LIST_ROWS; irMode = false; clampScroll(); }
             }
 
             // IR hover (skip when d-pad was used this frame)
-            bool irHoveredItem = false;
             if (irMode && ir.valid && !Input::isUpPressed() && !Input::isDownPressed()
                          && !Input::isLeftPressed() && !Input::isRightPressed()) {
-                for (int i = 0; i < ITEMS_VISIBLE; i++) {
+                for (int i = 0; i < LIST_ROWS; i++) {
                     int idx = viewTop + i;
                     if (idx >= n) break;
-                    int ry = LIST_Y + i * ROW_H;
-                    if (ir.x >= LIST_X && ir.x <= LIST_X + LIST_W &&
-                        ir.y >= ry && ir.y < ry + ROW_H) {
+                    int ry = LIST_Y + i * LIST_ROW_H;
+                    if (ir.x >= LIST_X && ir.x <= LIST_X + LW &&
+                        ir.y >= ry && ir.y < ry + LIST_ROW_H) {
                         itemSel = idx;
                         irMode = true;
-                        irHoveredItem = true;
-                        clampScroll();
                     }
                 }
             }
 
-            // A: select item
-            if (aPressed && n > 0 && itemSel < n) {
-                const JellyfinItem& sel = items[itemSel];
-                SYS_Report("[LibraryView] A pressed: itemSel=%d n=%d type='%s' libType='%s' ir.valid=%d ir.y=%.0f\n",
-                           itemSel, n, sel.type.c_str(), currentLibType.c_str(),
-                           (int)ir.valid, (float)ir.y);
+            // what to fetch: the rows on screen, a little ahead
+            feed.want(viewTop, viewTop + LIST_ROWS + 10);
+            JellyfinItem sel;
+            bool haveSel = n > 0 && feed.get(itemSel, sel);
+            if (haveSel && Ui::libraryStyle() == Ui::LibraryStyle::ListCover)
+                feed.requestCover(sel.id);
+
+            // A: select item (rows still loading are ignored)
+            if (aPressed && haveSel) {
+                if (ir.valid) {   // with the pointer, only a row under it counts
+                    int row = (int)((ir.y - LIST_Y) / LIST_ROW_H);
+                    if (ir.x < LIST_X || ir.x > LIST_X + LW || row < 0 || row >= LIST_ROWS ||
+                        viewTop + row != itemSel)
+                        return false;
+                }
                 if (currentLibType == "music") {
                     if (sel.type == "MusicArtist") {
                         // Drill into artist's albums — reuse item list with artist as parent
                         parentLibId      = currentLibId;
                         parentLibName    = currentLibName;
-                        parentItemPage   = itemPage;
+                        parentItemPage   = itemSel;
                         inItemsDrilldown = true;
                         currentLibId     = sel.id;
                         currentLibName   = sel.name;
                         itemPage         = 0;
                         state            = State::ItemsInit;
-                    } else if (sel.type == "MusicAlbum") {
+                    } else if (sel.type == "MusicAlbum" || sel.type == "Playlist") {
                         musicAlbumId     = sel.id;
                         musicAlbumName   = sel.name;
                         musicAlbumArtist.clear();
                         musicTracks.clear();
                         musicTrackSel    = 0;
                         musicTrackTop    = 0;
-                        musicIsPlaylist  = false;
-                        state = State::MusicTracksLoad;
-                    } else if (sel.type == "Playlist") {
-                        musicAlbumId     = sel.id;
-                        musicAlbumName   = sel.name;
-                        musicAlbumArtist.clear();
-                        musicTracks.clear();
-                        musicTrackSel    = 0;
-                        musicTrackTop    = 0;
-                        musicIsPlaylist  = true;
+                        musicIsPlaylist  = (sel.type == "Playlist");
                         state = State::MusicTracksLoad;
                     } else if (sel.type == "Audio") {
                         // Single track selected (flat library browse)
@@ -1224,18 +1242,16 @@ bool LibraryView::update(ir_t& ir) {
                         return true;
                     } else {
                         // Unknown type (Folder, AlbumArtist, etc.) — drill in generically
-                        SYS_Report("[LibraryView] music: unhandled type '%s', drilling in\n",
-                                   sel.type.c_str());
                         parentLibId      = currentLibId;
                         parentLibName    = currentLibName;
-                        parentItemPage   = itemPage;
+                        parentItemPage   = itemSel;
                         inItemsDrilldown = true;
                         currentLibId     = sel.id;
                         currentLibName   = sel.name;
                         itemPage         = 0;
                         state            = State::ItemsInit;
                     }
-                } else if (currentLibType == "playlists" && sel.type == "Playlist") {
+                } else if (sel.type == "Playlist") {
                     musicAlbumId     = sel.id;
                     musicAlbumName   = sel.name;
                     musicAlbumArtist.clear();
@@ -1244,14 +1260,27 @@ bool LibraryView::update(ir_t& ir) {
                     musicTrackTop    = 0;
                     musicIsPlaylist  = true;
                     state = State::MusicTracksLoad;
-                } else {
-                    // Non-music: open detail
-                    if (!sel.id.empty()) {
-                        detailItemId = sel.id;
-                        detailReturnState = State::ItemsReady;
-                        detailIsEpisodeHint = (sel.type == "Episode");
-                        state = State::DetailLoad;
-                    }
+                } else if (sel.type == "Series") {
+                    currentSeriesId    = sel.id;
+                    currentSeriesName  = sel.name;
+                    seasonsCallerState = State::ItemsReady;
+                    seasons.clear(); seasonSel = 0; seasonTop = 0;
+                    state = State::SeasonsLoad;
+                } else if (sel.type == "BoxSet" || sel.type == "Folder" || sel.type == "CollectionFolder") {
+                    // a collection or folder: its own list, B comes back here
+                    parentLibId      = currentLibId;
+                    parentLibName    = currentLibName;
+                    parentItemPage   = itemSel;
+                    inItemsDrilldown = true;
+                    currentLibId     = sel.id;
+                    currentLibName   = sel.name;
+                    itemPage         = 0;
+                    state            = State::ItemsInit;
+                } else if (!sel.id.empty()) {
+                    detailItemId        = sel.id;
+                    detailReturnState   = State::ItemsReady;
+                    detailIsEpisodeHint = (sel.type == "Episode");
+                    state = State::DetailLoad;
                 }
             }
             return false;
@@ -1472,7 +1501,8 @@ bool LibraryView::update(ir_t& ir) {
         case State::EpisodesReady: {
             int n = (int)episodes.size();
             if (Input::isBackPressed()) {
-                state = State::SeasonsReady;
+                if (episodesFromHome) { episodesFromHome = false; state = State::LibsReady; }
+                else                  state = State::SeasonsReady;
                 return false;
             }
             if (Input::isUpPressed())   { if (episodeSel > 0)   { episodeSel--; clampEpisodeScroll(); } irMode = false; }
@@ -1820,7 +1850,10 @@ bool LibraryView::update(ir_t& ir) {
         case State::MusicTracksReady: {
             int n = (int)musicTracks.size();
             if (Input::isBackPressed()) {
-                if (musicTab == 1)
+                if (tracksFromHome) {
+                    tracksFromHome = false;
+                    state = State::LibsReady;
+                } else if (musicTab == 1)
                     state = State::MusicSuggestionsReady;
                 else
                     state = State::ItemsReady;
@@ -1905,29 +1938,28 @@ bool LibraryView::update(ir_t& ir) {
                     if (subIdx >= 0) {
                         snprintf(fallback, sizeof(fallback),
                             "%s/Videos/%s/stream?Static=false&MediaSourceId=%s"
-                            "&VideoCodec=h264&AudioCodec=aac&Container=ts"
-                            "&Profile=baseline&Level=30"
-                            "&MaxWidth=480&MaxHeight=272"
-                            "&VideoBitrate=1500000&AudioBitrate=128000"
+                            "&VideoCodec=mpeg4&AudioCodec=mp3&Container=ts"
+                            "&MaxWidth=640&MaxHeight=480"
+                            "&VideoBitrate=%d&AudioBitrate=128000"
                             "&AllowVideoStreamCopy=false&AllowAudioStreamCopy=false"
-                            "&AudioStreamIndex=%d&SubtitleStreamIndex=%d&api_key=%s",
+                            "&AudioStreamIndex=%d&SubtitleStreamIndex=%d&ApiKey=%s",
                             serverUrl.c_str(), detailItemId.c_str(), detailItemId.c_str(),
-                            audioIdx, subIdx, auth.accessToken.c_str());
+                            client.videoBitrate(), audioIdx, subIdx, auth.accessToken.c_str());
                     } else {
                         snprintf(fallback, sizeof(fallback),
                             "%s/Videos/%s/stream?Static=false&MediaSourceId=%s"
-                            "&VideoCodec=h264&AudioCodec=aac&Container=ts"
-                            "&Profile=baseline&Level=30"
-                            "&MaxWidth=480&MaxHeight=272"
-                            "&VideoBitrate=1500000&AudioBitrate=128000"
+                            "&VideoCodec=mpeg4&AudioCodec=mp3&Container=ts"
+                            "&MaxWidth=640&MaxHeight=480"
+                            "&VideoBitrate=%d&AudioBitrate=128000"
                             "&AllowVideoStreamCopy=false&AllowAudioStreamCopy=false"
-                            "&AudioStreamIndex=%d&api_key=%s",
+                            "&AudioStreamIndex=%d&ApiKey=%s",
                             serverUrl.c_str(), detailItemId.c_str(), detailItemId.c_str(),
-                            audioIdx, auth.accessToken.c_str());
+                            client.videoBitrate(), audioIdx, auth.accessToken.c_str());
                     }
                     url = fallback;
                 }
                 pendingPlayUrl = url;
+                pendingPlayTitle = detail.name;
                 pendingPlayItemId = detailItemId;
                 pendingPlayMediaSourceId = detailItemId;
                 pendingPlaySessionId = playSessionId;
@@ -2029,29 +2061,28 @@ bool LibraryView::update(ir_t& ir) {
                     if (subIdx >= 0) {
                         snprintf(fallback, sizeof(fallback),
                             "%s/Videos/%s/stream?Static=false&MediaSourceId=%s"
-                            "&VideoCodec=h264&AudioCodec=aac&Container=ts"
-                            "&Profile=baseline&Level=30"
-                            "&MaxWidth=480&MaxHeight=272"
-                            "&VideoBitrate=1500000&AudioBitrate=128000"
+                            "&VideoCodec=mpeg4&AudioCodec=mp3&Container=ts"
+                            "&MaxWidth=640&MaxHeight=480"
+                            "&VideoBitrate=%d&AudioBitrate=128000"
                             "&AllowVideoStreamCopy=false&AllowAudioStreamCopy=false"
-                            "&AudioStreamIndex=%d&SubtitleStreamIndex=%d&api_key=%s",
+                            "&AudioStreamIndex=%d&SubtitleStreamIndex=%d&ApiKey=%s",
                             serverUrl.c_str(), detailItemId.c_str(), detailItemId.c_str(),
-                            audioIdx, subIdx, auth.accessToken.c_str());
+                            client.videoBitrate(), audioIdx, subIdx, auth.accessToken.c_str());
                     } else {
                         snprintf(fallback, sizeof(fallback),
                             "%s/Videos/%s/stream?Static=false&MediaSourceId=%s"
-                            "&VideoCodec=h264&AudioCodec=aac&Container=ts"
-                            "&Profile=baseline&Level=30"
-                            "&MaxWidth=480&MaxHeight=272"
-                            "&VideoBitrate=1500000&AudioBitrate=128000"
+                            "&VideoCodec=mpeg4&AudioCodec=mp3&Container=ts"
+                            "&MaxWidth=640&MaxHeight=480"
+                            "&VideoBitrate=%d&AudioBitrate=128000"
                             "&AllowVideoStreamCopy=false&AllowAudioStreamCopy=false"
-                            "&AudioStreamIndex=%d&api_key=%s",
+                            "&AudioStreamIndex=%d&ApiKey=%s",
                             serverUrl.c_str(), detailItemId.c_str(), detailItemId.c_str(),
-                            audioIdx, auth.accessToken.c_str());
+                            client.videoBitrate(), audioIdx, auth.accessToken.c_str());
                     }
                     url = fallback;
                 }
                 pendingPlayUrl            = url;
+                pendingPlayTitle          = detail.name;
                 pendingPlayItemId         = detailItemId;
                 pendingPlayMediaSourceId  = detailItemId;
                 pendingPlaySessionId      = playSessionId;
@@ -2179,15 +2210,16 @@ bool LibraryView::update(ir_t& ir) {
         }
 
         case State::SearchInput: {
-            // B → back to wherever we came from
-            if (Input::isBackPressed()) {
+            searchKb.setOrigin((640 - searchKb.width()) * 0.5f, 132);
+            searchKb.setEnterLabel("Search");
+            switch (searchKb.update(ir, searchQuery, 64)) {
+            case Keyboard::Result::Enter:            // Search key or [+]
+                if (!searchQuery.empty()) state = State::SearchLoad;
+                break;
+            case Keyboard::Result::Cancel:           // B with an empty query
                 state = searchReturnState;
-                return false;
-            }
-            handleSearchVKB(ir);
-            // + → execute search
-            if (Input::isRPressed() && !searchQuery.empty()) {
-                state = State::SearchLoad;
+                break;
+            default: break;
             }
             return false;
         }
@@ -2208,8 +2240,7 @@ bool LibraryView::update(ir_t& ir) {
                 searchQuery.clear();
                 searchResults.clear();
                 searchSel = 0; searchTop = 0;
-                srchKbRow = 0; srchKbCol = 0;
-                srchKbPage = 0; srchKbShift = false;
+                searchKb.reset();
                 state = State::SearchInput;
                 irMode = false;
                 return false;
@@ -2272,6 +2303,16 @@ bool LibraryView::update(ir_t& ir) {
                     posterMode       = false;
                     itemPage         = 0;
                     state            = State::ItemsInit;
+                } else if (sel.type == "BoxSet" && Ui::listMode()) {
+                    // text list of the collection; B comes back to the results
+                    inItemsDrilldown    = true;
+                    drilldownFromSearch = true;
+                    currentLibId      = sel.id;
+                    currentLibName    = sel.name;
+                    currentLibType    = "boxsets";
+                    posterMode        = false;
+                    itemPage          = 0;
+                    state = State::ItemsInit;
                 } else if (sel.type == "BoxSet") {
                     inBoxSetDrilldown   = true;
                     drilldownFromSearch = true;
@@ -2305,13 +2346,133 @@ bool LibraryView::update(ir_t& ir) {
 }
 
 // ---------------------------------------------------------------
+// Drawing helpers shared by the screens below (Ui kit look)
+// ---------------------------------------------------------------
+static float focusOf(bool sel, bool hover) {
+    return sel ? Ui::pulse() : (hover ? 0.55f : 0.0f);
+}
+
+// Shorten s (UTF-8) with "..." until it fits maxW pixels.
+static std::string fitText(GRRLIB_ttfFont* f, std::string s, int size, int maxW) {
+    if ((int)Text::width(f, s.c_str(), size) <= maxW) return s;
+    while (!s.empty() && (int)Text::width(f, (s + "...").c_str(), size) > maxW) {
+        while (!s.empty() && (s.back() & 0xC0) == 0x80) s.pop_back();
+        if (!s.empty()) s.pop_back();
+    }
+    return s + "...";
+}
+
+template <typename T>
+static float progressOf(const T& it) {
+    if (it.playbackPositionTicks <= 0 || it.runtimeTicks <= 0) return -1.0f;
+    return (float)it.playbackPositionTicks / (float)it.runtimeTicks;
+}
+
+// Picture tile: shadow, focus halo, cover-cropped image (or a placeholder
+// caption), border and optional progress bar.  w is the logical width; the
+// drawn width follows the widescreen pre-squish like every texture.
+static void drawThumb(GRRLIB_texImg* tex, float x, float y, float w, float h,
+                      float focus, float prog = -1.0f, const char* caption = nullptr,
+                      bool grow = true) {
+    const Ui::Palette& p = Ui::pal();
+    const float r = 10;
+    float g  = (grow && focus > 0.0f) ? 4.0f : 0.0f;   // pops out a little when focused
+    float vw = w * WiiUtils::wsScaleX() + g;
+    float aspect = (w + g) / (h + g);
+    x -= g * 0.5f; y -= g * 0.5f; h += g;
+
+    Ui::shadow(x + 1, y + 3, vw - 2, h - 2, r, 6.0f, p.shadow);
+    if (focus > 0.0f) Ui::shadow(x - 2, y - 2, vw + 4, h + 4, r + 2, 10.0f, Ui::alpha(p.glow, focus));
+    if (tex && tex->w > 0 && tex->h > 0) {
+        Ui::texCover(tex, x, y, vw, h, r, aspect);
+    } else {
+        Ui::roundRect(x, y, vw, h, r, p.cardTop, p.cardBottom);
+        if (caption && *caption) {
+            std::string c = fitText(Ui::font(), caption, 13, (int)vw - 12);
+            Ui::textCentered(x + vw * 0.5f, y + h * 0.5f - 8, c.c_str(), 13, p.textDim);
+        }
+    }
+    Ui::roundBorder(x, y, vw, h, r, 1.5f + focus * 1.5f,
+                    Ui::mix(Ui::alpha(p.cardBorder, 0.8f), p.accent, focus));
+    if (prog >= 0.0f) Ui::progress(x + 8, y + h - 12, vw - 16, 5, prog);
+}
+
+// Row card for the vertical lists.
+static void drawRow(int x, int y, int w, int h, float focus) {
+    Ui::card(x, y + 2, w, h - 6, 10, focus);
+}
+
+
+static void drawPageArrows(ir_t& ir, int upCy, int dnCy, bool canPrev, bool canNext,
+                           int cx, int hitR) {
+    auto over = [&](int cy) {
+        return ir.valid && (int)ir.x >= cx - hitR && (int)ir.x < cx + hitR &&
+               (int)ir.y >= cy - hitR && (int)ir.y < cy + hitR;
+    };
+    Ui::arrowButton(cx, upCy, true,  canPrev, over(upCy));
+    Ui::arrowButton(cx, dnCy, false, canNext, over(dnCy));
+}
+
+// Small chevron at the ends of a horizontally scrolling row.
+static void drawRowChevron(float ax, float ay, bool left, bool active) {
+    const Ui::Palette& p = Ui::pal();
+    u32 c = active ? p.accent : Ui::alpha(p.textDim, 0.3f);
+    if (left) Ui::triangle(ax - 7, ay, ax + 5, ay - 9, ax + 5, ay + 9, c);
+    else      Ui::triangle(ax + 7, ay, ax - 5, ay + 9, ax - 5, ay - 9, c);
+}
+
+static void sectionLabel(int x, int y, const char* s, bool active) {
+    const Ui::Palette& p = Ui::pal();
+    Ui::roundRect(x, y + 1, 3, 12, 1.5f, active ? p.accent : Ui::alpha(p.textDim, 0.5f));
+    Ui::text(x + 9, y, s, 12, active ? p.text : p.textDim);
+}
+
+static void headerLine(int y) {
+    if (Ui::headerBand() > 0) return;   // the band already separates
+    Ui::roundRect(20, y, 600, 2, 1, Ui::alpha(Ui::pal().cardBorder, 0.7f));
+}
+
+// Secondary header text: dim on plain backgrounds, translucent white on a band.
+static u32 headerDim() {
+    return Ui::headerBand() > 0 ? 0xFFFFFFC0 : Ui::pal().textDim;
+}
+
+// Back chevron + title at the top left, shortened to maxW.
+static void drawBreadcrumb(const std::string& title, int size, int maxW) {
+    const Ui::Palette& p = Ui::pal();
+    float cy = 14 + size * 0.55f;
+    Ui::triangle(20, cy, 28, cy - 7, 28, cy + 7, Ui::headerBand() > 0 ? 0xFFFFFFFF : p.accent);
+    std::string t = fitText(Ui::font(), filterDejaVu(title, 60), size, maxW - 14);
+    Ui::text(34, 14, t.c_str(), size, p.text);
+}
+
+static void drawCount(int page, int perPage, int shown, int total) {
+    char countStr[48];
+    snprintf(countStr, sizeof(countStr), "%d-%d / %d",
+             page * perPage + 1, page * perPage + shown, total);
+    Ui::textRight(620, 18, countStr, 15, headerDim());
+}
+
+static const char* const kMovieTabs[4] = { "Movies", "Collections", "Favorites", "Suggestions" };
+static const char* const kTvTabs[3]    = { "Series", "Suggestions", "Coming Up" };
+static const char* const kMusicTabs[3] = { "Albums", "Suggestions", "Playlists" };
+static const char* const kHomeTabs[3]  = { "Libraries", "Activity", "Favorites" };
+
+// Tabbed library header: tabs centred, breadcrumb in the room on the left.
+static void drawLibHeader(const std::string& libName, const char* const* tabNames,
+                          int nTabs, int sel) {
+    float x0 = Ui::tabs(320, 10, tabNames, nTabs, sel, 13);
+    drawBreadcrumb(libName, 16, (int)x0 - 34 - 10);
+    headerLine(46);
+}
+
+// ---------------------------------------------------------------
 // render()
 // ---------------------------------------------------------------
 void LibraryView::render(ir_t& ir) {
-    drawGradientBG();
+    const Ui::Palette& p = Ui::pal();
 
-    // Loading screen (shown one frame before blocking load)
-    if (state == State::LibsInit || state == State::LibsLoad ||
+    const bool loading = (state == State::LibsInit || state == State::LibsLoad ||
         state == State::ItemsInit || state == State::ItemsLoad ||
         state == State::PostersLoad || state == State::DetailLoad ||
         state == State::SeasonsLoad || state == State::EpisodesLoad ||
@@ -2320,25 +2481,56 @@ void LibraryView::render(ir_t& ir) {
         state == State::MovieSuggestionsLoad ||
         state == State::TVSuggestionsLoad || state == State::TVUpcomingLoad ||
         state == State::MusicSuggestionsLoad || state == State::PlaylistsLoad ||
-        state == State::GlobalFavoritesLoad || state == State::SearchLoad) {
-        float angle = (float)(ticks_to_millisecs(gettime()) % 1500) * (360.0f / 1500.0f);
+        state == State::GlobalFavoritesLoad || state == State::SearchLoad);
+    Ui::background(!loading);
 
-        if (ringTex) {
-            GRRLIB_SetMidHandle(ringTex, true);
-            GRRLIB_DrawImg(320, 240, ringTex, angle, 1.0f, 1.0f, 0xFFFFFFFF);
-            GRRLIB_SetMidHandle(ringTex, false);
-        } else {
-            drawCenteredText(0, 200, 640, "Loading...", 22, 0xCCCCCCFF);
-        }
+    // Loading screen (shown one frame before blocking load)
+    if (loading) {
+        if (ringTex) Ui::spinner(ringTex, 320, 240);
+        else         Ui::textCentered(320, 200, "Loading...", 22, p.textDim);
         drawCursor(ir);
         return;
     }
 
     // Error screen
     if (state == State::Error) {
-        GRRLIB_PrintfTTF(40, 200, font, "Error:", 20, 0xFF5555FF);
-        GRRLIB_PrintfTTF(40, 228, font, errMsg.c_str(), 16, 0xEEEEEEFF);
-        GRRLIB_PrintfTTF(40, 440, font, "[A] / [B]: Back", 16, 0x889AABFF);
+        const int EX = 100, EY = 140, EW = 440;
+        // word-wrap the message into at most 5 lines
+        std::vector<std::string> lines;
+        {
+            std::string cur, word;
+            std::string msg = filterDejaVu(errMsg, 400) + " ";
+            for (char ch : msg) {
+                if (ch != ' ' && ch != '\n') { word += ch; continue; }
+                std::string cand = cur.empty() ? word : cur + " " + word;
+                if (!cur.empty() && (int)Text::width(font, cand.c_str(), 15) > EW - 40) {
+                    lines.push_back(cur);
+                    cur = word;
+                } else {
+                    cur = cand;
+                }
+                word.clear();
+                if (ch == '\n' && !cur.empty()) { lines.push_back(cur); cur.clear(); }
+            }
+            if (!cur.empty()) lines.push_back(cur);
+            if (lines.size() > 5) lines.resize(5);
+        }
+        int EH = 70 + (int)lines.size() * 20;
+        Ui::card(EX, EY, EW, EH, 18, 0.0f);
+        Ui::circle(EX + 34, EY + 32, 13, p.danger);
+        Ui::textCentered(EX + 34, EY + 22, "!", 18, 0xFFFFFFFF);
+        Ui::text(EX + 58, EY + 20, "Error", 20, p.danger);
+        for (size_t i = 0; i < lines.size(); ++i)
+            Ui::text(EX + 20, EY + 58 + i * 20, lines[i].c_str(), 15, p.text);
+        const Ui::Hint h[] = { { "A", "Back" } };
+        Ui::footer(h, 1);
+        drawCursor(ir);
+        return;
+    }
+
+    // ---- Carousel home (Flix theme) ----
+    if (state == State::LibsReady && flixHome() && (browsePage ? catalog : browse).built()) {
+        (browsePage ? catalog : browse).render(ir);
         drawCursor(ir);
         return;
     }
@@ -2353,41 +2545,20 @@ void LibraryView::render(ir_t& ir) {
             if (ss != std::string::npos) srvLabel = srvLabel.substr(ss + 3);
             if (!srvLabel.empty() && srvLabel.back() == '/') srvLabel.pop_back();
         }
-        // Header background bar
-        GRRLIB_Rectangle(0, 0, 640, 52, 0x0E1826FF, 1);
-        // Server name – small, left-aligned, muted
-        GRRLIB_PrintfTTF(20, 6, font, srvLabel.c_str(), 13, 0x5577AAFF);
+        float tabX0 = Ui::tabs(320, 10, kHomeTabs, 3, homePage == 0 ? 0 : 1, 16);
+        srvLabel = fitText(font, filterDejaVu(srvLabel, 40), 14, (int)tabX0 - 30);
+        Ui::text(20, 18, srvLabel.c_str(), 14, headerDim());
+        headerLine(51);
 
-        // Page tabs – title-case, centered
-        const char* t0 = "Libraries";
-        const char* t1 = "Activity";
-        const char* t2 = "Favorites";
-        int tw0 = (int)GRRLIB_WidthTTF(font, t0, 16);
-        int tw1 = (int)GRRLIB_WidthTTF(font, t1, 16);
-        int tw2 = (int)GRRLIB_WidthTTF(font, t2, 16);
-        const int TAB_GAP = 30;
-        int totalTabW = tw0 + TAB_GAP + tw1 + TAB_GAP + tw2;
-        int tabX0 = 320 - totalTabW / 2;
-        int tabX1 = tabX0 + tw0 + TAB_GAP;
-        int tabX2 = tabX1 + tw1 + TAB_GAP;
-        GRRLIB_PrintfTTF(tabX0, 20, font, t0, 16, homePage == 0 ? 0xFFFFFFFF : 0x5B7A9AFF);
-        GRRLIB_PrintfTTF(tabX1, 20, font, t1, 16, homePage == 1 ? 0xFFFFFFFF : 0x5B7A9AFF);
-        GRRLIB_PrintfTTF(tabX2, 20, font, t2, 16, 0x5B7A9AFF);
-        if (homePage == 0) GRRLIB_Rectangle(tabX0, 42, tw0, 3, 0x4499FFFF, 1);
-        else               GRRLIB_Rectangle(tabX1, 42, tw1, 3, 0x4499FFFF, 1);
-        GRRLIB_Rectangle(0, 51, 640, 1, 0x1C2D3CFF, 1);
-
-        // User icon – top right of header
-        if (userIconTex) {
+        // Profile avatar – top right of header (click: back to the profile picker)
+        {
             bool iconHover = ir.valid && fabsf(ir.x - 614.0f) < 24.0f && fabsf(ir.y - 26.0f) < 24.0f;
-            float iconScale = iconHover ? 0.60f : 0.50f;
-            GRRLIB_SetMidHandle(userIconTex, true);
-            GRRLIB_DrawImg(614, 26, userIconTex, 0, iconScale, iconScale, 0xFFFFFFFF);
-            GRRLIB_SetMidHandle(userIconTex, false);
+            Ui::avatar(614, Ui::headerBand() > 0 ? 22 : 26, iconHover ? 17.0f : 15.0f,
+                       userName.c_str(), iconHover ? 1.0f : 0.0f);
         }
 
         if (homePage == 0) {
-            // ---- Libraries grid ----
+            // ---- Libraries grid (channel-style tiles) ----
             int n = (int)libraries.size();
             for (int i = 0; i < n; i++) {
                 int col = i % TILE_COLS;
@@ -2398,30 +2569,23 @@ void LibraryView::render(ir_t& ir) {
                 bool hover = ir.valid &&
                              ir.x >= tx && ir.x <= tx + TILE_W &&
                              ir.y >= ty && ir.y <= ty + TILE_H;
-                u32 bg = colorForType(libraries[i].collectionType, sel || hover);
-                GRRLIB_Rectangle(tx, ty, TILE_W, TILE_H, bg, 1);
-                if (sel || hover) {
-                    GRRLIB_Rectangle(tx - 2,      ty - 2,      TILE_W + 4, 2,          0xFFFFFFFF, 1);
-                    GRRLIB_Rectangle(tx - 2,      ty + TILE_H, TILE_W + 4, 2,          0xFFFFFFFF, 1);
-                    GRRLIB_Rectangle(tx - 2,      ty - 2,      2,          TILE_H + 4, 0xFFFFFFFF, 1);
-                    GRRLIB_Rectangle(tx + TILE_W, ty - 2,      2,          TILE_H + 4, 0xFFFFFFFF, 1);
-                }
-                drawCenteredText(tx, ty + 12, TILE_W, labelForType(libraries[i].collectionType), 12, 0xAABBCCFF);
-                drawCenteredText(tx, ty + 38, TILE_W, libraries[i].name.c_str(), 18, 0xFFFFFFFF);
+                float f = focusOf(sel, hover);
+                Ui::card(tx, ty, TILE_W, TILE_H, 14, f);
+
+                // coloured type pill + library name
+                const char* type = labelForType(libraries[i].collectionType);
+                int pw = Ui::textWidth(type, 10) + 18;
+                Ui::roundRect(tx + (TILE_W - pw) / 2, ty + 14, pw, 17, 8.5f,
+                              colorForType(libraries[i].collectionType, true),
+                              colorForType(libraries[i].collectionType, false));
+                Ui::textCentered(tx + TILE_W / 2, ty + 16, type, 10, 0xFFFFFFFF);
+                std::string name = fitText(font, filterDejaVu(libraries[i].name, 40), 18, TILE_W - 20);
+                Ui::textCentered(tx + TILE_W / 2, ty + 44, name.c_str(), 18,
+                                 Ui::mix(p.text, p.accentDark, f));
             }
-            GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-            // Tab cycle: Libraries →[+]→ Activity →[+]→ Favourites →[+]→ Libraries
-            {
-                struct { const char* label; int cx; } hints[] = {
-                    { "[A] Open",    80  },
-                    { "[1] Search", 240  },
-                    { "[-/+] Tab",  400  },
-                };
-                for (auto& hi : hints) {
-                    int w = (int)GRRLIB_WidthTTF(font, hi.label, 15);
-                    GRRLIB_PrintfTTF(hi.cx - w / 2, 458, font, hi.label, 15, 0x889AABFF);
-                }
-            }
+            const Ui::Hint l[] = { { "A", "Open" }, { "1", "Search" } };
+            const Ui::Hint r[] = { { "-/+", "Tab" } };
+            Ui::footer(l, 2, r, 1);
 
         } else {
             // ---- Activity page ----
@@ -2434,198 +2598,168 @@ void LibraryView::render(ir_t& ir) {
             int nc = (int)continueItems.size();
             int nu = (int)nextUpItems.size();
 
-            // Draw one activity card (thumbnail + border + progress bar + title)
+            // Draw one activity card (thumbnail + progress bar + title)
             auto drawActCard = [&](int i, int cardY, const JellyfinItem& item,
                                    GRRLIB_texImg* tex, bool selCard, bool showPct,
                                    const std::string& mainTitle, const std::string& subTitle) {
-                int   cx   = ACT_X0 + i * (ACT_CARD_W + ACT_CARD_GAP);
-                float ws   = WiiUtils::wsScaleX();
-                int   visW = (int)(ACT_CARD_W * ws + 0.5f);
-                bool  hov  = ir.valid && ir.x >= cx && ir.x < cx + ACT_CARD_W
-                                      && ir.y >= cardY && ir.y < cardY + ACT_CARD_H;
-
-                GRRLIB_Rectangle(cx, cardY, visW, ACT_CARD_H, 0x0D1520FF, 1);
-                if (tex && tex->w > 0) {
-                    float sx = (float)ACT_CARD_W / tex->w;
-                    float sy = (float)ACT_CARD_H / tex->h;
-                    float s  = sx > sy ? sx : sy;
-                    int   ox = (int)((visW  - tex->w * s * ws) * 0.5f);
-                    int   oy = (int)((ACT_CARD_H - tex->h * s) * 0.5f);
-                    GRRLIB_ClipDrawing(cx, cardY, (u32)visW, ACT_CARD_H);
-                    GRRLIB_DrawImg(cx + ox, cardY + oy, tex, 0, s * ws, s, 0xFFFFFFFF);
-                    GRRLIB_ClipReset();
-                    GRRLIB_Rectangle(cx, cardY, visW, ACT_CARD_H,
-                                     (selCard || hov) ? 0x00000055 : 0x00000088, 1);
-                } else {
-                    GRRLIB_Rectangle(cx, cardY, visW, ACT_CARD_H,
-                                     (selCard || hov) ? 0x1E3A5FCC : 0x0D1520CC, 1);
-                }
-                if (selCard || hov) {
-                    GRRLIB_Rectangle(cx - 2, cardY - 2,          visW + 4, 2,              0x4499FFFF, 1);
-                    GRRLIB_Rectangle(cx - 2, cardY + ACT_CARD_H, visW + 4, 2,              0x4499FFFF, 1);
-                    GRRLIB_Rectangle(cx - 2, cardY - 2,          2,        ACT_CARD_H + 4, 0x4499FFFF, 1);
-                    GRRLIB_Rectangle(cx + visW, cardY - 2,       2,        ACT_CARD_H + 4, 0x4499FFFF, 1);
-                }
-                if (showPct && item.playbackPositionTicks > 0 && item.runtimeTicks > 0) {
-                    int pct   = (int)(item.playbackPositionTicks * 100LL / item.runtimeTicks);
-                    if (pct > 100) pct = 100;
-                    int fillW = visW * pct / 100;
-                    GRRLIB_Rectangle(cx, cardY + ACT_CARD_H - 4, visW,  4, 0x0A1420FF, 1);
-                    if (fillW > 0)
-                        GRRLIB_Rectangle(cx, cardY + ACT_CARD_H - 4, fillW, 4, 0x44AAFFFF, 1);
-                }
+                int  cx  = ACT_X0 + i * (ACT_CARD_W + ACT_CARD_GAP);
+                bool hov = ir.valid && ir.x >= cx && ir.x < cx + ACT_CARD_W
+                                    && ir.y >= cardY && ir.y < cardY + ACT_CARD_H;
+                drawThumb(tex, cx, cardY, ACT_CARD_W, ACT_CARD_H, focusOf(selCard, hov),
+                          showPct ? progressOf(item) : -1.0f, mainTitle.c_str());
                 // Title + subtitle below card (strings pre-computed in buildActDisplayStrings)
-                GRRLIB_PrintfTTF(cx, cardY + ACT_CARD_H + 2,  font, mainTitle.c_str(), 13, 0xEEEEEEFF);
+                Ui::text(cx + 2, cardY + ACT_CARD_H + 4, mainTitle.c_str(), 13,
+                         selCard ? p.text : Ui::mix(p.text, p.textDim, 0.3f));
                 if (!subTitle.empty())
-                    GRRLIB_PrintfTTF(cx, cardY + ACT_CARD_H + 16, font, subTitle.c_str(), 11, 0x889AABFF);
+                    Ui::text(cx + 2, cardY + ACT_CARD_H + 19, subTitle.c_str(), 11, p.textDim);
             };
 
             // Continue Watching row
-            GRRLIB_PrintfTTF(ACT_X0, 58, font, "IN PROGRESS", 12,
-                             nc > 0 ? 0x6688AAFF : 0x445566FF);
+            sectionLabel(ACT_X0, 56, "IN PROGRESS", nc > 0);
             if (nc > 0) {
                 for (int i = 0; i < nc; i++)
                     drawActCard(i, ACT_ROW0_Y, continueItems[i], cwTextures[i],
                                 i == continueSel && actRow == 0, true,
                                 cwDisplayMain[i], cwDisplaySub[i]);
             } else {
-                GRRLIB_PrintfTTF(ACT_X0 + 20, ACT_ROW0_Y + 40, font, "Rien en cours", 14, 0x556677FF);
+                Ui::text(ACT_X0 + 20, ACT_ROW0_Y + 40, "Rien en cours", 14, p.textDim);
             }
 
             // Next Up row
-            GRRLIB_PrintfTTF(ACT_X0, 215, font, "NEXT UP", 12,
-                             nu > 0 ? 0x6688AAFF : 0x445566FF);
+            sectionLabel(ACT_X0, 213, "NEXT UP", nu > 0);
             if (nu > 0) {
                 for (int i = 0; i < nu; i++)
                     drawActCard(i, ACT_ROW1_Y, nextUpItems[i], nextUpTextures[i],
                                 i == nextUpSel && actRow == 1, false,
                                 nuDisplayMain[i], nuDisplaySub[i]);
             } else {
-                GRRLIB_PrintfTTF(ACT_X0 + 20, ACT_ROW1_Y + 40, font, "No next episode", 14, 0x556677FF);
+                Ui::text(ACT_X0 + 20, ACT_ROW1_Y + 40, "No next episode", 14, p.textDim);
             }
 
-            GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-            {
-                struct { const char* label; int cx; } hints[] = {
-                    { "[A] Open",      80  },
-                    { "[Up/Down] Row", 240  },
-                    { "[-/+] Tab",    400  },
-                    { "[B] Back",      560  },
-                };
-                for (auto& hi : hints) {
-                    int w = (int)GRRLIB_WidthTTF(font, hi.label, 15);
-                    GRRLIB_PrintfTTF(hi.cx - w / 2, 458, font, hi.label, 15, 0x889AABFF);
-                }
-            }
+            const Ui::Hint l[] = { { "A", "Open" }, { "UD", "Row" } };
+            const Ui::Hint r[] = { { "-/+", "Tab" }, { "B", "Back" } };
+            Ui::footer(l, 2, r, 2);
         }
     }
 
-    // ---- Items list ----
+    // ---- Items list (whole library as text) ----
     if (state == State::ItemsReady) {
+        const int n  = feed.total();
+        const int LW = listWidth();
+        const bool coverPanel = Ui::libraryStyle() == Ui::LibraryStyle::ListCover;
+
         // Header — music gets a tab bar; everything else gets a breadcrumb
+        JellyfinItem selItem;
+        bool haveSel = n > 0 && feed.get(itemSel, selItem);
         if (currentLibType == "music" && !inItemsDrilldown) {
-            const char* mTabNames[3] = { "Albums", "Suggestions", "Playlists" };
-            const int TAB_GAP = 20;
-            int totalW = 0;
-            for (int t = 0; t < 3; t++)
-                totalW += (int)GRRLIB_WidthTTF(font, mTabNames[t], 14) + (t < 2 ? TAB_GAP : 0);
-            int tabX = (640 - totalW) / 2;
-            for (int t = 0; t < 3; t++) {
-                int tw = (int)GRRLIB_WidthTTF(font, mTabNames[t], 14);
-                u32 col = (t == musicTab) ? 0xFFFFFFFF : 0x5B7A9AFF;
-                GRRLIB_PrintfTTF(tabX, 18, font, mTabNames[t], 14, col);
-                if (t == musicTab)
-                    GRRLIB_Rectangle(tabX, 42, tw, 2, 0x4499FFFF, 1);
-                tabX += tw + TAB_GAP;
-            }
-            GRRLIB_Rectangle(0, 46, 640, 1, 0x334466FF, 1);
+            Ui::tabs(320, 10, kMusicTabs, 3, musicTab, 14);
+            headerLine(46);
         } else {
-            // Breadcrumb header
-            char hdr[128];
-            snprintf(hdr, sizeof(hdr), "< %s", currentLibName.c_str());
-            GRRLIB_PrintfTTF(20, 14, font, hdr, 20, 0xFFFFFFFF);
-
-            // Item range and total (right-aligned)
-            int startIdx = itemPage * ITEMS_PER_PAGE;
-            int endIdx   = startIdx + (int)items.size();
-            char countStr[48];
-            snprintf(countStr, sizeof(countStr), "%d-%d / %d", startIdx + 1, endIdx, itemTotal);
-            int cw = (int)GRRLIB_WidthTTF(font, countStr, 15);
-            GRRLIB_PrintfTTF(620 - cw, 18, font, countStr, 15, 0x889AABFF);
-
-            GRRLIB_Rectangle(20, 46, 600, 1, 0x334466FF, 1);
+            drawBreadcrumb(currentLibName, 20, 420);
+            char pos[48];
+            if (n > 0 && haveSel)
+                snprintf(pos, sizeof(pos), "%c   \xc2\xb7   %d / %d", ListFeed::letterOf(selItem), itemSel + 1, n);
+            else
+                snprintf(pos, sizeof(pos), "%d / %d", n > 0 ? itemSel + 1 : 0, n);
+            Ui::textRight(620, 18, pos, 15, headerDim());
+            headerLine(46);
         }
 
-        int n = (int)items.size();
-        for (int i = 0; i < ITEMS_VISIBLE; i++) {
+        if (n == 0) Ui::textCentered(320, 200, "This library is empty", 16, p.textDim);
+
+        for (int i = 0; i < LIST_ROWS; i++) {
             int idx = viewTop + i;
             if (idx >= n) break;
-
+            int ry = LIST_Y + i * LIST_ROW_H;
             bool sel   = (idx == itemSel);
-            bool hover = ir.valid &&
-                         ir.y >= LIST_Y + i * ROW_H &&
-                         ir.y <  LIST_Y + (i + 1) * ROW_H &&
-                         ir.x >= LIST_X && ir.x <= LIST_X + LIST_W;
+            bool hover = ir.valid && ir.y >= ry && ir.y < ry + LIST_ROW_H &&
+                         ir.x >= LIST_X && ir.x <= LIST_X + LW;
+            float f = focusOf(sel, hover);
+            Ui::card(LIST_X, ry + 2, LW, LIST_ROW_H - 4, 9, f);
 
-            int ry = LIST_Y + i * ROW_H;
-            u32 bg;
-            if      (sel || hover) bg = 0x1E3A5FCC;
-            else if (i % 2 == 0)   bg = 0x0D1520AA;
-            else                   bg = 0x111827AA;
-
-            GRRLIB_Rectangle(LIST_X, ry, LIST_W, ROW_H - 2, bg, 1);
-
-            // Selection bar on the left
-            if (sel) GRRLIB_Rectangle(LIST_X, ry, 3, ROW_H - 2, 0x4499FFFF, 1);
-
-            // Title — truncate if too long
-            std::string name = items[idx].name;
-            if ((int)name.size() > 50) name = name.substr(0, 47) + "...";
-            GRRLIB_PrintfTTF(LIST_X + 10, ry + 8, font, name.c_str(), 20, 0xEEEEEEFF);
-
-            // Year (right side)
-            if (items[idx].year > 0) {
-                char yearStr[12];
-                snprintf(yearStr, sizeof(yearStr), "%d", items[idx].year);
-                int yw = (int)GRRLIB_WidthTTF(font, yearStr, 16);
-                GRRLIB_PrintfTTF(LIST_X + LIST_W - yw - 8, ry + 10, font, yearStr, 16, 0x889AABFF);
+            JellyfinItem it;
+            if (!feed.get(idx, it)) {
+                // still loading: a soft placeholder bar
+                Ui::roundRect(LIST_X + 14, ry + 13, LW * 0.45f, 10, 5, Ui::alpha(p.textDim, 0.25f));
+                continue;
             }
+            int rightW = 0;
+            if (it.year > 0) {
+                char y[12];
+                snprintf(y, sizeof(y), "%d", it.year);
+                rightW = Ui::textWidth(y, 14) + 12;
+                Ui::textRight(LIST_X + LW - 12, ry + 10, y, 14, p.textDim);
+            }
+            int textX = LIST_X + 14;
+            // type badge for mixed lists (series among films, folders...)
+            const char* badge = it.type == "Series" ? "SERIES" : it.type == "BoxSet" ? "COLLECTION"
+                              : (it.type == "Folder" || it.type == "CollectionFolder") ? "FOLDER" : nullptr;
+            if (badge && currentLibType != "tvshows") {
+                int bw = Ui::textWidth(badge, 9) + 12;
+                Ui::roundRect(textX, ry + 11, bw, 14, 7, Ui::alpha(p.accent, 0.85f));
+                Ui::textCentered(textX + bw * 0.5f, ry + 12, badge, 9, p.textOnAccent);
+                textX += bw + 8;
+            }
+            std::string name = fitText(font, filterDejaVu(it.name, 80), 16,
+                                       LIST_X + LW - 14 - rightW - textX);
+            Ui::text(textX, ry + 9, name.c_str(), 16, Ui::mix(p.text, p.accentDark, f));
+            if (it.playbackPositionTicks > 0 && it.runtimeTicks > 0)
+                Ui::progress(textX, ry + LIST_ROW_H - 9, 60, 3,
+                             (float)it.playbackPositionTicks / it.runtimeTicks);
+        }
+        Ui::scrollbar(LIST_X + LW + 8, LIST_Y + 2, LIST_ROWS * LIST_ROW_H - 4, viewTop, LIST_ROWS, n);
+
+        // Cover of the selected title (List + Cover)
+        if (coverPanel && haveSel) {
+            const float PX = LIST_X + LW + 26, PW = 600 - PX, PH = PW * 1.5f, PY = LIST_Y + 2;
+            GRRLIB_texImg* cover = feed.cover(selItem.id);
+            drawThumb(cover, PX, PY, PW, PH, 0.0f, progressOf(selItem),
+                      cover ? nullptr : selItem.name.c_str(), false);
+            float ty = PY + PH + 10;
+            std::string t = fitText(font, filterDejaVu(selItem.name, 60), 15, (int)PW);
+            Ui::text(PX, ty, t.c_str(), 15, p.text);
+            char meta[64] = "";
+            int mins = (int)(selItem.runtimeTicks / 600000000LL);
+            if (selItem.type == "Series" && selItem.childCount > 0)
+                snprintf(meta, sizeof(meta), "%d season%s", selItem.childCount, selItem.childCount > 1 ? "s" : "");
+            else if (mins > 0)
+                snprintf(meta, sizeof(meta), "%dh %02dmin", mins / 60, mins % 60);
+            if (selItem.year > 0) {
+                size_t l = strlen(meta);
+                snprintf(meta + l, sizeof(meta) - l, "%s%d", l ? "  \xc2\xb7  " : "", selItem.year);
+            }
+            if (meta[0]) Ui::text(PX, ty + 20, meta, 13, p.textDim);
         }
 
-        // Scrollbar (right edge)
-        if (n > ITEMS_VISIBLE) {
-            const int SB_X = 614, SB_Y = LIST_Y, SB_H = ITEMS_VISIBLE * ROW_H;
-            int barH = SB_H * ITEMS_VISIBLE / n;
-            if (barH < 16) barH = 16;
-            int maxTop = n - ITEMS_VISIBLE;
-            int barY   = SB_Y + (maxTop > 0 ? (SB_H - barH) * viewTop / maxTop : 0);
-            GRRLIB_Rectangle(SB_X, SB_Y, 5, SB_H, 0x2A3A4AFF, 1);
-            GRRLIB_Rectangle(SB_X, barY, 5, barH, 0x4499FFFF, 1);
+        // Letter jump feedback: a big letter for a moment
+        {
+            unsigned long long now = ticks_to_millisecs(gettime());
+            if (letterFlash && now - letterFlashMs < 700) {
+                float k = 1.0f - (float)(now - letterFlashMs) / 700.0f;
+                float cx = LIST_X + LW * 0.5f, cy = LIST_Y + LIST_ROWS * LIST_ROW_H * 0.5f;
+                Ui::roundRect(cx - 44, cy - 44, 88, 88, 22, Ui::alpha(p.accent, 0.9f * k), Ui::alpha(p.accentDark, 0.9f * k));
+                char l[2] = { letterFlash, 0 };
+                Ui::textCentered(cx, cy - 30, l, 52, Ui::alpha(0xFFFFFFFF, k));
+            }
+            if (feed.jumpPending())
+                Ui::spinner(ringTex, LIST_X + LW * 0.5f, LIST_Y + LIST_ROWS * LIST_ROW_H * 0.5f);
         }
 
         // Footer
-        GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-        GRRLIB_PrintfTTF(20, 458, font, "[B] Back", 15, 0x889AABFF);
-
+        const Ui::Hint l[] = { { "A", "Open" }, { "B", "Back" } };
         if (currentLibType == "music" && !inItemsDrilldown) {
-            GRRLIB_PrintfTTF(340, 458, font, "[-/+] Tab", 15, 0x889AABFF);
+            const Ui::Hint r[] = { { "LR", "A-Z" }, { "-/+", "Tab" } };
+            Ui::footer(l, 2, r, 2);
         } else {
-            int totalPages = (itemTotal + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE;
-            if (totalPages > 1) {
-                char pageStr[32];
-                snprintf(pageStr, sizeof(pageStr), "[-/+] Page %d/%d", itemPage + 1, totalPages);
-                int pw = (int)GRRLIB_WidthTTF(font, pageStr, 15);
-                GRRLIB_PrintfTTF(320 - pw / 2, 458, font, pageStr, 15, 0x889AABFF);
-            }
+            const Ui::Hint r[] = { { "LR", "A-Z" }, { "-/+", "Page" } };
+            Ui::footer(l, 2, r, 2);
         }
     }
 
     // ---- Season list ----
     if (state == State::SeasonsReady) {
-        char hdr[128];
-        snprintf(hdr, sizeof(hdr), "< %s", currentSeriesName.c_str());
-        GRRLIB_PrintfTTF(20, 14, font, hdr, 20, 0xFFFFFFFF);
-        GRRLIB_Rectangle(20, 46, 600, 1, 0x334466FF, 1);
+        drawBreadcrumb(currentSeriesName, 20, 580);
+        headerLine(46);
 
         int n = (int)seasons.size();
         for (int i = 0; i < ITEMS_VISIBLE; i++) {
@@ -2637,33 +2771,21 @@ void LibraryView::render(ir_t& ir) {
                          ir.y <  LIST_Y + (i + 1) * ROW_H &&
                          ir.x >= LIST_X && ir.x <= LIST_X + LIST_W;
             int ry = LIST_Y + i * ROW_H;
-            u32 bg;
-            if      (sel || hover) bg = 0x1E3A5FCC;
-            else if (i % 2 == 0)   bg = 0x0D1520AA;
-            else                   bg = 0x111827AA;
-            GRRLIB_Rectangle(LIST_X, ry, LIST_W, ROW_H - 2, bg, 1);
-            if (sel) GRRLIB_Rectangle(LIST_X, ry, 3, ROW_H - 2, 0x4499FFFF, 1);
-            GRRLIB_PrintfTTF(LIST_X + 10, ry + 8, font, filterDejaVu(seasons[idx].name, 45).c_str(), 20, 0xEEEEEEFF);
+            float f = focusOf(sel, hover);
+            drawRow(LIST_X, ry, LIST_W, ROW_H, f);
+            std::string name = fitText(font, filterDejaVu(seasons[idx].name, 45), 18, LIST_W - 32);
+            Ui::text(LIST_X + 16, ry + 11, name.c_str(), 18, Ui::mix(p.text, p.accentDark, f));
         }
-        if (n > ITEMS_VISIBLE) {
-            const int SB_X = 614, SB_Y = LIST_Y, SB_H = ITEMS_VISIBLE * ROW_H;
-            int barH = SB_H * ITEMS_VISIBLE / n; if (barH < 16) barH = 16;
-            int maxTop = n - ITEMS_VISIBLE;
-            int barY   = SB_Y + (maxTop > 0 ? (SB_H - barH) * seasonTop / maxTop : 0);
-            GRRLIB_Rectangle(SB_X, SB_Y, 5, SB_H, 0x2A3A4AFF, 1);
-            GRRLIB_Rectangle(SB_X, barY, 5, barH, 0x4499FFFF, 1);
-        }
-        GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-        GRRLIB_PrintfTTF(20, 458, font, "[A] Select   [B] Back", 15, 0x889AABFF);
+        Ui::scrollbar(614, LIST_Y + 2, ITEMS_VISIBLE * ROW_H - 6, seasonTop, ITEMS_VISIBLE, n);
+        const Ui::Hint l[] = { { "A", "Select" }, { "B", "Back" } };
+        Ui::footer(l, 2);
     }
 
     // ---- Episode list ----
     if (state == State::EpisodesReady) {
-        char hdr[128];
-        snprintf(hdr, sizeof(hdr), "< %s  /  %s",
-                 currentSeriesName.c_str(), currentSeasonName.c_str());
-        GRRLIB_PrintfTTF(20, 14, font, hdr, 18, 0xFFFFFFFF);
-        GRRLIB_Rectangle(20, 44, 600, 1, 0x334466FF, 1);
+        std::string hdr = currentSeriesName + "  /  " + currentSeasonName;
+        drawBreadcrumb(hdr, 18, 580);
+        headerLine(46);
 
         int n = (int)episodes.size();
         for (int i = 0; i < ITEMS_VISIBLE; i++) {
@@ -2675,46 +2797,35 @@ void LibraryView::render(ir_t& ir) {
                          ir.y <  LIST_Y + (i + 1) * ROW_H &&
                          ir.x >= LIST_X && ir.x <= LIST_X + LIST_W;
             int ry = LIST_Y + i * ROW_H;
-            u32 bg;
-            if      (sel || hover) bg = 0x1E3A5FCC;
-            else if (i % 2 == 0)   bg = 0x0D1520AA;
-            else                   bg = 0x111827AA;
-            GRRLIB_Rectangle(LIST_X, ry, LIST_W, ROW_H - 2, bg, 1);
-            if (sel) GRRLIB_Rectangle(LIST_X, ry, 3, ROW_H - 2, 0x4499FFFF, 1);
-            // Episode label: "E01 - Name" (filtered to DejaVu-safe chars)
-            char epLabel[256];
-            if (episodes[idx].indexNumber > 0)
-                snprintf(epLabel, sizeof(epLabel), "E%02d - %s",
-                         episodes[idx].indexNumber, episodes[idx].name.c_str());
-            else
-                snprintf(epLabel, sizeof(epLabel), "%s", episodes[idx].name.c_str());
-            std::string labelStr = filterDejaVu(epLabel, 45);
-            GRRLIB_PrintfTTF(LIST_X + 10, ry + 8, font, labelStr.c_str(), 20, 0xEEEEEEFF);
+            float f = focusOf(sel, hover);
+            drawRow(LIST_X, ry, LIST_W, ROW_H, f);
+
+            int tx = LIST_X + 16;
+            // Episode number badge
+            if (episodes[idx].indexNumber > 0) {
+                char num[8];
+                snprintf(num, sizeof(num), "E%02d", episodes[idx].indexNumber);
+                int bw = Ui::textWidth(num, 12) + 14;
+                Ui::roundRect(tx, ry + 12, bw, 20, 10, Ui::mix(p.accent, 0xFFFFFFFF, 0.2f), p.accentDark);
+                Ui::textCentered(tx + bw / 2, ry + 15, num, 12, p.textOnAccent);
+                tx += bw + 10;
+            }
+            std::string labelStr = fitText(font, filterDejaVu(episodes[idx].name, 60), 18,
+                                           LIST_X + LIST_W - 16 - tx);
+            Ui::text(tx, ry + 11, labelStr.c_str(), 18, Ui::mix(p.text, p.accentDark, f));
         }
-        if (n > ITEMS_VISIBLE) {
-            const int SB_X = 614, SB_Y = LIST_Y, SB_H = ITEMS_VISIBLE * ROW_H;
-            int barH = SB_H * ITEMS_VISIBLE / n; if (barH < 16) barH = 16;
-            int maxTop = n - ITEMS_VISIBLE;
-            int barY   = SB_Y + (maxTop > 0 ? (SB_H - barH) * episodeTop / maxTop : 0);
-            GRRLIB_Rectangle(SB_X, SB_Y, 5, SB_H, 0x2A3A4AFF, 1);
-            GRRLIB_Rectangle(SB_X, barY, 5, barH, 0x4499FFFF, 1);
-        }
-        GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-        GRRLIB_PrintfTTF(20, 458, font, "[A] Details   [B] Back", 15, 0x889AABFF);
+        Ui::scrollbar(614, LIST_Y + 2, ITEMS_VISIBLE * ROW_H - 6, episodeTop, ITEMS_VISIBLE, n);
+        const Ui::Hint l[] = { { "A", "Details" }, { "B", "Back" } };
+        Ui::footer(l, 2);
     }
 
     // ---- Music track list ----
     if (state == State::MusicTracksReady) {
         // Header: album name + artist
-        char hdr[128];
-        if (!musicAlbumArtist.empty())
-            snprintf(hdr, sizeof(hdr), "%s  —  %s", musicAlbumName.c_str(), musicAlbumArtist.c_str());
-        else
-            snprintf(hdr, sizeof(hdr), "%s", musicAlbumName.c_str());
-        std::string hdrStr = filterDejaVu(hdr, 55);
-        GRRLIB_PrintfTTF(20, 14, font, hdrStr.c_str(), 18, 0xFFFFFFFF);
-        // Green accent bar under header
-        GRRLIB_Rectangle(20, 44, 600, 2, 0x33AA55FF, 1);
+        std::string hdr = musicAlbumName;
+        if (!musicAlbumArtist.empty()) hdr += "  \xe2\x80\x94  " + musicAlbumArtist;
+        drawBreadcrumb(hdr, 18, 580);
+        headerLine(46);
 
         int n = (int)musicTracks.size();
         for (int i = 0; i < MUSIC_TRACKS_VISIBLE; i++) {
@@ -2726,715 +2837,230 @@ void LibraryView::render(ir_t& ir) {
                          ir.y <  LIST_Y + (i + 1) * ROW_H &&
                          ir.x >= LIST_X && ir.x <= LIST_X + LIST_W;
             int ry = LIST_Y + i * ROW_H;
-            u32 bg;
-            if      (sel || hover) bg = 0x1A5A2ACC;   /* deep green highlight */
-            else if (i % 2 == 0)   bg = 0x0D1520AA;
-            else                   bg = 0x111827AA;
-            GRRLIB_Rectangle(LIST_X, ry, LIST_W, ROW_H - 2, bg, 1);
-            if (sel) GRRLIB_Rectangle(LIST_X, ry, 3, ROW_H - 2, 0x33AA55FF, 1);
-
-            // Track number + title
-            char trackLabel[256];
+            float f = focusOf(sel, hover);
+            drawRow(LIST_X, ry, LIST_W, ROW_H, f);
             const JellyfinAudioItem& at = musicTracks[idx];
-            if (at.trackNumber > 0)
-                snprintf(trackLabel, sizeof(trackLabel), "%2d.  %s", at.trackNumber, at.name.c_str());
-            else
-                snprintf(trackLabel, sizeof(trackLabel), "%s", at.name.c_str());
-            std::string labelStr = filterDejaVu(trackLabel, 45);
-            GRRLIB_PrintfTTF(LIST_X + 10, ry + 6, font, labelStr.c_str(), 20, 0xEEEEEEFF);
 
+            // Track number in a circle
+            int tx = LIST_X + 14;
+            if (at.trackNumber > 0) {
+                char num[8];
+                snprintf(num, sizeof(num), "%d", at.trackNumber);
+                Ui::circle(tx + 11, ry + 22, 11, sel ? p.accent : Ui::alpha(p.cardBorder, 0.6f));
+                Ui::textCentered(tx + 11, ry + 15, num, 12, sel ? p.textOnAccent : p.text);
+                tx += 32;
+            }
             // Duration on the right
+            int dw = 0;
             if (at.runtimeTicks > 0) {
                 int secs = (int)(at.runtimeTicks / 10000000LL);
                 char dur[12];
                 snprintf(dur, sizeof(dur), "%d:%02d", secs / 60, secs % 60);
-                int dw = (int)GRRLIB_WidthTTF(font, dur, 16);
-                GRRLIB_PrintfTTF(LIST_X + LIST_W - dw - 4, ry + 8, font, dur, 16, 0x889AABFF);
+                dw = Ui::textWidth(dur, 15) + 12;
+                Ui::textRight(LIST_X + LIST_W - 14, ry + 13, dur, 15, p.textDim);
             }
+            std::string labelStr = fitText(font, filterDejaVu(at.name, 60), 18,
+                                           LIST_X + LIST_W - 16 - dw - tx);
+            Ui::text(tx, ry + 11, labelStr.c_str(), 18, Ui::mix(p.text, p.accentDark, f));
         }
-        // Scrollbar
-        if (n > MUSIC_TRACKS_VISIBLE) {
-            const int SB_X = 614, SB_Y = LIST_Y, SB_H = MUSIC_TRACKS_VISIBLE * ROW_H;
-            int barH = SB_H * MUSIC_TRACKS_VISIBLE / n; if (barH < 16) barH = 16;
-            int maxTop = n - MUSIC_TRACKS_VISIBLE;
-            int barY   = SB_Y + (maxTop > 0 ? (SB_H - barH) * musicTrackTop / maxTop : 0);
-            GRRLIB_Rectangle(SB_X, SB_Y, 5, SB_H, 0x2A3A4AFF, 1);
-            GRRLIB_Rectangle(SB_X, barY, 5, barH, 0x33AA55FF, 1);
-        }
-        GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-        GRRLIB_PrintfTTF(20, 458, font, "[A] Play   [B] Back", 15, 0x889AABFF);
+        Ui::scrollbar(614, LIST_Y + 2, MUSIC_TRACKS_VISIBLE * ROW_H - 6, musicTrackTop,
+                      MUSIC_TRACKS_VISIBLE, n);
+        const Ui::Hint l[] = { { "A", "Play" }, { "B", "Back" } };
+        Ui::footer(l, 2);
     }
 
     if (state == State::PostersReady) {
-        // Header: breadcrumb left, count right
-        char hdr[128];
-        snprintf(hdr, sizeof(hdr), "< %s", currentLibName.c_str());
-        GRRLIB_PrintfTTF(20, 14, font, hdr, inBoxSetDrilldown ? 16 : 20, 0xFFFFFFFF);
-
-        // For movies with tabs: draw tab bar in centre;
-        // for tvshows with tabs: draw tv tab bar; otherwise title of hovered item
+        // Header: tabs (movies / tv) or the selected title, breadcrumb left, count right
         if (currentLibType == "movies" && !inBoxSetDrilldown) {
-            const char* tabNames[4] = { "Movies", "Collections", "Favorites", "Suggestions" };
-            const int TAB_GAP = 20;
-            int totalW = 0;
-            for (int t = 0; t < 4; t++)
-                totalW += (int)GRRLIB_WidthTTF(font, tabNames[t], 14) + (t < 3 ? TAB_GAP : 0);
-            int tabX = (640 - totalW) / 2;
-            for (int t = 0; t < 4; t++) {
-                int tw = (int)GRRLIB_WidthTTF(font, tabNames[t], 14);
-                u32 col = (t == movieTab) ? 0xFFFFFFFF : 0x5B7A9AFF;
-                GRRLIB_PrintfTTF(tabX, 18, font, tabNames[t], 14, col);
-                if (t == movieTab)
-                    GRRLIB_Rectangle(tabX, 42, tw, 2, 0x4499FFFF, 1);
-                tabX += tw + TAB_GAP;
-            }
+            drawLibHeader(currentLibName, kMovieTabs, 4, movieTab);
         } else if (currentLibType == "tvshows") {
-            const char* tabNames[3] = { "Series", "Suggestions", "Coming Up" };
-            const int TAB_GAP = 20;
-            int totalW = 0;
-            for (int t = 0; t < 3; t++)
-                totalW += (int)GRRLIB_WidthTTF(font, tabNames[t], 14) + (t < 2 ? TAB_GAP : 0);
-            int tabX = (640 - totalW) / 2;
-            for (int t = 0; t < 3; t++) {
-                int tw = (int)GRRLIB_WidthTTF(font, tabNames[t], 14);
-                u32 col = (t == tvTab) ? 0xFFFFFFFF : 0x5B7A9AFF;
-                GRRLIB_PrintfTTF(tabX, 18, font, tabNames[t], 14, col);
-                if (t == tvTab)
-                    GRRLIB_Rectangle(tabX, 42, tw, 2, 0x4499FFFF, 1);
-                tabX += tw + TAB_GAP;
-            }
+            drawLibHeader(currentLibName, kTvTabs, 3, tvTab);
         } else {
-            // Non-movies: centred hovered-item title
+            drawBreadcrumb(currentLibName, inBoxSetDrilldown ? 16 : 20, 120);
+            headerLine(46);
             if (posterSel >= 0 && posterSel < (int)items.size()) {
                 const int HDR_X = 140, HDR_W = 360;
-                std::string t = items[posterSel].name;
-                while ((int)GRRLIB_WidthTTF(font, t.c_str(), 16) > HDR_W && !t.empty()) {
-                    while (!t.empty() && (t.back() & 0xC0) == 0x80) t.pop_back();
-                    if (!t.empty()) t.pop_back();
-                }
-                int tw = (int)GRRLIB_WidthTTF(font, t.c_str(), 16);
-                GRRLIB_PrintfTTF(HDR_X + (HDR_W - tw) / 2, 16, font, t.c_str(), 16, 0xE0E8FFFF);
+                std::string t = fitText(font, items[posterSel].name, 16, HDR_W);
+                Ui::textCentered(HDR_X + HDR_W / 2, 16, t.c_str(), 16, p.text);
             }
         }
-
-        int startIdx = itemPage * POSTERS_PER_PAGE;
-        int endIdx   = startIdx + (int)items.size();
-        char countStr[48];
-        snprintf(countStr, sizeof(countStr), "%d-%d / %d", startIdx + 1, endIdx, itemTotal);
-        int cw = (int)GRRLIB_WidthTTF(font, countStr, 15);
-        GRRLIB_PrintfTTF(620 - cw, 18, font, countStr, 15, 0x889AABFF);
-
-        GRRLIB_Rectangle(20, 46, 600, 1, 0x334466FF, 1);
+        drawCount(itemPage, POSTERS_PER_PAGE, (int)items.size(), itemTotal);
 
         int n = (int)items.size();
-        for (int i = 0; i < n && i < POSTER_VISIBLE; i++) {
-            int col = i % POSTER_COLS;
-            int row = i / POSTER_COLS;
-            int px  = POSTER_X0 + col * POSTER_STRIDE_X;
-            int py  = POSTER_Y0 + row * POSTER_STRIDE_Y;
-            bool sel = (i == posterSel);
-
-            // Visual width after widescreen pre-squish (0.75 on 16:9, 1.0 on 4:3)
-            float ws   = WiiUtils::wsScaleX();
-            int   visW = (int)(POSTER_W * ws + 0.5f);
-
-            // Selection highlight border
-            if (sel)
-                GRRLIB_Rectangle(px - 3, py - 3, visW + 6, POSTER_H + 6, 0x4499FFFF, 1);
-
-            // Poster background (dark fallback for missing posters)
-            GRRLIB_Rectangle(px, py, visW, POSTER_H, 0x1E2A3AFF, 1);
-
-            // Poster image: fill mode — scale to cover the full slot, clip excess.
-            if (posterTextures[i] && posterTextures[i]->w > 0 && posterTextures[i]->h > 0) {
-                float sx = (float)POSTER_W / posterTextures[i]->w;
-                float sy = (float)POSTER_H / posterTextures[i]->h;
-                float s  = sx > sy ? sx : sy;  // FILL: larger scale covers slot
-                float drawnW = posterTextures[i]->w * s * ws;
-                float drawnH = posterTextures[i]->h * s;
-                int ox = (int)((visW - drawnW) * 0.5f);
-                int oy = (int)((POSTER_H - drawnH) * 0.5f);
-                GRRLIB_ClipDrawing(px, py, (u32)visW, POSTER_H);
-                GRRLIB_DrawImg(px + ox, py + oy, posterTextures[i], 0, s * ws, s, 0xFFFFFFFF);
-                GRRLIB_ClipReset();
-            }
-            // Progress bar at bottom of poster slot
-            if (i < (int)items.size() &&
-                items[i].playbackPositionTicks > 0 && items[i].runtimeTicks > 0) {
-                int pct   = (int)(items[i].playbackPositionTicks * 100LL / items[i].runtimeTicks);
-                if (pct > 100) pct = 100;
-                int barY  = py + POSTER_H - 4;
-                int fillW = visW * pct / 100;
-                GRRLIB_Rectangle(px, barY, visW, 4, 0x0A1420FF, 1);
-                if (fillW > 0)
-                    GRRLIB_Rectangle(px, barY, fillW, 4, 0x44AAFFFF, 1);
+        // draw the focused poster last so its halo overlaps its neighbours
+        for (int pass = 0; pass < 2; pass++) {
+            for (int i = 0; i < n && i < POSTER_VISIBLE; i++) {
+                bool sel = (i == posterSel);
+                if (sel != (pass == 1)) continue;
+                int px = POSTER_X0 + (i % POSTER_COLS) * POSTER_STRIDE_X;
+                int py = POSTER_Y0 + (i / POSTER_COLS) * POSTER_STRIDE_Y;
+                drawThumb(posterTextures[i], px, py, POSTER_W, POSTER_H,
+                          sel ? Ui::pulse() : 0.0f, progressOf(items[i]), items[i].name.c_str());
             }
         }
 
-        // Page navigation arrows (right of poster grid)
-        {
-            int totalPages = (itemTotal + POSTERS_PER_PAGE - 1) / POSTERS_PER_PAGE;
-            bool canPrev = itemPage > 0;
-            bool canNext = itemPage + 1 < totalPages;
-            bool hoverUp = ir.valid &&
-                (int)ir.x >= ARROW_CX - ARROW_HIT_R && (int)ir.x < ARROW_CX + ARROW_HIT_R &&
-                (int)ir.y >= ARROW_UP_CY - ARROW_HIT_R && (int)ir.y < ARROW_UP_CY + ARROW_HIT_R;
-            bool hoverDn = ir.valid &&
-                (int)ir.x >= ARROW_CX - ARROW_HIT_R && (int)ir.x < ARROW_CX + ARROW_HIT_R &&
-                (int)ir.y >= ARROW_DN_CY - ARROW_HIT_R && (int)ir.y < ARROW_DN_CY + ARROW_HIT_R;
+        int totalPages = (itemTotal + POSTERS_PER_PAGE - 1) / POSTERS_PER_PAGE;
+        drawPageArrows(ir, ARROW_UP_CY, ARROW_DN_CY, itemPage > 0, itemPage + 1 < totalPages,
+                       ARROW_CX, ARROW_HIT_R);
 
-            u32 colUp = !canPrev ? 0x33445566 : (hoverUp ? 0xAADDFFFF : 0x6688AAFF);
-            u32 colDn = !canNext ? 0x33445566 : (hoverDn ? 0xAADDFFFF : 0x6688AAFF);
-
-            guVector triUp[3] = {
-                {(float)ARROW_CX,       (float)(ARROW_UP_CY - 13), 0},
-                {(float)(ARROW_CX - 14),(float)(ARROW_UP_CY + 11), 0},
-                {(float)(ARROW_CX + 14),(float)(ARROW_UP_CY + 11), 0},
-            };
-            u32 cUp[3] = {colUp, colUp, colUp};
-            GRRLIB_NGoneFilled(triUp, cUp, 3);
-
-            guVector triDn[3] = {
-                {(float)ARROW_CX,       (float)(ARROW_DN_CY + 13), 0},
-                {(float)(ARROW_CX - 14),(float)(ARROW_DN_CY - 11), 0},
-                {(float)(ARROW_CX + 14),(float)(ARROW_DN_CY - 11), 0},
-            };
-            u32 cDn[3] = {colDn, colDn, colDn};
-            GRRLIB_NGoneFilled(triDn, cDn, 3);
-        }
-
-        // Footer
-        GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-        GRRLIB_PrintfTTF(20, 458, font, "[B] Back", 15, 0x889AABFF);
-        // Show hovered/selected item title centred in the footer
-        if (posterSel >= 0 && posterSel < (int)items.size() && !items[posterSel].name.empty()) {
-            const int FTR_X = 110, FTR_W = 400;
-            std::string t = items[posterSel].name;
-            while ((int)GRRLIB_WidthTTF(font, t.c_str(), 15) > FTR_W && !t.empty()) {
-                while (!t.empty() && (t.back() & 0xC0) == 0x80) t.pop_back();
-                if (!t.empty()) t.pop_back();
-            }
-            if (!t.empty()) {
-                int tw = (int)GRRLIB_WidthTTF(font, t.c_str(), 15);
-                GRRLIB_PrintfTTF(FTR_X + (FTR_W - tw) / 2, 458, font, t.c_str(), 15, 0xDDEEFFFF);
-            }
-        }
-        {
-            int totalPages = (itemTotal + POSTERS_PER_PAGE - 1) / POSTERS_PER_PAGE;
-            if (totalPages > 1) {
-                char pageStr[24];
-                snprintf(pageStr, sizeof(pageStr), "Page %d / %d", itemPage + 1, totalPages);
-                int pw = (int)GRRLIB_WidthTTF(font, pageStr, 15);
-                GRRLIB_PrintfTTF(620 - pw, 458, font, pageStr, 15, 0x889AABFF);
-            }
-        }
+        // Footer: selected title centred, page on the right
+        const Ui::Hint l[] = { { "B", "Back" } };
+        char pageStr[24];
+        snprintf(pageStr, sizeof(pageStr), "Page %d / %d", itemPage + 1, totalPages);
+        const Ui::Hint r[] = { { "", pageStr } };
+        const char* center = (posterSel >= 0 && posterSel < n) ? items[posterSel].name.c_str() : nullptr;
+        Ui::footer(l, 1, r, totalPages > 1 ? 1 : 0, center);
     }
 
     // ---- Global Favourites poster grid ----
     if (state == State::GlobalFavoritesReady) {
-        // Header bar
-        GRRLIB_Rectangle(0, 0, 640, 52, 0x0E1826FF, 1);
-        GRRLIB_PrintfTTF(20, 6, font, auth.serverName.c_str(), 13, 0x5577AAFF);
-
-        // 3-tab header (Libraries | Activity | Favorites) — Favorites selected
-        {
-            const char* t0 = "Libraries";
-            const char* t1 = "Activity";
-            const char* t2 = "Favorites";
-            int tw0 = (int)GRRLIB_WidthTTF(font, t0, 16);
-            int tw1 = (int)GRRLIB_WidthTTF(font, t1, 16);
-            int tw2 = (int)GRRLIB_WidthTTF(font, t2, 16);
-            const int TAB_GAP = 30;
-            int totalTabW = tw0 + TAB_GAP + tw1 + TAB_GAP + tw2;
-            int tabX0 = 320 - totalTabW / 2;
-            int tabX1 = tabX0 + tw0 + TAB_GAP;
-            int tabX2 = tabX1 + tw1 + TAB_GAP;
-            GRRLIB_PrintfTTF(tabX0, 20, font, t0, 16, 0x5B7A9AFF);
-            GRRLIB_PrintfTTF(tabX1, 20, font, t1, 16, 0x5B7A9AFF);
-            GRRLIB_PrintfTTF(tabX2, 20, font, t2, 16, 0xFFFFFFFF);
-            GRRLIB_Rectangle(tabX2, 42, tw2, 3, 0x4499FFFF, 1);
-        }
-        GRRLIB_Rectangle(0, 51, 640, 1, 0x1C2D3CFF, 1);
+        float tabX0 = Ui::tabs(320, 10, kHomeTabs, 3, 2, 16);
+        std::string srv = fitText(font, filterDejaVu(auth.serverName, 40), 14, (int)tabX0 - 30);
+        Ui::text(20, 18, srv.c_str(), 14, headerDim());
+        headerLine(51);
 
         // Count top-right
-        {
-            int startIdx = itemPage * POSTERS_PER_PAGE;
-            int endIdx   = startIdx + (int)items.size();
-            if (itemTotal > 0) {
-                char countStr[48];
-                snprintf(countStr, sizeof(countStr), "%d-%d / %d", startIdx + 1, endIdx, itemTotal);
-                int cw = (int)GRRLIB_WidthTTF(font, countStr, 15);
-                GRRLIB_PrintfTTF(620 - cw, 18, font, countStr, 15, 0x889AABFF);
-            } else {
-                GRRLIB_PrintfTTF(520, 18, font, "Pas de favoris", 15, 0x889AABFF);
-            }
-        }
+        if (itemTotal > 0) drawCount(itemPage, POSTERS_PER_PAGE, (int)items.size(), itemTotal);
+        else               Ui::textRight(620, 18, "Pas de favoris", 15, headerDim());
 
         int n = (int)items.size();
         const int GF_Y0 = POSTER_Y0 + 12; // header is 52px tall vs 46px for library sub-pages
-        for (int i = 0; i < n && i < POSTER_VISIBLE; i++) {
-            int col = i % POSTER_COLS;
-            int row = i / POSTER_COLS;
-            int px  = POSTER_X0 + col * POSTER_STRIDE_X;
-            int py  = GF_Y0 + row * POSTER_STRIDE_Y;
-            bool sel   = (i == posterSel);
-            float ws   = WiiUtils::wsScaleX();
-            int   visW = (int)(POSTER_W * ws + 0.5f);
-
-            if (sel)
-                GRRLIB_Rectangle(px - 3, py - 3, visW + 6, POSTER_H + 6, 0x4499FFFF, 1);
-            GRRLIB_Rectangle(px, py, visW, POSTER_H, 0x1E2A3AFF, 1);
-
-            if (posterTextures[i] && posterTextures[i]->w > 0 && posterTextures[i]->h > 0) {
-                float sx = (float)POSTER_W / posterTextures[i]->w;
-                float sy = (float)POSTER_H / posterTextures[i]->h;
-                float s  = sx > sy ? sx : sy;
-                float drawnW = posterTextures[i]->w * s * ws;
-                float drawnH = posterTextures[i]->h * s;
-                int ox = (int)((visW - drawnW) * 0.5f);
-                int oy = (int)((POSTER_H - drawnH) * 0.5f);
-                GRRLIB_ClipDrawing(px, py, (u32)visW, POSTER_H);
-                GRRLIB_DrawImg(px + ox, py + oy, posterTextures[i], 0, s * ws, s, 0xFFFFFFFF);
-                GRRLIB_ClipReset();
-            }
-
-            // Type badge (Movie / Series / Album)
-            if (i < (int)items.size()) {
+        for (int pass = 0; pass < 2; pass++) {
+            for (int i = 0; i < n && i < POSTER_VISIBLE; i++) {
+                bool sel = (i == posterSel);
+                if (sel != (pass == 1)) continue;
+                int px = POSTER_X0 + (i % POSTER_COLS) * POSTER_STRIDE_X;
+                int py = GF_Y0 + (i / POSTER_COLS) * POSTER_STRIDE_Y;
+                drawThumb(posterTextures[i], px, py, POSTER_W, POSTER_H,
+                          sel ? Ui::pulse() : 0.0f, -1.0f, items[i].name.c_str());
+                // Type badge (Movie / Series / Album)
                 const char* badge = labelForType(items[i].type);
-                GRRLIB_PrintfTTF(px + 2, py + POSTER_H - 14, font, badge, 10, 0xAABBCCCC);
+                int bw = Ui::textWidth(badge, 10) + 12;
+                Ui::roundRect(px + 6, py + POSTER_H - 22, bw, 16, 8, 0x000000A0);
+                Ui::text(px + 12, py + POSTER_H - 20, badge, 10, 0xFFFFFFFF);
             }
         }
 
-        // Page navigation arrows
-        {
-            int totalPages = (itemTotal + POSTERS_PER_PAGE - 1) / POSTERS_PER_PAGE;
-            bool canPrev = itemPage > 0;
-            bool canNext = itemPage + 1 < totalPages;
-            bool hoverUp = ir.valid &&
-                (int)ir.x >= ARROW_CX - ARROW_HIT_R && (int)ir.x < ARROW_CX + ARROW_HIT_R &&
-                (int)ir.y >= ARROW_UP_CY - ARROW_HIT_R && (int)ir.y < ARROW_UP_CY + ARROW_HIT_R;
-            bool hoverDn = ir.valid &&
-                (int)ir.x >= ARROW_CX - ARROW_HIT_R && (int)ir.x < ARROW_CX + ARROW_HIT_R &&
-                (int)ir.y >= ARROW_DN_CY - ARROW_HIT_R && (int)ir.y < ARROW_DN_CY + ARROW_HIT_R;
-            u32 colUp = !canPrev ? 0x33445566 : (hoverUp ? 0xAADDFFFF : 0x6688AAFF);
-            u32 colDn = !canNext ? 0x33445566 : (hoverDn ? 0xAADDFFFF : 0x6688AAFF);
-            const int GF_ARROW_UP = ARROW_UP_CY + 12;
-            const int GF_ARROW_DN = ARROW_DN_CY + 12;
-            guVector triUp[3] = {
-                {(float)ARROW_CX,        (float)(GF_ARROW_UP - 13), 0},
-                {(float)(ARROW_CX - 14), (float)(GF_ARROW_UP + 11), 0},
-                {(float)(ARROW_CX + 14), (float)(GF_ARROW_UP + 11), 0},
-            };
-            u32 cUp[3] = {colUp, colUp, colUp};
-            GRRLIB_NGoneFilled(triUp, cUp, 3);
-            guVector triDn[3] = {
-                {(float)ARROW_CX,        (float)(GF_ARROW_DN + 13), 0},
-                {(float)(ARROW_CX - 14), (float)(GF_ARROW_DN - 11), 0},
-                {(float)(ARROW_CX + 14), (float)(GF_ARROW_DN - 11), 0},
-            };
-            u32 cDn[3] = {colDn, colDn, colDn};
-            GRRLIB_NGoneFilled(triDn, cDn, 3);
-        }
+        int totalPages = (itemTotal + POSTERS_PER_PAGE - 1) / POSTERS_PER_PAGE;
+        drawPageArrows(ir, ARROW_UP_CY + 12, ARROW_DN_CY + 12, itemPage > 0,
+                       itemPage + 1 < totalPages, ARROW_CX, ARROW_HIT_R);
 
-        // Footer
-        GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-        {
-            struct { const char* label; int cx; } hints[] = {
-                { "[A] Detail",  160  },
-                { "[-/+] Tab", 320  },
-                { "[B] Back",   480  },
-            };
-            for (auto& hi : hints) {
-                int w = (int)GRRLIB_WidthTTF(font, hi.label, 15);
-                GRRLIB_PrintfTTF(hi.cx - w / 2, 458, font, hi.label, 15, 0x889AABFF);
-            }
-        }
+        const Ui::Hint l[] = { { "A", "Detail" } };
+        const Ui::Hint r[] = { { "-/+", "Tab" }, { "B", "Back" } };
+        const char* center = (posterSel >= 0 && posterSel < n) ? items[posterSel].name.c_str() : nullptr;
+        Ui::footer(l, 1, r, 2, center);
     }
+
+    // ---- Suggestion rows (movies / tv / upcoming) ----
+    const int SG_X0  = 15;
+    const int SG_CW  = POSTER_W;  // 130
+    const int SG_CH  = 160;
+    const int SG_GAP = 20;        // 4 × 130 + 3 × 20 = 580 fits in 640
+    // One horizontally scrolling row of poster cards with its end chevrons.
+    auto drawSugRow = [&](int rowY, const std::vector<JellyfinItem>& list,
+                          GRRLIB_texImg* const* texs, int off, int selIdx, bool rowActive,
+                          bool preferSeries, bool showProgress) {
+        int nItems = (int)list.size();
+        for (int pass = 0; pass < 2; pass++) {
+            for (int si = 0; si < SUGG_VISIBLE; si++) {
+                int i = off + si;
+                if (i >= nItems) break;
+                bool sel = rowActive && i == selIdx;
+                if (sel != (pass == 1)) continue;
+                int  cx  = SG_X0 + si * (SG_CW + SG_GAP);
+                bool hov = ir.valid && ir.x >= cx && ir.x < cx + SG_CW
+                                    && ir.y >= rowY && ir.y < rowY + SG_CH;
+                const JellyfinItem& item = list[i];
+                const std::string& nm = (preferSeries && !item.seriesName.empty()) ? item.seriesName : item.name;
+                drawThumb(texs[i], cx, rowY, SG_CW, SG_CH, focusOf(sel, hov),
+                          showProgress ? progressOf(item) : -1.0f, nm.c_str());
+                int visW = (int)(SG_CW * WiiUtils::wsScaleX() + 0.5f);
+                std::string title = fitText(font, filterDejaVu(nm, 30), 12, visW);
+                Ui::text(cx + 1, rowY + SG_CH + 4, title.c_str(), 12, sel ? p.text : p.textDim);
+            }
+        }
+        int ay = rowY + SG_CH / 2;
+        drawRowChevron(SG_X0 - 9, ay, true, off > 0);
+        drawRowChevron(SG_X0 + SUGG_VISIBLE * (SG_CW + SG_GAP) - SG_GAP + 6, ay, false,
+                       off + SUGG_VISIBLE < nItems);
+    };
 
     // ---- Movie Suggestions (continue watching + recently added) ----
     if (state == State::MovieSuggestionsReady) {
-        // Header with tab bar
-        char hdr[128];
-        snprintf(hdr, sizeof(hdr), "< %s", currentLibName.c_str());
-        GRRLIB_PrintfTTF(20, 14, font, hdr, 20, 0xFFFFFFFF);
-
-        const char* tabNames[4] = { "Movies", "Collections", "Favorites", "Suggestions" };
-        {
-            const int TAB_GAP = 20;
-            int totalW = 0;
-            for (int t = 0; t < 4; t++)
-                totalW += (int)GRRLIB_WidthTTF(font, tabNames[t], 14) + (t < 3 ? TAB_GAP : 0);
-            int tabX = (640 - totalW) / 2;
-            for (int t = 0; t < 4; t++) {
-                int tw = (int)GRRLIB_WidthTTF(font, tabNames[t], 14);
-                u32 col = (t == movieTab) ? 0xFFFFFFFF : 0x5B7A9AFF;
-                GRRLIB_PrintfTTF(tabX, 18, font, tabNames[t], 14, col);
-                if (t == movieTab)
-                    GRRLIB_Rectangle(tabX, 42, tw, 2, 0x4499FFFF, 1);
-                tabX += tw + TAB_GAP;
-            }
-        }
-        GRRLIB_Rectangle(0, 46, 640, 1, 0x334466FF, 1);
-
-        const int SG_X0    = 15;
-        const int SG_CW    = POSTER_W;  // 130
-        const int SG_CH    = 160;       // card height: row top + 160 + ~16 title = 176 per row
-        const int SG_GAP   = 20;        // 4 × 130 + 3 × 20 = 580 fits in 640
-        const int SG_ROW0_Y = 65;       // row 0: 65..225,  titles at 227
-        const int SG_ROW1_Y = 270;      // row 1: 270..430, titles at 432; footer at 453
-
-        float ws = WiiUtils::wsScaleX();
-
-        // Helper: draw one card at exact screen column position cx
-        auto drawSugCard = [&](int cx, int cardY,
-                                const JellyfinItem& item,
-                                GRRLIB_texImg* tex,
-                                bool selCard) {
-            int   visW = (int)(SG_CW * ws + 0.5f);
-            bool  hov  = ir.valid && ir.x >= cx && ir.x < cx + SG_CW
-                                  && ir.y >= cardY && ir.y < cardY + SG_CH;
-
-            GRRLIB_Rectangle(cx, cardY, visW, SG_CH, 0x1E2A3AFF, 1);
-            if (tex && tex->w > 0) {
-                float sx = (float)SG_CW / tex->w;
-                float sy = (float)SG_CH / tex->h;
-                float s  = sx > sy ? sx : sy;
-                int   ox = (int)((visW - tex->w * s * ws) * 0.5f);
-                int   oy = (int)((SG_CH - tex->h * s) * 0.5f);
-                GRRLIB_ClipDrawing(cx, cardY, (u32)visW, SG_CH);
-                GRRLIB_DrawImg(cx + ox, cardY + oy, tex, 0, s * ws, s, 0xFFFFFFFF);
-                GRRLIB_ClipReset();
-            }
-            if (selCard || hov) {
-                GRRLIB_Rectangle(cx - 3, cardY - 3, visW + 6, 3,        0x4499FFFF, 1);
-                GRRLIB_Rectangle(cx - 3, cardY + SG_CH, visW + 6, 3,    0x4499FFFF, 1);
-                GRRLIB_Rectangle(cx - 3, cardY - 3, 3, SG_CH + 6,       0x4499FFFF, 1);
-                GRRLIB_Rectangle(cx + visW, cardY - 3, 3, SG_CH + 6,    0x4499FFFF, 1);
-            }
-            // Progress bar
-            if (item.playbackPositionTicks > 0 && item.runtimeTicks > 0) {
-                int pct   = (int)(item.playbackPositionTicks * 100LL / item.runtimeTicks);
-                if (pct > 100) pct = 100;
-                int fillW = visW * pct / 100;
-                GRRLIB_Rectangle(cx, cardY + SG_CH - 4, visW, 4, 0x0A1420FF, 1);
-                if (fillW > 0)
-                    GRRLIB_Rectangle(cx, cardY + SG_CH - 4, fillW, 4, 0x44AAFFFF, 1);
-            }
-            // Title below card (truncated to card width)
-            std::string title = filterDejaVu(item.name, 20);
-            while (!title.empty() && (int)GRRLIB_WidthTTF(font, title.c_str(), 12) > visW) {
-                while (!title.empty() && (title.back() & 0xC0) == 0x80) title.pop_back();
-                if (!title.empty()) title.pop_back();
-            }
-            GRRLIB_PrintfTTF(cx, cardY + SG_CH + 2, font, title.c_str(), 12, 0xDDDDDDFF);
-        };
-
+        drawLibHeader(currentLibName, kMovieTabs, 4, movieTab);
+        const int SG_ROW0_Y = 65, SG_ROW1_Y = 270;
         int nc = (int)movieContItems.size();
         int nr = (int)movieRecentItems.size();
 
-        // Helper: draw a scroll arrow indicator at the ends of a row
-        auto drawRowArrow = [&](bool left, int rowY, bool active) {
-            int   ax  = left ? (SG_X0 - 12) : (SG_X0 + SUGG_VISIBLE * (SG_CW + SG_GAP) - SG_GAP + 2);
-            int   ay  = rowY + SG_CH / 2;
-            u32   col = active ? 0xAADDFFFF : 0x2A3A4AFF;
-            if (left) {
-                guVector tri[3] = {{(float)(ax - 8),(float)ay,0},{(float)(ax+6),(float)(ay-8),0},{(float)(ax+6),(float)(ay+8),0}};
-                u32 c[3] = {col,col,col}; GRRLIB_NGoneFilled(tri,c,3);
-            } else {
-                guVector tri[3] = {{(float)(ax+8),(float)ay,0},{(float)(ax-6),(float)(ay-8),0},{(float)(ax-6),(float)(ay+8),0}};
-                u32 c[3] = {col,col,col}; GRRLIB_NGoneFilled(tri,c,3);
-            }
-        };
+        sectionLabel(SG_X0, 50, "IN PROGRESS", nc > 0);
+        if (nc > 0)
+            drawSugRow(SG_ROW0_Y, movieContItems, movieContTex, movieSuggestContOff,
+                       movieSuggestContSel, movieSuggestRow == 0, false, true);
+        else
+            Ui::text(SG_X0 + 20, SG_ROW0_Y + 60, "Aucun film en cours", 14, p.textDim);
 
-        // Row 0 — Continue Watching
-        GRRLIB_PrintfTTF(SG_X0, 52, font, "IN PROGRESS", 11,
-                         nc > 0 ? 0x6688AAFF : 0x445566FF);
-        if (nc > 0) {
-            for (int si = 0; si < SUGG_VISIBLE; si++) {
-                int i = movieSuggestContOff + si;
-                if (i >= nc) break;
-                int cx = SG_X0 + si * (SG_CW + SG_GAP);
-                drawSugCard(cx, SG_ROW0_Y, movieContItems[i], movieContTex[i],
-                            i == movieSuggestContSel && movieSuggestRow == 0);
-            }
-            drawRowArrow(true,  SG_ROW0_Y, movieSuggestContOff > 0);
-            drawRowArrow(false, SG_ROW0_Y, movieSuggestContOff + SUGG_VISIBLE < nc);
-        } else {
-            GRRLIB_PrintfTTF(SG_X0 + 20, SG_ROW0_Y + 60, font, "Aucun film en cours", 14, 0x556677FF);
-        }
+        sectionLabel(SG_X0, 252, "RECENTLY ADDED", nr > 0);
+        if (nr > 0)
+            drawSugRow(SG_ROW1_Y, movieRecentItems, movieRecentTex, movieSuggestRecOff,
+                       movieSuggestRecSel, movieSuggestRow == 1, false, true);
+        else
+            Ui::text(SG_X0 + 20, SG_ROW1_Y + 60, "No recent movies", 14, p.textDim);
 
-        // Row 1 — Recently Added
-        GRRLIB_PrintfTTF(SG_X0, 252, font, "RECENTLY ADDED", 11,
-                         nr > 0 ? 0x6688AAFF : 0x445566FF);
-        if (nr > 0) {
-            for (int si = 0; si < SUGG_VISIBLE; si++) {
-                int i = movieSuggestRecOff + si;
-                if (i >= nr) break;
-                int cx = SG_X0 + si * (SG_CW + SG_GAP);
-                drawSugCard(cx, SG_ROW1_Y, movieRecentItems[i], movieRecentTex[i],
-                            i == movieSuggestRecSel && movieSuggestRow == 1);
-            }
-            drawRowArrow(true,  SG_ROW1_Y, movieSuggestRecOff > 0);
-            drawRowArrow(false, SG_ROW1_Y, movieSuggestRecOff + SUGG_VISIBLE < nr);
-        } else {
-            GRRLIB_PrintfTTF(SG_X0 + 20, SG_ROW1_Y + 60, font, "No recent movies", 14, 0x556677FF);
-        }
-
-        GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-        GRRLIB_PrintfTTF(20, 458, font, "[A] Detail  [B] Back", 15, 0x889AABFF);
-        GRRLIB_PrintfTTF(340, 458, font, "[-/+] Tab", 15, 0x889AABFF);
+        const Ui::Hint l[] = { { "A", "Detail" }, { "B", "Back" } };
+        const Ui::Hint r[] = { { "-/+", "Tab" } };
+        Ui::footer(l, 2, r, 1);
     }
 
     // ---- TV Suggestions (continue watching episodes + recently added series) ----
     if (state == State::TVSuggestionsReady) {
-        char hdr[128];
-        snprintf(hdr, sizeof(hdr), "< %s", currentLibName.c_str());
-        GRRLIB_PrintfTTF(20, 14, font, hdr, 20, 0xFFFFFFFF);
-
-        const char* tabNames[3] = { "Series", "Suggestions", "Coming Up" };
-        const int TAB_GAP = 20;
-        int totalW = 0;
-        for (int t = 0; t < 3; t++)
-            totalW += (int)GRRLIB_WidthTTF(font, tabNames[t], 14) + (t < 2 ? TAB_GAP : 0);
-        int tabX = (640 - totalW) / 2;
-        for (int t = 0; t < 3; t++) {
-            int tw = (int)GRRLIB_WidthTTF(font, tabNames[t], 14);
-            u32 col = (t == tvTab) ? 0xFFFFFFFF : 0x5B7A9AFF;
-            GRRLIB_PrintfTTF(tabX, 18, font, tabNames[t], 14, col);
-            if (t == tvTab)
-                GRRLIB_Rectangle(tabX, 42, tw, 2, 0x4499FFFF, 1);
-            tabX += tw + TAB_GAP;
-        }
-        GRRLIB_Rectangle(0, 46, 640, 1, 0x334466FF, 1);
-
-        const int SG_X0     = 15;
-        const int SG_CW     = POSTER_W;
-        const int SG_CH     = 160;
-        const int SG_GAP    = 20;
-        const int SG_ROW0_Y = 65;
-        const int SG_ROW1_Y = 270;
-
-        float ws = WiiUtils::wsScaleX();
-
-        auto drawTVCard = [&](int cx, int cardY,
-                               const JellyfinItem& item,
-                               GRRLIB_texImg* tex,
-                               bool selCard) {
-            int  visW = (int)(SG_CW * ws + 0.5f);
-            bool hov  = ir.valid && ir.x >= cx && ir.x < cx + SG_CW
-                                 && ir.y >= cardY && ir.y < cardY + SG_CH;
-            GRRLIB_Rectangle(cx, cardY, visW, SG_CH, 0x1E2A3AFF, 1);
-            if (tex && tex->w > 0) {
-                float sx = (float)SG_CW / tex->w;
-                float sy = (float)SG_CH / tex->h;
-                float s  = sx > sy ? sx : sy;
-                int   ox = (int)((visW - tex->w * s * ws) * 0.5f);
-                int   oy = (int)((SG_CH - tex->h * s) * 0.5f);
-                GRRLIB_ClipDrawing(cx, cardY, (u32)visW, SG_CH);
-                GRRLIB_DrawImg(cx + ox, cardY + oy, tex, 0, s * ws, s, 0xFFFFFFFF);
-                GRRLIB_ClipReset();
-            }
-            if (selCard || hov) {
-                GRRLIB_Rectangle(cx - 3, cardY - 3, visW + 6, 3,     0x4499FFFF, 1);
-                GRRLIB_Rectangle(cx - 3, cardY + SG_CH, visW + 6, 3, 0x4499FFFF, 1);
-                GRRLIB_Rectangle(cx - 3, cardY - 3, 3, SG_CH + 6,    0x4499FFFF, 1);
-                GRRLIB_Rectangle(cx + visW, cardY - 3, 3, SG_CH + 6, 0x4499FFFF, 1);
-            }
-            if (item.playbackPositionTicks > 0 && item.runtimeTicks > 0) {
-                int pct   = (int)(item.playbackPositionTicks * 100LL / item.runtimeTicks);
-                if (pct > 100) pct = 100;
-                int fillW = visW * pct / 100;
-                GRRLIB_Rectangle(cx, cardY + SG_CH - 4, visW, 4, 0x0A1420FF, 1);
-                if (fillW > 0)
-                    GRRLIB_Rectangle(cx, cardY + SG_CH - 4, fillW, 4, 0x44AAFFFF, 1);
-            }
-            std::string title = filterDejaVu(
-                item.type == "Episode" && !item.seriesName.empty() ? item.seriesName : item.name, 20);
-            while (!title.empty() && (int)GRRLIB_WidthTTF(font, title.c_str(), 12) > visW) {
-                while (!title.empty() && (title.back() & 0xC0) == 0x80) title.pop_back();
-                if (!title.empty()) title.pop_back();
-            }
-            GRRLIB_PrintfTTF(cx, cardY + SG_CH + 2, font, title.c_str(), 12, 0xDDDDDDFF);
-        };
-
-        auto drawTVArrow = [&](bool left, int rowY, bool active) {
-            int ax  = left ? (SG_X0 - 12) : (SG_X0 + SUGG_VISIBLE * (SG_CW + SG_GAP) - SG_GAP + 2);
-            int ay  = rowY + SG_CH / 2;
-            u32 col = active ? 0xAADDFFFF : 0x2A3A4AFF;
-            if (left) {
-                guVector tri[3] = {{(float)(ax-8),(float)ay,0},{(float)(ax+6),(float)(ay-8),0},{(float)(ax+6),(float)(ay+8),0}};
-                u32 c[3] = {col,col,col}; GRRLIB_NGoneFilled(tri,c,3);
-            } else {
-                guVector tri[3] = {{(float)(ax+8),(float)ay,0},{(float)(ax-6),(float)(ay-8),0},{(float)(ax-6),(float)(ay+8),0}};
-                u32 c[3] = {col,col,col}; GRRLIB_NGoneFilled(tri,c,3);
-            }
-        };
-
+        drawLibHeader(currentLibName, kTvTabs, 3, tvTab);
+        const int SG_ROW0_Y = 65, SG_ROW1_Y = 270;
         int nc = (int)tvContItems.size();
         int nr = (int)tvRecentItems.size();
 
-        // Row 0 — Continue Watching (episodes)
-        GRRLIB_PrintfTTF(SG_X0, 52, font, "IN PROGRESS", 11,
-                         nc > 0 ? 0x6688AAFF : 0x445566FF);
-        if (nc > 0) {
-            for (int si = 0; si < SUGG_VISIBLE; si++) {
-                int i = tvSuggestContOff + si;
-                if (i >= nc) break;
-                int cx = SG_X0 + si * (SG_CW + SG_GAP);
-                drawTVCard(cx, SG_ROW0_Y, tvContItems[i], tvContTex[i],
-                           i == tvSuggestContSel && tvSuggestRow == 0);
-            }
-            drawTVArrow(true,  SG_ROW0_Y, tvSuggestContOff > 0);
-            drawTVArrow(false, SG_ROW0_Y, tvSuggestContOff + SUGG_VISIBLE < nc);
-        } else {
-            GRRLIB_PrintfTTF(SG_X0 + 20, SG_ROW0_Y + 60, font, "No episode in progress", 14, 0x556677FF);
-        }
+        sectionLabel(SG_X0, 50, "IN PROGRESS", nc > 0);
+        if (nc > 0)
+            drawSugRow(SG_ROW0_Y, tvContItems, tvContTex, tvSuggestContOff,
+                       tvSuggestContSel, tvSuggestRow == 0, true, true);
+        else
+            Ui::text(SG_X0 + 20, SG_ROW0_Y + 60, "No episode in progress", 14, p.textDim);
 
-        // Row 1 — Recently Added (series)
-        GRRLIB_PrintfTTF(SG_X0, 252, font, "RECENT SERIES", 11,
-                         nr > 0 ? 0x6688AAFF : 0x445566FF);
-        if (nr > 0) {
-            for (int si = 0; si < SUGG_VISIBLE; si++) {
-                int i = tvSuggestRecOff + si;
-                if (i >= nr) break;
-                int cx = SG_X0 + si * (SG_CW + SG_GAP);
-                drawTVCard(cx, SG_ROW1_Y, tvRecentItems[i], tvRecentTex[i],
-                           i == tvSuggestRecSel && tvSuggestRow == 1);
-            }
-            drawTVArrow(true,  SG_ROW1_Y, tvSuggestRecOff > 0);
-            drawTVArrow(false, SG_ROW1_Y, tvSuggestRecOff + SUGG_VISIBLE < nr);
-        } else {
-            GRRLIB_PrintfTTF(SG_X0 + 20, SG_ROW1_Y + 60, font, "No recent series", 14, 0x556677FF);
-        }
+        sectionLabel(SG_X0, 252, "RECENT SERIES", nr > 0);
+        if (nr > 0)
+            drawSugRow(SG_ROW1_Y, tvRecentItems, tvRecentTex, tvSuggestRecOff,
+                       tvSuggestRecSel, tvSuggestRow == 1, true, true);
+        else
+            Ui::text(SG_X0 + 20, SG_ROW1_Y + 60, "No recent series", 14, p.textDim);
 
-        GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-        GRRLIB_PrintfTTF(20, 458, font, "[A] Select  [B] Back", 15, 0x889AABFF);
-        GRRLIB_PrintfTTF(380, 458, font, "[-/+] Tab", 15, 0x889AABFF);
+        const Ui::Hint l[] = { { "A", "Select" }, { "B", "Back" } };
+        const Ui::Hint r[] = { { "-/+", "Tab" } };
+        Ui::footer(l, 2, r, 1);
     }
 
     // ---- TV Upcoming (unaired episodes) ----
     if (state == State::TVUpcomingReady) {
-        char hdr[128];
-        snprintf(hdr, sizeof(hdr), "< %s", currentLibName.c_str());
-        GRRLIB_PrintfTTF(20, 14, font, hdr, 20, 0xFFFFFFFF);
-
-        const char* tabNames[3] = { "Series", "Suggestions", "Coming Up" };
-        const int TAB_GAP = 20;
-        int totalW = 0;
-        for (int t = 0; t < 3; t++)
-            totalW += (int)GRRLIB_WidthTTF(font, tabNames[t], 14) + (t < 2 ? TAB_GAP : 0);
-        int tabX = (640 - totalW) / 2;
-        for (int t = 0; t < 3; t++) {
-            int tw = (int)GRRLIB_WidthTTF(font, tabNames[t], 14);
-            u32 col = (t == tvTab) ? 0xFFFFFFFF : 0x5B7A9AFF;
-            GRRLIB_PrintfTTF(tabX, 18, font, tabNames[t], 14, col);
-            if (t == tvTab)
-                GRRLIB_Rectangle(tabX, 42, tw, 2, 0x4499FFFF, 1);
-            tabX += tw + TAB_GAP;
-        }
-        GRRLIB_Rectangle(0, 46, 640, 1, 0x334466FF, 1);
-
+        drawLibHeader(currentLibName, kTvTabs, 3, tvTab);
         int nu = (int)tvUpcomingItems.size();
-
         if (nu == 0) {
-            // Empty state
-            int mw = (int)GRRLIB_WidthTTF(font, "No content.", 20);
-            GRRLIB_PrintfTTF(320 - mw / 2, 185, font, "No content.", 20, 0xCCCCCCFF);
-            const char* hint = "Make sure metadata download is enabled.";
-            int hw = (int)GRRLIB_WidthTTF(font, hint, 13);
-            GRRLIB_PrintfTTF(320 - hw / 2, 215, font, hint, 13, 0x889AABFF);
+            Ui::card(170, 160, 300, 90, 18, 0.0f);
+            Ui::textCentered(320, 182, "No content.", 20, p.text);
+            Ui::textCentered(320, 214, "Make sure metadata download is enabled.", 13, p.textDim);
         } else {
-            float ws = WiiUtils::wsScaleX();
-            const int SG_X0  = 15;
-            const int SG_CW  = POSTER_W;
-            const int SG_CH  = 160;
-            const int SG_GAP = 20;
-            const int SG_Y   = 80;
-
-            GRRLIB_PrintfTTF(SG_X0, 55, font, "COMING UP", 11, 0x6688AAFF);
-
-            for (int si = 0; si < SUGG_VISIBLE; si++) {
-                int i = tvUpcomingOff + si;
-                if (i >= nu) break;
-                int cx   = SG_X0 + si * (SG_CW + SG_GAP);
-                int visW = (int)(SG_CW * ws + 0.5f);
-                bool sel = (i == tvUpcomingSel);
-                bool hov = ir.valid && ir.x >= cx && ir.x < cx + SG_CW
-                                    && ir.y >= SG_Y && ir.y < SG_Y + SG_CH;
-
-                GRRLIB_Rectangle(cx, SG_Y, visW, SG_CH, 0x1E2A3AFF, 1);
-                if (tvUpcomingTex[i] && tvUpcomingTex[i]->w > 0) {
-                    float sx = (float)SG_CW / tvUpcomingTex[i]->w;
-                    float sy = (float)SG_CH / tvUpcomingTex[i]->h;
-                    float s  = sx > sy ? sx : sy;
-                    int   ox = (int)((visW - tvUpcomingTex[i]->w * s * ws) * 0.5f);
-                    int   oy = (int)((SG_CH - tvUpcomingTex[i]->h * s) * 0.5f);
-                    GRRLIB_ClipDrawing(cx, SG_Y, (u32)visW, SG_CH);
-                    GRRLIB_DrawImg(cx + ox, SG_Y + oy, tvUpcomingTex[i], 0, s * ws, s, 0xFFFFFFFF);
-                    GRRLIB_ClipReset();
-                }
-                if (sel || hov) {
-                    GRRLIB_Rectangle(cx - 3, SG_Y - 3, visW + 6, 3,          0x4499FFFF, 1);
-                    GRRLIB_Rectangle(cx - 3, SG_Y + SG_CH, visW + 6, 3,      0x4499FFFF, 1);
-                    GRRLIB_Rectangle(cx - 3, SG_Y - 3, 3, SG_CH + 6,         0x4499FFFF, 1);
-                    GRRLIB_Rectangle(cx + visW, SG_Y - 3, 3, SG_CH + 6,      0x4499FFFF, 1);
-                }
-                // Series name below card
-                const JellyfinItem& itm = tvUpcomingItems[i];
-                std::string title = filterDejaVu(
-                    !itm.seriesName.empty() ? itm.seriesName : itm.name, 20);
-                while (!title.empty() && (int)GRRLIB_WidthTTF(font, title.c_str(), 12) > visW) {
-                    while (!title.empty() && (title.back() & 0xC0) == 0x80) title.pop_back();
-                    if (!title.empty()) title.pop_back();
-                }
-                GRRLIB_PrintfTTF(cx, SG_Y + SG_CH + 2, font, title.c_str(), 12, 0xDDDDDDFF);
-            }
-            // Scroll arrows
-            {
-                int ax0 = SG_X0 - 12;
-                int ax1 = SG_X0 + SUGG_VISIBLE * (SG_CW + SG_GAP) - SG_GAP + 2;
-                int ay  = SG_Y + SG_CH / 2;
-                auto drawArrow = [&](int ax, bool left, bool active) {
-                    u32 col = active ? 0xAADDFFFF : 0x2A3A4AFF;
-                    if (left) {
-                        guVector tri[3] = {{(float)(ax-8),(float)ay,0},{(float)(ax+6),(float)(ay-8),0},{(float)(ax+6),(float)(ay+8),0}};
-                        u32 c[3] = {col,col,col}; GRRLIB_NGoneFilled(tri,c,3);
-                    } else {
-                        guVector tri[3] = {{(float)(ax+8),(float)ay,0},{(float)(ax-6),(float)(ay-8),0},{(float)(ax-6),(float)(ay+8),0}};
-                        u32 c[3] = {col,col,col}; GRRLIB_NGoneFilled(tri,c,3);
-                    }
-                };
-                drawArrow(ax0, true,  tvUpcomingOff > 0);
-                drawArrow(ax1, false, tvUpcomingOff + SUGG_VISIBLE < nu);
-            }
+            sectionLabel(SG_X0, 55, "COMING UP", true);
+            drawSugRow(80, tvUpcomingItems, tvUpcomingTex, tvUpcomingOff,
+                       tvUpcomingSel, true, true, false);
         }
-
-        GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-        GRRLIB_PrintfTTF(20, 458, font, "[A] Detail  [B] Back", 15, 0x889AABFF);
-        GRRLIB_PrintfTTF(340, 458, font, "[-/+] Tab", 15, 0x889AABFF);
+        const Ui::Hint l[] = { { "A", "Detail" }, { "B", "Back" } };
+        const Ui::Hint r[] = { { "-/+", "Tab" } };
+        Ui::footer(l, 2, r, 1);
     }
 
     // ---- Music Suggestions (recently added albums) ----
     if (state == State::MusicSuggestionsReady) {
-        // Tab bar
-        const char* mTabNames[3] = { "Albums", "Suggestions", "Playlists" };
-        const int TAB_GAP = 20;
-        int totalW = 0;
-        for (int t = 0; t < 3; t++)
-            totalW += (int)GRRLIB_WidthTTF(font, mTabNames[t], 14) + (t < 2 ? TAB_GAP : 0);
-        int tabX = (640 - totalW) / 2;
-        for (int t = 0; t < 3; t++) {
-            int tw = (int)GRRLIB_WidthTTF(font, mTabNames[t], 14);
-            u32 col = (t == musicTab) ? 0xFFFFFFFF : 0x5B7A9AFF;
-            GRRLIB_PrintfTTF(tabX, 18, font, mTabNames[t], 14, col);
-            if (t == musicTab)
-                GRRLIB_Rectangle(tabX, 42, tw, 2, 0x4499FFFF, 1);
-            tabX += tw + TAB_GAP;
-        }
-        GRRLIB_Rectangle(0, 46, 640, 1, 0x334466FF, 1);
+        Ui::tabs(320, 10, kMusicTabs, 3, musicTab, 14);
+        headerLine(46);
 
         // 2-row × 4-col grid of album art cards
-        // Available height: 47..452 = 405px. Two rows + titles need ~310px, centered.
         const int COLS    = 4;
         const int AC_CW   = 120;  // square album card
         const int AC_CH   = 120;
@@ -3447,65 +3073,34 @@ void LibraryView::render(ir_t& ir) {
         const int ROW0_Y  = 74;   // first row starts after header + gap
         const int ROW1_Y  = ROW0_Y + AC_RSTRIDE;
 
-        float ws = WiiUtils::wsScaleX();
         int nr = (int)musicRecentItems.size();
-
-        GRRLIB_PrintfTTF(GRID_X, HDR_Y, font, "RECENTLY ADDED", 11,
-                         nr > 0 ? 0x6688AAFF : 0x445566FF);
+        sectionLabel(GRID_X, HDR_Y, "RECENTLY ADDED", nr > 0);
 
         auto drawAlbumCard = [&](int col, int cardY, int i) {
-            int cx = GRID_X + col * (AC_CW + AC_GAP);
-            int visW = (int)(AC_CW * ws + 0.5f);
-            bool sel  = (i == musicSuggestSel);
-            bool hov  = ir.valid && ir.x >= cx && ir.x < cx + AC_CW
-                                 && ir.y >= cardY && ir.y < cardY + AC_CH;
-
-            GRRLIB_texImg* tex = musicRecentTex[i];
-            // Background
-            GRRLIB_Rectangle(cx, cardY, visW, AC_CH, 0x1A2535FF, 1);
-            if (tex && tex->w > 0) {
-                float sx = (float)AC_CW / tex->w;
-                float sy = (float)AC_CH / tex->h;
-                float s  = sx > sy ? sx : sy;
-                int   ox = (int)((visW - tex->w * s * ws) * 0.5f);
-                int   oy = (int)((AC_CH - tex->h * s) * 0.5f);
-                GRRLIB_ClipDrawing(cx, cardY, (u32)visW, AC_CH);
-                GRRLIB_DrawImg(cx + ox, cardY + oy, tex, 0, s * ws, s, 0xFFFFFFFF);
-                GRRLIB_ClipReset();
-            }
-            // Selection border
-            if (sel || hov) {
-                GRRLIB_Rectangle(cx - 3, cardY - 3, visW + 6, 3,           0x4499FFFF, 1);
-                GRRLIB_Rectangle(cx - 3, cardY + AC_CH, visW + 6, 3,       0x4499FFFF, 1);
-                GRRLIB_Rectangle(cx - 3, cardY - 3, 3, AC_CH + 6,          0x4499FFFF, 1);
-                GRRLIB_Rectangle(cx + visW, cardY - 3, 3, AC_CH + 6,       0x4499FFFF, 1);
-            }
-            // Title label
-            std::string title = filterDejaVu(musicRecentItems[i].name, 18);
-            while (!title.empty()
-                   && (int)GRRLIB_WidthTTF(font, title.c_str(), 12) > visW) {
-                while (!title.empty() && (title.back() & 0xC0) == 0x80) title.pop_back();
-                if (!title.empty()) title.pop_back();
-            }
-            GRRLIB_PrintfTTF(cx, cardY + AC_CH + 3, font, title.c_str(), 12,
-                             (sel || hov) ? 0xFFFFFFFF : 0x889AABFF);
+            int  cx  = GRID_X + col * (AC_CW + AC_GAP);
+            int  visW = (int)(AC_CW * WiiUtils::wsScaleX() + 0.5f);
+            bool sel = (i == musicSuggestSel);
+            bool hov = ir.valid && ir.x >= cx && ir.x < cx + AC_CW
+                                && ir.y >= cardY && ir.y < cardY + AC_CH;
+            drawThumb(musicRecentTex[i], cx, cardY, AC_CW, AC_CH, focusOf(sel, hov), -1.0f,
+                      musicRecentItems[i].name.c_str());
+            std::string title = fitText(font, filterDejaVu(musicRecentItems[i].name, 30), 12, visW);
+            Ui::text(cx + 1, cardY + AC_CH + 5, title.c_str(), 12, (sel || hov) ? p.text : p.textDim);
         };
 
         if (nr == 0) {
-            int mw = (int)GRRLIB_WidthTTF(font, "No recent albums", 16);
-            GRRLIB_PrintfTTF(320 - mw / 2, 200, font, "No recent albums", 16, 0x556677FF);
+            Ui::textCentered(320, 200, "No recent albums", 16, p.textDim);
         } else {
-            for (int col = 0; col < COLS; col++) {
-                if (col < nr)
-                    drawAlbumCard(col, ROW0_Y, col);
-                if (col + COLS < nr)
-                    drawAlbumCard(col, ROW1_Y, col + COLS);
+            for (int pass = 0; pass < 2; pass++) {
+                for (int i = 0; i < nr && i < COLS * 2; i++) {
+                    if ((i == musicSuggestSel) != (pass == 1)) continue;
+                    drawAlbumCard(i % COLS, i < COLS ? ROW0_Y : ROW1_Y, i);
+                }
             }
         }
-
-        GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-        GRRLIB_PrintfTTF(20, 458, font, "[A] Open  [B] Back", 15, 0x889AABFF);
-        GRRLIB_PrintfTTF(360, 458, font, "[-/+] Tab", 15, 0x889AABFF);
+        const Ui::Hint l[] = { { "A", "Open" }, { "B", "Back" } };
+        const Ui::Hint r[] = { { "-/+", "Tab" } };
+        Ui::footer(l, 2, r, 1);
     }
 
     // ---- Item detail ----
@@ -3514,33 +3109,22 @@ void LibraryView::render(ir_t& ir) {
 
     // ---- Resume prompt overlay ----
     if (state == State::ResumePrompt) {
-        // Semi-transparent backdrop
-        GRRLIB_Rectangle(0, 0, 640, 480, 0x00000099, 1);
+        GRRLIB_Rectangle(Ui::screenLeft(), 0, Ui::screenWidth(), 480, p.dim, 1);
 
-        // Dialog box
+        // Dialog box (DW/DH/button geometry shared with update())
         const int DW = 340, DH = 120;
         const int DX = (640 - DW) / 2;
         const int DY = (480 - DH) / 2;
-        GRRLIB_Rectangle(DX, DY, DW, DH, 0x1A2535FF, 1);
-        GRRLIB_Rectangle(DX,      DY,      DW, 2,  0x4499FFFF, 1);
-        GRRLIB_Rectangle(DX,      DY+DH-2, DW, 2,  0x4499FFFF, 1);
-        GRRLIB_Rectangle(DX,      DY,      2, DH,  0x4499FFFF, 1);
-        GRRLIB_Rectangle(DX+DW-2, DY,      2, DH,  0x4499FFFF, 1);
+        Ui::card(DX, DY, DW, DH + 34, 18, 0.0f);
 
-        // Title
-        const char* dlgTitle = "Resume playback?";
-        int tw = (int)GRRLIB_WidthTTF(font, dlgTitle, 16);
-        GRRLIB_PrintfTTF(DX + (DW - tw) / 2, DY + 14, font, dlgTitle, 16, 0xFFFFFFFF);
-
-        // Resume position hint
+        Ui::textCentered(320, DY + 14, "Resume playback?", 17, p.text);
         {
             int secs = (int)(detail.playbackPositionTicks / 10000000LL);
             int rh = secs / 3600, rm = (secs % 3600) / 60, rs = secs % 60;
             char hint[48];
-            if (rh > 0) snprintf(hint, sizeof(hint), "(at %d:%02d:%02d)", rh, rm, rs);
-            else         snprintf(hint, sizeof(hint), "(at %d:%02d)", rm, rs);
-            int hw = (int)GRRLIB_WidthTTF(font, hint, 13);
-            GRRLIB_PrintfTTF(DX + (DW - hw) / 2, DY + 36, font, hint, 13, 0x55CCFFFF);
+            if (rh > 0) snprintf(hint, sizeof(hint), "at %d:%02d:%02d", rh, rm, rs);
+            else        snprintf(hint, sizeof(hint), "at %d:%02d", rm, rs);
+            Ui::textCentered(320, DY + 38, hint, 13, p.accentDark);
         }
 
         // Two buttons: Continue | From Start
@@ -3549,27 +3133,17 @@ void LibraryView::render(ir_t& ir) {
         int bTotalW = BW * 2 + BGAP;
         int bStartX = DX + (DW - bTotalW) / 2;
         int bY      = DY + DH - BH - 14;
+        for (int i = 0; i < 2; ++i)
+            Ui::button(bStartX + i * (BW + BGAP), bY, BW, BH, btnLabels[i], 15,
+                       resumeSel == i ? Ui::pulse() : 0.0f);
 
-        for (int i = 0; i < 2; ++i) {
-            int bx = bStartX + i * (BW + BGAP);
-            bool sel = (resumeSel == i);
-            u32 bgCol  = sel ? 0x4499FFFF : 0x2A3B4DFF;
-            u32 txtCol = sel ? 0x001133FF : 0xAABBCCFF;
-            GRRLIB_Rectangle(bx, bY, BW, BH, bgCol, 1);
-            if (sel) {
-                GRRLIB_Rectangle(bx,      bY,      BW, 2,  0xFFFFFFCC, 1);
-                GRRLIB_Rectangle(bx,      bY+BH-2, BW, 2,  0xFFFFFFCC, 1);
-                GRRLIB_Rectangle(bx,      bY,      2, BH,  0xFFFFFFCC, 1);
-                GRRLIB_Rectangle(bx+BW-2, bY,      2, BH,  0xFFFFFFCC, 1);
-            }
-            int lw = (int)GRRLIB_WidthTTF(font, btnLabels[i], 15);
-            GRRLIB_PrintfTTF(bx + (BW - lw) / 2, bY + 7, font, btnLabels[i], 15, txtCol);
-        }
-
-        // Hint bar
-        GRRLIB_PrintfTTF(DX + 8, DY + DH + 6, font,
-                         "\xe2\x86\x90\xe2\x86\x92 Select  [A] Confirm  [B] Cancel",
-                         12, 0x889AABFF);
+        // Hints inside the dialog
+        const Ui::Hint h[] = { { "LR", "Select" }, { "A", "Confirm" }, { "B", "Cancel" } };
+        float hw = 0;
+        for (const auto& hi : h) hw += Ui::hintWidth(hi);
+        float hx = 320 - (hw - 14) * 0.5f;
+        Ui::roundRect(DX + 16, DY + DH - 2, DW - 32, 1.5f, 0.75f, Ui::alpha(p.cardBorder, 0.6f));
+        for (const auto& hi : h) hx += Ui::hint(hx, DY + DH + 6, hi);
     }
 
     // ---- Search ----
@@ -3585,6 +3159,7 @@ void LibraryView::render(ir_t& ir) {
 // drawDetailView()
 // ---------------------------------------------------------------
 void LibraryView::drawDetailView(ir_t& ir) {
+    const Ui::Palette& p = Ui::pal();
     const int POSTER_X  = 20;
     const int POSTER_Y  = 30;
     const int INFO_X    = 240;
@@ -3605,77 +3180,67 @@ void LibraryView::drawDetailView(ir_t& ir) {
     };
 
     // Episode thumbnails are 16:9; movie/show posters are portrait
-    const int POSTER_W2 = detailIsEpisode ? 210 : 200;
-    const int POSTER_H2 = detailIsEpisode ? 118 : 285;
+    // both end before the info card (INFO_X - 14 = 226): 20 + 196 / 20 + 200
+    const int POSTER_W2 = detailIsEpisode ? 196 : 200;
+    const int POSTER_H2 = detailIsEpisode ? 110 : 285;
 
     float ws   = WiiUtils::wsScaleX();
     int   visW = (int)(POSTER_W2 * ws + 0.5f);
 
-    // ---- Thumbnail / Poster ----
-    GRRLIB_Rectangle(POSTER_X, POSTER_Y, visW, POSTER_H2, 0x1E2A3AFF, 1);
-    // 2-pixel coloured border to visually distinguish episode vs movie
-    u32 borderCol = detailIsEpisode ? 0x3399CCFF : 0x334466FF;
-    GRRLIB_Rectangle(POSTER_X - 2,       POSTER_Y - 2, visW + 4,  2,         borderCol, 1);
-    GRRLIB_Rectangle(POSTER_X - 2,       POSTER_Y + POSTER_H2, visW + 4, 2,  borderCol, 1);
-    GRRLIB_Rectangle(POSTER_X - 2,       POSTER_Y - 2, 2, POSTER_H2 + 4,     borderCol, 1);
-    GRRLIB_Rectangle(POSTER_X + visW,    POSTER_Y - 2, 2, POSTER_H2 + 4,     borderCol, 1);
-    if (detailTex && detailTex->w > 0) {
-        float sx = (float)POSTER_W2 / detailTex->w;
-        float sy = (float)POSTER_H2 / detailTex->h;
-        float s  = sx > sy ? sx : sy; // FILL: crop edges rather than leave gray bars
-        float dw = detailTex->w * s * ws, dh = detailTex->h * s;
-        int ox = (int)((visW - dw) * 0.5f);
-        int oy = (int)((POSTER_H2 - dh) * 0.5f);
-        GRRLIB_ClipDrawing(POSTER_X, POSTER_Y, (u32)visW, POSTER_H2);
-        GRRLIB_DrawImg(POSTER_X + ox, POSTER_Y + oy, detailTex, 0, s * ws, s, 0xFFFFFFFF);
-        GRRLIB_ClipReset();
-    }
+    // ---- Info panel ----
+    Ui::card(INFO_X - 14, POSTER_Y - 12, 640 - (INFO_X - 14) - 6, 438 - (POSTER_Y - 12), 16, 0.0f);
 
-    // ---- Play button overlay (shown when cursor hovers the poster) ----
+    // ---- Thumbnail / Poster ----
     bool posterHover = ir.valid
         && ir.x >= POSTER_X && ir.x < POSTER_X + visW
         && ir.y >= POSTER_Y && ir.y < POSTER_Y + POSTER_H2;
+    drawThumb(detailTex, POSTER_X, POSTER_Y, POSTER_W2, POSTER_H2,
+              posterHover ? 0.8f : 0.0f, progressOf(detail), detail.name.c_str(), false);
+
+    // ---- Play button overlay (shown when cursor hovers the poster) ----
     if (posterHover) {
-        GRRLIB_Rectangle(POSTER_X, POSTER_Y, visW, POSTER_H2, 0x00000099, 1);
-        int cx = POSTER_X + visW / 2;
-        int cy = POSTER_Y + POSTER_H2 / 2;
-        int bw = 64, bh = 34;
-        GRRLIB_Rectangle(cx - bw/2,     cy - bh/2,     bw,     bh,     0x000000AA, 1);
-        GRRLIB_Rectangle(cx - bw/2 - 1, cy - bh/2 - 1, bw + 2, 2,     0xFFFFFFCC, 1);
-        GRRLIB_Rectangle(cx - bw/2 - 1, cy + bh/2 - 1, bw + 2, 2,     0xFFFFFFCC, 1);
-        GRRLIB_Rectangle(cx - bw/2 - 1, cy - bh/2 - 1, 2,     bh + 2, 0xFFFFFFCC, 1);
-        GRRLIB_Rectangle(cx + bw/2 - 1, cy - bh/2 - 1, 2,     bh + 2, 0xFFFFFFCC, 1);
-        int tw = GRRLIB_WidthTTF(font, "\xe2\x96\xb6 Lire", 16);
-        GRRLIB_PrintfTTF(cx - tw/2, cy - 10, font, "\xe2\x96\xb6 Lire", 16, 0xFFFFFFFF);
+        Ui::roundRect(POSTER_X, POSTER_Y, visW, POSTER_H2, 10, 0x00000070);
+        float cx = POSTER_X + visW * 0.5f;
+        float cy = POSTER_Y + POSTER_H2 * 0.5f - 8;
+        Ui::shadow(cx - 26, cy - 24, 52, 52, 26, 6.0f, 0x00000060);
+        Ui::circle(cx, cy, 26, p.accent);
+        Ui::roundBorder(cx - 26, cy - 26, 52, 52, 26, 2.0f, 0xFFFFFFE0);
+        Ui::triangle(cx - 8, cy - 12, cx + 13, cy, cx - 8, cy + 12, 0xFFFFFFFF);
+        Ui::textCentered(cx, cy + 32, "Lire", 15, 0xFFFFFFFF);
     }
 
     // ---- Title ----
     int y = POSTER_Y;
     {
         bool jp = hasJapanese(detail.name);
-        std::string title = jp ? detail.name : filterDejaVu(detail.name, 40);
-        GRRLIB_PrintfTTF(INFO_X, y, jp ? jpFont : font, title.c_str(), 22, 0xFFFFFFFF);
+        std::string title = jp ? detail.name : fitText(font, filterDejaVu(detail.name, 60), 22, INFO_W - 12);
+        Text::print(INFO_X, y, jp ? jpFont : font, title.c_str(), 22, p.text);
     }
-    y += 28;
+    y += 32;
 
-    // ---- Year  Runtime  Rating ----
+    // ---- Year  Runtime  Rating (chips) ----
     {
-        char meta[64] = "";
+        char chips[3][24];
+        int nChips = 0;
         if (detail.year)
-            snprintf(meta, sizeof(meta), "%d", detail.year);
+            snprintf(chips[nChips++], sizeof(chips[0]), "%d", detail.year);
         if (detail.runtimeTicks > 0) {
             int secs = (int)(detail.runtimeTicks / 10000000LL);
             int h = secs / 3600, m = (secs % 3600) / 60;
-            char rt[20];
-            if (h > 0) snprintf(rt, sizeof(rt), "  %dh %02dmin", h, m);
-            else       snprintf(rt, sizeof(rt), "  %dmin", m);
-            strncat(meta, rt, sizeof(meta) - strlen(meta) - 1);
+            if (h > 0) snprintf(chips[nChips++], sizeof(chips[0]), "%dh %02dmin", h, m);
+            else       snprintf(chips[nChips++], sizeof(chips[0]), "%dmin", m);
         }
-        if (!detail.officialRating.empty()) {
-            strncat(meta, "  ", sizeof(meta) - strlen(meta) - 1);
-            strncat(meta, detail.officialRating.c_str(), sizeof(meta) - strlen(meta) - 1);
+        if (!detail.officialRating.empty())
+            snprintf(chips[nChips++], sizeof(chips[0]), "%s", detail.officialRating.c_str());
+        int cx = INFO_X;
+        for (int i = 0; i < nChips; ++i) {
+            int cw = Ui::textWidth(chips[i], 13) + 18;
+            Ui::roundRect(cx, y, cw, 20, 10, p.field);
+            Ui::roundBorder(cx, y, cw, 20, 10, 1.0f, p.fieldBorder);
+            Ui::textCentered(cx + cw / 2, y + 3, chips[i], 13, p.textDim);
+            cx += cw + 6;
         }
-        if (meta[0]) { GRRLIB_PrintfTTF(INFO_X, y, font, meta, 15, 0xAABBCCFF); y += 20; }
+        if (nChips) y += 28;
     }
 
     // ---- Resume hint (shown when playback position is saved) ----
@@ -3684,9 +3249,10 @@ void LibraryView::drawDetailView(ir_t& ir) {
         int h    = secs / 3600, m = (secs % 3600) / 60;
         int pct  = (int)(detail.playbackPositionTicks * 100LL / detail.runtimeTicks);
         char buf[48];
-        if (h > 0) snprintf(buf, sizeof(buf), "> Resume at %dh%02d (%d%%)", h, m, pct);
-        else        snprintf(buf, sizeof(buf), "> Resume at %dmin (%d%%)", m, pct);
-        GRRLIB_PrintfTTF(INFO_X, y, font, buf, 14, 0x55CCFFFF);
+        if (h > 0) snprintf(buf, sizeof(buf), "Resume at %dh%02d (%d%%)", h, m, pct);
+        else       snprintf(buf, sizeof(buf), "Resume at %dmin (%d%%)", m, pct);
+        Ui::triangle(INFO_X, y + 3, INFO_X + 9, y + 8, INFO_X, y + 13, p.accentDark);
+        Ui::text(INFO_X + 14, y, buf, 14, p.accentDark);
         y += 20;
     }
 
@@ -3694,18 +3260,19 @@ void LibraryView::drawDetailView(ir_t& ir) {
     if (!detail.genres.empty()) {
         std::string g;
         for (size_t i = 0; i < detail.genres.size(); i++) {
-            if (i) g += ", ";
+            if (i) g += "  \xc2\xb7  ";
             g += detail.genres[i];
         }
-        GRRLIB_PrintfTTF(INFO_X, y, font, g.c_str(), 14, 0x889AABFF);
+        g = fitText(font, g, 14, INFO_W - 12);
+        Ui::text(INFO_X, y, g.c_str(), 14, p.textDim);
         y += 18;
     }
     y += 6;
 
-    // ---- Overview (pre-computed lines, no per-frame WidthTTF) ----
+    // ---- Overview (pre-computed lines, no per-frame width measuring) ----
     if (!detailLines.empty()) {
         for (const auto& line : detailLines) {
-            GRRLIB_PrintfTTF(INFO_X, y, font, line.c_str(), 13, 0xCCCCCCFF);
+            Ui::text(INFO_X, y, line.c_str(), 13, Ui::mix(p.text, p.textDim, 0.25f));
             y += 17;
         }
         y += 6;
@@ -3713,30 +3280,36 @@ void LibraryView::drawDetailView(ir_t& ir) {
 
     // ---- Cast & crew (max 6) ----
     if (!detail.people.empty()) {
-        GRRLIB_PrintfTTF(INFO_X, y, font, "Cast & crew", 14, 0x6688AAFF);
+        Ui::text(INFO_X, y, "Cast & crew", 14, p.accentDark);
         y += 18;
         int shown = 0;
-        for (const auto& p : detail.people) {
+        for (const auto& pp : detail.people) {
             if (shown >= 6) break;
-            if (p.name.empty() && p.character.empty()) continue;
+            if (pp.name.empty() && pp.character.empty()) continue;
             int rx = INFO_X + 8;
-            if (!p.name.empty() && hasJapanese(p.name)) {
+            if (!pp.name.empty() && hasJapanese(pp.name)) {
                 // Japanese VA name: render with jpFont, then Latin suffix with font
-                GRRLIB_PrintfTTF(rx, y, jpFont, p.name.c_str(), 13, 0xBBCCDDFF);
-                rx += GRRLIB_WidthTTF(jpFont, p.name.c_str(), 13);
+                Text::print(rx, y, jpFont, pp.name.c_str(), 13, p.text);
+                rx += Text::width(jpFont, pp.name.c_str(), 13);
                 std::string suffix;
-                if (p.role == "Director")          suffix = " (director)";
-                else if (!p.character.empty())     suffix = " - " + p.character;
+                if (pp.role == "Director")          suffix = " (director)";
+                else if (!pp.character.empty())     suffix = " - " + pp.character;
                 if (!suffix.empty())
-                    GRRLIB_PrintfTTF(rx, y, font, suffix.c_str(), 13, 0xBBCCDDFF);
+                    Ui::text(rx, y, suffix.c_str(), 13, p.textDim);
             } else {
-                // All-Latin line
-                std::string line = !p.name.empty() ? p.name : p.character;
-                if (!p.name.empty()) {
-                    if (p.role == "Director")          line += " (director)";
-                    else if (!p.character.empty())     line += " - " + p.character;
+                // All-Latin line: name in text colour, role dimmed
+                const std::string& nm = !pp.name.empty() ? pp.name : pp.character;
+                Ui::text(rx, y, nm.c_str(), 13, p.text);
+                std::string suffix;
+                if (!pp.name.empty()) {
+                    if (pp.role == "Director")          suffix = " (director)";
+                    else if (!pp.character.empty())     suffix = " - " + pp.character;
                 }
-                GRRLIB_PrintfTTF(rx, y, font, line.c_str(), 13, 0xBBCCDDFF);
+                if (!suffix.empty()) {
+                    int nw = Ui::textWidth(nm.c_str(), 13);
+                    suffix = fitText(font, suffix, 13, INFO_W - 16 - nw);
+                    Ui::text(rx + nw, y, suffix.c_str(), 13, p.textDim);
+                }
             }
             y += 16;
             shown++;
@@ -3751,11 +3324,10 @@ void LibraryView::drawDetailView(ir_t& ir) {
     const bool hasAudio = !detail.audioStreams.empty();
     const bool hasSub   = !detail.subtitleStreams.empty();
     if (hasAudio || hasSub) {
-        // Separator line
-        GRRLIB_Rectangle(INFO_X, STREAM_Y0 - 8, INFO_W, 1, 0x334466FF, 1);
+        Ui::roundRect(INFO_X, STREAM_Y0 - 8, INFO_W - 14, 1.5f, 0.75f, Ui::alpha(p.cardBorder, 0.6f));
 
-        // Validate UTF-8 and truncate at a safe codepoint boundary so GRRLIB
-        // never receives a broken multi-byte sequence.
+        // Validate UTF-8 and truncate at a safe codepoint boundary so the
+        // renderer never receives a broken multi-byte sequence.
         auto safeTitle = [](const char* s, int maxCodepoints) -> std::string {
             if (!s) return "-";
             std::string out;
@@ -3787,67 +3359,37 @@ void LibraryView::drawDetailView(ir_t& ir) {
 
             int ry = STREAM_Y0 + row * STREAM_ROW_H;
             bool focused = (detailFocusRow == row);
-
-            // Highlight rect for focused row
             if (focused)
-                GRRLIB_Rectangle(INFO_X - 2, ry - 2, INFO_W, STREAM_ROW_H - 2, 0x1E3A5AFF, 1);
+                Ui::roundRect(INFO_X - 6, ry - 3, INFO_W - 8, STREAM_ROW_H - 3, (STREAM_ROW_H - 3) * 0.5f,
+                              Ui::mix(p.accent, 0xFFFFFFFF, 0.2f), p.accentDark);
 
-            u32 labelCol = focused ? 0xFFFFFFFF : 0x889AABFF;
-            u32 valueCol = focused ? 0xFFEE88FF : 0xCCCCCCFF;
+            u32 labelCol = focused ? p.textOnAccent : p.textDim;
+            u32 valueCol = focused ? p.textOnAccent : p.text;
 
-            if (row == 0) {
-                // Audio
-                GRRLIB_PrintfTTF(INFO_X + 2, ry, font, "Audio", 13, labelCol);
-                const char* rawTitle = detailAudioSel < (int)detail.audioStreams.size()
+            const char* label = row == 0 ? "Audio" : "Subtitles";
+            const char* rawTitle;
+            if (row == 0)
+                rawTitle = detailAudioSel < (int)detail.audioStreams.size()
                     ? detail.audioStreams[detailAudioSel].displayTitle.c_str() : "-";
-                std::string t = safeTitle(rawTitle, 36);
-                char buf[64];
-                snprintf(buf, sizeof(buf), "< %s >", t.c_str());
-                GRRLIB_ttfFont* tf = hasJapanese(t) ? jpFont : font;
-                GRRLIB_PrintfTTF(INFO_X + 60, ry, tf, buf, 13, valueCol);
-            } else {
-                // Subtitle
-                GRRLIB_PrintfTTF(INFO_X + 2, ry, font, "Subtitles", 13, labelCol);
-                const char* rawTitle = (detailSubSel == -1)
+            else
+                rawTitle = (detailSubSel == -1)
                     ? "Off"
                     : (detailSubSel < (int)detail.subtitleStreams.size()
                         ? detail.subtitleStreams[detailSubSel].displayTitle.c_str() : "-");
-                std::string t = safeTitle(rawTitle, 36);
-                char buf[64];
-                snprintf(buf, sizeof(buf), "< %s >", t.c_str());
-                GRRLIB_ttfFont* tf = hasJapanese(t) ? jpFont : font;
-                GRRLIB_PrintfTTF(INFO_X + 60, ry, tf, buf, 13, valueCol);
-            }
+            Ui::text(INFO_X + 4, ry, label, 13, labelCol);
+            std::string t = safeTitle(rawTitle, 36);
+            char buf[64];
+            snprintf(buf, sizeof(buf), "\xe2\x80\xb9 %s \xe2\x80\xba", t.c_str());
+            GRRLIB_ttfFont* tf = hasJapanese(t) ? jpFont : font;
+            Text::print(INFO_X + 74, ry, tf, buf, 13, valueCol);
         }
     }
 
     // ---- Footer ----
-    GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-    std::string footerStr = "[A] Play   [B] Back";
-    if (hasAudio || hasSub)
-        footerStr += "   [Up/Down] Focus   [</>/] Change";
-    GRRLIB_PrintfTTF(20, 458, font, footerStr.c_str(), 13, 0x889AABFF);
+    const Ui::Hint l[] = { { "A", "Play" }, { "B", "Back" } };
+    const Ui::Hint r[] = { { "UD", "Focus" }, { "LR", "Change" } };
+    Ui::footer(l, 2, r, (hasAudio || hasSub) ? 2 : 0);
 }
-
-// ---------------------------------------------------------------
-// Search: VKB layout (same as ConnectView)
-// ---------------------------------------------------------------
-static const char* s_srchKbRows[7] = {
-    // Page 0: letters
-    "1234567890-.",
-    "qwertyuiop:/",
-    "asdfghjkl@_ ",
-    "\x01zxcvbnm.,\x02\x7f",   // \x01=Shift  \x02=SYM  \x7f=Backspace
-    // Page 1: symbols
-    "!?@#$%^&*()-",
-    "_+=|\\[]{};:\"",
-    "'<>./`~\x02\x7f",         // \x02=ABC
-};
-static const int SRCH_KB_COLS_MAX = 12;
-static const int SRCH_KB_X        = 80;
-static const int SRCH_KB_Y        = 140;
-static const int SRCH_KB_CELLW    = 38;
-static const int SRCH_KB_CELLH    = 36;
 
 // ---------------------------------------------------------------
 void LibraryView::clampSearchScroll() {
@@ -3874,163 +3416,53 @@ void LibraryView::performSearch() {
 }
 
 // ---------------------------------------------------------------
-void LibraryView::handleSearchVKB(ir_t& ir) {
-    int pageStart = srchKbPage * 4;
-    int pageRows  = (srchKbPage == 0) ? 4 : 3;
-    int rowLen    = strlen(s_srchKbRows[pageStart + srchKbRow]);
-
-    if (Input::isUpPressed()) {
-        srchKbRow = (srchKbRow - 1 + pageRows) % pageRows;
-        int nl = strlen(s_srchKbRows[pageStart + srchKbRow]);
-        if (srchKbCol >= nl) srchKbCol = nl - 1;
-    }
-    if (Input::isDownPressed()) {
-        srchKbRow = (srchKbRow + 1) % pageRows;
-        int nl = strlen(s_srchKbRows[pageStart + srchKbRow]);
-        if (srchKbCol >= nl) srchKbCol = nl - 1;
-    }
-    if (Input::isLeftPressed())  srchKbCol = (srchKbCol - 1 + rowLen) % rowLen;
-    if (Input::isRightPressed()) srchKbCol = (srchKbCol + 1) % rowLen;
-
-    if (Input::isLPressed() && srchKbPage == 0) srchKbShift = !srchKbShift;
-
-    if (Input::isAJustPressed()) {
-        char key = 0;
-        if (ir.valid) {
-            for (int r = 0; r < pageRows && !key; r++) {
-                int len = strlen(s_srchKbRows[pageStart + r]);
-                for (int c = 0; c < len && !key; c++) {
-                    int cx = SRCH_KB_X + c * SRCH_KB_CELLW;
-                    int cy = SRCH_KB_Y + r * SRCH_KB_CELLH;
-                    if (ir.x >= cx && ir.x <= cx + SRCH_KB_CELLW - 2 &&
-                        ir.y >= cy && ir.y <= cy + SRCH_KB_CELLH - 2) {
-                        key = s_srchKbRows[pageStart + r][c];
-                        srchKbRow = r; srchKbCol = c;
-                    }
-                }
-            }
-        }
-        if (!key) key = s_srchKbRows[pageStart + srchKbRow][srchKbCol];
-
-        if (key == '\x01') {
-            srchKbShift = !srchKbShift;
-            SoundFX::play(SoundFX::FX::PressKey);
-        } else if (key == '\x02') {
-            srchKbPage = 1 - srchKbPage;
-            srchKbRow = 0; srchKbCol = 0; srchKbShift = false;
-            SoundFX::play(SoundFX::FX::PressKey);
-        } else if (key == '\x7f') {
-            if (!searchQuery.empty()) searchQuery.pop_back();
-            SoundFX::play(SoundFX::FX::Backspace);
-        } else if (key == ' ') {
-            searchQuery += ' ';
-            SoundFX::play(SoundFX::FX::PressKey);
-        } else {
-            if (srchKbShift && key >= 'a' && key <= 'z')
-                searchQuery += (char)(key - 32);
-            else
-                searchQuery += key;
-            srchKbShift = false;
-            SoundFX::play(SoundFX::FX::PressKey);
-        }
-    }
-}
-
-// ---------------------------------------------------------------
 void LibraryView::renderSearchInput(ir_t& ir) {
-    int pageStart = srchKbPage * 4;
-    int pageRows  = (srchKbPage == 0) ? 4 : 3;
+    const Ui::Palette& p = Ui::pal();
+    Ui::header("Search");
 
-    // Header
-    GRRLIB_Rectangle(0, 0, 640, 52, 0x0E1826FF, 1);
-    drawCenteredText(0, 16, 640, "Search", 20, 0xFFFFFFFF);
-    GRRLIB_Rectangle(0, 51, 640, 1, 0x1C2D3CFF, 1);
-
-    // Search field
-    const int FX = 80, FY = 75, FW = 480;
-    GRRLIB_Rectangle(FX - 4, FY - 4, FW + 8, 36, 0x1E3A5FFF, 1);
-    GRRLIB_Rectangle(FX - 4, FY - 4, FW + 8, 36, 0x4499FFFF, 0); // outline
+    // Search field: placeholder when empty, blinking caret
     {
-        std::string display = searchQuery + "_";
-        if (GRRLIB_WidthTTF(font, display.c_str(), 18) > (u32)FW) {
-            // Trim from the front so the cursor is always visible
-            while (display.size() > 1 &&
-                   GRRLIB_WidthTTF(font, display.c_str(), 18) > (u32)FW) {
-                display.erase(display.begin());
-            }
-        }
-        GRRLIB_PrintfTTF(FX, FY, font, display.c_str(), 18, 0xFFFFFFFF);
-    }
-
-    // Keyboard background
-    GRRLIB_Rectangle(SRCH_KB_X - 8, SRCH_KB_Y - 8,
-                     SRCH_KB_COLS_MAX * SRCH_KB_CELLW + 16,
-                     pageRows * SRCH_KB_CELLH + 16, 0x00000099, 1);
-
-    for (int r = 0; r < pageRows; r++) {
-        int ri  = pageStart + r;
-        int len = strlen(s_srchKbRows[ri]);
-        for (int c = 0; c < len; c++) {
-            int cx = SRCH_KB_X + c * SRCH_KB_CELLW;
-            int cy = SRCH_KB_Y + r * SRCH_KB_CELLH;
-            bool sel     = (r == srchKbRow && c == srchKbCol);
-            bool irHover = ir.valid &&
-                           ir.x >= cx && ir.x <= cx + SRCH_KB_CELLW - 2 &&
-                           ir.y >= cy && ir.y <= cy + SRCH_KB_CELLH - 2;
-
-            char k = s_srchKbRows[ri][c];
-            char label[5] = {0};
-            if      (k == '\x7f') { label[0]='<'; label[1]='-'; }
-            else if (k == ' ')    { label[0]='_'; }
-            else if (k == '\x01') { label[0]='^'; label[1]='S'; label[2]='H'; }
-            else if (k == '\x02') {
-                if (srchKbPage == 0) { label[0]='S'; label[1]='Y'; label[2]='M'; }
-                else                 { label[0]='A'; label[1]='B'; label[2]='C'; }
-            }
-            else if (srchKbShift && k >= 'a' && k <= 'z') { label[0] = (char)(k - 32); }
-            else { label[0] = k; }
-
-            u32 bgCol = (k == '\x01' && srchKbShift) ? 0xDD8800CC
-                      : (k == '\x02')                ? 0x226633CC
-                      : sel                          ? 0x4499FFDD
-                      : irHover                      ? 0x6699BBDD
-                      :                                0x1E2D44CC;
-            GRRLIB_Rectangle(cx + 1, cy + 1, SRCH_KB_CELLW - 2, SRCH_KB_CELLH - 2, bgCol, 1);
-
-            u32 tc = (k == '\x01' && srchKbShift) ? 0xFFDD44FF
-                   : (k == '\x02')                ? 0x88FFAAFF
-                   : sel                          ? 0xFFFFFFFF
-                   :                                0xBBCCDDFF;
-            int tw = (int)(strlen(label) * 10);
-            GRRLIB_PrintfTTF(cx + (SRCH_KB_CELLW - tw) / 2, cy + 10,
-                             font, label, 14, tc);
+        const float FX = 62, FY = 70, FW = 516, FH = 38;
+        bool caretOn = (ticks_to_millisecs(gettime()) / 500) % 2 == 0;
+        std::string display = searchQuery;
+        while (!display.empty() && Text::width(font, display.c_str(), 18) > (u32)(FW - 44))
+            display.erase(display.begin());
+        Ui::field(FX, FY, FW, FH, nullptr, 18, true);
+        if (searchQuery.empty())
+            Ui::text(FX + 20, FY + 9, "Type a title, an actor...", 18, Ui::alpha(p.textDim, 0.8f));
+        else
+            Ui::text(FX + 20, FY + 9, display.c_str(), 18, p.text);
+        if (caretOn) {
+            float cx = FX + 20 + (searchQuery.empty() ? 0 : Ui::textWidth(display.c_str(), 18)) + 1;
+            Ui::roundRect(cx, FY + 9, 2, 20, 1, p.accent);
         }
     }
 
-    // Hints at bottom
-    int hintY = SRCH_KB_Y + pageRows * SRCH_KB_CELLH + 10;
-    if (srchKbPage == 0 && srchKbShift) {
-        GRRLIB_PrintfTTF(SRCH_KB_X, hintY, font,
-            "[CAPS]  -: toggle  |  [+] Search  |  B: back", 13, 0xFFDD44FF);
-    } else {
-        GRRLIB_PrintfTTF(SRCH_KB_X, hintY, font,
-            "-: CAPS  |  [+] Search  |  B: back", 13, 0x778899FF);
-    }
+    // Keyboard on its panel
+    Ui::card((640 - searchKb.width()) * 0.5f - 10, 122,
+             searchKb.width() + 20, searchKb.height() + 20, 16, 0.0f);
+    searchKb.render(ir);
+
+    const Ui::Hint l[] = { { "A", "Type" }, { "B", searchQuery.empty() ? "Back" : "Delete" } };
+    const Ui::Hint r[] = { { "-", "Shift" }, { "+", "Search" } };
+    Ui::footer(l, 2, r, 2);
 }
 
 // ---------------------------------------------------------------
 void LibraryView::renderSearchResults(ir_t& ir) {
+    const Ui::Palette& p = Ui::pal();
     int n = (int)searchResults.size();
 
     // Header
-    GRRLIB_Rectangle(0, 0, 640, 52, 0x0E1826FF, 1);
-    char hdr[128];
-    snprintf(hdr, sizeof(hdr), "Results: %s", searchQuery.c_str());
-    GRRLIB_PrintfTTF(20, 16, font, hdr, 18, 0xFFFFFFFF);
-    GRRLIB_Rectangle(0, 51, 640, 1, 0x1C2D3CFF, 1);
+    {
+        char sc[16] = "";
+        if (n > SEARCH_VISIBLE) snprintf(sc, sizeof(sc), "%d / %d", searchSel + 1, n);
+        std::string hdr = fitText(font, "Results: " + filterDejaVu(searchQuery, 40), 24, 460);
+        Ui::header(hdr.c_str(), sc[0] ? sc : nullptr);
+    }
 
     if (n == 0) {
-        drawCenteredText(0, 200, 640, "No results.", 20, 0x889AABFF);
+        Ui::textCentered(320, 200, "No results.", 20, p.textDim);
     } else {
         for (int i = 0; i < SEARCH_VISIBLE; i++) {
             int idx = searchTop + i;
@@ -4040,28 +3472,25 @@ void LibraryView::renderSearchResults(ir_t& ir) {
             bool  hov = ir.valid &&
                         ir.x >= LIST_X && ir.x <= LIST_X + LIST_W &&
                         ir.y >= ry && ir.y < ry + ROW_H;
-
-            if (sel || hov)
-                GRRLIB_Rectangle(LIST_X - 4, ry, LIST_W + 8, ROW_H - 2, 0x1E3A5FFF, 1);
+            float f = focusOf(sel, hov);
+            drawRow(LIST_X - 4, ry, LIST_W + 8, ROW_H, f);
 
             // Type badge
             const std::string& type = searchResults[idx].type;
             const char* badge = "?";
             u32 bCol = 0x446688FF;
-            if      (type == "Movie")       { badge = "MOVIE";   bCol = 0x2266CCFF; }
-            else if (type == "Series")      { badge = "SERIES";  bCol = 0xCC4433FF; }
-            else if (type == "Episode")     { badge = "EP";     bCol = 0xAA3322FF; }
-            else if (type == "MusicAlbum")  { badge = "ALBUM";  bCol = 0x33AA55FF; }
-            else if (type == "Audio")       { badge = "TRACK";  bCol = 0x33AA55FF; }
-            else if (type == "MusicArtist") { badge = "ARTIST"; bCol = 0x228844FF; }
-            else if (type == "BoxSet")      { badge = "COLLEC"; bCol = 0x8844CCFF; }
-            else if (type == "Playlist")    { badge = "LIST";   bCol = 0x228899FF; }
-            GRRLIB_Rectangle(LIST_X - 4, ry, 48, ROW_H - 4, bCol, 1);
-            int bw = (int)GRRLIB_WidthTTF(font, badge, 11);
-            GRRLIB_PrintfTTF(LIST_X - 4 + (48 - bw) / 2, ry + 7, font, badge, 11, 0xFFFFFFFF);
+            if      (type == "Movie")       { badge = "MOVIE";   bCol = 0x2D7DE0FF; }
+            else if (type == "Series")      { badge = "SERIES";  bCol = 0xE0563FFF; }
+            else if (type == "Episode")     { badge = "EP";      bCol = 0xC2453AFF; }
+            else if (type == "MusicAlbum")  { badge = "ALBUM";   bCol = 0x3DAF5AFF; }
+            else if (type == "Audio")       { badge = "TRACK";   bCol = 0x3DAF5AFF; }
+            else if (type == "MusicArtist") { badge = "ARTIST";  bCol = 0x2C9450FF; }
+            else if (type == "BoxSet")      { badge = "COLLEC";  bCol = 0x8E54D6FF; }
+            else if (type == "Playlist")    { badge = "LIST";    bCol = 0x2A9FB0FF; }
+            Ui::roundRect(LIST_X + 8, ry + 12, 54, 20, 10, Ui::mix(bCol, 0xFFFFFFFF, 0.15f), bCol);
+            Ui::textCentered(LIST_X + 35, ry + 15, badge, 10, 0xFFFFFFFF);
 
             // Title
-            u32 textCol = (sel || hov) ? 0xFFFFFFFF : 0xCCDDEEFF;
             std::string label = filterDejaVu(searchResults[idx].name, 38);
             if (type == "Episode" && !searchResults[idx].seriesName.empty()) {
                 // Show "Series S01E02 - Episode title"
@@ -4075,24 +3504,12 @@ void LibraryView::renderSearchResults(ir_t& ir) {
                 snprintf(yb, sizeof(yb), " (%d)", searchResults[idx].year);
                 label += yb;
             }
-            GRRLIB_PrintfTTF(LIST_X + 50, ry + 8, font, label.c_str(), 16, textCol);
-        }
-
-        // Scroll indicator
-        if (n > SEARCH_VISIBLE) {
-            char sc[16];
-            snprintf(sc, sizeof(sc), "%d / %d", searchSel + 1, n);
-            int sw = (int)GRRLIB_WidthTTF(font, sc, 14);
-            GRRLIB_PrintfTTF(620 - sw, 20, font, sc, 14, 0x556677FF);
+            label = fitText(font, label, 16, LIST_W - 90);
+            Ui::text(LIST_X + 74, ry + 12, label.c_str(), 16, Ui::mix(p.text, p.accentDark, f));
         }
     }
 
-    GRRLIB_Rectangle(0, 453, 640, 1, 0x334466FF, 1);
-    GRRLIB_PrintfTTF(20, 458, font, "[A] Open", 15, 0x889AABFF);
-    {
-        const char* nh = "[1] Nouvelle recherche";
-        int nw = (int)GRRLIB_WidthTTF(font, nh, 15);
-        GRRLIB_PrintfTTF(320 - nw / 2, 458, font, nh, 15, 0x889AABFF);
-    }
-    GRRLIB_PrintfTTF(490, 458, font, "[B] Back", 15, 0x889AABFF);
+    const Ui::Hint l[] = { { "A", "Open" }, { "1", "Nouvelle recherche" } };
+    const Ui::Hint r[] = { { "B", "Back" } };
+    Ui::footer(l, 2, r, 1);
 }

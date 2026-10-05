@@ -1,4 +1,6 @@
 #include "ProfileView.h"
+#include "../core/Text.h"
+#include "Ui.h"
 #include "../input/Input.h"
 #include <stdio.h>
 #include <string.h>
@@ -8,21 +10,6 @@ ProfileView::ProfileView(GRRLIB_ttfFont* f, GRRLIB_texImg* cursor,
     : font(f), cursorTex(cursor), profiles(p)
 {
     focusedRow = 0;
-}
-
-/* -----------------------------------------------------------------------
- * Helpers
- * ----------------------------------------------------------------------- */
-void ProfileView::drawGradientBG() {
-    const int r1=0x1a, g1=0x1a, b1=0x2e;
-    const int r2=0x16, g2=0x21, b2=0x3e;
-    const int bands=16, bh=480/bands;
-    for (int i=0; i<bands; i++) {
-        float t = i/(float)(bands-1);
-        u32 col = (((int)(r1+(r2-r1)*t))<<24)|(((int)(g1+(g2-g1)*t))<<16)
-                |(((int)(b1+(b2-b1)*t))<<8)|0xFF;
-        GRRLIB_Rectangle(0, i*bh, 640, bh, col, 1);
-    }
 }
 
 /* -----------------------------------------------------------------------
@@ -94,78 +81,62 @@ ProfileResult ProfileView::update(ir_t& ir) {
  * render()
  * ----------------------------------------------------------------------- */
 void ProfileView::render(ir_t& ir) {
-    drawGradientBG();
-
-    /* Title */
-    const char* title = profiles.empty() ? "No Profiles — Add One" : "Select Profile";
-    int tw = GRRLIB_WidthTTF(font, title, 26);
-    GRRLIB_PrintfTTF((640 - tw) / 2, 14, font, title, 26, 0xFFFFFFFF);
-    GRRLIB_Rectangle(ROW_X, 55, ROW_W, 1, 0x4499FF88, 1);
+    const Ui::Palette& pal = Ui::pal();
+    Ui::background();
+    Ui::header(profiles.empty() ? "Add a Profile" : "Who's watching?");
 
     int totalRows = (int)profiles.size() + 1;
     int vis = (totalRows < MAX_VIS) ? totalRows : MAX_VIS;
 
     for (int i = 0; i < vis; i++) {
-        int ry  = ROW_Y0 + i * ROW_H;
-        bool sel   = (i == focusedRow);
+        focusAnim[i] = Ui::approach(focusAnim[i], i == focusedRow ? 1.0f : 0.0f);
+        float f   = focusAnim[i];
+        float ry  = ROW_Y0 + i * ROW_H;
+        float g   = 6.0f * f;                       /* grow when focused */
+        float x = ROW_X - g, w = ROW_W + g * 2, y = ry - g * 0.3f, h = ROW_H - 8 + g * 0.6f;
         bool isAdd = (i == (int)profiles.size());
 
-        u32 bg     = sel ? 0x1E3A5FCC : 0x111827AA;
-        u32 border = sel ? 0x4499FFFF : 0x2A3A4AFF;
-
-        GRRLIB_Rectangle(ROW_X, ry,          ROW_W, ROW_H - 4, bg,     1);
-        GRRLIB_Rectangle(ROW_X, ry,          ROW_W, 2,          border, 1);
-        GRRLIB_Rectangle(ROW_X, ry+ROW_H-6,  ROW_W, 2,          border, 1);
-
+        Ui::card(x, y, w, h, 16, f);
+        float cx = x + 34, cy = y + h * 0.5f;
         if (isAdd) {
-            u32 col = sel ? 0x4499FFFF : 0x778899FF;
-            GRRLIB_PrintfTTF(ROW_X + 14, ry + 18, font, "+ Add New Profile", 20, col);
-        } else {
-            const SavedProfile& p = profiles[i];
-
-            /* Line 1: "Username @ Server Name" */
-            char line1[96];
-            if (!p.username.empty() && !p.serverName.empty())
-                snprintf(line1, sizeof(line1), "%s @ %s", p.username.c_str(), p.serverName.c_str());
-            else if (!p.serverName.empty())
-                snprintf(line1, sizeof(line1), "%s", p.serverName.c_str());
-            else
-                snprintf(line1, sizeof(line1), "%s", p.serverUrl.c_str());
-
-            /* Line 2: server URL */
-            char line2[80];
-            snprintf(line2, sizeof(line2), "%s", p.serverUrl.c_str());
-
-            GRRLIB_PrintfTTF(ROW_X + 14, ry + 8,  font, line1, 18, 0xEEEEEEFF);
-            GRRLIB_PrintfTTF(ROW_X + 14, ry + 32, font, line2, 13, 0x778899FF);
-
-            /* Delete hint when selected and not in confirm mode */
-            if (sel && !confirmDelete) {
-                const char* hint = "-: Delete";
-                int hw = GRRLIB_WidthTTF(font, hint, 13);
-                GRRLIB_PrintfTTF(ROW_X + ROW_W - hw - 10, ry + 22, font, hint, 13, 0xFF6666AA);
-            }
+            Ui::circle(cx, cy, 20, Ui::mix(pal.cardBorder, pal.accent, f));
+            Ui::circle(cx, cy, 17, pal.cardTop);
+            Ui::textCentered(cx, cy - 15, "+", 26, Ui::mix(pal.textDim, pal.accentDark, f));
+            Ui::text(x + 68, cy - 10, "Add New Profile", 19, Ui::mix(pal.textDim, pal.accentDark, f));
+            continue;
         }
+        const SavedProfile& p = profiles[i];
+
+        /* Avatar: first letter of the user name in a Wii-blue disc */
+        Ui::avatar(cx, cy, 20, p.username.c_str(), 0.0f);
+
+        const char* name = !p.username.empty() ? p.username.c_str()
+                         : !p.serverName.empty() ? p.serverName.c_str() : p.serverUrl.c_str();
+        char server[96];
+        if (!p.serverName.empty()) snprintf(server, sizeof(server), "%s  \xe2\x80\xa2  %s", p.serverName.c_str(), p.serverUrl.c_str());
+        else                       snprintf(server, sizeof(server), "%s", p.serverUrl.c_str());
+        Ui::text(x + 68, y + 9,  name,   20, pal.text);
+        Ui::text(x + 68, y + 34, server, 13, pal.textDim);
     }
 
-    /* Delete confirmation overlay */
+    /* Delete confirmation */
     if (confirmDelete) {
-        GRRLIB_Rectangle(100, 185, 440, 110, 0x000000DD, 1);
-        GRRLIB_Rectangle(100, 185, 440,   2, 0xFF4444FF, 1);
-        const char* q = "Delete this profile?";
-        int qw = GRRLIB_WidthTTF(font, q, 20);
-        GRRLIB_PrintfTTF((640-qw)/2, 210, font, q, 20, 0xFF6666FF);
-        const char* hint2 = "A: Yes, delete   B: Cancel";
-        int h2w = GRRLIB_WidthTTF(font, hint2, 16);
-        GRRLIB_PrintfTTF((640-h2w)/2, 252, font, hint2, 16, 0xCCCCCCFF);
+        GRRLIB_Rectangle(Ui::screenLeft(), 0, Ui::screenWidth(), 480, pal.dim, 1);
+        Ui::card(140, 170, 360, 130, 20, 0.0f);
+        Ui::textCentered(320, 192, "Delete this profile?", 21, pal.danger);
+        Ui::textCentered(320, 222, "Its saved sign-in will be forgotten.", 14, pal.textDim);
+        Ui::button(170, 248, 140, 38, "Delete", 17, 1.0f);
+        Ui::button(330, 248, 140, 38, "Cancel", 17, 0.0f);
     }
 
-    /* Footer */
-    const char* footer = confirmDelete
-        ? "A: Confirm Delete   B: Cancel"
-        : "A: Connect   -: Delete   B: Back";
-    int fw = GRRLIB_WidthTTF(font, footer, 14);
-    GRRLIB_PrintfTTF((640 - fw) / 2, 458, font, footer, 14, 0x778899FF);
+    if (confirmDelete) {
+        static const Ui::Hint left[] = { { "A", "Delete" }, { "B", "Cancel" } };
+        Ui::bottomBar(left, 2);
+    } else {
+        static const Ui::Hint left[]  = { { "A", "Open" }, { "-", "Delete" } };
+        static const Ui::Hint right[] = { { "B", "Back" } };
+        Ui::bottomBar(left, 2, right, 1);
+    }
 
     /* IR cursor */
     if (ir.valid && cursorTex) {

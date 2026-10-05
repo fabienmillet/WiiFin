@@ -17,10 +17,20 @@ private:
     JellyfinClient& client;
     bool&           musicEnabled;
 
-    int  selectedIndex = 0;
-    bool irMode        = false;
+    int   selectedIndex = 0;
+    float pageAnim      = 0.0f;   /* page slide                   */
+    bool  irMode        = false;
+    float focusAnim[8]  = {};
 
-    void drawGradientBG();
-    void drawToggleRow(int x, int y, int w, const char* label,
-                       const char* desc, bool value, bool focused);
+    /* Screen-area (overscan) calibration */
+    bool  calibrating   = false;
+    int   calCorner     = 0;      /* 0 top-left, 1 bottom-right */
+    u64   calHeldSince  = 0;      /* d-pad auto-repeat */
+    u64   calLastStep   = 0;
+
+    void drawRow(int index, const char* label, const char* desc,
+                 const char* value, u32 pillCol);
+    void activate(int index);
+    void updateCalibration();
+    void renderCalibration();
 };

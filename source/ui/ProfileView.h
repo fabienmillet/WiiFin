@@ -32,11 +32,11 @@ private:
     bool irMode        = false;
     bool confirmDelete = false;
 
-    static const int ROW_H   = 64;
-    static const int ROW_Y0  = 90;
-    static const int ROW_X   = 60;
-    static const int ROW_W   = 520;
-    static const int MAX_VIS = 6; /* max visible rows (profiles + Add New) */
+    static const int ROW_H   = 66;
+    static const int ROW_Y0  = 74;
+    static const int ROW_X   = 70;
+    static const int ROW_W   = 500;
+    static const int MAX_VIS = 5; /* max visible rows (profiles + Add New) */
 
-    void drawGradientBG();
+    float focusAnim[MAX_VIS] = {};
 };

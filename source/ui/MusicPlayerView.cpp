@@ -16,6 +16,11 @@
  */
 
 #include "MusicPlayerView.h"
+#include "../core/ExitZone.h"
+#include "../core/Text.h"
+#include "Ui.h"
+#include "../input/Input.h"
+#include "../core/Utils.h"
 #include "../player/WiiPlayer.h"
 #include "../core/MusicBGM.h"
 
@@ -65,7 +70,7 @@ static volatile bool      s_asyncStop         = false;
 static lwp_t              s_asyncThread       = LWP_THREAD_NULL;
 /* httpsRequest alone uses ~8 KB of stack (mbedTLS contexts + buffers); give
  * enough room for the full call chain: asyncReporterFunc → report* → https. */
-static uint8_t            s_asyncStack[32 * 1024] __attribute__((aligned(32)));
+static uint8_t            s_asyncStack[32 * 1024] DEAD_AT_EXIT __attribute__((aligned(32)));
 /* Hovered transport button: -1=Prev, 0=None, 1=Play/Pause, 2=Next.
  * Written by renderFrameGRRLIB (bgThread), read by bgTick (same thread). */
 static volatile int       s_btnHovered = 0;
@@ -160,6 +165,10 @@ static GRRLIB_texImg* loadJPEGTexture(const u8* data, u32 size)
     jpeg_mem_src(&cinfo, data, size);
     jpeg_read_header(&cinfo, TRUE);
     cinfo.out_color_space = JCS_RGB;
+    // Speed over exactness: the images are small and already resized by the
+    // server, so the integer DCT and plain chroma upsampling are not visible.
+    cinfo.dct_method          = JDCT_IFAST;
+    cinfo.do_fancy_upsampling = FALSE;
     jpeg_start_decompress(&cinfo);
 
     u32 w  = cinfo.output_width;
@@ -292,10 +301,12 @@ float MusicOverlay::getPosition() const
 
 float MusicOverlay::getDuration() const
 {
-    float d = (float)g_mplayer_duration;
-    if (d <= 0.0f && !tracks.empty() && currentIdx < (int)tracks.size())
-        d = (float)(tracks[currentIdx].runtimeTicks / 10000000LL);
-    return d;
+    /* Jellyfin's runtime first: MPlayer estimates a streamed track's length
+     * from the bitrate, and the estimate goes wild after a rebuffer (a
+     * 4-minute song showed 22:52). */
+    if (!tracks.empty() && currentIdx < (int)tracks.size() && tracks[currentIdx].runtimeTicks > 0)
+        return (float)(tracks[currentIdx].runtimeTicks / 10000000LL);
+    return (float)g_mplayer_duration;
 }
 
 /* -----------------------------------------------------------------------
@@ -474,6 +485,141 @@ void MusicOverlay::updateVisualizerFrame(float dt)
 }
 
 /* -----------------------------------------------------------------------
+ * drawMusicScreen — the whole "Now Playing" screen (Ui kit look).  Used for
+ * the static frame shown while MPlayer starts and for the animated HUD.
+ * viz may be null (flat bars).  Transport button rectangles are shared with
+ * the IR hit test in renderFrameGRRLIB.
+ * ----------------------------------------------------------------------- */
+static const int MP_BTN_Y   = 304;
+static const int MP_BTN_H   = 52;
+static const int MP_BTN_W   = 80;
+static const int MP_BTN_GAP = 20;
+static const int MP_BTN_X0  = (640 - (MP_BTN_W * 3 + MP_BTN_GAP * 2)) / 2;  /* = 180 */
+
+static void drawMusicScreen(const std::vector<MusicOverlay::Track>& tracks, int idx,
+                            GRRLIB_texImg* art, float pos, float dur, bool playing,
+                            int hov, const float* viz, int nViz)
+{
+    const Ui::Palette& p = Ui::pal();
+    Ui::background();
+
+    /* ---- Header ---- */
+    Ui::text(28, 16, "Now Playing", 22, p.text);
+    int n = (int)tracks.size();
+    if (n > 1) {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "Track %d / %d", idx + 1, n);
+        Ui::textRight(612, 22, buf, 15, p.textDim);
+    }
+    Ui::roundRect(28, 52, 584, 2, 1, Ui::alpha(p.cardBorder, 0.8f));
+
+    /* ---- Album art ---- */
+    const float ART_X = 30, ART_Y = 70, ART_SZ = 176;
+    const float aw = ART_SZ * WiiUtils::wsScaleX();
+    Ui::shadow(ART_X + 1, ART_Y + 4, aw - 2, ART_SZ - 2, 14, 8.0f, p.shadow);
+    if (art && art->w > 0 && art->h > 0) {
+        Ui::texCover(art, ART_X, ART_Y, aw, ART_SZ, 14, 1.0f);
+    } else {
+        Ui::roundRect(ART_X, ART_Y, aw, ART_SZ, 14, p.cardTop, p.cardBottom);
+        Ui::textCentered(ART_X + aw * 0.5f, ART_Y + ART_SZ * 0.5f - 40, "\xe2\x99\xab", 72,
+                         Ui::alpha(p.textDim, 0.6f));
+    }
+    Ui::roundBorder(ART_X, ART_Y, aw, ART_SZ, 14, 1.5f, Ui::alpha(p.cardBorder, 0.8f));
+
+    /* ---- Title / artist / album ---- */
+    const int RX = (int)(ART_X + aw) + 26, RW = 612 - RX;
+    auto fit = [&](const std::string& in, int size) {
+        std::string t = in;
+        if (Ui::textWidth(t.c_str(), size) <= RW) return t;
+        while (!t.empty() && Ui::textWidth((t + "...").c_str(), size) > RW) {
+            while (!t.empty() && (t.back() & 0xC0) == 0x80) t.pop_back();
+            if (!t.empty()) t.pop_back();
+        }
+        return t + "...";
+    };
+    if (idx >= 0 && idx < n) {
+        const MusicOverlay::Track& tr = tracks[idx];
+        Ui::text(RX, ART_Y + 2, fit(tr.title, 22).c_str(), 22, p.text);
+        if (!tr.artist.empty()) Ui::text(RX, ART_Y + 32, fit(tr.artist, 16).c_str(), 16, p.accentDark);
+        if (!tr.album.empty())  Ui::text(RX, ART_Y + 54, fit(tr.album, 14).c_str(), 14, p.textDim);
+    }
+
+    /* ---- Visualizer (rounded bars on a baseline) ---- */
+    {
+        const float BASE = ART_Y + ART_SZ, MAXH = 92;
+        const float gap = 4, bw = (RW - gap * (nViz - 1)) / (float)nViz;
+        for (int i = 0; i < nViz; i++) {
+            float v  = viz ? viz[i] : 0.0f;
+            float bh = 6 + v * MAXH;
+            float bx = RX + i * (bw + gap);
+            Ui::roundRect(bx, BASE - bh, bw, bh, bw * 0.5f,
+                          Ui::mix(p.accent, 0xFFFFFFFF, 0.35f * v), Ui::alpha(p.accent, 0.55f));
+        }
+    }
+
+    /* ---- Seek bar + times ---- */
+    {
+        const float SX = 30, SW = 580, SY = 266;
+        if (dur > 0.0f && pos > dur) pos = dur;
+        float frac = dur > 0.0f ? pos / dur : 0.0f;
+        Ui::roundRect(SX, SY, SW, 8, 4, Ui::alpha(p.cardBorder, 0.6f));
+        if (frac > 0.0f)
+            Ui::roundRect(SX, SY, SW * frac < 8 ? 8 : SW * frac, 8, 4,
+                          Ui::mix(p.accent, 0xFFFFFFFF, 0.2f), p.accent);
+        float kx = SX + SW * frac;
+        Ui::shadow(kx - 8, SY - 3, 16, 16, 8, 4.0f, p.shadow);
+        Ui::circle(kx, SY + 4, 8, p.cardTop);
+        Ui::roundBorder(kx - 8, SY - 4, 16, 16, 8, 2.0f, p.accent);
+
+        char buf[16];
+        int s = (int)pos;
+        snprintf(buf, sizeof(buf), "%d:%02d", s / 60, s % 60);
+        Ui::text(SX, SY + 14, buf, 14, p.text);
+        if (dur > 0.0f) {
+            s = (int)dur;
+            snprintf(buf, sizeof(buf), "%d:%02d", s / 60, s % 60);
+            Ui::textRight(SX + SW, SY + 14, buf, 14, p.textDim);
+        }
+    }
+
+    /* ---- Transport buttons ---- */
+    const int vals[3] = { -1, 1, 2 };
+    for (int b = 0; b < 3; b++) {
+        float bx = MP_BTN_X0 + b * (MP_BTN_W + MP_BTN_GAP);
+        bool  on = hov == vals[b];
+        Ui::button(bx, MP_BTN_Y, MP_BTN_W, MP_BTN_H, "", 14, on ? Ui::pulse() : 0.0f);
+        float cx = bx + MP_BTN_W * 0.5f, cy = MP_BTN_Y + MP_BTN_H * 0.5f;
+        u32 c = on ? p.accentDark : p.text;
+        if (b == 0) {          /* |<  previous */
+            Ui::roundRect(cx - 11, cy - 9, 4, 18, 1.5f, c);
+            Ui::triangle(cx - 6, cy, cx + 9, cy - 9, cx + 9, cy + 9, c);
+        } else if (b == 2) {   /* >|  next */
+            Ui::triangle(cx - 9, cy - 9, cx + 6, cy, cx - 9, cy + 9, c);
+            Ui::roundRect(cx + 7, cy - 9, 4, 18, 1.5f, c);
+        } else if (playing) {  /* ||  pause */
+            Ui::roundRect(cx - 8, cy - 10, 6, 20, 2, c);
+            Ui::roundRect(cx + 2, cy - 10, 6, 20, 2, c);
+        } else {               /* >   play */
+            Ui::triangle(cx - 6, cy - 11, cx + 11, cy, cx - 6, cy + 11, c);
+        }
+    }
+
+    /* ---- Track dots ---- */
+    if (n > 1 && n <= 20) {
+        const float DOT = 8, GAP = 6;
+        float total = n * DOT + (n - 1) * GAP;
+        float dx = 320 - total * 0.5f;
+        for (int i = 0; i < n; i++)
+            Ui::circle(dx + i * (DOT + GAP) + DOT * 0.5f, 384, i == idx ? 4.5f : 3.5f,
+                       i == idx ? p.accent : Ui::alpha(p.cardBorder, 0.8f));
+    }
+
+    const Ui::Hint l[] = { { "A", "Play/Pause" }, { "LR", "Seek" } };
+    const Ui::Hint r[] = { { "-/+", "Track" }, { "B", "Back" } };
+    Ui::footer(l, 2, r, 2);
+}
+
+/* -----------------------------------------------------------------------
  * renderFrameGRRLIB — static, called ~60 Hz from bgThread during
  * audio-only playback.  Renders the full music HUD using GRRLIB and
  * calls GRRLIB_Render() (which waits for vsync) at the end.
@@ -508,198 +654,37 @@ void MusicOverlay::renderFrameGRRLIB()
 
     mo->updateVisualizerFrame(dt);
 
-    /* ---- Layout constants (GRRLIB framebuffer = 640×480) ----------- */
-    const int W = 640, H = 480;
-
-    /* Two-column layout:
-     *   Left  — album art square (or placeholder)
-     *   Right — track dots, title, artist, visualizer bars
-     *   Full width — seek bar + time labels + controls hint          */
-    const int ART_X   = 18;
-    const int ART_Y   = 38;
-    const int ART_SZ  = 210;   /* displayed as ART_SZ × ART_SZ          */
-    const int RIGHT_X = ART_X + ART_SZ + 12;   /* = 240                 */
-    const int RIGHT_W = W - RIGHT_X - 18;       /* = 382                 */
-
-    /* ---- Background ----------------------------------------------- */
-    GRRLIB_FillScreen(0x000000FF);
-
-    /* ---- Track dots (top of right column, centred within it) ------- */
-    {
-        int n = (int)mo->tracks.size();
-        if (n > 1 && n <= 20) {
-            const int DOT_W = 8, DOT_GAP = 4;
-            int total = n * (DOT_W + DOT_GAP) - DOT_GAP;
-            int dx = RIGHT_X + (RIGHT_W - total) / 2;
-            for (int i = 0; i < n; i++) {
-                u32 c = (i == mo->currentIdx) ? 0xFFFFFFFF : 0x3A3A3AFF;
-                GRRLIB_Rectangle((f32)(dx + i * (DOT_W + DOT_GAP)), 14.0f,
-                                 (f32)DOT_W, (f32)DOT_W, c, true);
-            }
-        }
-    }
-
-    /* ---- Album art (left column) or dark placeholder --------------- */
-    if (renderArtTex) {
-        float sx = (float)ART_SZ / (float)renderArtTex->w;
-        float sy = (float)ART_SZ / (float)renderArtTex->h;
-        GRRLIB_DrawImg(ART_X, ART_Y, renderArtTex, 0.0f, sx, sy, 0xFFFFFFFF);
-    } else {
-        GRRLIB_Rectangle((f32)ART_X, (f32)ART_Y,
-                         (f32)ART_SZ, (f32)ART_SZ, 0x1A1A1AFF, true);
-    }
-
-    /* ---- Title and artist (right column) --------------------------- */
-    if (renderFont && !mo->tracks.empty() &&
-        mo->currentIdx < (int)mo->tracks.size()) {
-        const Track& tr = mo->tracks[mo->currentIdx];
-
-        const char* title = tr.title.c_str();
-        GRRLIB_PrintfTTF(RIGHT_X, ART_Y + 2, renderFont, title, 20, 0xFFFFFFFF);
-
-        if (!tr.artist.empty()) {
-            const char* artist = tr.artist.c_str();
-            GRRLIB_PrintfTTF(RIGHT_X, ART_Y + 28, renderFont, artist, 14, 0x999999FF);
-        }
-    }
-
-    /* ---- Visualizer bars (right column, below artist) -------------- */
-    const int VIZ_BASE_Y  = ART_Y + ART_SZ;            /* = 248         */
-    const int VIZ_MAX_H   = ART_SZ - 58;              /* = 152, top≈96  */
-    const int BAR_W       = RIGHT_W / VIZ_BARS - 2;   /* ≈14 px @ 382  */
-    const int BAR_GAP     = 2;
-    const int VIZ_TOTAL_W = (BAR_W + BAR_GAP) * VIZ_BARS - BAR_GAP;
-    const int VIZ_X0      = RIGHT_X + (RIGHT_W - VIZ_TOTAL_W) / 2;
-
-    for (int i = 0; i < VIZ_BARS; i++) {
-        int bx = VIZ_X0 + i * (BAR_W + BAR_GAP);
-        int bh = (int)(mo->vizHeight[i] * (float)VIZ_MAX_H);
-        if (bh < 2) bh = 2;
-        int by = VIZ_BASE_Y - bh;
-
-        /* Colour gradient: dark blue at bottom → cyan at top */
-        float t = (float)bh / (float)VIZ_MAX_H;
-        uint8_t r = (uint8_t)(t * 60);
-        uint8_t g = (uint8_t)(100 + t * 155);
-        uint8_t b = 255;
-        u32 color = ((u32)r << 24) | ((u32)g << 16) | ((u32)b << 8) | 0xFF;
-        GRRLIB_Rectangle((f32)bx, (f32)by, (f32)BAR_W, (f32)bh, color, true);
-
-        /* 2-px bright peak cap */
-        if (bh > 4)
-            GRRLIB_Rectangle((f32)bx, (f32)(by - 3), (f32)BAR_W, 2.0f,
-                             0xFFFFFFFF, true);
-    }
-
-    /* ---- Seek bar (full width, below art + viz) -------------------- */
-    const int SEEK_Y  = VIZ_BASE_Y + 14;   /* = 262                     */
-    const int SEEK_X0 = ART_X;
-    const int SEEK_X1 = W - 18;            /* = 622                     */
-    const int SEEK_H  = 5;
-
-    GRRLIB_Rectangle((f32)SEEK_X0, (f32)SEEK_Y,
-                     (f32)(SEEK_X1 - SEEK_X0), (f32)SEEK_H,
-                     0x2A2A2AFF, true);
-
     float pos = mo->getPosition();
     const float dur = mo->getDuration();
     /* Cap displayed position at duration — wall-clock timer can overrun
      * during cache-stall at EOF before mplayer detects end-of-stream. */
     if (dur > 0.0f && pos > dur) pos = dur;
 
-    if (dur > 0.0f) {
-        float frac = pos / dur;
-        if (frac > 1.0f) frac = 1.0f;
-        int filled = (int)(frac * (float)(SEEK_X1 - SEEK_X0));
-        if (filled > 0)
-            GRRLIB_Rectangle((f32)SEEK_X0, (f32)SEEK_Y,
-                             (f32)filled, (f32)SEEK_H, 0x0099CCFF, true);
-        /* Scrubber knob */
-        GRRLIB_Rectangle((f32)(SEEK_X0 + filled - 5), (f32)(SEEK_Y - 4),
-                         10.0f, (f32)(SEEK_H + 8), 0xFFFFFFFF, true);
-    }
-
-    /* ---- Time labels ----------------------------------------------- */
-    if (renderFont) {
-        const int TIME_Y = SEEK_Y + SEEK_H + 5;
-        char buf[16];
-        int s = (int)pos;
-        snprintf(buf, sizeof(buf), "%d:%02d", s / 60, s % 60);
-        GRRLIB_PrintfTTF(SEEK_X0, TIME_Y, renderFont, buf, 15, 0xCCCCCCFF);
-
-        if (dur > 0.0f) {
-            s = (int)dur;
-            snprintf(buf, sizeof(buf), "%d:%02d", s / 60, s % 60);
-            u32 dw = GRRLIB_WidthTTF(renderFont, buf, 15);
-            GRRLIB_PrintfTTF(SEEK_X1 - (int)dw, TIME_Y, renderFont, buf, 15, 0x666666FF);
-        }
-
-        /* Hint — reduced now that play/pause and track change are buttons */
-        const char* hint = "</>: Seek     B: Back";
-        u32 hw = GRRLIB_WidthTTF(renderFont, hint, 12);
-        GRRLIB_PrintfTTF((W - (int)hw) / 2, H - 14, renderFont, hint, 12, 0x333333FF);
-    }
-
-    /* ---- Transport buttons (IR-clickable) --------------------------------
-     * Three buttons: |< (Prev)  ||/>  (Play/Pause)  >| (Next)
-     * Total: 3×80 + 2×20 = 280 px → starts at (640-280)/2 = 180.
-     * Do NOT call WPAD_ScanPads() — see original cursor comment.
-     * ----------------------------------------------------------------------- */
-    {
-        const int BTN_Y   = 304;
-        const int BTN_H   = 52;
-        const int BTN_W   = 80;
-        const int BTN_GAP = 20;
-        const int BTN_X0  = (W - (BTN_W * 3 + BTN_GAP * 2)) / 2;  /* = 180 */
-
-        /* Read IR once — shared for hover detection and cursor drawing. */
-        ir_t ir;
-        WPAD_IR(WPAD_CHAN_0, &ir);
-
-        int newHov = 0;
-        if (ir.valid) {
-            int ix = (int)ir.x, iy = (int)ir.y;
-            if (iy >= BTN_Y && iy < BTN_Y + BTN_H) {
-                if      (ix >= BTN_X0                        && ix < BTN_X0 + BTN_W)                       newHov = -1;
-                else if (ix >= BTN_X0 + BTN_W + BTN_GAP     && ix < BTN_X0 + BTN_W * 2 + BTN_GAP)        newHov =  1;
-                else if (ix >= BTN_X0 + (BTN_W + BTN_GAP)*2 && ix < BTN_X0 + BTN_W * 3 + BTN_GAP * 2)   newHov =  2;
+    /* Read IR once — shared for hover detection and cursor drawing.
+     * Do NOT call WPAD_ScanPads() here (the bgThread owns the pads). */
+    ir_t ir;
+    Input::readIR(ir);
+    int newHov = 0;
+    if (ir.valid) {
+        int ix = (int)ir.x, iy = (int)ir.y;
+        if (iy >= MP_BTN_Y && iy < MP_BTN_Y + MP_BTN_H) {
+            for (int b = 0; b < 3; b++) {
+                int bx = MP_BTN_X0 + b * (MP_BTN_W + MP_BTN_GAP);
+                if (ix >= bx && ix < bx + MP_BTN_W) { newHov = b == 0 ? -1 : (b == 1 ? 1 : 2); break; }
             }
         }
-        s_btnHovered = newHov;
+    }
+    s_btnHovered = newHov;
 
-        const bool playingNow  = !(bool)g_mplayer_paused;
-        const char* btnLabels[3] = { "|<", playingNow ? "||" : ">", ">|" };
-        const int   btnVals[3]   = { -1, 1, 2 };
-        const int   btnX[3]      = { BTN_X0,
-                                     BTN_X0 + BTN_W + BTN_GAP,
-                                     BTN_X0 + (BTN_W + BTN_GAP) * 2 };
+    drawMusicScreen(mo->tracks, mo->currentIdx, renderArtTex, pos, dur,
+                    !(bool)g_mplayer_paused, newHov, mo->vizHeight, VIZ_BARS);
 
-        for (int b = 0; b < 3; b++) {
-            bool hov = (newHov == btnVals[b]);
-            /* Border */
-            GRRLIB_Rectangle((f32)(btnX[b] - 1), (f32)(BTN_Y - 1),
-                             (f32)(BTN_W + 2), (f32)(BTN_H + 2),
-                             hov ? 0x0099CCFF : 0x2A2A4AFF, true);
-            /* Fill */
-            GRRLIB_Rectangle((f32)btnX[b], (f32)BTN_Y,
-                             (f32)BTN_W, (f32)BTN_H,
-                             hov ? 0x003C6EFF : 0x0D0D1EFF, true);
-            /* Label */
-            if (renderFont) {
-                u32 tw = GRRLIB_WidthTTF(renderFont, btnLabels[b], 19);
-                int tx = btnX[b] + ((int)BTN_W - (int)tw) / 2;
-                int ty = BTN_Y + (BTN_H - 20) / 2;
-                GRRLIB_PrintfTTF(tx, ty, renderFont, btnLabels[b], 19, 0xFFFFFFFF);
-            }
-        }
-
-        /* Cursor drawn on top of buttons */
-        if (renderCursorTex && ir.valid) {
-            orient_t orient;
-            WPAD_Orientation(WPAD_CHAN_0, &orient);
-            GRRLIB_DrawImg((int)ir.x - 8, (int)ir.y - 4,
-                           renderCursorTex, orient.roll, 1.0f, 1.0f, 0xFFFFFFFF);
-        }
+    /* Cursor drawn on top of everything */
+    if (renderCursorTex && ir.valid) {
+        orient_t orient;
+        WPAD_Orientation(WPAD_CHAN_0, &orient);
+        GRRLIB_DrawImg((int)ir.x - 8, (int)ir.y - 4,
+                       renderCursorTex, orient.roll, 1.0f, 1.0f, 0xFFFFFFFF);
     }
 
     VIDEO_SetBlack(FALSE);
@@ -801,54 +786,11 @@ bool MusicPlayerView::run()
          * The bgThread will NOT touch GRRLIB until g_stream_opened_cb sets
          * s_renderEnabled (after mplayer init completes).  The Wii VI holds
          * this frame in the meantime. */
-        {
-            const int W = 640, H = 480;
-            const int ART_X  = 18,  ART_Y  = 38,  ART_SZ = 210;
-            const int RIGHT_X = ART_X + ART_SZ + 12;  /* 240 */
-            const int RIGHT_W = W - RIGHT_X - 18;       /* 382 */
-            for (int _fi = 0; _fi < 2; ++_fi) {
-                GRRLIB_FillScreen(0x000000FF);
-
-                /* Track dots in right column */
-                if (font) {
-                    int n = (int)tracks.size();
-                    if (n > 1 && n <= 20) {
-                        const int DOT_W = 8, DOT_GAP = 4;
-                        int total = n * (DOT_W + DOT_GAP) - DOT_GAP;
-                        int dx = RIGHT_X + (RIGHT_W - total) / 2;
-                        for (int i = 0; i < n; i++) {
-                            u32 c = (i == idx) ? 0xFFFFFFFF : 0x3A3A3AFF;
-                            GRRLIB_Rectangle((f32)(dx + i * (DOT_W + DOT_GAP)), 14.0f,
-                                             (f32)DOT_W, (f32)DOT_W, c, true);
-                        }
-                    }
-                }
-
-                /* Album art or placeholder */
-                if (MusicOverlay::renderArtTex) {
-                    float sx = (float)ART_SZ / (float)MusicOverlay::renderArtTex->w;
-                    float sy = (float)ART_SZ / (float)MusicOverlay::renderArtTex->h;
-                    GRRLIB_DrawImg(ART_X, ART_Y, MusicOverlay::renderArtTex,
-                                   0.0f, sx, sy, 0xFFFFFFFF);
-                } else {
-                    GRRLIB_Rectangle((f32)ART_X, (f32)ART_Y,
-                                     (f32)ART_SZ, (f32)ART_SZ, 0x1A1A1AFF, true);
-                }
-
-                /* Title and artist in right column */
-                if (font) {
-                    GRRLIB_PrintfTTF(RIGHT_X, ART_Y + 2, font,
-                                     tr.title.c_str(), 20, 0xFFFFFFFF);
-                    if (!tr.artist.empty())
-                        GRRLIB_PrintfTTF(RIGHT_X, ART_Y + 28, font,
-                                         tr.artist.c_str(), 14, 0x999999FF);
-
-                    const char* hint = "A:Play/Pause  </> Seek  +/-:Track  B:Back";
-                    u32 hw = GRRLIB_WidthTTF(font, hint, 13);
-                    GRRLIB_PrintfTTF((W - (int)hw) / 2, H - 16, font, hint, 13, 0x444444FF);
-                }
-                GRRLIB_Render();
-            }
+        for (int _fi = 0; _fi < 2; ++_fi) {
+            drawMusicScreen(tracks, idx, MusicOverlay::renderArtTex, 0.0f,
+                            (float)(tr.runtimeTicks / 10000000LL), true, 0, nullptr,
+                            MusicOverlay::VIZ_BARS);
+            GRRLIB_Render();
         }
 
         /* ---- Set bgThread callbacks: GRRLIB HUD + button input -------- */
@@ -885,8 +827,7 @@ bool MusicPlayerView::run()
          * transition spinner.  Without this, one of the XFBs may still
          * contain a stale frame from a prior video session and briefly
          * flashes through before the spinner render completes.
-         * Mirror the same blank→fill→unblank pattern used by App.cpp after
-         * wii_player_play() so the transition is always clean. */
+         * Blank -> fill -> unblank keeps the transition clean. */
         VIDEO_SetBlack(TRUE);
         VIDEO_Flush();
 
@@ -897,12 +838,8 @@ bool MusicPlayerView::run()
             extern unsigned char data_ring_png[];
             GRRLIB_texImg* ringTex = GRRLIB_LoadTexture(data_ring_png);
             for (int _fi = 0; _fi < 2; ++_fi) {
-                GRRLIB_FillScreen(0x0A1628FF);
-                if (ringTex) {
-                    GRRLIB_SetMidHandle(ringTex, true);
-                    GRRLIB_DrawImg(320, 240, ringTex, 0.0f, 1.0f, 1.0f, 0xFFFFFFFF);
-                    GRRLIB_SetMidHandle(ringTex, false);
-                }
+                Ui::background(false);
+                Ui::spinner(ringTex, 320, 240);
                 GRRLIB_Render();
             }
             GRRLIB_FreeTexture(ringTex);

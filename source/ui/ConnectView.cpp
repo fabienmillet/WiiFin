@@ -1,27 +1,19 @@
 #include "ConnectView.h"
+#include "../core/ExitZone.h"
+#include "../core/Text.h"
+#include "Ui.h"
 #include "../input/Input.h"
 #include "../core/SoundFX.h"
 #include <wiikeyboard/keyboard.h>
 #include <ogc/lwp.h>
 #include <string.h>
 #include <stdio.h>
+#include <ogc/lwp_watchdog.h>
 
-// ---------------------------------------------------------------
-// Keyboard layout  (2 pages)
-// ---------------------------------------------------------------
-const char* ConnectView::kbRows[7] = {
-    // --- Page 0 : letters ---
-    "1234567890-.",
-    "qwertyuiop:/",
-    "asdfghjkl@_ ",
-    "\x01zxcvbnm,\x02\x7f",    // \x01=Shift  \x02=SYM  \x7f=Backspace
-    // --- Page 1 : symbols ---
-    "!?@#$%^&*()-",
-    "_+=|\\[]{};:\"",
-    "'<>./`~\x02\x7f",           // \x02=ABC (back to letters)
-};
 
-static const int KB_COLS_MAX = 12;
+// Tab bar (drawn by renderBackground, hit-tested by update): three equal
+// segments, centred
+static const float TAB_W = 180, TAB_X0 = (640 - 3 * TAB_W) / 2, TAB_Y = 52, TAB_H = 30;
 
 // USB keyboard callback — appends char to a shared buffer
 static char usbChar = 0;
@@ -30,7 +22,7 @@ static void usbCallback(char c) { usbChar = c; }
 // ---------------------------------------------------------------------------
 // Background discovery thread
 // ---------------------------------------------------------------------------
-static u8  s_discoverStack[32 * 1024];
+static u8  s_discoverStack[32 * 1024] DEAD_AT_EXIT;
 
 struct DiscoverCtx {
     JellyfinClient*              client;
@@ -45,7 +37,97 @@ static void* discoverWorker(void* arg) {
     return nullptr;
 }
 
+// ---------------------------------------------------------------------------
+// Background sign-in thread
+// ---------------------------------------------------------------------------
+/* Not DEAD_AT_EXIT: HOME can quit while a sign-in is still running. */
+static u8 s_loginStack[64 * 1024] __attribute__((aligned(32)));   /* mbedTLS handshake */
+
+struct LoginJob {
+    JellyfinClient* client;
+    std::string     url, user, pass;
+    volatile bool   running = true;
+    bool            ok = false;
+    JellyfinAuth    auth;
+    std::string     err;
+};
+
+static void* loginWorker(void* arg) {
+    LoginJob* j = static_cast<LoginJob*>(arg);
+    j->ok = j->client->authenticate(j->url, j->user, j->pass, j->auth);
+    if (j->ok) {
+        std::string sn;
+        if (j->client->getServerName(j->url, j->auth, sn)) j->auth.serverName = sn;
+    } else {
+        j->err = j->client->lastError();
+    }
+    j->running = false;
+    return nullptr;
+}
+
 // ---------------------------------------------------------------
+ConnectView::~ConnectView() {
+    /* the threads use this view's members: let them finish first */
+    if (loginThread != LWP_THREAD_NULL) LWP_JoinThread(loginThread, nullptr);
+    delete loginJob;
+    if (discoverThread != LWP_THREAD_NULL) LWP_JoinThread(discoverThread, nullptr);
+    delete discoverCtx;
+}
+
+bool ConnectView::needNetwork(AfterNet then) {
+    if (netReady || (netReady = client.takeNetworkResult())) return true;
+    client.startNetwork();
+    afterNet = then;
+    busy     = Busy::Network;
+    return false;
+}
+
+void ConnectView::startLogin() {
+    while (fields[0].size() > 1 && fields[0].back() == '/') fields[0].pop_back();
+    serverUrl = fields[0];
+    loginJob = new LoginJob;
+    loginJob->client = &client;
+    loginJob->url  = fields[0];
+    loginJob->user = fields[1];
+    loginJob->pass = fields[2];
+    if (LWP_CreateThread(&loginThread, loginWorker, loginJob,
+                         s_loginStack, sizeof(s_loginStack), 50) < 0) {
+        loginThread = LWP_THREAD_NULL;
+        loginWorker(loginJob);              /* no thread: sign in here */
+    }
+    busy = Busy::Login;
+}
+
+/* While a slow step runs: keep the screen alive, collect its result. */
+ConnectResult ConnectView::updateBusy() {
+    if (busy == Busy::Network) {
+        if (Input::isBackPressed()) {            /* start-up goes on in the background */
+            busy = Busy::None;
+            setStatus("Cancelled.", true);
+            return ConnectResult::None;
+        }
+        if (client.networkBusy()) return ConnectResult::None;
+        busy = Busy::None;
+        if (!client.takeNetworkResult()) { setStatus(client.lastError(), true); return ConnectResult::None; }
+        netReady = true;
+        if      (afterNet == AfterNet::Login)        startLogin();
+        else if (afterNet == AfterNet::QuickConnect) autoQuickConnect = true;
+        else                                         autoDiscover = true;
+        return ConnectResult::None;
+    }
+    /* Login: every request times out on its own, B waits for it */
+    if (loginJob->running) return ConnectResult::None;
+    if (loginThread != LWP_THREAD_NULL) LWP_JoinThread(loginThread, nullptr);
+    loginThread = LWP_THREAD_NULL;
+    busy = Busy::None;
+    bool ok = loginJob->ok;
+    if (ok) { auth = loginJob->auth; username = loginJob->user; }
+    else    setStatus(loginJob->err, true);
+    delete loginJob;
+    loginJob = nullptr;
+    return ok ? ConnectResult::Success : ConnectResult::None;
+}
+
 ConnectView::ConnectView(GRRLIB_texImg* btn, GRRLIB_texImg* cursor,
                          GRRLIB_ttfFont* f, JellyfinClient& c)
     : btnTex(btn), cursorTex(cursor), font(f), client(c) {
@@ -112,9 +194,10 @@ ConnectResult ConnectView::update(ir_t& ir) {
     // Status timer
     if (statusTimer > 0) statusTimer--;
 
+    if (busy != Busy::None) return updateBusy();
+
     // B = cancel (or close VKB)
-    if (Input::isBackPressed()) {
-        if (kbActive) { kbActive = false; return ConnectResult::None; }
+    if (Input::isBackPressed() && !kbActive) {
         // Join any in-flight discovery thread before leaving
         if (discoverThread != LWP_THREAD_NULL) {
             LWP_JoinThread(discoverThread, nullptr);
@@ -126,17 +209,17 @@ ConnectResult ConnectView::update(ir_t& ir) {
     }
 
     // --- Tab switching: IR click on tab headers OR L/R buttons ---
-    // Tab zones (from renderBackground): Credentials ~x30-190 y50-74, QC ~x240-430 y50-74
     bool aPressed = Input::isAJustPressed();
 
     // IR hover: any valid IR position sets irMode so d-pad A is blocked while pointer is out
     if (ir.valid) irMode = true;
 
     bool irTabHandled = false;
-    if (ir.valid && aPressed && ir.y >= 44 && ir.y <= 80) {
-        if      (ir.x >= 10  && ir.x <= 195) { activeTab = Tab::Credentials;  kbActive = false; irTabHandled = true; }
-        else if (ir.x >= 200 && ir.x <= 400) { activeTab = Tab::QuickConnect; kbActive = false; irTabHandled = true; }
-        else if (ir.x >= 405 && ir.x <= 540) { activeTab = Tab::Discover;     kbActive = false; irTabHandled = true; }
+    if (ir.valid && aPressed && ir.y >= TAB_Y && ir.y <= TAB_Y + TAB_H &&
+        ir.x >= TAB_X0 && ir.x < TAB_X0 + 3 * TAB_W) {
+        activeTab = (Tab)(int)((ir.x - TAB_X0) / TAB_W);
+        kbActive = false;
+        irTabHandled = true;
     }
     if (!kbActive) {
         if (Input::isLPressed()) { activeTab = (Tab)(((int)activeTab - 1 + 3) % 3); kbActive = false; irMode = false; }
@@ -152,9 +235,9 @@ ConnectResult ConnectView::update(ir_t& ir) {
                 bool irFieldHandled = false;
                 // Field hit areas (from renderCredentials): y=110, y=180, y=250, button y=330
                 if (ir.x >= 80 && ir.x <= 560) {
-                    if      (ir.y >= 100 && ir.y <= 145) { focusedField = Field::Server;   kbActive = true; kbRow = 0; kbCol = 0; kbPage = 0; irFieldHandled = true; irMode = true; }
-                    else if (ir.y >= 170 && ir.y <= 215) { focusedField = Field::Username;  kbActive = true; kbRow = 0; kbCol = 0; kbPage = 0; irFieldHandled = true; irMode = true; }
-                    else if (ir.y >= 240 && ir.y <= 285) { focusedField = Field::Password;  kbActive = true; kbRow = 0; kbCol = 0; kbPage = 0; irFieldHandled = true; irMode = true; }
+                    if      (ir.y >= 100 && ir.y <= 145) { focusedField = Field::Server;   kbActive = true; kb.reset(); irFieldHandled = true; irMode = true; }
+                    else if (ir.y >= 170 && ir.y <= 215) { focusedField = Field::Username;  kbActive = true; kb.reset(); irFieldHandled = true; irMode = true; }
+                    else if (ir.y >= 240 && ir.y <= 285) { focusedField = Field::Password;  kbActive = true; kb.reset(); irFieldHandled = true; irMode = true; }
                 }
                 // Connect button: centered at x=320, y=330, 200x48
                 if (!irFieldHandled &&
@@ -181,28 +264,11 @@ ConnectResult ConnectView::update(ir_t& ir) {
             // A button: open VKB or submit (only when not in IR mode)
             if (aPressed && !irMode) {
                 if (focusedField != Field::SubmitBtn) {
-                    kbActive = true; kbRow = 0; kbCol = 0; kbPage = 0;
+                    kbActive = true; kb.reset();
                 } else {
                     doSubmit:
                     SoundFX::play(SoundFX::FX::Start);
-                    if (!netReady) {
-                        setStatus("Connecting to network...");
-                        netReady = client.initNetwork();
-                        if (!netReady) { setStatus(client.lastError(), true); return ConnectResult::None; }
-                    }
-                    setStatus("Authenticating...");
-                    while (fields[0].size() > 1 && fields[0].back() == '/') fields[0].pop_back();
-                    serverUrl = fields[0];
-                    JellyfinAuth a;
-                    if (client.authenticate(fields[0], fields[1], fields[2], a)) {
-                        std::string sn;
-                        if (client.getServerName(fields[0], a, sn)) a.serverName = sn;
-                        auth = a;
-                        username = fields[1];
-                        return ConnectResult::Success;
-                    } else {
-                        setStatus(client.lastError(), true);
-                    }
+                    if (needNetwork(AfterNet::Login)) startLogin();
                 }
             }
         } else {
@@ -218,15 +284,13 @@ ConnectResult ConnectView::update(ir_t& ir) {
                                 ir.x >= 200 && ir.x <= 440 &&
                                 ir.y >= 250 && ir.y <= 302;
                 if (qcBtnHit) irMode = true;
-                if (aPressed && (qcBtnHit || (!ir.valid && !irMode))) {
+                if ((aPressed && (qcBtnHit || (!ir.valid && !irMode))) || autoQuickConnect) {
+                    autoQuickConnect = false;
                     if (fields[0].empty()) {
                         setStatus("Set the Server URL in the Credentials tab first.", true);
                         break;
                     }
-                    if (!netReady) {
-                        netReady = client.initNetwork();
-                        if (!netReady) { setStatus(client.lastError(), true); break; }
-                    }
+                    if (!needNetwork(AfterNet::QuickConnect)) break;
                     while (fields[0].size() > 1 && fields[0].back() == '/') fields[0].pop_back();
                     serverUrl = fields[0];
                     if (client.quickConnectInitiate(serverUrl, qcResult)) {
@@ -275,11 +339,9 @@ ConnectResult ConnectView::update(ir_t& ir) {
                               ir.x >= 200 && ir.x <= 440 &&
                               ir.y >= 240 && ir.y <= 292;
                 if (btnHit) irMode = true;
-                if (aPressed && (btnHit || (!irMode && !ir.valid))) {
-                    if (!netReady) {
-                        netReady = client.initNetwork();
-                        if (!netReady) { setStatus(client.lastError(), true); break; }
-                    }
+                if ((aPressed && (btnHit || (!irMode && !ir.valid))) || autoDiscover) {
+                    autoDiscover = false;
+                    if (!needNetwork(AfterNet::Discover)) break;
                     discoveredServers.clear();
                     discoverSelected = 0;
                     discoverCtx = new DiscoverCtx{&client, &discoveredServers, false};
@@ -357,291 +419,199 @@ ConnectResult ConnectView::update(ir_t& ir) {
 // Virtual keyboard input
 // ---------------------------------------------------------------
 void ConnectView::handleVKBInput(ir_t& ir) {
-    int pageStart = kbPage * 4;
-    int pageRows  = (kbPage == 0) ? 4 : 3;
-    int rowLen    = strlen(kbRows[pageStart + kbRow]);
-
-    if (Input::isUpPressed()) {
-        kbRow = (kbRow - 1 + pageRows) % pageRows;
-        int nl = strlen(kbRows[pageStart + kbRow]);
-        if (kbCol >= nl) kbCol = nl - 1;
-    }
-    if (Input::isDownPressed()) {
-        kbRow = (kbRow + 1) % pageRows;
-        int nl = strlen(kbRows[pageStart + kbRow]);
-        if (kbCol >= nl) kbCol = nl - 1;
-    }
-    if (Input::isLeftPressed())  kbCol = (kbCol - 1 + rowLen) % rowLen;
-    if (Input::isRightPressed()) kbCol = (kbCol + 1) % rowLen;
-
-    // L button toggles caps lock (letters page only)
-    if (Input::isLPressed() && kbPage == 0) kbShift = !kbShift;
-
-    if (Input::isAJustPressed()) {
-        int fi = (int)focusedField;
-        if (fi > 2) { kbActive = false; return; }
-
-        char key = 0;
-        if (ir.valid) {
-            for (int r = 0; r < pageRows && !key; r++) {
-                int len = strlen(kbRows[pageStart + r]);
-                for (int c = 0; c < len && !key; c++) {
-                    int cx = KB_X + c * KB_CELLW;
-                    int cy = KB_Y + r * KB_CELLH;
-                    if (ir.x >= cx && ir.x <= cx + KB_CELLW - 2 &&
-                        ir.y >= cy && ir.y <= cy + KB_CELLH - 2) {
-                        key = kbRows[pageStart + r][c];
-                        kbRow = r; kbCol = c;
-                    }
-                }
-            }
-        }
-        if (!key) key = kbRows[pageStart + kbRow][kbCol];
-
-        if (key == '\x01') {
-            kbShift = !kbShift;
-            SoundFX::play(SoundFX::FX::PressKey);
-        } else if (key == '\x02') {
-            kbPage = 1 - kbPage;
-            kbRow = 0; kbCol = 0;
-            kbShift = false;
-            SoundFX::play(SoundFX::FX::PressKey);
-        } else if (key == '\x7f') {
-            if (!fields[fi].empty()) fields[fi].pop_back();
-            SoundFX::play(SoundFX::FX::Backspace);
-        } else if (key == ' ') {
-            fields[fi] += ' ';
-            SoundFX::play(SoundFX::FX::PressKey);
-        } else {
-            if (kbShift && key >= 'a' && key <= 'z')
-                fields[fi] += (char)(key - 32);
-            else
-                fields[fi] += key;
-            kbShift = false;
-            SoundFX::play(SoundFX::FX::PressKey);
-        }
-    }
-
-    if (Input::isBPressed()) { kbActive = false; return; }
-
-    if (Input::isRPressed()) {
+    int fi = (int)focusedField;
+    if (fi > 2) { kbActive = false; return; }
+    kb.setOrigin((640 - kb.width()) * 0.5f, 238);
+    kb.setEnterLabel(fi < 2 ? "Next" : "Done");
+    switch (kb.update(ir, fields[fi], 255)) {
+    case Keyboard::Result::Enter:
+        /* OK walks through the fields, then lands on Connect */
+        if (fi < 2) { focusedField = (Field)(fi + 1); kb.reset(); }
+        else        { kbActive = false; focusedField = Field::SubmitBtn; }
+        break;
+    case Keyboard::Result::Cancel:
         kbActive = false;
-        if (!fields[0].empty() && !fields[1].empty() && !fields[2].empty())
-            focusedField = Field::SubmitBtn;
+        break;
+    default: break;
     }
 }
 
 // ---------------------------------------------------------------
 // Render helpers
 // ---------------------------------------------------------------
-static void drawGradientBG(GRRLIB_ttfFont* font) {
-    const int r1 = 0x1a, g1 = 0x1a, b1 = 0x2e;
-    const int r2 = 0x16, g2 = 0x21, b2 = 0x3e;
-    const int bands = 16, bh = 480 / bands;
-    for (int i = 0; i < bands; i++) {
-        float t  = i / (float)(bands - 1);
-        int rc   = r1 + (int)((r2 - r1) * t);
-        int gc   = g1 + (int)((g2 - g1) * t);
-        int bc   = b1 + (int)((b2 - b1) * t);
-        u32 col  = ((u32)rc << 24) | ((u32)gc << 16) | ((u32)bc << 8) | 0xFF;
-        GRRLIB_Rectangle(0, i * bh, 640, bh, col, 1);
-    }
-    (void)font;
-}
-
-static void drawField(GRRLIB_ttfFont* font, const char* label, int x, int y,
-                       int w, const std::string& value,
-                       bool focused, bool masked) {
-    // Label
-    GRRLIB_PrintfTTF(x, y - 20, font, label, 16, 0xCCCCCCFF);
-    // Field border
-    u32 borderCol = focused ? 0x4499FFFF : 0x446688FF;
-    GRRLIB_Rectangle(x - 2, y - 2, w + 4, 34, borderCol, 1);
-    GRRLIB_Rectangle(x, y, w, 30, 0x0D1526FF, 1);
-    // Value
-    std::string display;
-    if (masked) display = std::string(value.size(), '*');
-    else        display = value;
+static void drawField(const char* label, int x, int y, int w, const std::string& value,
+                      bool focused, bool masked) {
+    const Ui::Palette& p = Ui::pal();
+    Ui::text(x + 4, y - 21, label, 15, focused ? p.accentDark : p.textDim);
+    std::string display = masked ? std::string(value.size(), '*') : value;
     if (focused) display += "_"; // caret
-    GRRLIB_PrintfTTF(x + 6, y + 6, font, display.c_str(), 18, 0xEEEEEEFF);
+    // keep the end (and the caret) visible
+    while (display.size() > 1 && Ui::textWidth(display.c_str(), 18) > w - 20)
+        display.erase(display.begin());
+    Ui::field(x - 6, y - 3, w + 12, 36, display.c_str(), 18, focused);
 }
 
-static void drawButton(GRRLIB_texImg* btnTex, GRRLIB_ttfFont* font,
-                        int cx, int y, int w, int h,
-                        const char* label, bool focused) {
-    if (btnTex) {
-        float zoom = focused ? 1.05f : 1.0f;
-        int dw = (int)(w * zoom), dh = (int)(h * zoom);
-        float dsx = (float)dw / btnTex->w;
-        float dsy = (float)dh / btnTex->h;
-        u32 tint = focused ? 0x4499FFFF : 0xFFFFFFFF;
-        GRRLIB_DrawImg(cx - dw / 2, y + (h - dh) / 2, btnTex, 0, dsx, dsy, tint);
-    }
-    int tw = GRRLIB_WidthTTF(font, label, 20);
-    u32 tc = focused ? 0x003A80FF : 0x1A3A5AFF;
-    GRRLIB_PrintfTTF(cx - tw / 2, y + (h - 20) / 2, font, label, 20, tc);
+static void drawButton(int cx, int y, int w, int h, const char* label, bool focused) {
+    Ui::button(cx - w / 2, y, w, h, label, 20, focused ? Ui::pulse() : 0.0f);
+}
+
+// Centred paragraph line.
+static void line(int y, const char* s, int size, u32 col) {
+    Ui::textCentered(320, y, s, size, col);
 }
 
 void ConnectView::renderBackground() {
-    drawGradientBG(font);
-    // Title
-    GRRLIB_PrintfTTF(0, 14, font, "Connect to Jellyfin", 24, 0xFFFFFFFF);
-    // Tabs
-    u32 credCol = (activeTab == Tab::Credentials)    ? 0xFFFFFFFF : 0x778899FF;
-    u32 qcCol   = (activeTab == Tab::QuickConnect)   ? 0xFFFFFFFF : 0x778899FF;
-    u32 discCol = (activeTab == Tab::Discover)       ? 0xFFFFFFFF : 0x778899FF;
-    GRRLIB_PrintfTTF(20,  50, font, "[ Credentials ]",  18, credCol);
-    GRRLIB_PrintfTTF(200, 50, font, "[ Quick Connect ]", 18, qcCol);
-    GRRLIB_PrintfTTF(405, 50, font, "[ Discover ]",      18, discCol);
+    const Ui::Palette& p = Ui::pal();
+    Ui::background();
+    Ui::text(28, 12, "Connect to Jellyfin", 22, p.text);
 
+    // Tabs: one pill split into the segments update() hit-tests
+    {
+        const float X0 = TAB_X0, X3 = TAB_X0 + 3 * TAB_W, Y = TAB_Y, H = TAB_H;
+        const float seg[4] = { X0, X0 + TAB_W, X0 + 2 * TAB_W, X3 };
+        const char* names[3] = { "Credentials", "Quick Connect", "Discover" };
+        Ui::shadow(X0, Y + 1, X3 - X0, H, H * 0.5f, 4.0f, p.shadow);
+        Ui::roundRect(X0, Y, X3 - X0, H, H * 0.5f, p.field, Ui::mix(p.field, p.cardBottom, 0.5f));
+        Ui::roundBorder(X0, Y, X3 - X0, H, H * 0.5f, 1.5f, p.fieldBorder);
+        for (int i = 0; i < 3; ++i) {
+            bool on = (int)activeTab == i;
+            float sx = seg[i], sw = seg[i + 1] - seg[i];
+            if (on) Ui::roundRect(sx + 2, Y + 2, sw - 4, H - 4, (H - 4) * 0.5f,
+                                  Ui::mix(p.accent, 0xFFFFFFFF, 0.25f), p.accentDark);
+            Ui::textCentered(sx + sw * 0.5f, Y + 7, names[i], 15, on ? p.textOnAccent : p.textDim);
+        }
+    }
+
+    // Slow step in progress
+    if (busy != Busy::None) {
+        static const char* const dots[4] = { "", ".", "..", "..." };
+        char msg[64];
+        snprintf(msg, sizeof(msg), "%s%s",
+                 busy == Busy::Network ? "Connecting to the network" : "Signing in",
+                 dots[(ticks_to_millisecs(gettime()) / 400) % 4]);
+        int w = Ui::textWidth("Connecting to the network...", 14);
+        Ui::roundRect(320 - w / 2 - 16, 420, w + 32, 26, 13, p.cardTop, p.cardBottom);
+        Ui::roundBorder(320 - w / 2 - 16, 420, w + 32, 26, 13, 1.5f, p.accent);
+        Ui::text(320 - w / 2, 425, msg, 14, p.accentDark);
+    } else
     // Status (deux lignes si le message est trop large)
     if (statusTimer > 0) {
-        u32 sc = statusError ? 0xFF4444FF : 0x44EE88FF;
+        u32 sc = statusError ? p.danger : p.ok;
         const std::string& msg = statusMsg;
-        int sw = GRRLIB_WidthTTF(font, msg.c_str(), 14);
-        if (sw <= 620) {
-            int x = (640 - sw) / 2;
-            GRRLIB_PrintfTTF(x < 10 ? 10 : x, 432, font, msg.c_str(), 14, sc);
-        } else {
+        int sw = Ui::textWidth(msg.c_str(), 14);
+        std::string l1 = msg, l2;
+        if (sw > 580) {
             // Roughly split at midpoint on a space boundary
             size_t mid = msg.size() / 2;
             size_t sp  = msg.rfind(' ', mid);
             if (sp == std::string::npos) sp = mid;
-            std::string l1 = msg.substr(0, sp);
-            std::string l2 = msg.substr(sp + 1);
-            int w1 = GRRLIB_WidthTTF(font, l1.c_str(), 13);
-            int w2 = GRRLIB_WidthTTF(font, l2.c_str(), 13);
-            GRRLIB_PrintfTTF((640 - w1) / 2, 424, font, l1.c_str(), 13, sc);
-            GRRLIB_PrintfTTF((640 - w2) / 2, 439, font, l2.c_str(), 13, sc);
+            l1 = msg.substr(0, sp);
+            l2 = msg.substr(sp + 1);
         }
+        int w  = Ui::textWidth(l1.c_str(), 14);
+        if (!l2.empty()) { int w2 = Ui::textWidth(l2.c_str(), 14); if (w2 > w) w = w2; }
+        int bh = l2.empty() ? 26 : 42;
+        int by = 446 - bh;
+        Ui::roundRect(320 - w / 2 - 16, by, w + 32, bh, 13, p.cardTop, p.cardBottom);
+        Ui::roundBorder(320 - w / 2 - 16, by, w + 32, bh, 13, 1.5f, sc);
+        Ui::textCentered(320, by + 5, l1.c_str(), 14, sc);
+        if (!l2.empty()) Ui::textCentered(320, by + 21, l2.c_str(), 14, sc);
     }
-    // Footer
-    const char* footer = "A Select  B Back/Close  L/R Tabs";
-    int fw = GRRLIB_WidthTTF(font, footer, 14);
-    GRRLIB_PrintfTTF((640 - fw) / 2, 458, font, footer, 14, 0x778899FF);
 }
 
 void ConnectView::renderCredentials(ir_t& ir) {
     int fx = 80, fw = 480;
-    drawField(font, "Server URL", fx, 110, fw, fields[0],
+    drawField("Server URL", fx, 110, fw, fields[0],
               focusedField == Field::Server && !kbActive, false);
-    drawField(font, "Username",   fx, 180, fw, fields[1],
+    drawField("Username",   fx, 180, fw, fields[1],
               focusedField == Field::Username && !kbActive, false);
-    drawField(font, "Password",   fx, 250, fw, fields[2],
+    drawField("Password",   fx, 250, fw, fields[2],
               focusedField == Field::Password && !kbActive, true);
 
     // Submit button
-    drawButton(btnTex, font, 320, 330, 200, 48, "Connect",
+    drawButton(320, 330, 200, 48, "Connect",
                focusedField == Field::SubmitBtn && !kbActive);
 
-    if (kbActive) renderVKB(ir);
+    if (kbActive) {
+        renderVKB(ir);
+        const Ui::Hint l[] = { { "A", "Type" }, { "B", "Delete" } };
+        const Ui::Hint r[] = { { "-", "Shift" }, { "+", focusedField == Field::Password ? "Done" : "Next" } };
+        Ui::footer(l, 2, r, 2);
+    } else {
+        const Ui::Hint l[] = { { "A", "Select" }, { "UD", "Move" } };
+        const Ui::Hint r[] = { { "-/+", "Tabs" }, { "B", "Back" } };
+        Ui::footer(l, 2, r, 2);
+    }
 }
 
 void ConnectView::renderVKB(ir_t& ir) {
-    int pageStart = kbPage * 4;
-    int pageRows  = (kbPage == 0) ? 4 : 3;
-
-    // Semi-transparent background behind keyboard
-    GRRLIB_Rectangle(KB_X - 8, KB_Y - 8,
-                     KB_COLS_MAX * KB_CELLW + 16,
-                     pageRows * KB_CELLH + 16, 0x00000099, 1);
-
-    for (int r = 0; r < pageRows; r++) {
-        int ri  = pageStart + r;
-        int len = strlen(kbRows[ri]);
-        for (int c = 0; c < len; c++) {
-            int cx = KB_X + c * KB_CELLW;
-            int cy = KB_Y + r * KB_CELLH;
-            bool sel = (r == kbRow && c == kbCol);
-
-            bool irHover = ir.valid &&
-                           ir.x >= cx && ir.x <= cx + KB_CELLW - 2 &&
-                           ir.y >= cy && ir.y <= cy + KB_CELLH - 2;
-
-            char k = kbRows[ri][c];
-
-            // Key label
-            char label[5] = {0};
-            if      (k == '\x7f') { label[0]='<'; label[1]='-'; }
-            else if (k == ' ')    { label[0]='_'; }
-            else if (k == '\x01') { label[0]='^'; label[1]='S'; label[2]='H'; }
-            else if (k == '\x02') {
-                if (kbPage == 0) { label[0]='S'; label[1]='Y'; label[2]='M'; }
-                else             { label[0]='A'; label[1]='B'; label[2]='C'; }
-            }
-            else if (kbShift && k >= 'a' && k <= 'z') { label[0] = (char)(k - 32); }
-            else { label[0] = k; }
-
-            // Background colour
-            u32 bgCol = (k == '\x01' && kbShift) ? 0xDD8800CC
-                      : (k == '\x02')             ? 0x226633CC
-                      : sel                       ? 0x4499FFDD
-                      : irHover                   ? 0x6699BBDD
-                      :                             0x1E2D44CC;
-            GRRLIB_Rectangle(cx + 1, cy + 1, KB_CELLW - 2, KB_CELLH - 2, bgCol, 1);
-
-            u32 tc = (k == '\x01' && kbShift) ? 0xFFDD44FF
-                   : (k == '\x02')             ? 0x88FFAAFF
-                   : sel                       ? 0xFFFFFFFF
-                   :                             0xBBCCDDFF;
-            // Approximate centering: avg ~10 px/char at size 16 avoids per-key WidthTTF
-            int tw = (int)(strlen(label) * 10);
-            GRRLIB_PrintfTTF(cx + (KB_CELLW - tw) / 2, cy + 10, font, label, 16, tc);
+    // Keyboard panel (covers the lower fields while typing; the edited
+    // field is shown in the panel's title row)
+    kb.setOrigin((640 - kb.width()) * 0.5f, 238);
+    const int PX = (int)((640 - kb.width()) * 0.5f) - 12, PW = (int)kb.width() + 24;
+    const int PY = 238 - 50, PH = (int)kb.height() + 62;
+    GRRLIB_Rectangle(Ui::screenLeft(), 0, Ui::screenWidth(), 480, Ui::alpha(Ui::pal().dim, 0.5f), 1);
+    Ui::card(PX, PY, PW, PH, 16, 0.0f);
+    {
+        int fi = (int)focusedField;
+        const char* names[3] = { "Server URL", "Username", "Password" };
+        if (fi <= 2) {
+            std::string v = fi == 2 ? std::string(fields[fi].size(), '*') : fields[fi];
+            v += "_";
+            while (v.size() > 1 && Ui::textWidth(v.c_str(), 16) > PW - 150)
+                v.erase(v.begin());
+            Ui::text(PX + 16, PY + 13, names[fi], 14, Ui::pal().textDim);
+            Ui::field(PX + 110, PY + 8, PW - 122, 28, v.c_str(), 16, true);
         }
     }
 
-    // Hint
-    int hintY = KB_Y + pageRows * KB_CELLH + 6;
-    if (kbPage == 0 && kbShift) {
-        GRRLIB_PrintfTTF(KB_X, hintY, font, "[SHIFT]  -: toggle  |  B: close  |  +: confirm", 14, 0xFFDD44FF);
-    } else {
-        GRRLIB_PrintfTTF(KB_X, hintY, font, "-: SHIFT  |  B: close  |  +: confirm", 14, 0x778899FF);
-    }
+    kb.render(ir);
 }
 
 void ConnectView::renderQuickConnect(ir_t& ir) {
+    const Ui::Palette& p = Ui::pal();
     int cx = 320;
     switch (qcState) {
         case QCState::Idle: {
-            GRRLIB_PrintfTTF(0, 110, font,
-                "Quick Connect lets you sign in by approving", 18, 0xCCCCCCFF);
-            GRRLIB_PrintfTTF(0, 135, font,
-                "a code in the Jellyfin web interface.", 18, 0xCCCCCCFF);
+            Ui::card(70, 96, 500, 108, 16, 0.0f);
+            line(112, "Quick Connect lets you sign in by approving", 17, p.text);
+            line(136, "a code in the Jellyfin web interface.", 17, p.text);
 
             /* Show current server URL or a warning if not set */
             if (fields[0].empty()) {
-                GRRLIB_PrintfTTF(0, 178, font,
-                    "Go to Credentials tab and enter the Server URL first.", 14, 0xFF8844FF);
+                line(174, "Go to Credentials tab and enter the Server URL first.", 14, p.danger);
             } else {
                 char sbuf[128];
                 snprintf(sbuf, sizeof(sbuf), "Server: %s", fields[0].c_str());
-                int sw = GRRLIB_WidthTTF(font, sbuf, 14);
-                GRRLIB_PrintfTTF((640-sw)/2, 178, font, sbuf, 14, 0x778899FF);
+                line(174, sbuf, 14, p.textDim);
             }
 
             bool focused = ir.valid &&
                            ir.x >= 200 && ir.x <= 440 &&
                            ir.y >= 250 && ir.y <= 302;
-            drawButton(btnTex, font, cx, 250, 240, 52, "Start Quick Connect", focused);
+            drawButton(cx, 250, 240, 52, "Start Quick Connect", focused || !ir.valid);
             break;
         }
 
         case QCState::Waiting: {
-            GRRLIB_PrintfTTF(0, 120, font, "Enter this code on your Jellyfin server:", 18, 0xCCCCCCFF);
-            // Big code display
-            int cw = GRRLIB_WidthTTF(font, qcResult.code.c_str(), 52);
-            GRRLIB_PrintfTTF((640 - cw) / 2, 160, font, qcResult.code.c_str(), 52, 0x4499FFFF);
-            GRRLIB_PrintfTTF(0, 240, font, "Waiting for approval...", 18, 0xAAAAAAFF);
-            GRRLIB_PrintfTTF(0, 268, font, "B to cancel", 16, 0x778899FF);
+            line(112, "Enter this code on your Jellyfin server:", 17, p.text);
+            // Big code display on a card
+            int cw = Ui::textWidth(qcResult.code.c_str(), 52);
+            Ui::card(320 - cw / 2 - 30, 148, cw + 60, 80, 18, Ui::pulse());
+            Ui::textCentered(320, 160, qcResult.code.c_str(), 52, p.accentDark);
+            line(250, "Waiting for approval...", 17, p.textDim);
             break;
         }
         case QCState::Done:
-            GRRLIB_PrintfTTF(0, 200, font, "Approved! Signing in...", 22, 0x44EE88FF);
+            line(200, "Approved! Signing in...", 22, p.ok);
             break;
         case QCState::Error:
-            GRRLIB_PrintfTTF(0, 200, font, "Error. Press A to retry.", 20, 0xFF4444FF);
+            line(200, "Error. Press A to retry.", 20, p.danger);
             break;
     }
+    const Ui::Hint l[] = { { "A", "Select" } };
+    const Ui::Hint r[] = { { "-/+", "Tabs" }, { "B", qcState == QCState::Waiting ? "Cancel" : "Back" } };
+    Ui::footer(l, 1, r, 2);
 }
 
 void ConnectView::renderCursor(ir_t& ir) {
@@ -654,63 +624,55 @@ void ConnectView::renderCursor(ir_t& ir) {
 }
 
 void ConnectView::renderDiscover(ir_t& ir) {
+    const Ui::Palette& p = Ui::pal();
     int cx = 320;
     switch (discoverState) {
         case DiscoverState::Idle:
-            GRRLIB_PrintfTTF(0, 110, font,
-                "Find Jellyfin servers on your local network.", 18, 0xCCCCCCFF);
-            GRRLIB_PrintfTTF(0, 138, font,
-                "The Wii must be on the same network as the server.", 16, 0x778899FF);
+            Ui::card(70, 96, 500, 84, 16, 0.0f);
+            line(114, "Find Jellyfin servers on your local network.", 17, p.text);
+            line(142, "The Wii must be on the same network as the server.", 14, p.textDim);
             {
                 bool btnFocus = ir.valid &&
                                 ir.x >= 200 && ir.x <= 440 &&
                                 ir.y >= 240 && ir.y <= 292;
-                drawButton(btnTex, font, cx, 240, 240, 52, "Scan for Servers", btnFocus);
+                drawButton(cx, 240, 240, 52, "Scan for Servers", btnFocus || !ir.valid);
             }
             break;
 
-        case DiscoverState::Scanning: {
-            int tw = GRRLIB_WidthTTF(font, "Scanning...", 22);
-            GRRLIB_PrintfTTF((640 - tw) / 2, 220, font, "Scanning...", 22, 0x4499FFFF);
+        case DiscoverState::Scanning:
+            line(220, "Scanning...", 22, p.accentDark);
             break;
-        }
 
         case DiscoverState::Done: {
             int n = (int)discoveredServers.size();
             if (n == 0) {
-                GRRLIB_PrintfTTF(0, 170, font, "No servers found.", 20, 0xFF8844FF);
-                GRRLIB_PrintfTTF(0, 200, font,
-                    "Check your network and server settings, then try again.", 15, 0x778899FF);
+                line(170, "No servers found.", 20, p.danger);
+                line(200, "Check your network and server settings, then try again.", 14, p.textDim);
                 bool btnFocus = ir.valid &&
                                 ir.x >= 200 && ir.x <= 440 &&
                                 ir.y >= 240 && ir.y <= 292;
-                drawButton(btnTex, font, cx, 240, 200, 48, "Scan Again", btnFocus);
+                drawButton(cx, 240, 200, 48, "Scan Again", btnFocus || !ir.valid);
                 break;
             }
-            GRRLIB_PrintfTTF(20, 100, font, "Found — select a server:", 16, 0xCCCCCCFF);
+            Ui::text(28, 98, "Found \xe2\x80\x94 select a server:", 15, p.textDim);
             for (int i = 0; i < n && i < 6; i++) {
                 int rowY = 126 + i * 50;
                 bool sel = (i == discoverSelected);
                 bool irHov = ir.valid &&
                              ir.x >= 60 && ir.x <= 580 &&
                              ir.y >= rowY && ir.y <= rowY + 42;
-                bool highlight = sel || irHov;
-                u32 bg = highlight ? 0x1E3A5AE0 : 0x0D1526CC;
-                GRRLIB_Rectangle(60, rowY, 520, 42, bg, 1);
-                if (highlight)
-                    GRRLIB_Rectangle(58, rowY - 2, 524, 46, 0x4499FFFF, 0);
-                GRRLIB_PrintfTTF(70, rowY + 4, font,
-                    discoveredServers[i].name.c_str(), 16,
-                    highlight ? 0xFFFFFFFF : 0xBBCCDDFF);
-                GRRLIB_PrintfTTF(70, rowY + 24, font,
-                    discoveredServers[i].address.c_str(), 13,
-                    highlight ? 0x88CCFFFF : 0x778899FF);
+                float f = sel ? Ui::pulse() : (irHov ? 0.55f : 0.0f);
+                Ui::card(60, rowY, 520, 44, 12, f);
+                Ui::text(76, rowY + 5, discoveredServers[i].name.c_str(), 16,
+                         Ui::mix(p.text, p.accentDark, f));
+                Ui::text(76, rowY + 25, discoveredServers[i].address.c_str(), 13, p.textDim);
             }
-            GRRLIB_PrintfTTF(20, 126 + 6 * 50 + 6, font,
-                "A: Use this server   Up/Down: Navigate", 14, 0x778899FF);
             break;
         }
     }
+    const Ui::Hint l[] = { { "A", "Select" } };
+    const Ui::Hint r[] = { { "-/+", "Tabs" }, { "B", "Back" } };
+    Ui::footer(l, 1, r, 2);
 }
 
 void ConnectView::render(ir_t& ir) {

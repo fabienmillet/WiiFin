@@ -7,6 +7,9 @@
 #include <string>
 #include "../jellyfin/JellyfinClient.h"
 #include "MusicPlayerView.h"
+#include "BrowseHome.h"
+#include "Keyboard.h"
+#include "ListFeed.h"
 
 class LibraryView {
 public:
@@ -22,17 +25,18 @@ public:
     void render(ir_t& ir);
     void drawLoadingFrame(); // draw+flush one spinning ring frame (also called by network callback)
 
-    // Free all textures and heavy heap data before starting playback.
-    // Preserves pendingPlay* fields which the caller needs.
-    // Called by App just before wii_player_play() to give MPlayer room to allocate.
-    void releaseForPlayback();
+    // Playback finished: keep the current page and its textures (the heap
+    // spills into MEM2, which keeps ~45 MB free while MPlayer runs), and
+    // reload the detail page for lastItemId (fresh resume position).
+    void onPlaybackFinished(const std::string& lastItemId);
 
-    // Re-attach asset pointers (which change after reloadAssets()) and
-    // return to the LibsReady state without re-fetching libraries over the network.
-    void reinitAfterPlayback(GRRLIB_ttfFont* f, GRRLIB_ttfFont* jf,
-                             GRRLIB_texImg* cursor, GRRLIB_texImg* ring);
+    // Name of the signed-in user (header avatar).
+    void setUserName(const std::string& name) {
+        userName = name; browse.setUserName(name); catalog.setUserName(name);
+    }
 
     std::string pendingPlayUrl;           // set before returning true when the user hits Play
+    std::string pendingPlayTitle;         // shown in the player's top bar
     std::string pendingPlayItemId;        // Jellyfin item id for /Sessions/Playing reporting
     std::string pendingPlayMediaSourceId; // MediaSourceId (same as itemId for transcoded streams)
     std::string pendingPlaySessionId;     // PlaySessionId from PlaybackInfo (for progress reporting)
@@ -57,11 +61,11 @@ public:
     int pendingPlaySubIdx   = -1;  // currently-selected sub stream index (-1 = none)
 
 private:
+    void clearPendingPlay();
     GRRLIB_ttfFont* font;
     GRRLIB_ttfFont* jpFont;
     GRRLIB_texImg*  cursorTex;
     GRRLIB_texImg*  ringTex;
-    GRRLIB_texImg*  userIconTex = nullptr;
     JellyfinClient& client;
     JellyfinAuth    auth;
     std::string     serverUrl;
@@ -131,10 +135,15 @@ private:
     bool        inItemsDrilldown = false;
 
     std::string errMsg;
+    std::string loggedErr;     /* last error written to the log */
     float       spinAngle = 0.0f;
 
     static const int ITEMS_PER_PAGE = 50;
     static const int ITEMS_VISIBLE  = 8;
+    // Text list of a library (ItemsReady): thinner rows, no pages
+    static const int LIST_ROWS  = 10;
+    static const int LIST_ROW_H = 36;
+    int listWidth() const;      // narrower when the cover panel is shown
 
     // Tile grid (3 columns)
     static const int TILE_COLS = 3;
@@ -266,14 +275,13 @@ private:
     int musicSuggestOff = 0;
     static const int SUGG_VISIBLE = 4; // cards shown per row (4 × 130px + 3 × 20px gap = 580 fits in 640)
     // Pre-computed display strings for activity cards (built once at load time,
-    // avoids per-frame GRRLIB_WidthTTF truncation loops that drop frame rate)
+    // avoids per-frame Text::width truncation loops that drop frame rate)
     std::string cwDisplayMain[3], cwDisplaySub[3];
     std::string nuDisplayMain[3], nuDisplaySub[3];
 
     void loadLibraries();
     void loadContinueWatching();
     void loadNextUp();
-    void reloadActivityTextures(); // re-fetch backdrop images after playback release
     void buildActDisplayStrings(); // pre-compute truncated titles for activity cards
     void freeCWTextures();
     void freeNextUpTextures();
@@ -297,8 +305,6 @@ private:
     void runWithLoading(std::function<void()> fn);
     void freePosters();
     void freeDetail();
-    void drawGradientBG();
-    void drawCenteredText(int x, int y, int w, const char* text, int sz, u32 col);
     void drawCursor(ir_t& ir);
     void drawDetailView(ir_t& ir);
     void clampScroll();
@@ -313,18 +319,29 @@ private:
     State                     searchReturnState = State::LibsReady;
     static const int          SEARCH_VISIBLE    = 8;
     bool                      drilldownFromSearch = false; // true when ItemsReady/PostersReady was entered from search
-    // Virtual keyboard state for search
-    bool srchKbShift = false;
-    int  srchKbRow   = 0;
-    int  srchKbCol   = 0;
-    int  srchKbPage  = 0;
+    Keyboard                  searchKb;          // on-screen keyboard for search
 
     void performSearch();
     void clampSearchScroll();
-    void handleSearchVKB(ir_t& ir);
     void renderSearchInput(ir_t& ir);
     void renderSearchResults(ir_t& ir);
 
     u32         colorForType(const std::string& type, bool selected);
     const char* labelForType(const std::string& type);
+
+    // "Rows" home layout: carousel home (rows of posters) instead of the tile grid
+    BrowseHome browse;                  // what to watch now
+    BrowseHome catalog;                 // the "browse" page (libraries, A-Z, genres)
+    ListFeed   feed;                    // ItemsReady: whole library, loaded as it scrolls
+    int        listRestoreSel = -1;     // selection to restore after a drill-down
+    unsigned long long letterFlashMs = 0; // letter jump feedback
+    char       letterFlash = 0;
+    std::string userName;
+    bool       browsePage     = false;  // catalog shown instead of the home rows
+    bool       tracksFromHome = false;  // album opened from the carousel home
+    bool       episodesFromHome = false; // season opened from the carousel home
+    bool flixHome() const;
+    bool updateState(ir_t& ir);
+    void openItem(const JellyfinItem& it, State returnState);
+    void openLibrary(int index);
 };
