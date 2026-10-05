@@ -4,6 +4,8 @@
 class Input {
 public:
     static void update();
+    /* Wii Remote pointer in drawing space (see Ui::pointerToScreen). */
+    static void readIR(ir_t& ir);
     static bool isHomePressed();
     static bool isUpPressed();
     static bool isDownPressed();

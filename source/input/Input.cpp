@@ -1,4 +1,5 @@
 #include "Input.h"
+#include "../ui/Ui.h"
 #include <wiiuse/wpad.h>
 
 static u32 buttonsDown = 0;
@@ -18,3 +19,8 @@ bool Input::isBPressed()     { return buttonsDown & WPAD_BUTTON_B; }
 bool Input::isBackPressed()  { return buttonsDown & WPAD_BUTTON_B; }
 bool Input::isLPressed()     { return buttonsDown & WPAD_BUTTON_MINUS; }
 bool Input::isRPressed()     { return buttonsDown & WPAD_BUTTON_PLUS; }
+
+void Input::readIR(ir_t& ir) {
+    WPAD_IR(WPAD_CHAN_0, &ir);
+    Ui::pointerToScreen(ir);
+}
