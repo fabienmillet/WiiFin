@@ -1,56 +1,40 @@
 #!/bin/bash
-# End-to-end playback check, run by the CI:
-#   - Counter Film (h264, re-encoded by the server) from the start, then a
-#     +10 s seek, which restarts the stream
-#   - Xvid Film (copied by the server when played from 0) resumed at 0:45
-# Each of the three streams must start and its video advance by at least
-# 5 s, without a decoding error ("Error at MB": the picture is broken or
-# black) and without an error screen.
+# End-to-end playback check, run by the CI: plays a scenario of
+# tools/test/scenarios (format: see scenario.py) against the test server and
+# checks WiiFin's log.
 #
-# Needs the test server with those two movies, and a WiiFin built with the
-# button presses of playback.script:
-#   tools/test/make_media.sh playback && ONLY=playback tools/test/server.sh
-#   NOPROFILE=1 BUILD_ONLY=1 tools/test/tour.sh "$(cat tools/test/playback.script)"
-#   tools/test/playback.sh tools/test/out/build/WiiFin.dol
+#   tools/test/make_media.sh playback
+#   MOVIES=playback MIXED= tools/test/server.sh 300k
+#   NOPROFILE=1 BUILD_ONLY=1 tools/test/tour.sh ""
+#   tools/test/playback.sh resume [tools/test/out/build/WiiFin.dol] [timeout s]
 #
-# The profile (server, token) and settings go to wiifin.cfg on Dolphin's SD
-# card.  env: DOLPHIN as in smoke.sh; VIDEO (default Null)
+# The profile, settings and presses go to Dolphin's SD card (wiifin.cfg,
+# tour.txt), so one test build plays every scenario.  The log is kept in
+# out/playback/<scenario>/log.txt.
+# env: DOLPHIN as in smoke.sh; VIDEO (default Null)
+#      DUMP=1: also dump the picture (default video backend) and look for
+#      screens that flash for a frame or two (flicker.py, out/.../flicker)
+#      FRAMES="5 10 20": dump too, and save those seconds of it to
+#      out/playback/<scenario>/frames
+#      PAL=1: a European Wii in PAL 50 Hz (576i) instead of NTSC 480i
+#      AUDIO_DUMP=1: Dolphin writes what the console plays to
+#      out/playback/<scenario>/dolphin/Dump/Audio (nothing on the speakers)
 T=$(dirname "$(realpath "$0")")
+[ -n "$FRAMES" ] && DUMP=1
 . "$T/lib.sh"
-FILE=$(realpath "${1:-$T/out/build/WiiFin.dol}")
-LIMIT=${2:-300}
+NAME=${1:?usage: playback.sh <scenario> [dol] [timeout s]}
+SC=$T/scenarios/$NAME.txt
+FILE=$(realpath "${2:-$T/out/build/WiiFin.dol}")
+LIMIT=${3:-300}
+[ -f "$SC" ] || { echo "playback: no scenario $SC"; exit 2; }
 [ -f "$FILE" ] || { echo "playback: $FILE not found"; exit 2; }
 [ -f "$T/out/session" ] || { echo "playback: no out/session, start server.sh first"; exit 2; }
-{ read -r TOKEN; read -r USERID; } < "$T/out/session"
-J=http://127.0.0.1:18096
-A="Authorization: MediaBrowser Client=\"WiiFinTest\", Device=\"test\", DeviceId=\"wiifin-test\", Version=\"1\", Token=\"$TOKEN\""
 
-# Saved positions: Counter Film from the start, Xvid Film at 0:45
-itemId() {
-    curl -s "$J/Items?Recursive=true&IncludeItemTypes=Movie&userId=$USERID" -H "$A" |
-        python3 -c "import json,sys; print(next(i['Id'] for i in json.load(sys.stdin)['Items'] if i['Name'].startswith('$1')))"
-}
-position() {
-    curl -s -f -o /dev/null -X POST "$J/UserItems/$1/UserData?userId=$USERID" -H "$A" \
-        -H 'Content-Type: application/json' -d "{\"PlaybackPositionTicks\":$2,\"Played\":false}"
-}
-COUNTER=$(itemId Counter) && XVID=$(itemId Xvid) || { echo "playback: Counter Film / Xvid Film not on the server"; exit 2; }
-position "$COUNTER" 0 && position "$XVID" 450000000 || { echo "playback: cannot set the positions"; exit 2; }
+P=$T/out/playback/$NAME
+rm -rf "$P"
+python3 "$T/scenario.py" sd "$SC" "$P/sd" "$T/out/session" || exit 2
+python3 "$T/scenario.py" positions "$SC" http://127.0.0.1:18096 "$T/out/session" || exit 2
 
-P=$T/out/playback
-rm -rf "$P"; mkdir -p "$P/sd/apps/WiiFin"
-cat > "$P/sd/apps/WiiFin/wiifin.cfg" <<EOF
-music_enabled=0
-home_layout=0
-library_view=2
-screen_area_asked=1
-profile_count=1
-profile.0.server_url=$J
-profile.0.username=wii
-profile.0.server_name=Jellyfin Test
-profile.0.user_id=$USERID
-profile.0.access_token=$TOKEN
-EOF
 U=$P/dolphin
 # the SD card is built from $P/sd at boot
 dolphin_setup "$U" <<EOF
@@ -59,50 +43,54 @@ WiiSDCard = True
 WiiSDCardEnableFolderSync = True
 [General]
 WiiSDCardSyncFolder = $P/sd
+${PAL:+FallbackRegion = 2}
+${AUDIO_DUMP:+[DSP]
+DumpAudio = True
+DumpAudioSilent = True}
+${DUMP:+[Movie]
+DumpFrames = True
+DumpFramesSilent = True}
 EOF
 dolphin_cmd "$P"
 
-$DOLPHIN -v "${VIDEO:-Null}" -u "$U" -e "$FILE" > "$U/out.txt" 2>&1 &
+VARGS=(-v "${VIDEO:-Null}")
+[ -n "$DUMP" ] && [ -z "$VIDEO" ] && VARGS=()   # Null draws nothing to dump
+[ -n "$PAL" ] && VARGS+=(-C SYSCONF.IPL.E60=False)   # PAL 50 Hz, 576i
+[ -n "$XFB" ] && VARGS+=(-C GFX.Hacks.XFBToTextureEnable=False -C GFX.Hacks.ImmediateXFBEnable=False)   # what the VI shows
+$DOLPHIN "${VARGS[@]}" -u "$U" -e "$FILE" > "$U/out.txt" 2>&1 &
 PID=$!
-# the script's last entry (button 0) marks the end
+# the server's remote control, when the scenario has some (remote lines)
+RPID=
+if grep -q '^remote ' "$SC"; then
+    python3 "$T/scenario.py" remote "$SC" "$U/Logs/dolphin.log" http://127.0.0.1:18096 "$T/out/session" \
+        > "$P/remote.txt" 2>&1 &
+    RPID=$!
+fi
+# the scenario's END press (button 0) marks the end
 for _ in $(seq 1 "$LIMIT"); do
     sleep 1
     kill -0 $PID 2>/dev/null || break
     dolphin_log "$U" | grep -q '^\[TOUR\] t=[0-9]* press 0$' && break
 done
 dolphin_stop $PID
+[ -n "$RPID" ] && kill $RPID 2>/dev/null
 dolphin_log "$U" > "$P/log.txt"
+# what the server answered the remote commands (expect log can check it)
+[ -f "$P/remote.txt" ] && cat "$P/remote.txt" >> "$P/log.txt"
+F=$(/bin/ls -S "$U"/Dump/Frames/*.avi 2>/dev/null | head -1)
+if [ -n "$FRAMES" ]; then
+    mkdir -p "$P/frames"
+    for t in $FRAMES; do
+        ffmpeg -loglevel error -y -ss "$t" -i "$F" -frames:v 1 -vf scale=480:-1 "$P/frames/t$t.png"
+    done
+fi
 
-python3 - "$P/log.txt" <<'PY'
-import re, sys
-log = open(sys.argv[1], errors='replace').read().split('\n')
-fails = []
-if not any(re.match(r'\[TOUR\] t=\d+ press 0$', l) for l in log):
-    fails.append('the scenario did not reach its end')
-starts = [i for i, l in enumerate(log) if l.startswith('[WiiPlayer] play:')]
-names = ['Counter Film from the start', 'Counter Film after a +10 s seek', 'Xvid Film resumed at 0:45']
-if len(starts) != 3:
-    fails.append('%d streams opened, expected 3' % len(starts))
-for n, s in enumerate(starts[:3]):
-    seg = log[s:starts[n + 1] if n + 1 < len(starts) else len(log)]
-    v = [float(m.group(1)) for l in seg for m in [re.search(r'\bV:\s*(-?[\d.]+)', l)] if m]
-    errs = sum('Error at MB' in l for l in seg)
-    shown = (max(v) - min(v)) if v else 0.0
-    ok = any('Starting playback' in l for l in seg) and shown >= 5.0 and errs == 0
-    print('%-34s video %5.1f s, %d decoding errors  %s' % (names[n], shown, errs, 'ok' if ok else 'FAILED'))
-    if not ok:
-        fails.append(names[n])
-if starts[2:3] and 'AllowVideoStreamCopy=false' not in log[starts[2]]:
-    fails.append('the resumed Xvid stream is not re-encoded')
-for l in log:
-    if l.startswith('[Library] error screen') or 'Can\'t play this video' in l:
-        fails.append(l)
-if fails:
-    print('playback: FAILED: ' + '; '.join(fails))
-    sys.exit(1)
-print('playback: OK')
-PY
+echo "== $NAME: $(sed -n '1s/^# //p' "$SC")"
+python3 "$T/scenario.py" check "$SC" "$P/log.txt"
 status=$?
+if [ -n "$DUMP" ]; then
+    python3 "$T/flicker.py" "$F" "$P/flicker" || status=1
+fi
 if [ $status -ne 0 ]; then
     echo "---- WiiFin log (no MPlayer status lines) ----"
     grep -v '^A: ' "$P/log.txt" | tail -80

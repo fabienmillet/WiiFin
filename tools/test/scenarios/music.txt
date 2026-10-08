@@ -1,0 +1,23 @@
+# The music player (needs a Music library: server.sh with MUSIC=<folder>):
+# a track of the library list starts the queue; the seek bar, the Up Next
+# panel, shuffle, then the idle screen.
+server http://127.0.0.1:18096
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12400 RIGHT      Singles
+12800 RIGHT      Songs (your music, after Singles)
+13000 A
+20000 A          the first track
+27000 UP         the seek bar
+28000 RIGHT      +10 s
+29000 DOWN       the controls
+30000 RIGHT      focus: next
+31000 1          Up Next
+33000 DOWN
+34000 DOWN
+35000 A          play the 4th track
+39000 B          close the panel
+40000 2          shuffle
+65000 A          wakes the idle screen
+68000 END

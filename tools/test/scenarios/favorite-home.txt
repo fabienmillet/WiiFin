@@ -1,0 +1,18 @@
+# The home rows follow a favourite (issue: only after reconnecting): Counter
+# Film made a favourite on its page from Continue Watching, B: the rows are
+# built again with it in My Favorites; then unmarked, and gone again.
+server http://127.0.0.1:18096
+cfg home_layout=1
+positions-reset
+position Counter 30
+6000  A          Connect To Jellyfin
+9500  A          the profile: the home rows
+14000 A          Counter Film, from Continue Watching
+17000 1          favourite
+19000 B          back to the home rows, built again
+23000 A          Counter Film again
+26000 1          not a favourite any more
+28000 B
+32000 END
+expect logorder "[Home] " "[Favorite] on: HTTP 20" "[Home] " "[Favorite] off: HTTP 20" "[Home] "
+expect logre "\[Home\] \d+ rows, [1-9]\d* favourite titles"

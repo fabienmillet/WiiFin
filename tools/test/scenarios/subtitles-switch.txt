@@ -1,0 +1,22 @@
+# Subtitle Film without subtitles, then its SRT track turned on and off in
+# the player: drawn by WiiFin over the same stream, no restart.
+server http://127.0.0.1:18096
+position Subtitle 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 DOWN       Subtitle Film
+15500 A
+17000 DOWN       subtitle row: on, as the server picks it
+17500 LEFT       Off
+18500 A          Play, no subtitles
+30000 2          the subtitle tracks
+31000 DOWN       the SRT one
+31500 A
+40000 2
+41000 UP         Off
+41500 A
+46000 END
+expect streams 1
+expect url 1 static=true
+expect log [Subtitles] track 2: HTTP 200

@@ -1,0 +1,22 @@
+# Leaving the music player with the background music off (music_enabled=0):
+# the menu music stays off, the interface sounds come back (a move).
+server http://127.0.0.1:18096
+cfg log_sounds=1
+cfg music_enabled=0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12400 RIGHT      Singles
+13000 A
+16500 A          Test Album (the Albums tab)
+19500 A          its first track
+26000 LEFT       previous
+26400 LEFT       shuffle
+26800 LEFT       the heart
+27200 A          favourite
+30000 A          not any more
+33000 B          back to the album
+34500 DOWN       a sound in the album
+36000 END
+expect logorder "[TOUR] t=33" "MusicBGM::reinitAudio" "[Sound] move"
+expect nolog MusicBGM::resume

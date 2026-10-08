@@ -1,0 +1,24 @@
+# "Play on... Nintendo Wii" from the server: from the home screen, Counter
+# Film starts; its volume set from the server shows in the server's
+# session; Subtitle Film asked for meanwhile replaces it; then stopped.
+# Then a track of Test Album (Singles), in the music player, stopped too.
+server http://127.0.0.1:18096
+position Counter 0
+position Subtitle 0
+remote "[Remote] connected" 3000 Play "Counter Film"
+remote "[vo] first picture" 3000 SetVolume Volume=40
+remote "[vo] first picture" 14000 ExpectVolume 40
+remote "[vo] first picture" 17000 Play "Subtitle Film"
+remote "[vo] first picture" 36000 Stop
+remote "[Remote] stop" 4000 Play "MP3 Track"
+remote "[Remote] play: 1 track(s)" 8000 Stop
+6000  A          Connect To Jellyfin
+9000  A          the profile
+80000 END
+expect streams 2
+expect logcount 2 [Remote] play: Movie
+expect logre '^\[Remote\] set volume$'
+expect log remote: volume 40 reported
+expect logre '^\[Remote\] stop$'
+expect log [Remote] play: 1 track(s)
+expect logcount 2 [Remote] stop

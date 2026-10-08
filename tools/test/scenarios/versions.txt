@@ -1,0 +1,29 @@
+# A film in two versions (ZB: Fullscreen with two audio tracks, the one
+# Jellyfin opens, and Widescreen with one): a Version row above Audio;
+# Right on it switches to Widescreen and its track; Play plays that file.
+server http://127.0.0.1:18096
+position ZB 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+13000 DOWN
+13300 DOWN
+13600 DOWN
+13900 DOWN
+14200 DOWN
+14500 DOWN
+14800 DOWN
+15100 DOWN
+15400 DOWN
+15700 DOWN
+16000 DOWN
+16300 DOWN
+16600 DOWN
+18000 A          ZB Two Versions
+21000 UP         the Version row
+21800 RIGHT      Widescreen
+23000 A          Play
+33000 B          stop
+36000 END
+expect logorder "[Detail] version Fullscreen: 2 audio" "[Detail] version Widescreen: 1 audio" "[Play] version Widescreen"
+expect streams 1

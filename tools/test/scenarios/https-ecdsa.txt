@@ -1,0 +1,15 @@
+# HTTPS with an ECDSA P-384 certificate signed in SHA-384, like the ECDSA
+# certificates of Let's Encrypt (Caddy's default): the handshake needs
+# SHA-384 in mbedTLS (issue 11), then Counter Film plays.
+server https://127.0.0.1:18444
+cfg ssl_verify=0
+position Counter 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 A          Counter Film
+18000 A          Play
+38000 END
+expect streams 1
+expect url 1 https://127.0.0.1:18444/
+expect nolog TLS handshake failed

@@ -1,0 +1,66 @@
+# Direct play, one file per container (make_media.sh formats): each plays
+# as it is (no transcode), with a +10 s seek made by MPlayer in the file.
+server http://127.0.0.1:18096
+position "Z1 AVI" 0
+position "Z2 MKV" 0
+position "Z3 MP4 Index First" 0
+position "Z4 MP4 Index Last" 0
+position "Z5 MPEG2" 0
+position "Z6 MPEG2" 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 DOWN
+15400 DOWN
+15800 DOWN       Z1
+17000 A          Z1 AVI
+20000 A          Play
+32000 RIGHT      +10 s, in the file
+38000 B          controls
+39000 B          stop
+43000 B          back to the list
+45000 DOWN
+47000 A          Z2 MKV
+50000 A          Play
+62000 RIGHT      +10 s, in the file
+68000 B          controls
+69000 B          stop
+73000 B          back to the list
+75000 DOWN
+77000 A          Z3 MP4 Index First
+80000 A          Play
+92000 RIGHT      +10 s, in the file
+98000 B          controls
+99000 B          stop
+103000 B          back to the list
+105000 DOWN
+107000 A          Z4 MP4 Index Last
+110000 A          Play
+122000 RIGHT      +10 s, in the file
+128000 B          controls
+129000 B          stop
+133000 B          back to the list
+135000 DOWN
+137000 A          Z5 MPEG2
+140000 A          Play
+152000 RIGHT      +10 s, in the file
+158000 B          controls
+159000 B          stop
+163000 B          back to the list
+165000 DOWN
+167000 A          Z6 MPEG2
+170000 A          Play
+182000 RIGHT      +10 s, in the file
+188000 B          controls
+189000 B          stop
+193000 B          back to the list
+197000 END
+expect streams 6
+expect url 1 static=true
+expect url 2 static=true
+expect url 3 static=true
+expect url 4 static=true
+expect url 5 static=true
+expect url 6 static=true
+expect nolog transcoding instead
+expect nolog Too heavy

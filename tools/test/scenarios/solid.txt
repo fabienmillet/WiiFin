@@ -1,0 +1,14 @@
+# Settings > Backgrounds: Solid (solid_colors=1, issue 22): every gradient
+# becomes one colour; the third settings page shows the row.
+server http://127.0.0.1:18096
+cfg solid_colors=1
+3000  DOWN
+4000  A          Settings
+6000  PLUS       page 2
+7000  PLUS       page 3: Screen Area, Backgrounds
+9000  B
+10000 UP
+11000 A          Connect To Jellyfin
+14000 A          the profile: the home screen in solid colours
+17000 END
+expect log [TOUR] t=

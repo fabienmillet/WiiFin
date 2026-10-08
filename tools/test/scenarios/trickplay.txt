@@ -1,0 +1,17 @@
+# Counter Film, whose trickplay thumbnails server.sh has Jellyfin make: three
+# +10 s presses show the target's thumbnail over the seek bar, then the
+# stream restarts there.
+server http://127.0.0.1:18096
+position Counter 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 A          Counter Film
+18000 A          Play
+30000 RIGHT
+30300 RIGHT
+30600 RIGHT      +30 s
+42000 END
+expect streams 2
+expect log [Trickplay] found
+expect log [Trickplay] tile 0: ok

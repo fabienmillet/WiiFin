@@ -10,7 +10,8 @@
 # seconds of the dump and writes the OSREPORT log.
 #
 # usage: tools/test/tour.sh "<script>" "<seconds>" [duration]
-#   script    { ms, buttons }, ...   ms since the first input read, e.g.
+#   script    { ms, buttons }, ...   ms since the first input read (or ""
+#             and the presses in sd:/apps/WiiFin/tour.txt, see playback.sh), e.g.
 #             "{ 6000, WPAD_BUTTON_A }, { 9000, WPAD_BUTTON_DOWN },"
 #             (WPAD_* bits, Input::BTN_ZOOM; a Classic Controller is reported)
 #   seconds   "5 10 20": frames of the dump to save as out/frames/t<s>.png
@@ -21,6 +22,7 @@
 #      FIRSTRUN=1  keep the first-launch questions (screen area)
 #      ASPECT43=1  4:3 console
 #      MARKER=1    white frame + Start sound 12 s in, audio dump: for measure_av.py
+#      (the scenario's POINTER / NOPOINTER presses show a pointer: [POINTER] lines)
 #      EXTRA_SED   shell command run in out/build before building
 #      REPO        source tree to build (default: this repository)
 #      NOPROFILE=1 no profile or settings built in: they come from wiifin.cfg
@@ -48,27 +50,91 @@ old = 'u32 wDown = WPAD_ButtonsDown(0);'
 assert old in s, 'Input::update changed: update tools/test/tour.sh'
 s = s.replace(old, 'u32 wDown = tourButtons(); classic = true;')
 s = s.replace('void Input::update() {', '''#include <ogc/system.h>
+#include <stdio.h>
+/* "POINTER" / "NOPOINTER" in a scenario: the pointer shows at a fixed spot
+ * (no press meanwhile); each screen must draw it (see the [POINTER] lines) */
+#define TOUR_POINTER_ON  0x04000000u
+#define TOUR_POINTER_OFF 0x02000000u
+void tourPointer(bool on);
+/* Presses: the built-in script, or sd:/apps/WiiFin/tour.txt when present
+ * ("<ms> <hex buttons>" per line, see playback.sh) */
 u32 tourButtons() {
     static u64 t0 = 0; if (!t0) t0 = ticks_to_millisecs(gettime());
     u64 t = ticks_to_millisecs(gettime()) - t0;
-    static const struct { u64 at; u32 btn; } sc[] = { %s { 0xFFFFFFFFull, 0 } };
-    static int i = 0;
-    if (t >= sc[i].at) { SYS_Report("[TOUR] t=%%llu press %%x\\n", t, sc[i].btn); return sc[i++].btn; }
+    static struct { u64 at; u32 btn; } sc[256] = { %s { 0xFFFFFFFFull, 0 } };
+    static int i = -1;
+    if (i < 0) {
+        i = 0;
+        if (FILE* f = fopen("sd:/apps/WiiFin/tour.txt", "r")) {
+            int n = 0; unsigned long long at; unsigned b;
+            while (n < 255 && fscanf(f, "%%llu %%x", &at, &b) == 2) { sc[n].at = at; sc[n].btn = b; n++; }
+            sc[n].at = 0xFFFFFFFFull; sc[n].btn = 0;
+            fclose(f);
+            SYS_Report("[TOUR] %%d presses from tour.txt\\n", n);
+        }
+    }
+    if (t >= sc[i].at) {
+        u32 b = sc[i++].btn;
+        SYS_Report("[TOUR] t=%%llu press %%x\\n", t, b);
+        if (b & TOUR_POINTER_ON)  tourPointer(true);
+        if (b & TOUR_POINTER_OFF) tourPointer(false);
+        return b & ~(TOUR_POINTER_ON | TOUR_POINTER_OFF);
+    }
     return 0;
 }
 void Input::update() {''' % e['SCRIPT'], 1)
 s += '''
-/* no pointer */
-extern "C" s32 __real_WPAD_IR(int chan, struct ir_t* ir);
-extern "C" s32 __wrap_WPAD_IR(int chan, struct ir_t* ir) { s32 r = __real_WPAD_IR(chan, ir); ir->valid = 0; return r; }
-'''
-if e.get('MARKER'):
-    s += '''
-/* A/V marker: one white frame and the Start sound together, 12 s in */
+/* The pointer: none, except when the scenario turns it on.  Frames drawn
+ * while it is on are counted, with and without the pointer sprite. */
 #include <grrlib.h>
 #include "../core/SoundFX.h"
-extern "C" void __real_GRRLIB_Render(void);
-extern "C" void __wrap_GRRLIB_Render(void) {
+extern "C" { GRRLIB_texImg* g_tour_cursor = nullptr; }
+static volatile bool s_pointer = false;
+static int s_frames = 0, s_withCursor = 0;
+static bool s_cursorDrawn = false;
+void tourPointer(bool on) {
+    if (!on && s_pointer)
+        SYS_Report("[POINTER] %%d frames, pointer drawn on %%d\\n", s_frames, s_withCursor);
+    s_pointer = on; s_frames = s_withCursor = 0;
+}
+extern "C" s32 __real_WPAD_IR(int chan, struct ir_t* ir);
+extern "C" s32 __wrap_WPAD_IR(int chan, struct ir_t* ir) {
+    s32 r = __real_WPAD_IR(chan, ir);
+    ir->valid = s_pointer ? 1 : 0;
+    if (s_pointer) { ir->x = 636; ir->y = 300; ir->sx = 636; ir->sy = 300; ir->angle = 0; }
+    return r;
+}
+extern "C" void __real_GRRLIB_DrawImg(const f32 x, const f32 y, const GRRLIB_texImg* tex, const f32 deg,
+                                      const f32 sx, const f32 sy, const u32 color);
+extern "C" void __wrap_GRRLIB_DrawImg(const f32 x, const f32 y, const GRRLIB_texImg* tex, const f32 deg,
+                                      const f32 sx, const f32 sy, const u32 color) {
+    if (tex && tex == g_tour_cursor) s_cursorDrawn = true;
+    __real_GRRLIB_DrawImg(x, y, tex, deg, sx, sy, color);
+}
+/* each frame, just before GRRLIB_Render (source/core/RenderHook.cpp) */
+extern "C" void (*g_wiifin_before_render)(void);
+static void tourBeforeRender(void) {
+    if (s_pointer) { s_frames++; if (s_cursorDrawn) s_withCursor++; }
+    s_cursorDrawn = false;
+    /* frame pacing, every 5 s: the time between two frames (16.7 ms when
+     * each one makes its vsync), and the frames that missed it */
+    static u64 last = 0, from = 0, worst = 0;
+    static int n = 0, late = 0;
+    u64 now = gettime();
+    if (last) {
+        u64 d = now - last;
+        n++; if (d > worst) worst = d;
+        if (ticks_to_microsecs(d) > 20000) late++;
+        if (ticks_to_millisecs(now - from) >= 5000) {
+            SYS_Report("[FRAMES] %%d frames in %%llu ms, %%d late, worst %%llu ms\\n", n,
+                       ticks_to_millisecs(now - from), late, ticks_to_millisecs(worst));
+            n = late = 0; worst = 0; from = now;
+        }
+    } else from = now;
+    last = now;
+%s}
+static struct TourHook { TourHook() { g_wiifin_before_render = tourBeforeRender; } } s_tourHook;
+''' % ('''    /* A/V marker: one white frame and the Start sound together, 12 s in */
     static u64 t0 = 0; if (!t0) t0 = ticks_to_millisecs(gettime());
     static int done = 0;
     u64 t = ticks_to_millisecs(gettime()) - t0;
@@ -78,18 +144,19 @@ extern "C" void __wrap_GRRLIB_Render(void) {
         SoundFX::play(SoundFX::FX::Start);
         SYS_Report("[MARK] t=%llu\\n", t);
     }
-    __real_GRRLIB_Render();
-}
-'''
+''' if e.get('MARKER') else '')
 open(p, 'w').write(s)
 
 p = 'Makefile'; s = open(p).read()
 old = 'LDFLAGS     := -g $(MACHDEP)'
 assert old in s, 'Makefile LDFLAGS changed: update tools/test/tour.sh'
-s = s.replace(old, old + ' -Wl,--wrap=WPAD_IR' + (' -Wl,--wrap=GRRLIB_Render' if e.get('MARKER') else ''), 1)
+s = s.replace(old, old + ' -Wl,--wrap=WPAD_IR -Wl,--wrap=GRRLIB_DrawImg', 1)   # GRRLIB_Render: g_wiifin_before_render
 open(p, 'w').write(s)
 
 p = 'source/core/App.cpp'; s = open(p).read()
+cur = '    cursorPointerTex    = GRRLIB_LoadTexture(data_cursors_PointerP1_64_png);\n'
+assert cur in s, 'cursor texture load changed: update tools/test/tour.sh'
+s = s.replace(cur, cur + '    { extern GRRLIB_texImg* g_tour_cursor; g_tour_cursor = cursorPointerTex; }\n', 1)
 old = '    loadSettings();\n'
 if e.get('NOPROFILE'):
     old = None   # profile and settings come from wiifin.cfg

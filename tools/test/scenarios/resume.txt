@@ -1,0 +1,23 @@
+# Counter Film (720p h264: transcoded) from the start, a +10 s seek
+# restarting the stream, then Xvid Film resumed at 0:45: played as it is,
+# MPlayer seeking in the file (resume-transcode: the same, transcoded).
+server http://127.0.0.1:18096
+position Counter 0
+position Xvid 45
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 A          Counter Film
+18000 A          Play
+30000 RIGHT      +10 s
+44000 B          controls
+45000 B          stop
+49000 B          back to the list
+51000 DOWN
+51500 DOWN       Xvid Film
+52000 A
+55000 A          Play: resume prompt
+57000 A          Continue
+74000 END
+expect streams 3
+expect url 3 static=true

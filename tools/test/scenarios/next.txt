@@ -1,0 +1,16 @@
+# An episode played to its end goes on with the next one by itself
+# (Shuffle Show episodes last 20 s).
+server http://127.0.0.1:18096
+position "Shuffle Show S01E01" 0
+position "Shuffle Show S01E02" 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT      Shows
+12500 A
+15000 A          Shuffle Show
+18000 A          Season 1
+21000 A          S01E01
+24000 A          Play
+62000 END
+expect streams 2
+expect log episode finished, playing the next one

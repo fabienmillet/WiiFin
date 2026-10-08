@@ -1,0 +1,22 @@
+# Media segments (server.sh's port 18081 gives every item an intro at
+# 2-9 s and credits at 12-20 s): "Skip intro" during the intro jumps to
+# its end, then "Next episode" during the credits starts the next one.
+server http://127.0.0.1:18081
+position "Shuffle Show S01E01" 0
+position "Shuffle Show S01E02" 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT      Shows
+12500 A
+15000 A          Shuffle Show
+18000 A          Season 1
+21000 A          S01E01
+24000 A          Play
+31000 A          Skip intro
+35500 A          Next episode (the credits)
+50000 END
+expect streams 2
+expect log [Segments] 2 to skip
+expect log [Segments] Skip intro: to 9.3 s
+expect nolog episode finished
+expect log next episode: 2 of 10

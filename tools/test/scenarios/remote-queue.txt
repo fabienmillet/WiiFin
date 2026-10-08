@@ -1,0 +1,16 @@
+# "Play next" / "Add to queue" from the server: Add to queue with nothing
+# playing plays at once (MP3 Track); then WAV Track added to the queue and
+# AAC Track to play next: after the MP3, the AAC, then the WAV.
+server http://127.0.0.1:18096
+remote "[Remote] connected" 3000 PlayLast "MP3 Track"
+remote "[Remote] play: 1 track(s)" 2000 PlayLast "WAV Track"
+remote "[Remote] play: 1 track(s)" 3500 PlayNext "AAC Track"
+remote "[Remote] play: 1 track(s)" 6000 NextTrack
+remote "pcm_s16le" 3000 Stop
+6000  A          Connect To Jellyfin
+9000  A          the profile
+60000 END
+expect log [Music] 1 track(s) added to the queue
+expect log [Music] 1 track(s) to play next
+expect logorder "AudioPlaybackInfo] mp3" "transcoded to MP3, ContainerNotSupported" "AudioPlaybackInfo] wav"
+expect logre '^\[Remote\] stop$'

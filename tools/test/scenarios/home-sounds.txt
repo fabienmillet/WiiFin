@@ -1,0 +1,10 @@
+# The HOME menu with the background music off (music_enabled=0): its own
+# sounds play, and the interface sounds still do once it is closed.
+server http://127.0.0.1:18096
+cfg log_sounds=1
+cfg music_enabled=0
+3000  HOME       the HOME menu
+5000  B          closed
+6500  DOWN       a sound in the main menu
+8000  END
+expect logorder "[Sound] menu_enter" "[Sound] move"

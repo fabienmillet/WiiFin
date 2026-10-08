@@ -1,0 +1,29 @@
+# ZA: a Korean and Chinese title, and subtitles in both, drawn with the SD
+# card's font (data/fonts/cjk, in apps/WiiFin/fonts/ as the Homebrew Channel
+# package has it): not one character missing ([Text] no glyph).
+server http://127.0.0.1:18096
+sdfile data/fonts/cjk/NotoSansCJK-WiiFin.otf fonts/NotoSansCJK-WiiFin.otf
+position "ZA" 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 RIGHT
+15600 RIGHT
+16200 RIGHT      Z1
+16800 DOWN
+17200 DOWN
+17600 DOWN
+18000 DOWN
+18400 DOWN
+18800 DOWN
+19200 DOWN
+19600 DOWN
+20000 DOWN       ZA
+21500 A          its page
+26000 A          Play
+50000 END
+expect streams 1
+expect log [Text] fonts/NotoSansCJK-WiiFin.otf
+expect logre '\[Subtitles\] track \d+: HTTP 200'
+expect nolog [Text] no glyph
+expect log [Text] fallback font 2 drew

@@ -1,0 +1,21 @@
+# The music library's tabs, as Jellyfin's, on Singles (Test Album): Albums
+# (the album), Suggestions, Artists (its artist), Playlists (none), Songs
+# (its five tracks); each its own list.
+server http://127.0.0.1:18096
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12400 RIGHT      Singles
+13000 A          Albums
+17000 PLUS       Suggestions
+20000 PLUS       Artists
+23000 PLUS       Playlists
+26000 PLUS       Songs
+29000 A          a track: the music player
+34000 B
+37000 END
+expect log [Library] music tab Albums: 1
+expect log [Library] music tab Artists: 1
+expect log [Library] music tab Playlists: 0
+expect log [Library] music tab Songs: 5
+expect log [AudioPlaybackInfo] mp3

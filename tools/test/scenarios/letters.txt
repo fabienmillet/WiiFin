@@ -1,0 +1,15 @@
+# Music library list: Right jumps to the next letter, again and again.
+server http://127.0.0.1:18096
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12400 RIGHT      Singles
+12800 RIGHT      Songs (your music, after Singles)
+13000 A
+20000 RIGHT
+21500 RIGHT
+23000 RIGHT
+24500 RIGHT
+26000 RIGHT
+27500 LEFT
+30000 END

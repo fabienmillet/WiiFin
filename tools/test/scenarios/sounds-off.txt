@@ -1,0 +1,16 @@
+# Settings > Interface Sounds OFF (ui_sounds=0): not a sound in the menus.
+server http://127.0.0.1:18096
+cfg log_sounds=1
+cfg ui_sounds=0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT      Shows
+12500 LEFT       Movies
+13000 A
+16000 DOWN
+17000 B
+19000 PLUS       Activity
+20500 MINUS      Libraries
+22000 END
+expect streams 0
+expect nolog [Sound]

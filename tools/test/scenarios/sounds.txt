@@ -1,0 +1,36 @@
+# The interface sounds (log_sounds=1 logs each one): moving, opening,
+# going back, turning pages, playing; move.wav and bgm.mp3 put in sounds/
+# on the SD card replace the built-in ones.
+server http://127.0.0.1:18096
+cfg log_sounds=1
+cfg music_enabled=1
+position Subtitle 0
+sound move.wav
+sound bgm.mp3
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT      Shows: move
+12500 LEFT       Movies: move
+13000 A          Movies: open
+16000 DOWN       Subtitle Film: move
+17000 A          its page: open
+20000 B          back to the list
+22000 A          its page again
+25000 A          Play
+38000 B          controls
+39000 B          stop
+43000 B          back to the list
+45000 B          back to the home
+47000 PLUS       Activity: page
+48500 MINUS      Libraries: page
+50000 END
+expect streams 1
+expect log [Sound] move.wav from the SD card
+expect log [Sound] bgm.mp3 from the SD card
+# the music loop plays it again and again (3 s): its length, not the 1.1 MB built-in one
+expect logre 'musicLoop: PlayBuffer buf=\S+ len=[1-9]\d{4}$'
+expect logre '^\[Sound\] move$'
+expect logre '^\[Sound\] open$'
+expect logre '^\[Sound\] back$'
+expect logre '^\[Sound\] page$'
+expect logre '^\[Sound\] play$'

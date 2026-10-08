@@ -1,0 +1,26 @@
+# The server's remote control (the dashboard's buttons): Counter Film
+# paused, played again, a message over it, then stopped from the server;
+# back in the menus a message shows there too, and a pause has nothing to
+# pause.  scenario.py sends the commands through the server's API.
+server http://127.0.0.1:18096
+position Counter 0
+remote "[vo] first picture" 3000 Pause
+remote "[vo] first picture" 6000 Unpause
+remote "[vo] first picture" 8000 Message "From the dashboard" "Hello Wii! A message over the video."
+remote "[vo] first picture" 14000 Stop
+remote "[Remote] stop" 4000 Message "Again" "And over the menus."
+remote "[Remote] stop" 6000 Pause
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 A          Counter Film
+18000 A          Play
+48000 END
+expect streams 1
+expect log [Remote] capabilities: HTTP 204
+expect log [Remote] connected
+expect logre '^\[Remote\] pause$'
+expect logre '^\[Remote\] unpause$'
+expect logre '^\[Remote\] stop$'
+expect logcount 2 [Remote] message (
+expect log [Remote] pause: nothing playing

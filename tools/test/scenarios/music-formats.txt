@@ -1,0 +1,21 @@
+# The music player on Test Album (make_media.sh music: server.sh's
+# "Singles" library): its five tracks of 12 s going on
+# one after the other by themselves; MP3, FLAC and WAV played as they are,
+# the 96 kHz FLAC and the AAC transcoded to MP3, each for its reason.
+server http://127.0.0.1:18096
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12400 RIGHT      Singles
+13000 A
+16500 A          Test Album (the Albums tab)
+19500 A          its first track
+95000 B          back to the library
+99000 END
+expect logre AudioPlaybackInfo\] mp3 mp3 .*: sent as it is
+expect logre AudioPlaybackInfo\] flac flac .* 44100 Hz .*: sent as it is
+expect logre AudioPlaybackInfo\] wav pcm_s16le .*: sent as it is
+expect logre AudioPlaybackInfo\] flac flac .* 96000 Hz .*AudioSampleRateNotSupported
+expect logre AudioPlaybackInfo\] .*aac .*transcoded to MP3, ContainerNotSupported
+expect logcount 5 Starting playback
+expect nolog response over

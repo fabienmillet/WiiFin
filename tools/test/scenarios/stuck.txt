@@ -1,0 +1,19 @@
+# A picture stuck while the data comes in (test_freeze_at: past 5 s the
+# watchdog sees the position stand still, as with a stream MPlayer cannot
+# show): WiiFin tries once more at a lower quality, then says what
+# happens instead of blaming the connection.
+server http://127.0.0.1:18096
+cfg direct_play=0
+cfg test_freeze_at=5
+position Counter 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 A          Counter Film
+18000 A          Play
+95000 END
+expect advance 0
+expect streams 2
+expect logre no progress for 20 s: .*the picture is stuck
+expect log [runPlay] picture stuck: again
+expect log "giving up: The video comes in, but the Wii can't show it"

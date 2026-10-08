@@ -1,0 +1,38 @@
+# Frame pacing while browsing ([FRAMES] lines of the test build), with the
+# background music on: compare with music_enabled=0 (issue 23).
+server http://127.0.0.1:18096
+cfg music_enabled=1
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+14000 DOWN
+14300 DOWN
+14600 DOWN
+14900 DOWN
+15200 DOWN
+15500 DOWN
+15800 DOWN
+16100 DOWN
+16400 DOWN
+16700 DOWN
+17000 UP
+17300 UP
+17600 UP
+17900 UP
+18200 UP
+18500 UP
+19000 B
+20000 RIGHT
+20500 A          Shows
+23000 A
+26000 A
+27000 DOWN
+27400 DOWN
+27800 DOWN
+28200 UP
+28600 UP
+29000 B
+30000 B
+31000 B
+33000 END
+expect log [FRAMES]

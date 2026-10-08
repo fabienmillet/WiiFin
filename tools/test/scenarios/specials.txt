@@ -1,0 +1,20 @@
+# Special features: on Counter Film's page, 2 lists its trailer and its
+# featurette (make_media.sh: trailers/, featurettes/); the featurette's page,
+# then it plays; B back to the list, then to the film's page.
+server http://127.0.0.1:18096
+position Counter 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 A          Counter Film
+18000 2          Special Features
+21000 DOWN       the featurette
+21500 A          its page
+24500 A          Play
+36000 B          controls
+37000 B          stop
+40000 B          back to the special features
+42000 B          back to the film page
+45000 END
+expect streams 1
+expect log [Specials] 2 video(s) of 2 kind(s)

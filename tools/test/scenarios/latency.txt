@@ -1,0 +1,15 @@
+# Pause, resume and seeks on Counter Film, for latency.py (no CI check).
+server http://127.0.0.1:18096
+position Counter 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 A          Counter Film
+18000 A          Play
+32000 A          pause
+36000 A          resume
+44000 RIGHT      +10 s
+60000 LEFT       -10 s
+76000 RIGHT      +10 s
+92000 END
+expect streams 4

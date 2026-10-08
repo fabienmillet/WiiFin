@@ -1,0 +1,25 @@
+# Z8 MKV Big Subtitles: a 730 KB SRT track (an anime's ASS once Jellyfin
+# makes it SRT), past the 256 KB response buffer: fetched whole, drawn.
+server http://127.0.0.1:18096
+position "Z8" 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 DOWN
+15400 DOWN
+15800 DOWN
+16200 DOWN
+16600 DOWN
+17000 DOWN
+17400 DOWN
+17800 DOWN
+18200 DOWN
+18600 DOWN
+19500 A          Z8 MKV Big Subtitles
+24000 A          Play
+45000 END
+expect streams 1
+expect url 1 static=true
+expect log [Subtitles] track 2: HTTP 200
+expect nolog response over
+expect nolog burning it in

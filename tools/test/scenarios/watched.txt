@@ -1,0 +1,25 @@
+# Watched / not watched with +: on the page of Counter Film, then on the
+# first row of Shuffle Show's episode list; its page then shows it
+# watched, and the zoom button (a GameCube's Z) there unmarks it again.
+server http://127.0.0.1:18096
+position Counter 0
+position "Shuffle Show S01E01" 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 A          Counter Film
+18000 PLUS       watched
+20000 PLUS       not watched any more
+22000 B          back to the list
+24000 B          home
+26000 RIGHT      Shows
+26500 A
+29000 A          Shuffle Show
+32000 A          Season 1
+35000 PLUS       S01E01 watched, from the list
+37000 A          its page
+40000 ZL         not watched any more, with the zoom button (GameCube Z)
+42000 B
+44000 END
+expect logorder "[Played] on: HTTP 20" "[Played] off: HTTP 20" "[Played] on: HTTP 20" "[Played] off: HTTP 20"
+expect logcount 4 "[Played] "

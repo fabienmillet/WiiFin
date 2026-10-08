@@ -3,14 +3,16 @@
 
 # dolphin_setup <user folder>: a fresh Dolphin user folder logging OSREPORT
 # (WiiFin's log) to <user folder>/Logs/dolphin.log, with no GameCube pad (an
-# emulated one sends phantom START presses).  Dolphin.ini lines can follow
-# on stdin.
+# emulated one sends phantom START presses), and silent: no sound on the
+# speakers of whoever runs the tests (SOUND=1 keeps it).  Dolphin.ini lines
+# can follow on stdin.
 dolphin_setup() {
     rm -rf "$1"; mkdir -p "$1/Config"
     printf '[Options]\nVerbosity = 3\nWriteToConsole = False\nWriteToFile = True\n[Logs]\nOSREPORT = True\n' \
         > "$1/Config/Logger.ini"
     { printf '[Core]\nSIDevice0 = 0\nWiimoteContinuousScanning = False\n'
       printf '[Analytics]\nEnabled = False\nPermissionAsked = True\n'
+      [ "$SOUND" = 1 ] || printf '[DSP]\nBackend = No Audio Output\n'
       [ -t 0 ] || cat; } > "$1/Config/Dolphin.ini"
 }
 

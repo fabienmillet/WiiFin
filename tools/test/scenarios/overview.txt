@@ -1,0 +1,17 @@
+# A synopsis too long for the page: "- Read more" under its five lines,
+# - opens all of it in a panel, Up / Down scroll it, B closes it.
+server http://127.0.0.1:18096
+position Subtitle 0
+overview Subtitle "A retired lighthouse keeper on a storm-battered island finds a waterlogged diary that describes, day by day, a voyage that has not happened yet. Each entry matches the weather of the following morning, and the last pages end with a shipwreck on his own rocks.\nHe sets out to warn the crew of every boat that passes, but nobody believes an old man with a soaked notebook, and the harbour master threatens to take his light away. Only a young radio operator, stranded on the island by the same storm, agrees to help him decode the diary's strange coordinates.\nTogether they race against the tide, the gossip of the village and their own doubts, while the diary keeps writing itself a little further every night, closer and closer to the moment it describes.\nA quiet, windswept mystery about fate, stubbornness and the people who listen when nobody else will, shot on the cliffs of the Atlantic coast over three winters."
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+14000 DOWN       Subtitle Film
+15000 A          its page
+18000 MINUS      the whole synopsis
+19500 DOWN
+20000 DOWN
+20500 DOWN
+21500 B          closed
+23000 END
+expect logre "\[Detail\] the whole overview: (1[4-9]|[2-9]\d) lines"

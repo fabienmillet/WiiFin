@@ -1,0 +1,15 @@
+# Seasons as posters (Library View: Posters, library_view=0): Shuffle
+# Show's seasons in a grid, with their posters (or the series' one);
+# Right moves to the next season, A opens its episodes.
+server http://127.0.0.1:18096
+cfg library_view=0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT      Shows
+12500 A
+15000 A          Shuffle Show: its seasons
+18000 RIGHT      Season 2
+19000 A          its episodes
+22000 END
+expect logre "\[Seasons\] 2 seasons, \d+ posters? of their own"
+expect logre "\[Episodes\] \d+ in season 2"

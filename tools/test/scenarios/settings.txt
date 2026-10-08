@@ -1,0 +1,43 @@
+# Every setting changed once from the Settings screen (A on each row): the
+# line WiiFin logs on leaving shows each one changed; the music stops at
+# once and the interface sounds go on without it; then sounds off.
+server http://127.0.0.1:18096
+cfg log_sounds=1
+cfg music_enabled=1
+cfg ui_sounds=1
+cfg clock_12h=0
+3000  DOWN
+4000  A          Settings
+5000  A          SSL Verification off
+5800  DOWN
+6300  A          Background Music off, at once
+7300  DOWN       a sound without the music
+8000  A          Interface Sounds off
+8800  DOWN
+9300  A          Video Quality: High
+9800  DOWN
+10300 A          Direct Play off
+10800 DOWN
+11300 A          Smooth Motion off
+11800 DOWN
+12300 A          Theme: Flix (home in rows)
+12800 DOWN
+13300 A          Home Screen: grid
+13800 DOWN
+14300 A          Library View: Posters
+14800 DOWN
+15300 A          Disc Slot Light off
+15800 DOWN
+16300 A          Screen Area: the calibration
+17300 RIGHT      1 px from the left
+18000 B          done
+19000 DOWN
+19500 A          Backgrounds: solid
+20000 DOWN
+20500 A          Clock: 12-hour
+21500 B          leave
+23000 END
+expect logorder "musicLoop: exiting" "[Sound] move"
+expect nologafter "musicLoop: exiting" "ASND_End"
+expect nologafter "[TOUR] t=8" "[Sound]"
+expect log [Settings] ssl 0, music 0, sounds 0, quality High, direct 0, smooth 0, theme Flix, home grid, view 0, light 0, area 1,0,0,0, solid 1, clock 12h

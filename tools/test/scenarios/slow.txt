@@ -1,0 +1,16 @@
+# Counter Film through the throttled proxy (server.sh 300k: 2.4 Mb/s): the
+# link test must cap the quality to Low (1.5 Mb/s), which then plays
+# without rebuffering.
+server http://127.0.0.1:18080
+position Counter 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 A          Counter Film
+18000 A          Play
+50000 END
+expect streams 1
+expect advance 15
+expect url 1 VideoBitrate=1500000
+expect log quality up to Low
+expect nolog [rebuf]

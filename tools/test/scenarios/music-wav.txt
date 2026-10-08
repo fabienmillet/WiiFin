@@ -1,0 +1,19 @@
+# A WAV track of the Music library (server.sh MUSIC=...): played as it is
+# (24-bit, 44.1 kHz stereo: MPlayer reads WAV), and reported as DirectPlay.
+server http://127.0.0.1:18096
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12400 RIGHT      Singles
+12800 RIGHT      Songs (your music, after Singles)
+13000 A
+20000 RIGHT      letter A
+21500 UP
+21900 UP
+22300 UP
+22700 UP
+23100 UP
+23500 UP         4URA - Your Highness (WAV)
+24500 A
+48000 END
+expect log sent as it is

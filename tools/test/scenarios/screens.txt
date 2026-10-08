@@ -1,0 +1,91 @@
+# Every screen, with the D-pad alone: each one must draw the pointer when
+# there is one (POINTER .. NOPOINTER), and none may flash (DUMP=1).
+server http://127.0.0.1:18096
+cfg home_layout=1
+cfg log_sounds=1
+position Counter 0
+position Xvid 0
+position "Shuffle Show S01E01" 0
+3000  POINTER    main menu
+4500  NOPOINTER
+6000  A          Connect To Jellyfin
+7500  POINTER    profiles
+8500  NOPOINTER
+9500  A          the profile
+13000 POINTER    home (rows)
+14500 NOPOINTER
+15500 PLUS       browse page
+17000 POINTER    browse page
+18000 NOPOINTER
+19000 A          Movies
+22000 POINTER    library list
+23000 NOPOINTER
+24000 A          Counter Film
+27000 POINTER    detail page
+28000 NOPOINTER
+29000 B
+31000 B          back to the browse page
+32000 RIGHT      Shows
+33000 A
+36000 POINTER    series list
+37000 NOPOINTER
+38000 A          Shuffle Show
+41000 POINTER    seasons
+42000 NOPOINTER
+43000 A          Season 1
+46000 POINTER    episodes
+47000 NOPOINTER
+48000 B
+49500 B
+51000 B
+52500 B          back to the home rows
+54000 1          search
+55500 POINTER    search keyboard
+56500 NOPOINTER
+57500 A          a letter
+58500 PLUS       search
+61000 POINTER    search results
+62000 NOPOINTER
+63000 B
+64000 B
+65000 B
+67000 HOME
+68500 POINTER    HOME menu
+69500 NOPOINTER
+70500 B
+72000 A          the first movie
+75000 A          Play
+82000 A          pause: the controls stay
+83000 POINTER    player (paused)
+84000 NOPOINTER
+85000 A          resume, controls shown for 5 s
+86000 B          stop
+88000 B          back to the home rows (B does not leave them)
+89500 UP         the header
+90000 RIGHT      the profile button
+90500 A          profiles
+92000 B          main menu
+93500 DOWN
+94500 A          Settings
+96000 POINTER    settings
+97000 NOPOINTER
+98000 RIGHT      next page
+99000 POINTER    settings, page 2
+100000 NOPOINTER
+101000 PLUS      next page, with +
+102000 POINTER   settings, page 3
+103000 NOPOINTER
+104000 B
+105500 UP
+106500 A         profiles
+108000 DOWN      Add New Profile
+109000 A
+111000 POINTER   connect screen
+112000 NOPOINTER
+113000 B
+115000 END
+# the rows home and the settings have their sounds too
+expect logre '^\[Sound\] move$'
+expect logre '^\[Sound\] open$'
+expect logre '^\[Sound\] back$'
+expect logre '^\[Sound\] page$'
