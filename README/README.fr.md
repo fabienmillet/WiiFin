@@ -52,9 +52,9 @@ Il parcourt et lit vos films, séries et musiques sur la console elle-même. Il 
 - Bibliothèques de films, séries et musique en affiches ou en listes (avec la pochette du titre sélectionné) ; sauts **A-Z** avec gauche / droite
 - **Tri et filtre** d'une bibliothèque de films ou de séries (touche 2) : par nom, année, note ou date d'ajout ; un genre ; tout, non vus, vus ou favoris
 - **Recherche** (touche 1 sur l'accueil)
-- **Fiche détaillée** : synopsis, classification, genres, distribution, pistes audio et sous-titres (celles que le serveur choisit pour vous au départ : votre mode de sous-titres et vos langues, les pistes par défaut et forcées du fichier), plusieurs **versions** d'un film, **favoris** (touche 1, aussi sur une série), **vu / non vu** (+, aussi sur une ligne de la liste des épisodes)
+- **Fiche détaillée** : synopsis (en entier avec − quand la fiche le coupe), classification, genres, distribution, pistes audio et sous-titres (celles que le serveur choisit pour vous au départ : votre mode de sous-titres et vos langues, les pistes par défaut et forcées du fichier), plusieurs **versions** d'un film, **favoris** (touche 1, aussi sur une série), **vu / non vu** (+, aussi sur une ligne de la liste des épisodes)
 - **Bonus** : bandes-annonces, featurettes, coulisses… d'un film (touche 2 sur sa fiche) ou d'une série (après ses saisons)
-- **Séries** : saisons et épisodes, **lecture aléatoire** (touche 2), épisode suivant / précédent d'une saison à l'autre
+- **Séries** : saisons (en affiches, ou en liste avec l'affiche de la saison) et épisodes, **lecture aléatoire** (touche 2), épisode suivant / précédent d'une saison à l'autre
 - Titres et sous-titres en **japonais, chinois et coréen** : le japonais est intégré, le chinois et le coréen passent par la police de `apps/WiiFin/fonts/` (fournie dans le paquet pour la Chaîne Homebrew)
 
 **Vidéo**
@@ -87,13 +87,13 @@ Le pointeur est facultatif : tous les écrans se pilotent à la croix.
 |---|---|---|---|
 | A / B | A / B | A / B | Valider / Retour |
 | Croix | Croix ou stick gauche | Croix ou stick | Se déplacer (maintenir pour répéter) ; gauche / droite : A-Z dans les listes, −10 / +10 s dans le lecteur |
-| − / + | − / + ou L / R | L / R | Onglets, pages, épisode ou morceau précédent / suivant ; + : vu / non vu (un film, un épisode) |
+| − / + | − / + ou L / R | L / R | Onglets, pages, épisode ou morceau précédent / suivant ; + : vu / non vu (un film, un épisode) ; − : le synopsis en entier (une fiche) |
 | 1 | Y | Y | Recherche (accueil), favori (un film, une série), piste audio (lecteur), file d'attente (musique) |
 | 2 | X | X | Tri et filtre (listes), bonus (un film), lecture aléatoire (séries, musique), sous-titres (lecteur) |
 | HOME | HOME | START | Menu HOME |
 | pointeur | ZL / ZR | Z | Zoom de la vidéo (ajusté / plein écran) ; dans les menus, ce que fait + seul : vu / non vu, la page Browse, Entrée du clavier |
 
-Les aides à l'écran montrent les touches de la dernière manette utilisée (GameCube : A vert, B rouge, L / R, START).
+Les aides à l'écran montrent les touches de la dernière manette utilisée (GameCube : A vert, B rouge, L / R, Z, START).
 
 ### ⚙️ Paramètres
 

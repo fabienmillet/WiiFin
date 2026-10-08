@@ -52,9 +52,9 @@ Explora y reproduce tus películas, series y música en la propia consola. Está
 - Bibliotecas de películas, series y música en carteles o en listas (con la portada del título seleccionado); saltos **A-Z** con izquierda / derecha
 - **Ordenar y filtrar** una biblioteca de películas o series (botón 2): por nombre, año, valoración o fecha de adición; un género; todo, no vistos, vistos o favoritos
 - **Búsqueda** (botón 1 en el inicio)
-- **Ficha de detalles**: sinopsis, clasificación, géneros, reparto, pistas de audio y subtítulos (al principio las que el servidor elige para ti: tu modo de subtítulos y tus idiomas, las pistas predeterminadas y forzadas del archivo), varias **versiones** de una película, **favoritos** (botón 1, también en una serie), **visto / no visto** (+, también en una fila de la lista de episodios)
+- **Ficha de detalles**: sinopsis (completa con − cuando la ficha la corta), clasificación, géneros, reparto, pistas de audio y subtítulos (al principio las que el servidor elige para ti: tu modo de subtítulos y tus idiomas, las pistas predeterminadas y forzadas del archivo), varias **versiones** de una película, **favoritos** (botón 1, también en una serie), **visto / no visto** (+, también en una fila de la lista de episodios)
 - **Contenido extra**: tráileres, featurettes, detrás de las cámaras… de una película (botón 2 en su ficha) o de una serie (tras sus temporadas)
-- **Series**: temporadas y episodios, **aleatorio** (botón 2), episodio siguiente / anterior entre temporadas
+- **Series**: temporadas (como carteles, o en lista con la portada de la temporada) y episodios, **aleatorio** (botón 2), episodio siguiente / anterior entre temporadas
 - Títulos y subtítulos en **japonés, chino y coreano**: el japonés viene integrado; el chino y el coreano, con la fuente de `apps/WiiFin/fonts/` (incluida en el paquete para el Homebrew Channel)
 
 **Vídeo**
@@ -87,13 +87,13 @@ El puntero es opcional: todas las pantallas funcionan con la cruceta.
 |---|---|---|---|
 | A / B | A / B | A / B | Seleccionar / Volver |
 | Cruceta | Cruceta o stick izquierdo | Cruceta o stick | Moverse (mantener para repetir); izquierda / derecha: A-Z en listas, −10 / +10 s en el reproductor |
-| − / + | − / + o L / R | L / R | Pestañas, páginas, episodio o canción anterior / siguiente; + : visto / no visto (una película, un episodio) |
+| − / + | − / + o L / R | L / R | Pestañas, páginas, episodio o canción anterior / siguiente; + : visto / no visto (una película, un episodio); − : la sinopsis completa (una ficha) |
 | 1 | Y | Y | Búsqueda (inicio), favorito (una película, una serie), pista de audio (reproductor), cola (música) |
 | 2 | X | X | Ordenar y filtrar (listas), extras (una película), aleatorio (series, música), subtítulos (reproductor) |
 | HOME | HOME | START | Menú HOME |
 | puntero | ZL / ZR | Z | Zoom del vídeo (ajustar / llenar); en los menús, lo que hace + solo: visto / no visto, la página Browse, Intro del teclado |
 
-Las ayudas en pantalla muestran los botones del último mando usado (GameCube: A verde, B rojo, L / R, START).
+Las ayudas en pantalla muestran los botones del último mando usado (GameCube: A verde, B rojo, L / R, Z, START).
 
 ### ⚙️ Ajustes
 

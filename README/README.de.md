@@ -52,9 +52,9 @@ Er durchsucht und spielt deine Filme, Serien und Musik direkt auf der Konsole ab
 - Film-, Serien- und Musikmediatheken als Poster oder Listen (mit dem Cover des gewählten Titels); **A-Z**-Sprünge mit links / rechts
 - **Sortieren und filtern** einer Film- oder Serienmediathek (Taste 2): nach Name, Jahr, Bewertung oder Hinzufügedatum; ein Genre; alle, nicht gesehen, gesehen oder Favoriten
 - **Suche** (Taste 1 auf dem Startbildschirm)
-- **Detailseite**: Inhalt, Altersfreigabe, Genres, Besetzung, Audio- und Untertitelspuren (zu Beginn die, die der Server für dich wählt: dein Untertitelmodus und deine Sprachen, die Standard- und erzwungenen Spuren der Datei), mehrere **Versionen** eines Films, **Favoriten** (Taste 1, auch bei einer Serie), **gesehen / nicht gesehen** (+, auch in der Episodenliste)
+- **Detailseite**: Inhalt (ganz mit −, wenn die Seite ihn kürzt), Altersfreigabe, Genres, Besetzung, Audio- und Untertitelspuren (zu Beginn die, die der Server für dich wählt: dein Untertitelmodus und deine Sprachen, die Standard- und erzwungenen Spuren der Datei), mehrere **Versionen** eines Films, **Favoriten** (Taste 1, auch bei einer Serie), **gesehen / nicht gesehen** (+, auch in der Episodenliste)
 - **Extras**: Trailer, Featurettes, Hinter den Kulissen… eines Films (Taste 2 auf seiner Seite) oder einer Serie (nach ihren Staffeln)
-- **Serien**: Staffeln und Episoden, **Zufallswiedergabe** (Taste 2), nächste / vorherige Episode über Staffelgrenzen hinweg
+- **Serien**: Staffeln (als Poster oder als Liste mit dem Cover der Staffel) und Episoden, **Zufallswiedergabe** (Taste 2), nächste / vorherige Episode über Staffelgrenzen hinweg
 - **Japanische, chinesische und koreanische** Titel und Untertitel: Japanisch ist eingebaut, Chinesisch und Koreanisch kommen aus der Schrift in `apps/WiiFin/fonts/` (im Paket für den Homebrew Channel)
 
 **Video**
@@ -87,13 +87,13 @@ Der Zeiger ist optional: jeder Bildschirm lässt sich mit dem Steuerkreuz bedien
 |---|---|---|---|
 | A / B | A / B | A / B | Auswählen / Zurück |
 | Steuerkreuz | Steuerkreuz oder linker Stick | Steuerkreuz oder Stick | Bewegen (gedrückt halten zum Wiederholen); links / rechts: A-Z in Listen, −10 / +10 s im Player |
-| − / + | − / + oder L / R | L / R | Reiter, Seiten, vorherige / nächste Episode oder Titel; + : gesehen / nicht gesehen (ein Film, eine Episode) |
+| − / + | − / + oder L / R | L / R | Reiter, Seiten, vorherige / nächste Episode oder Titel; + : gesehen / nicht gesehen (ein Film, eine Episode); − : der ganze Inhalt (eine Detailseite) |
 | 1 | Y | Y | Suche (Start), Favorit (ein Film, eine Serie), Audiospur (Player), Warteschlange (Musik) |
 | 2 | X | X | Sortieren und filtern (Listen), Extras (ein Film), Zufall (Serien, Musik), Untertitel (Player) |
 | HOME | HOME | START | HOME-Menü |
 | Zeiger | ZL / ZR | Z | Video-Zoom (einpassen / füllen); in den Menüs das, was + allein tut: gesehen / nicht gesehen, die Browse-Seite, Enter der Tastatur |
 
-Die Hinweise auf dem Bildschirm zeigen die Tasten des zuletzt benutzten Controllers (GameCube: A grün, B rot, L / R, START).
+Die Hinweise auf dem Bildschirm zeigen die Tasten des zuletzt benutzten Controllers (GameCube: A grün, B rot, L / R, Z, START).
 
 ### ⚙️ Einstellungen
 

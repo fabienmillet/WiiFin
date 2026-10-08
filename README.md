@@ -52,9 +52,9 @@ It browses and plays your films, series and music on the console itself, written
 - Film, series and music libraries as posters or lists (with the cover of the selected title); **A-Z** jumps with left / right
 - **Sort & filter** a film or series library (button 2): by name, year, rating or date added; one genre; all, not watched, watched or favourites
 - **Search** (button 1 on the home screen)
-- **Detail page**: synopsis, rating, genres, cast, audio and subtitle tracks (those the server picks for you to start with: your subtitle mode and languages, the file's default and forced tracks), several **versions** of a film, **favourites** (button 1, also on a series), **watched / not watched** (+, also on a row of the episode list)
+- **Detail page**: synopsis (all of it with − when the page cuts it short), rating, genres, cast, audio and subtitle tracks (those the server picks for you to start with: your subtitle mode and languages, the file's default and forced tracks), several **versions** of a film, **favourites** (button 1, also on a series), **watched / not watched** (+, also on a row of the episode list)
 - **Special features**: trailers, featurettes, behind the scenes... of a film (button 2 on its page) or a series (after its seasons)
-- **Series**: seasons and episodes, **shuffle** (button 2), next / previous episode across seasons
+- **Series**: seasons (as posters, or a list with the season's cover) and episodes, **shuffle** (button 2), next / previous episode across seasons
 - **Japanese, Chinese and Korean** titles and subtitles: Japanese built in, Chinese and Korean with the font of `apps/WiiFin/fonts/` (in the Homebrew Channel package)
 
 **Video**
@@ -87,13 +87,13 @@ The pointer is optional: every screen works with the D-pad.
 |---|---|---|---|
 | A / B | A / B | A / B | Select / Back |
 | D-pad | D-pad or left stick | D-pad or stick | Move (hold to repeat); left / right: A-Z in lists, −10 / +10 s in the player |
-| − / + | − / + or L / R | L / R | Tabs, pages, previous / next episode or track; + : watched / not watched (a film, an episode) |
+| − / + | − / + or L / R | L / R | Tabs, pages, previous / next episode or track; + : watched / not watched (a film, an episode); − : the whole synopsis (a page) |
 | 1 | Y | Y | Search (home), favourite (a film, a series), audio track (player), Up Next (music) |
 | 2 | X | X | Sort & filter (lists), special features (a film), shuffle (series, music), subtitles (player) |
 | HOME | HOME | START | HOME menu |
 | pointer | ZL / ZR | Z | Video zoom (fit / fill); in the menus, what + does on its own: watched / not watched, the browse page, the keyboard's Enter |
 
-On-screen hints show the buttons of the controller used last (GameCube: A green, B red, L / R, START).
+On-screen hints show the buttons of the controller used last (GameCube: A green, B red, L / R, Z, START).
 
 ### ⚙️ Settings
 

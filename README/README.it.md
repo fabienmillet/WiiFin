@@ -52,9 +52,9 @@ Sfoglia e riproduce i tuoi film, serie e musica direttamente sulla console. È s
 - Librerie di film, serie e musica come locandine o elenchi (con la copertina del titolo selezionato); salti **A-Z** con sinistra / destra
 - **Ordinare e filtrare** una libreria di film o serie (tasto 2): per nome, anno, voto o data di aggiunta; un genere; tutto, non visti, visti o preferiti
 - **Ricerca** (tasto 1 nella schermata iniziale)
-- **Scheda dettagli**: trama, classificazione, generi, cast, tracce audio e sottotitoli (all'inizio quelle che il server sceglie per te: la tua modalità sottotitoli e le tue lingue, le tracce predefinite e forzate del file), più **versioni** di un film, **preferiti** (tasto 1, anche su una serie), **visto / non visto** (+, anche su una riga dell'elenco episodi)
+- **Scheda dettagli**: trama (intera con − quando la scheda la taglia), classificazione, generi, cast, tracce audio e sottotitoli (all'inizio quelle che il server sceglie per te: la tua modalità sottotitoli e le tue lingue, le tracce predefinite e forzate del file), più **versioni** di un film, **preferiti** (tasto 1, anche su una serie), **visto / non visto** (+, anche su una riga dell'elenco episodi)
 - **Contenuti speciali**: trailer, featurette, dietro le quinte… di un film (tasto 2 nella sua scheda) o di una serie (dopo le sue stagioni)
-- **Serie**: stagioni ed episodi, **riproduzione casuale** (tasto 2), episodio successivo / precedente tra una stagione e l'altra
+- **Serie**: stagioni (come locandine, o in elenco con la copertina della stagione) ed episodi, **riproduzione casuale** (tasto 2), episodio successivo / precedente tra una stagione e l'altra
 - Titoli e sottotitoli in **giapponese, cinese e coreano**: il giapponese è integrato, cinese e coreano usano il font di `apps/WiiFin/fonts/` (incluso nel pacchetto per l'Homebrew Channel)
 
 **Video**
@@ -87,13 +87,13 @@ Il puntatore è facoltativo: ogni schermata funziona con la croce direzionale.
 |---|---|---|---|
 | A / B | A / B | A / B | Seleziona / Indietro |
 | Croce direzionale | Croce o levetta sinistra | Croce o levetta | Muoversi (tieni premuto per ripetere); sinistra / destra: A-Z negli elenchi, −10 / +10 s nel lettore |
-| − / + | − / + o L / R | L / R | Schede, pagine, episodio o brano precedente / successivo; + : visto / non visto (un film, un episodio) |
+| − / + | − / + o L / R | L / R | Schede, pagine, episodio o brano precedente / successivo; + : visto / non visto (un film, un episodio); − : la trama intera (una scheda) |
 | 1 | Y | Y | Ricerca (inizio), preferito (un film, una serie), traccia audio (lettore), coda (musica) |
 | 2 | X | X | Ordina e filtra (elenchi), contenuti speciali (un film), casuale (serie, musica), sottotitoli (lettore) |
 | HOME | HOME | START | Menu HOME |
 | puntatore | ZL / ZR | Z | Zoom del video (adatta / riempi); nei menu, ciò che fa + da solo: visto / non visto, la pagina Browse, Invio della tastiera |
 
-I suggerimenti a schermo mostrano i tasti dell'ultimo controller usato (GameCube: A verde, B rosso, L / R, START).
+I suggerimenti a schermo mostrano i tasti dell'ultimo controller usato (GameCube: A verde, B rosso, L / R, Z, START).
 
 ### ⚙️ Impostazioni
 
