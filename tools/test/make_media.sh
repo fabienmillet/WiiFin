@@ -5,7 +5,8 @@
 #                           a trailer and a featurette (special features)
 #            Grain Film     720p, heavy noise (transcoder under load)
 #            Slow Movie     6 min, for throttled-link buffering
-#            Subtitle Film  SRT track (burn-in from a start offset)
+#            Subtitle Film  SRT track (burn-in from a start offset); the SRT
+#                           tracks here are marked default: the server picks them
 #            Xvid Film      AVI Xvid + MP3 with B-frames (stream copy), made by
 #                           libxvid: MPlayer CE's decoder misreads some B-frames
 #                           of ffmpeg's own mpeg4 encoder ("illegal MB_type")
@@ -71,7 +72,7 @@ if want subtitle; then
     done > "$SRT"
     gen "movies/Subtitle Film (2017)/Subtitle Film (2017).mkv" \
         -f lavfi -i "testsrc2=size=640x360:rate=24" -f lavfi -i "sine=f=440:sample_rate=48000" -i "$SRT" \
-        -t 120 -map 0 -map 1 -map 2 $X264 -c:a aac -c:s srt -metadata:s:s:0 language=eng
+        -t 120 -map 0 -map 1 -map 2 $X264 -c:a aac -c:s srt -metadata:s:s:0 language=eng -disposition:s:0 default
     rm -f "$SRT"
 fi
 
@@ -125,7 +126,7 @@ for i in range(3000):
 ' > "$SRT"
         gen "movies/Z8 MKV Big Subtitles (2016)/Z8 MKV Big Subtitles (2016).mkv" \
             -f lavfi -i "$(num BIGSUB 640x360)" "${TONE[@]}" -i "$SRT" -t 40 -map 0 -map 1 -map 2 \
-            $X264 -profile:v main -level 3.0 -b:v 1000k -c:a aac -b:a 128k -c:s srt -metadata:s:s:0 language=eng
+            $X264 -profile:v main -level 3.0 -b:v 1000k -c:a aac -b:a 128k -c:s srt -metadata:s:s:0 language=eng -disposition:s:0 default
         rm -f "$SRT"
     fi
     # Japanese: the title, and a subtitle track of kana, kanji, full-width
@@ -145,7 +146,7 @@ for i in range(3000):
 SRTEOF
         gen "movies/$JP/$JP.mkv" \
             -f lavfi -i "$(num JAPANESE 640x360)" "${TONE[@]}" -i "$SRT" -t 30 -map 0 -map 1 -map 2 \
-            $X264 -profile:v main -level 3.0 -b:v 1000k -c:a aac -b:a 128k -c:s srt -metadata:s:s:0 language=jpn
+            $X264 -profile:v main -level 3.0 -b:v 1000k -c:a aac -b:a 128k -c:s srt -metadata:s:s:0 language=jpn -disposition:s:0 default
         rm -f "$SRT"
     fi
     # Korean and Chinese: the title, and subtitles in both (the SD card's
@@ -166,7 +167,7 @@ SRTEOF
 SRTEOF
         gen "movies/$KO/$KO.mkv" \
             -f lavfi -i "$(num CJK 640x360)" "${TONE[@]}" -i "$SRT" -t 30 -map 0 -map 1 -map 2 \
-            $X264 -profile:v main -level 3.0 -b:v 1000k -c:a aac -b:a 128k -c:s srt -metadata:s:s:0 language=kor
+            $X264 -profile:v main -level 3.0 -b:v 1000k -c:a aac -b:a 128k -c:s srt -metadata:s:s:0 language=kor -disposition:s:0 default
         rm -f "$SRT"
     fi
     # its title kept: online, Jellyfin took it for another film (renamed,
