@@ -1,13 +1,16 @@
 #include "SettingsView.h"
 #include "Ui.h"
 #include "../player/vo_wiifin.h"
+#include "../player/WiiPlayer.h"
+#include "../core/SoundFX.h"
+#include "../core/MusicBGM.h"
 #include "../core/Text.h"
 #include "../input/Input.h"
 #include "../version.h"
 #include <stdio.h>
 #include <ogc/lwp_watchdog.h>
 
-static const int NUM_SETTINGS = 8; // extensible
+static const int NUM_SETTINGS = 13; // extensible
 
 /* Row layout (also used for pointer hit-testing).  Settings come in pages
  * of PER_PAGE rows, turned with arrows on the screen edges like the Wii
@@ -51,22 +54,27 @@ void SettingsView::drawRow(int i, const char* label, const char* desc,
 void SettingsView::activate(int index) {
     switch (index) {
         case 0: client.sslVerify = !client.sslVerify; break;
-        case 1: musicEnabled     = !musicEnabled;     break;
-        case 2: client.videoQuality = (client.videoQuality + 1) % JellyfinClient::VIDEO_QUALITY_COUNT; break;
-        case 3: g_wiifin_smooth_motion = !g_wiifin_smooth_motion; break;
-        case 4:
+        case 1: musicEnabled = !musicEnabled; MusicBGM::setEnabled(musicEnabled); break;
+        case 2: SoundFX::setEnabled(!SoundFX::enabled()); break;
+        case 3: client.videoQuality = (client.videoQuality + 1) % JellyfinClient::VIDEO_QUALITY_COUNT; break;
+        case 4: client.directPlay = !client.directPlay; break;
+        case 5: g_wiifin_smooth_motion = !g_wiifin_smooth_motion; break;
+        case 6:
             Ui::setTheme(Ui::nextTheme(Ui::theme()));
             /* the Flix look is made for the rows of carousels */
             if (Ui::theme() == Ui::Theme::Flix) Ui::setHomeLayout(Ui::HomeLayout::Rows);
             break;
-        case 5:
+        case 7:
             Ui::setHomeLayout(Ui::homeLayout() == Ui::HomeLayout::Rows ? Ui::HomeLayout::Grid
                                                                        : Ui::HomeLayout::Rows);
             break;
-        case 6:
+        case 8:
             Ui::setLibraryStyle((Ui::LibraryStyle)(((int)Ui::libraryStyle() + 1) % Ui::LIBRARY_STYLE_COUNT));
             break;
-        case 7: calibrating = true; calCorner = 0; break;
+        case 9: g_wiifin_disc_light = !g_wiifin_disc_light; break;
+        case 10: calibrating = true; calCorner = 0; break;
+        case 11: Ui::setSolidColors(!Ui::solidColors()); break;
+        case 12: Ui::setClock12h(!Ui::clock12h()); break;
     }
 }
 
@@ -156,11 +164,15 @@ bool SettingsView::update(ir_t& ir) {
     if (calibrating) { updateCalibration(); return false; }
 
     if (ir.valid) irMode = true;
+    else          irMode = false;   /* no pointer on the screen: the D-pad drives, A acts on the highlighted item */
 
-    if (Input::isBackPressed()) return true;
+    if (Input::isBackPressed()) { SoundFX::play(SoundFX::FX::Back); return true; }
 
     const int page = selectedIndex / PER_PAGE;
-    /* Up/Down walk through every row (pages follow); Left/Right turn pages */
+    const int selBefore = selectedIndex;
+    bool activated = false;
+    /* Up/Down walk through every row (pages follow); Left/Right and -/+
+     * (L/R on the Classic and GameCube controllers) turn pages */
     if (Input::isUpPressed())   { selectedIndex = (selectedIndex - 1 + NUM_SETTINGS) % NUM_SETTINGS; irMode = false; }
     if (Input::isDownPressed()) { selectedIndex = (selectedIndex + 1) % NUM_SETTINGS; irMode = false; }
     auto turn = [&](int to) {
@@ -171,6 +183,8 @@ bool SettingsView::update(ir_t& ir) {
     };
     if (Input::isLeftPressed())  { turn(page - 1); irMode = false; }
     if (Input::isRightPressed()) { turn(page + 1); irMode = false; }
+    if (Input::isLPressed())     { turn(page - 1); irMode = false; }
+    if (Input::isRPressed())     { turn(page + 1); irMode = false; }
 
     int hovered = -1;
     if (ir.valid) {
@@ -185,9 +199,13 @@ bool SettingsView::update(ir_t& ir) {
     if (aPressed) {
         if (overArrow(ir, ARROW_L_CX))      turn(page - 1);
         else if (overArrow(ir, ARROW_R_CX)) turn(page + 1);
-        else if (ir.valid) { if (hovered >= 0) activate(hovered); }
-        else if (!irMode) activate(selectedIndex);
+        else if (ir.valid) { if (hovered >= 0) { activate(hovered); activated = true; } }
+        else if (!irMode) { activate(selectedIndex); activated = true; }
     }
+    /* turning Interface Sounds on plays this one: what they sound like */
+    if (activated)                                    SoundFX::play(SoundFX::FX::Start);
+    else if (selectedIndex / PER_PAGE != page)        SoundFX::play(SoundFX::FX::Page);
+    else if (selectedIndex != selBefore)              SoundFX::play(SoundFX::FX::Move);
     return false;
 }
 
@@ -209,18 +227,39 @@ void SettingsView::render(ir_t& ir) {
             client.sslVerify ? "ON" : "OFF", client.sslVerify ? p.ok : 0x8A9099FF);
     drawRow(1, "Background Music", "Play background music in menus",
             musicEnabled ? "ON" : "OFF", musicEnabled ? p.ok : 0x8A9099FF);
+    drawRow(2, "Interface Sounds",
+            SoundFX::enabled() ? "Sounds in the menus; your own in sounds/ on the SD card"
+                               : "The menus stay silent",
+            SoundFX::enabled() ? "ON" : "OFF", SoundFX::enabled() ? p.ok : 0x8A9099FF);
     {
         static const u32 qualityCol[JellyfinClient::VIDEO_QUALITY_COUNT] =
-            { 0xD98A2EFF, 0x34A8DDFF, 0x3DAF5AFF };
-        char desc[96];
-        snprintf(desc, sizeof(desc),
-                 "Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering",
-                 client.videoBitrate() / 1000000.0);
-        drawRow(2, "Video Quality", desc,
+            { 0xD98A2EFF, 0x34A8DDFF, 0x3DAF5AFF, 0x9A5BD6FF };
+        /* the chosen bitrate, and what the connection measured at the first
+         * video holds it to (it is not the setting changing on its own) */
+        char desc[128];
+        const int q = client.videoQuality;
+        if (client.measuredKbps() > 0 && client.linkQuality() < q)
+            snprintf(desc, sizeof(desc),
+                     "%.1f Mb/s; your connection (%.1f Mb/s measured) holds videos to %.1f",
+                     JellyfinClient::qualityBitrate(q) / 1000000.0, client.measuredKbps() / 1000.0,
+                     client.videoBitrate() / 1000000.0);
+        else if (q == JellyfinClient::VIDEO_QUALITY_COUNT - 1)
+            snprintf(desc, sizeof(desc),
+                     "%.1f Mb/s: sharpest, for a wired adapter. Lower it if videos stutter",
+                     JellyfinClient::qualityBitrate(q) / 1000000.0);
+        else
+            snprintf(desc, sizeof(desc),
+                     "Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering",
+                     JellyfinClient::qualityBitrate(q) / 1000000.0);
+        drawRow(3, "Video Quality", desc,
                 JellyfinClient::videoQualityName(client.videoQuality),
                 qualityCol[client.videoQuality]);
     }
-    drawRow(3, "Smooth Motion",
+    drawRow(4, "Direct Play",
+            client.directPlay ? "Files the Wii can decode play as they are (SD DivX, DVD...): no server work"
+                              : "Every video is converted by the server",
+            client.directPlay ? "Auto" : "OFF", client.directPlay ? p.ok : 0x8A9099FF);
+    drawRow(5, "Smooth Motion",
             g_wiifin_smooth_motion ? "Blends frames on picture changes: films move evenly on 60 Hz TVs"
                                    : "Each frame shown as is (24 fps films judder slightly on 60 Hz)",
             g_wiifin_smooth_motion ? "ON" : "OFF", g_wiifin_smooth_motion ? p.ok : 0x8A9099FF);
@@ -232,11 +271,11 @@ void SettingsView::render(ir_t& ir) {
         };
         static const u32 themeCol[Ui::THEME_COUNT] = { 0x34A8DDFF, 0x45546BFF, 0xD81F26FF };
         int t = (int)Ui::theme();
-        drawRow(4, "Theme", themeDesc[t], Ui::themeName(Ui::theme()), themeCol[t]);
+        drawRow(6, "Theme", themeDesc[t], Ui::themeName(Ui::theme()), themeCol[t]);
     }
     {
         bool rows = Ui::homeLayout() == Ui::HomeLayout::Rows;
-        drawRow(5, "Home Screen", rows ? "Rows of posters to browse, like the old video channels"
+        drawRow(7, "Home Screen", rows ? "Rows of posters to browse, like the old video channels"
                                        : "A grid of your libraries",
                 rows ? "Rows" : "Grid", rows ? p.accent : 0x8A9099FF);
     }
@@ -248,15 +287,26 @@ void SettingsView::render(ir_t& ir) {
             "Text lists, with the cover of the selected title",
         };
         int v = (int)Ui::libraryStyle();
-        drawRow(6, "Library View", desc[v], name[v], v == 0 ? 0x8A9099FF : p.accent);
+        drawRow(8, "Library View", desc[v], name[v], v == 0 ? 0x8A9099FF : p.accent);
     }
+    drawRow(9, "Disc Slot Light",
+            g_wiifin_disc_light ? "Pulses with the sound, as bright as the Wii Settings say"
+                                : "Stays dark during playback",
+            g_wiifin_disc_light ? "ON" : "OFF", g_wiifin_disc_light ? p.ok : 0x8A9099FF);
     {
         int l, t, r, b;
         Ui::safeArea(l, t, r, b);
         bool full = !(l | t | r | b);
-        drawRow(7, "Screen Area", "Shrink the interface if your TV crops the edges (overscan)",
+        drawRow(10, "Screen Area", "Shrink the interface if your TV crops the edges (overscan)",
                 full ? "Full" : "Adjusted", full ? 0x8A9099FF : p.accent);
     }
+    drawRow(11, "Backgrounds",
+            Ui::solidColors() ? "Solid colours: no bands on TVs that show them in gradients"
+                              : "Soft gradients, like the Wii Menu",
+            Ui::solidColors() ? "Solid" : "Gradient", Ui::solidColors() ? p.accent : 0x8A9099FF);
+    drawRow(12, "Clock",
+            Ui::clock12h() ? "1:30 PM, the date as month/day" : "13:30, the date as day/month",
+            Ui::clock12h() ? "12-hour" : "24-hour", p.accent);
 
     /* page arrows on the screen edges + page dots */
     if (PAGES > 1) {
@@ -275,7 +325,7 @@ void SettingsView::render(ir_t& ir) {
     Ui::textCentered(320, 348, version, 15, p.accentDark);
     Ui::textCentered(320, 370, credits, 12, p.textDim);
 
-    static const Ui::Hint left[]  = { { "UD", "Choose" }, { "A", "Change" }, { "LR", "Page" } };
+    static const Ui::Hint left[]  = { { "UD", "Choose" }, { "A", "Change" }, { "-/+", "Page" } };
     static const Ui::Hint right[] = { { "B", "Back" } };
     Ui::bottomBar(left, PAGES > 1 ? 3 : 2, right, 1);
 }

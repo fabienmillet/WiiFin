@@ -43,7 +43,7 @@ void drawLibHeader(const std::string& libName, const char* const* tabNames,
 
 extern const char* const kMovieTabs[4];
 extern const char* const kTvTabs[3];
-extern const char* const kMusicTabs[3];
+extern const char* const kMusicTabs[5];
 extern const char* const kHomeTabs[3];
 
 }  // namespace LibDraw

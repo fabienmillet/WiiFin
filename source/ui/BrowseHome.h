@@ -48,12 +48,19 @@ public:
 
     /* Item under the selection (valid after Action::Open). */
     const JellyfinItem* selectedItem() const;
+    /* Changes whenever the highlight moves (LibraryView's sounds) */
+    unsigned focusKey() const {
+        unsigned k = (unsigned)(rowSel + 1) * 7919u + (unsigned)(headerFocus + 2) * 104729u;
+        if (rowSel >= 0 && rowSel < (int)rows.size()) k += (unsigned)rows[rowSel].sel * 2654435761u;
+        return k;
+    }
     void setUserName(const std::string& n) { userName = n; }
 
 private:
     struct Row {
         std::string                 title;
         bool                        square = false;   /* album art */
+        bool                        wide   = false;   /* 16:9: the libraries' own pictures */
         std::vector<JellyfinItem>   items;
         std::vector<GRRLIB_texImg*> tex;
         std::vector<unsigned char>  st;               /* TileState */

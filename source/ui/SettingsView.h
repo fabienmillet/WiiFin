@@ -24,7 +24,7 @@ private:
     int   selectedIndex = 0;
     float pageAnim      = 0.0f;   /* page slide                   */
     bool  irMode        = false;
-    float focusAnim[8]  = {};
+    float focusAnim[13] = {};
 
     /* Screen-area (overscan) calibration */
     bool  calibrating   = false;

@@ -266,19 +266,18 @@ bool LibraryView::updateMusicSuggestions(ir_t& ir, bool aPressed) {
     // Tab switch with -/+
     if (Input::isLPressed()) {
         freeMusicSuggestions();
-        musicTab = (musicTab + 2) % 3;
+        musicTab = 0;   /* Albums */
         itemPage = 0;
-        if      (musicTab == 0) { currentLibId = musicLibId; state = State::ItemsInit; }
-        else                   state = State::PlaylistsLoad;
+        currentLibId = musicLibId;
+        state = State::ItemsInit;
         return false;
     }
     if (Input::isRPressed()) {
         freeMusicSuggestions();
-        musicTab = (musicTab + 1) % 3;
+        musicTab = 2;   /* Artists */
         itemPage = 0;
-        if      (musicTab == 0) { currentLibId = musicLibId; state = State::ItemsInit; }
-        else if (musicTab == 1) state = State::MusicSuggestionsLoad;
-        else                   state = State::PlaylistsLoad;
+        currentLibId = musicLibId;
+        state = State::ItemsInit;
         return false;
     }
     {
@@ -395,7 +394,7 @@ void LibraryView::renderTVUpcoming(ir_t& ir) {
 // Music Suggestions (recently added albums)
 void LibraryView::renderMusicSuggestions(ir_t& ir) {
     const Ui::Palette& p = Ui::pal();
-    Ui::tabs(320, 10, kMusicTabs, 3, musicTab, 14);
+    Ui::tabs(320, 10, kMusicTabs, 5, musicTab, 14);
     headerLine(46);
 
     // 2-row × 4-col grid of album art cards

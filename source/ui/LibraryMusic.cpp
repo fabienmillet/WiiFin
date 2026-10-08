@@ -45,7 +45,7 @@ bool LibraryView::updateMusicTracks(ir_t& ir, bool aPressed) {
     if (aPressed && n > 0 && musicTrackSel < n) {
         pendingMusicTracks.clear();
         for (const auto& at : musicTracks) {
-            MusicOverlay::Track t;
+            MusicTrack t;
             t.id           = at.id;
             t.title        = at.name;
             t.artist       = at.artist.empty() ? musicAlbumArtist : at.artist;

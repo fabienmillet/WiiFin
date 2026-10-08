@@ -119,7 +119,7 @@ bool LibraryView::updateSearchResults(ir_t& ir, bool aPressed) {
             freePosters();
             state = State::ItemsInit;
         } else if (sel.type == "Audio") {
-            MusicOverlay::Track t;
+            MusicTrack t;
             t.id    = sel.id;
             t.title = sel.name;
             t.runtimeTicks = sel.runtimeTicks;
@@ -191,7 +191,7 @@ void LibraryView::renderSearchInput(ir_t& ir) {
     searchKb.render(ir);
 
     const Ui::Hint l[] = { { "A", "Type" }, { "B", searchQuery.empty() ? "Back" : "Delete" } };
-    const Ui::Hint r[] = { { "-", "Shift" }, { "+", "Search" } };
+    const Ui::Hint r[] = { { "-", "Shift" }, { "+!", "Search" } };
     Ui::footer(l, 2, r, 2);
 }
 

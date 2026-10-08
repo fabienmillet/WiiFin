@@ -2,6 +2,7 @@
 #include "../core/Text.h"
 #include "Ui.h"
 #include "../input/Input.h"
+#include "../core/SoundFX.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -16,9 +17,10 @@ ProfileView::ProfileView(GRRLIB_ttfFont* f, GRRLIB_texImg* cursor,
  * update()
  * ----------------------------------------------------------------------- */
 ProfileResult ProfileView::update(ir_t& ir) {
-    if (ir.valid) irMode = true;
+    irMode = ir.valid;   /* no pointer on the screen: the D-pad drives, A acts on the highlighted item */
 
     int totalRows = (int)profiles.size() + 1; /* profiles + "Add New" row */
+    const int rowBefore = focusedRow;
 
     /* D-pad navigation */
     if (Input::isUpPressed()) {
@@ -48,8 +50,11 @@ ProfileResult ProfileView::update(ir_t& ir) {
         }
     }
 
+    if (focusedRow != rowBefore) SoundFX::play(SoundFX::FX::Move);
+
     /* B = back / cancel confirm */
     if (Input::isBackPressed()) {
+        SoundFX::play(SoundFX::FX::Back);
         if (confirmDelete) { confirmDelete = false; return ProfileResult::None; }
         return ProfileResult::Back;
     }
@@ -57,11 +62,13 @@ ProfileResult ProfileView::update(ir_t& ir) {
     /* MINUS (isLPressed) = toggle delete confirm for a profile row */
     if (Input::isLPressed() && focusedRow < (int)profiles.size()) {
         confirmDelete = !confirmDelete;
+        SoundFX::play(confirmDelete ? SoundFX::FX::Select : SoundFX::FX::Back);
         return ProfileResult::None;
     }
 
     /* A = confirm */
     if (Input::isAJustPressed() && (irHoveredRow || (!ir.valid && !irMode))) {
+        SoundFX::play(SoundFX::FX::Open);
         if (confirmDelete) {
             confirmDelete = false;
             selectedIdx = focusedRow;

@@ -128,7 +128,7 @@ Keyboard::Result Keyboard::update(const ir_t& ir, std::string& text, size_t maxL
         }
     }
     if (Input::isLPressed()) press(Key{ 4, 0, 2, 0, K_SHIFT }, text, maxLen);   /* - */
-    if (Input::isRPressed()) return Result::Enter;                            /* + */
+    if (Input::isActionPressed()) return Result::Enter;                       /* + (GameCube Z) */
     if (Input::isBackPressed()) {
         if (text.empty()) return Result::Cancel;
         text.pop_back();

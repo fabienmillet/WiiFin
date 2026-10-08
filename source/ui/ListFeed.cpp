@@ -21,10 +21,15 @@ ListFeed::~ListFeed()
 
 std::string ListFeed::query(int start, int limit, const char* nameLessThan) const
 {
-    char q[512];
+    char q[640];
+    /* a filter starting with '/' is a route of its own (/Artists/...) */
+    std::string base = filter[0] == '/' ? filter : "/Users/" + auth.userId + "/Items?" + filter;
     snprintf(q, sizeof(q),
-             "/Users/%s/Items?%s&SortBy=SortName&SortOrder=Ascending&Limit=%d&StartIndex=%d%s%s",
-             auth.userId.c_str(), filter.c_str(), limit, start,
+             "%s%s&Limit=%d&StartIndex=%d%s%s",
+             base.c_str(),
+             /* the filter's own sort, else by name (the letters need it) */
+             filter.find("SortBy=") == std::string::npos ? "&SortBy=SortName&SortOrder=Ascending" : "",
+             limit, start,
              nameLessThan ? "&NameLessThan=" : "", nameLessThan ? nameLessThan : "");
     return q;
 }
@@ -113,13 +118,22 @@ bool ListFeed::fetchChunk(int c)
     return ok;
 }
 
+bool ListFeed::fetchRange(int start, int limit, std::vector<JellyfinItem>& out)
+{
+    out.clear();
+    return client.getItemsByQuery(serverUrl, auth, query(start, limit, nullptr), out);
+}
+
 int ListFeed::countBefore(char letter)
 {
     if (letter == '#') return 0;                    /* digits/symbols sort first */
     char q[2] = { (char)(letter - 'A' + 'a'), 0 };  /* sort names are lower case */
-    std::vector<JellyfinItem> none;
+    /* Limit=1: Jellyfin takes 0 for "no limit" and sends every title before
+     * the letter, which overflowed the response buffer from a few hundred on
+     * (the count, at the end, was lost and the jump went nowhere) */
+    std::vector<JellyfinItem> one;
     int total = -1;
-    if (!client.getItemsByQuery(serverUrl, auth, query(0, 0, q), none, &total)) return -1;
+    if (!client.getItemsByQuery(serverUrl, auth, query(0, 1, q), one, &total)) return -1;
     return total;
 }
 

@@ -8,8 +8,9 @@
 namespace LibDraw {
 
 // ---------------------------------------------------------------------------
-// Utility: filter a UTF-8 string to codepoints DejaVu Sans covers, then
-// truncate at maxCp codepoints. Use for any list label rendered with `font`.
+// Utility: a UTF-8 string without its control characters, truncated at maxCp
+// codepoints.  Every other character is drawn (Text: DejaVu Sans, or the
+// Japanese font for what it lacks).
 // ---------------------------------------------------------------------------
 std::string filterDejaVu(const std::string& s, int maxCp) {
     std::string out;
@@ -27,7 +28,7 @@ std::string filterDejaVu(const std::string& s, int maxCp) {
             cp = (cp << 6) | (p[i] & 0x3F);
         }
         if (!valid) { p++; continue; }
-        bool ok = cp < 0x0500 || (cp >= 0x2000 && cp <= 0x26FF);
+        bool ok = cp >= 0x20 && (cp < 0x7F || cp > 0x9F);
         if (ok) {
             for (int i = 0; i < seqLen; i++) out += (char)p[i];
             ++count;
@@ -146,7 +147,7 @@ void drawLibHeader(const std::string& libName, const char* const* tabNames,
 
 const char* const kMovieTabs[4] = { "Movies", "Collections", "Favorites", "Suggestions" };
 const char* const kTvTabs[3]    = { "Series", "Suggestions", "Coming Up" };
-const char* const kMusicTabs[3] = { "Albums", "Suggestions", "Playlists" };
+const char* const kMusicTabs[5] = { "Albums", "Suggestions", "Artists", "Playlists", "Songs" };
 const char* const kHomeTabs[3]  = { "Libraries", "Activity", "Favorites" };
 
 }  // namespace LibDraw

@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include <grrlib.h>
 #include <wiiuse/wpad.h>
 
@@ -38,6 +39,12 @@ Theme       nextTheme(Theme t);
 Theme       theme();
 const char* themeName(Theme t);
 const Palette& pal();
+/* Solid colours instead of gradients (no banding on 480i TVs) */
+void setSolidColors(bool on);
+bool solidColors();
+/* The bar's clock: 12-hour (1:31 PM, date month/day) or 24-hour */
+void setClock12h(bool on);
+bool clock12h();
 
 /* Home screen layout: tile grid of libraries, or rows of poster carousels
  * (independent of the theme; picking the Flix theme switches to Rows). */
@@ -107,6 +114,10 @@ void card(float x, float y, float w, float h, float r, float focus);
 void button(float x, float y, float w, float h, const char* label, int size, float focus);
 /* Title at the top left with a thin separator. */
 void header(const char* title, const char* subtitle = nullptr);
+/* A message (the server's "Send message"): a card at the top of whatever
+ * screen is drawn, for ms; drawNotice() draws it (the render hook). */
+void showNotice(const std::string& header, const std::string& text, int ms);
+void drawNotice();
 
 /* Bottom bar with the clock in the middle and button hints on the sides.
  * Hints are pairs of (button, label); button is "A", "B", "1", "2", "+",

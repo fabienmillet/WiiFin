@@ -27,7 +27,9 @@ public:
     ListFeed(JellyfinClient& client, const std::string& serverUrl, const JellyfinAuth& auth);
     ~ListFeed();
 
-    /* filter: the query part selecting the titles, e.g. "ParentId=<id>" */
+    /* filter: the query part selecting the titles, e.g. "ParentId=<id>",
+     * with a sort of its own maybe ("&SortBy=...": then no letter jumps);
+     * or a whole route and query of its own ("/Artists/AlbumArtists?...") */
     bool open(const std::string& filter, std::string& err);
     void close();
     bool isOpen() const { return opened; }
@@ -38,6 +40,8 @@ public:
     int  total() const { return count; }
     bool get(int i, JellyfinItem& out);       /* false while that chunk loads */
     void want(int first, int last);           /* rows on screen (plus margin) */
+    /* Titles start .. start + limit - 1, fetched now (blocking). */
+    bool fetchRange(int start, int limit, std::vector<JellyfinItem>& out);
 
     /* Letter jumps: dir +1 next letter, -1 previous (or the start of the
      * current letter).  Result arrives asynchronously. */

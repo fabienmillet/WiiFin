@@ -15,6 +15,8 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
     int n = feed.total();
     feed.startWorker();
     const int LW = listWidth();
+    if (sortPanel) { updateSortPanel(); return false; }
+    if (Input::is2Pressed() && sortable()) { openSortPanel(); return false; }
 
     if (Input::isBackPressed()) {
         if (inItemsDrilldown) {
@@ -36,9 +38,10 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
 
     if (Input::isUpPressed())   { itemSel--; irMode = false; clampScroll(); }
     if (Input::isDownPressed()) { itemSel++; irMode = false; clampScroll(); }
-    // Left/Right: previous/next letter
-    if (Input::isLeftPressed())  { feed.requestJump(-1, itemSel); irMode = false; }
-    if (Input::isRightPressed()) { feed.requestJump(+1, itemSel); irMode = false; }
+    // Left/Right: previous/next letter (sorted by name only)
+    const bool letters = !sortable() || listSort.sort == 0;
+    if (letters && Input::isLeftPressed())  { feed.requestJump(-1, itemSel); irMode = false; }
+    if (letters && Input::isRightPressed()) { feed.requestJump(+1, itemSel); irMode = false; }
     {
         int idx;
         if (feed.takeJump(idx) && idx >= 0) {
@@ -54,11 +57,10 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
     // Music library: -/+ switches tabs; elsewhere -/+ scroll a screen
     if (currentLibType == "music" && !inItemsDrilldown) {
         if (Input::isLPressed() || Input::isRPressed()) {
-            musicTab = Input::isLPressed() ? (musicTab + 2) % 3 : (musicTab + 1) % 3;
+            musicTab = Input::isLPressed() ? (musicTab + 4) % 5 : (musicTab + 1) % 5;
             itemPage = 0;
-            if      (musicTab == 0) state = State::ItemsInit;
-            else if (musicTab == 1) state = State::MusicSuggestionsLoad;
-            else                   state = State::PlaylistsLoad;
+            /* every tab but Suggestions is a list of the library (loadItems) */
+            state = musicTab == 1 ? State::MusicSuggestionsLoad : State::ItemsInit;
             return false;
         }
     } else {
@@ -117,15 +119,31 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
                 musicIsPlaylist  = (sel.type == "Playlist");
                 state = State::MusicTracksLoad;
             } else if (sel.type == "Audio") {
-                // Single track selected (flat library browse)
-                MusicOverlay::Track t;
-                t.id    = sel.id;
-                t.title = sel.name;
-                t.runtimeTicks = sel.runtimeTicks;
+                // A track of a flat library (files without albums): it and
+                // the tracks around it, in list order, make the queue
+                const int BEFORE = 20, COUNT = 220;
+                int first = itemSel > BEFORE ? itemSel - BEFORE : 0;
+                std::vector<JellyfinItem> range;
+                feed.stopWorker();
+                runWithLoading([&]() { feed.fetchRange(first, COUNT, range); });
                 pendingMusicTracks.clear();
-                pendingMusicTracks.push_back(t);
                 pendingMusicTrackIdx = 0;
-                pendingPlayIsMusic   = true;
+                for (const JellyfinItem& it : range) {
+                    if (it.type != "Audio") continue;
+                    if (it.id == sel.id) pendingMusicTrackIdx = (int)pendingMusicTracks.size();
+                    MusicTrack t;
+                    t.id           = it.id;
+                    t.title        = it.name;
+                    t.runtimeTicks = it.runtimeTicks;
+                    pendingMusicTracks.push_back(t);
+                }
+                if (pendingMusicTracks.empty() || pendingMusicTracks[pendingMusicTrackIdx].id != sel.id) {
+                    MusicTrack t;
+                    t.id = sel.id; t.title = sel.name; t.runtimeTicks = sel.runtimeTicks;
+                    pendingMusicTracks.assign(1, t);
+                    pendingMusicTrackIdx = 0;
+                }
+                pendingPlayIsMusic = true;
                 return true;
             } else {
                 // Unknown type (Folder, AlbumArtist, etc.) — drill in generically
@@ -175,6 +193,8 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
 
 bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
     int n = (int)items.size();
+    if (sortPanel) { updateSortPanel(); return false; }
+    if (Input::is2Pressed() && sortable()) { openSortPanel(); return false; }
     if (Input::isBackPressed()) {
         freePosters();
         if (inBoxSetDrilldown) {
@@ -351,7 +371,7 @@ void LibraryView::renderItemList(ir_t& ir) {
     JellyfinItem selItem;
     bool haveSel = n > 0 && feed.get(itemSel, selItem);
     if (currentLibType == "music" && !inItemsDrilldown) {
-        Ui::tabs(320, 10, kMusicTabs, 3, musicTab, 14);
+        Ui::tabs(320, 10, kMusicTabs, 5, musicTab, 14);
         headerLine(46);
     } else {
         drawBreadcrumb(currentLibName, 20, 420);
@@ -444,15 +464,21 @@ void LibraryView::renderItemList(ir_t& ir) {
             Ui::spinner(ringTex, LIST_X + LW * 0.5f, LIST_Y + LIST_ROWS * LIST_ROW_H * 0.5f);
     }
 
-    // Footer
-    const Ui::Hint l[] = { { "A", "Open" }, { "B", "Back" } };
+    // Footer: the sort in force beside its button
+    const std::string sum = sortSummary();
+    const Ui::Hint l[] = { { "A", "Open" }, { "B", "Back" }, { "2", sum.empty() ? "Sort" : sum.c_str() } };
+    const int nl = sortable() ? 3 : 2;
     if (currentLibType == "music" && !inItemsDrilldown) {
         const Ui::Hint r[] = { { "LR", "A-Z" }, { "-/+", "Tab" } };
-        Ui::footer(l, 2, r, 2);
+        Ui::footer(l, nl, r, 2);
+    } else if (sortable() && listSort.sort != 0) {
+        const Ui::Hint r[] = { { "-/+", "Page" } };
+        Ui::footer(l, nl, r, 1);
     } else {
         const Ui::Hint r[] = { { "LR", "A-Z" }, { "-/+", "Page" } };
-        Ui::footer(l, 2, r, 2);
+        Ui::footer(l, nl, r, 2);
     }
+    if (sortPanel) renderSortPanel();
 }
 
 void LibraryView::renderPosterGrid(ir_t& ir) {
@@ -490,11 +516,13 @@ void LibraryView::renderPosterGrid(ir_t& ir) {
     drawPageArrows(ir, ARROW_UP_CY, ARROW_DN_CY, itemPage > 0, itemPage + 1 < totalPages,
                    ARROW_CX, ARROW_HIT_R);
 
-    // Footer: selected title centred, page on the right
-    const Ui::Hint l[] = { { "B", "Back" } };
+    // Footer: selected title centred, page on the right, the sort in force
+    const std::string sum = sortSummary();
+    const Ui::Hint l[] = { { "B", "Back" }, { "2", sum.empty() ? "Sort" : sum.c_str() } };
     char pageStr[32];
     snprintf(pageStr, sizeof(pageStr), "Page %d / %d", itemPage + 1, totalPages);
     const Ui::Hint r[] = { { "", pageStr } };
     const char* center = (posterSel >= 0 && posterSel < n) ? items[posterSel].name.c_str() : nullptr;
-    Ui::footer(l, 1, r, totalPages > 1 ? 1 : 0, center);
+    Ui::footer(l, sortable() ? 2 : 1, r, totalPages > 1 ? 1 : 0, center);
+    if (sortPanel) renderSortPanel();
 }

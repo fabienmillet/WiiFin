@@ -246,8 +246,9 @@ ConnectResult ConnectView::update(ir_t& ir) {
     // --- Tab switching: IR click on tab headers OR L/R buttons ---
     bool aPressed = Input::isAJustPressed();
 
-    // IR hover: any valid IR position sets irMode so d-pad A is blocked while pointer is out
-    if (ir.valid) irMode = true;
+    // Pointer on the screen: A only acts on what it points at.  No pointer:
+    // the D-pad drives, A acts on the highlighted item.
+    irMode = ir.valid;
 
     bool irTabHandled = false;
     if (ir.valid && aPressed && ir.y >= TAB_Y && ir.y <= TAB_Y + TAB_H &&
@@ -594,7 +595,7 @@ void ConnectView::renderCredentials(ir_t& ir) {
     if (kbActive) {
         renderVKB(ir);
         const Ui::Hint l[] = { { "A", "Type" }, { "B", "Delete" } };
-        const Ui::Hint r[] = { { "-", "Shift" }, { "+", focusedField == Field::Password ? "Done" : "Next" } };
+        const Ui::Hint r[] = { { "-", "Shift" }, { "+!", focusedField == Field::Password ? "Done" : "Next" } };
         Ui::footer(l, 2, r, 2);
     } else {
         const Ui::Hint l[] = { { "A", "Select" }, { "UD", "Move" } };

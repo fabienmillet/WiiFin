@@ -10,6 +10,24 @@
 using namespace LibDraw;
 
 bool LibraryView::updateDetail(ir_t& ir, bool aPressed) {
+    /* the whole overview over the page: Up / Down a line, B or - closes */
+    if (overviewPanel) {
+        const int maxTop = (int)overviewAll.size() > OV_PANEL_ROWS ? (int)overviewAll.size() - OV_PANEL_ROWS : 0;
+        if (Input::isBackPressed() || Input::isLPressed() || aPressed) overviewPanel = false;
+        else if (Input::isUpPressed()   && overviewTop > 0)      overviewTop--;
+        else if (Input::isDownPressed() && overviewTop < maxTop) overviewTop++;
+        else if (Input::isLeftPressed())  overviewTop = overviewTop > OV_PANEL_ROWS ? overviewTop - OV_PANEL_ROWS : 0;
+        else if (Input::isRightPressed()) overviewTop = overviewTop + OV_PANEL_ROWS < maxTop ? overviewTop + OV_PANEL_ROWS : maxTop;
+        return false;
+    }
+    /* -, or A with the pointer on it: the overview the page cuts short */
+    const bool onOverview = ir.valid && ir.x >= 240 && ir.x < 630 && ir.y >= detailOvY0 && ir.y < detailOvY1;
+    if (overviewCut && (Input::isLPressed() || (aPressed && onOverview))) {
+        SYS_Report("[Detail] the whole overview: %d lines\n", (int)overviewAll.size());
+        overviewPanel = true;
+        overviewTop = 0;
+        return false;
+    }
     // A: play
     if (aPressed) {
         if (detail.playbackPositionTicks > 0) {
@@ -22,13 +40,32 @@ bool LibraryView::updateDetail(ir_t& ir, bool aPressed) {
         preparePlay(0LL);
         return true;
     }
+    if (Input::is1Pressed()) toggleFavorite(detailItemId, detail.isFavorite);
+    if (Input::isActionPressed()) {   /* +: watched; that drops the resume point */
+        togglePlayed(detailItemId, detail.played);
+        if (detail.played) detail.playbackPositionTicks = 0;
+        for (auto& e : episodes)   /* the episode list shown on B */
+            if (e.id == detailItemId) {
+                e.played = detail.played;
+                if (e.played) e.playbackPositionTicks = 0;
+            }
+    }
+    if (Input::is2Pressed() && detail.specialFeatures > 0) {
+        specialsFilmReturn = detailReturnState;
+        openSpecials(detailItemId, detail.name, State::DetailReady);
+        return false;
+    }
     if (Input::isBackPressed()) {
         freeDetail();
         state = detailReturnState;
     } else if (Input::isUpPressed()) {
-        detailFocusRow = 0;
+        /* the version row above the audio one, when there are several files */
+        detailFocusRow = detailFocusRow <= 0 && !detail.versions.empty() ? -1 : 0;
     } else if (Input::isDownPressed()) {
-        detailFocusRow = 1;
+        detailFocusRow = detailFocusRow < 0 ? 0 : 1;
+    } else if (detailFocusRow < 0 && (Input::isLeftPressed() || Input::isRightPressed())) {
+        const int n = (int)detail.versions.size();
+        selectVersion((detailVersionSel + (Input::isLeftPressed() ? n - 1 : 1)) % n);
     } else if (Input::isLeftPressed()) {
         if (detailFocusRow == 0 && !detail.audioStreams.empty()) {
             if (--detailAudioSel < 0) detailAudioSel = (int)detail.audioStreams.size() - 1;
@@ -128,20 +165,6 @@ void LibraryView::drawDetailView(ir_t& ir) {
     const int INFO_X    = 240;
     const int INFO_W    = 390;
 
-    // Returns true if s contains any codepoint >= U+3000 (CJK/Japanese range)
-    auto hasJapanese = [](const std::string& s) -> bool {
-        const unsigned char* p = (const unsigned char*)s.c_str();
-        while (*p) {
-            uint32_t cp;
-            if      (*p < 0x80)  { cp = *p++; }
-            else if (*p < 0xE0)  { cp = (*p++ & 0x1F) << 6;  cp |= (*p++ & 0x3F); }
-            else if (*p < 0xF0)  { cp = (*p++ & 0x0F) << 12; cp |= (*p++ & 0x3F) << 6; cp |= (*p++ & 0x3F); }
-            else                 { cp = (*p++ & 0x07) << 18; cp |= (*p++ & 0x3F) << 12; cp |= (*p++ & 0x3F) << 6; cp |= (*p++ & 0x3F); }
-            if (cp >= 0x3000) return true;
-        }
-        return false;
-    };
-
     // Episode thumbnails are 16:9; movie/show posters are portrait
     // both end before the info card (INFO_X - 14 = 226): 20 + 196 / 20 + 200
     const int POSTER_W2 = detailIsEpisode ? 196 : 200;
@@ -169,38 +192,47 @@ void LibraryView::drawDetailView(ir_t& ir) {
         Ui::circle(cx, cy, 26, p.accent);
         Ui::roundBorder(cx - 26, cy - 26, 52, 52, 26, 2.0f, 0xFFFFFFE0);
         Ui::triangle(cx - 8, cy - 12, cx + 13, cy, cx - 8, cy + 12, 0xFFFFFFFF);
-        Ui::textCentered(cx, cy + 32, "Lire", 15, 0xFFFFFFFF);
+        Ui::textCentered(cx, cy + 32, "Play", 15, 0xFFFFFFFF);
     }
 
     // ---- Title ----
     int y = POSTER_Y;
     {
-        bool jp = hasJapanese(detail.name);
-        std::string title = jp ? detail.name : fitText(font, filterDejaVu(detail.name, 60), 22, INFO_W - 12);
-        Text::print(INFO_X, y, jp ? jpFont : font, title.c_str(), 22, p.text);
+        /* Japanese in it: drawn with the Japanese font (Text's fallback) */
+        std::string title = fitText(font, filterDejaVu(detail.name, 60), 22,
+                                    INFO_W - 12 - (detail.isFavorite ? 28 : 0));
+        Text::print(INFO_X, y, font, title.c_str(), 22, p.text);
+        if (detail.isFavorite)   /* a favourite: a heart after the title (1) */
+            Text::print(INFO_X + Text::width(font, title.c_str(), 22) + 8, y, font,
+                        "\xe2\x99\xa5", 22, 0xE8455AFF);
     }
     y += 32;
 
     // ---- Year  Runtime  Rating (chips) ----
     {
-        char chips[3][24];
+        char chips[4][24];
         int nChips = 0;
         if (detail.year)
             snprintf(chips[nChips++], sizeof(chips[0]), "%d", detail.year);
         if (detail.runtimeTicks > 0) {
             int secs = (int)(detail.runtimeTicks / 10000000LL);
             int h = secs / 3600, m = (secs % 3600) / 60;
-            if (h > 0) snprintf(chips[nChips++], sizeof(chips[0]), "%dh %02dmin", h, m);
-            else       snprintf(chips[nChips++], sizeof(chips[0]), "%dmin", m);
+            if (h > 0)        snprintf(chips[nChips++], sizeof(chips[0]), "%dh %02dmin", h, m);
+            else if (m > 0)   snprintf(chips[nChips++], sizeof(chips[0]), "%dmin", m);
+            else              snprintf(chips[nChips++], sizeof(chips[0]), "%ds", secs);   /* a trailer, a clip */
         }
         if (!detail.officialRating.empty())
             snprintf(chips[nChips++], sizeof(chips[0]), "%s", detail.officialRating.c_str());
+        const int nInfo = nChips;
+        if (detail.played)
+            snprintf(chips[nChips++], sizeof(chips[0]), "\xe2\x9c\x93 Watched");
         int cx = INFO_X;
         for (int i = 0; i < nChips; ++i) {
+            const bool seen = i >= nInfo;   /* the last chip, in green */
             int cw = Ui::textWidth(chips[i], 13) + 18;
             Ui::roundRect(cx, y, cw, 20, 10, p.field);
-            Ui::roundBorder(cx, y, cw, 20, 10, 1.0f, p.fieldBorder);
-            Ui::textCentered(cx + cw / 2, y + 3, chips[i], 13, p.textDim);
+            Ui::roundBorder(cx, y, cw, 20, 10, 1.0f, seen ? p.ok : p.fieldBorder);
+            Ui::textCentered(cx + cw / 2, y + 3, chips[i], 13, seen ? p.ok : p.textDim);
             cx += cw + 6;
         }
         if (nChips) y += 28;
@@ -234,10 +266,19 @@ void LibraryView::drawDetailView(ir_t& ir) {
 
     // ---- Overview (pre-computed lines, no per-frame width measuring) ----
     if (!detailLines.empty()) {
+        detailOvY0 = y;
+        const bool hover = overviewCut && ir.valid && ir.x >= INFO_X && ir.x < INFO_X + INFO_W &&
+                           ir.y >= detailOvY0 && ir.y < detailOvY1;
         for (const auto& line : detailLines) {
-            Ui::text(INFO_X, y, line.c_str(), 13, Ui::mix(p.text, p.textDim, 0.25f));
+            Ui::text(INFO_X, y, line.c_str(), 13, hover ? p.accentDark : Ui::mix(p.text, p.textDim, 0.25f));
             y += 17;
         }
+        if (overviewCut) {   /* the rest of it: - (or A on the text) */
+            const Ui::Hint more = { "-", "Read more" };
+            Ui::hint(INFO_X + INFO_W - 12 - Ui::hintWidth(more) + 14, y - 1, more);
+            y += 17;
+        }
+        detailOvY1 = y;
         y += 6;
     }
 
@@ -247,19 +288,11 @@ void LibraryView::drawDetailView(ir_t& ir) {
         y += 18;
         int shown = 0;
         for (const auto& pp : detail.people) {
-            if (shown >= 6) break;
+            /* room for the "Read more" line and the version row */
+            if (shown >= 6 - (overviewCut ? 1 : 0) - (detail.versions.empty() ? 0 : 2)) break;
             if (pp.name.empty() && pp.character.empty()) continue;
             int rx = INFO_X + 8;
-            if (!pp.name.empty() && hasJapanese(pp.name)) {
-                // Japanese VA name: render with jpFont, then Latin suffix with font
-                Text::print(rx, y, jpFont, pp.name.c_str(), 13, p.text);
-                rx += Text::width(jpFont, pp.name.c_str(), 13);
-                std::string suffix;
-                if (pp.role == "Director")          suffix = " (director)";
-                else if (!pp.character.empty())     suffix = " - " + pp.character;
-                if (!suffix.empty())
-                    Ui::text(rx, y, suffix.c_str(), 13, p.textDim);
-            } else {
+            {
                 // All-Latin line: name in text colour, role dimmed
                 const std::string& nm = !pp.name.empty() ? pp.name : pp.character;
                 Ui::text(rx, y, nm.c_str(), 13, p.text);
@@ -282,11 +315,12 @@ void LibraryView::drawDetailView(ir_t& ir) {
 
     // ---- Audio / Subtitle stream selectors ----
     // Drawn at a fixed bottom-anchor position so they're always visible.
-    const int STREAM_Y0 = 390;
     const int STREAM_ROW_H = 24;
+    const bool hasVersions = !detail.versions.empty();
+    const int STREAM_Y0 = 390 - (hasVersions ? STREAM_ROW_H : 0);   /* the version row first */
     const bool hasAudio = !detail.audioStreams.empty();
     const bool hasSub   = !detail.subtitleStreams.empty();
-    if (hasAudio || hasSub) {
+    if (hasAudio || hasSub || hasVersions) {
         Ui::roundRect(INFO_X, STREAM_Y0 - 8, INFO_W - 14, 1.5f, 0.75f, Ui::alpha(p.cardBorder, 0.6f));
 
         // Validate UTF-8 and truncate at a safe codepoint boundary so the
@@ -316,11 +350,11 @@ void LibraryView::drawDetailView(ir_t& ir) {
             return out;
         };
 
-        for (int row = 0; row < 2; row++) {
+        for (int row = hasVersions ? -1 : 0; row < 2; row++) {
             if (row == 0 && !hasAudio) continue;
             if (row == 1 && !hasSub)   continue;
 
-            int ry = STREAM_Y0 + row * STREAM_ROW_H;
+            int ry = STREAM_Y0 + (row + (hasVersions ? 1 : 0)) * STREAM_ROW_H;
             bool focused = (detailFocusRow == row);
             if (focused)
                 Ui::roundRect(INFO_X - 6, ry - 3, INFO_W - 8, STREAM_ROW_H - 3, (STREAM_ROW_H - 3) * 0.5f,
@@ -329,9 +363,11 @@ void LibraryView::drawDetailView(ir_t& ir) {
             u32 labelCol = focused ? p.textOnAccent : p.textDim;
             u32 valueCol = focused ? p.textOnAccent : p.text;
 
-            const char* label = row == 0 ? "Audio" : "Subtitles";
+            const char* label = row < 0 ? "Version" : row == 0 ? "Audio" : "Subtitles";
             const char* rawTitle;
-            if (row == 0)
+            if (row < 0)
+                rawTitle = detail.versions[detailVersionSel].name.c_str();
+            else if (row == 0)
                 rawTitle = detailAudioSel < (int)detail.audioStreams.size()
                     ? detail.audioStreams[detailAudioSel].displayTitle.c_str() : "-";
             else
@@ -343,13 +379,42 @@ void LibraryView::drawDetailView(ir_t& ir) {
             std::string t = safeTitle(rawTitle, 36);
             char buf[64];
             snprintf(buf, sizeof(buf), "\xe2\x80\xb9 %s \xe2\x80\xba", t.c_str());
-            GRRLIB_ttfFont* tf = hasJapanese(t) ? jpFont : font;
-            Text::print(INFO_X + 74, ry, tf, buf, 13, valueCol);
+            Text::print(INFO_X + 74, ry, font, buf, 13, valueCol);
         }
     }
 
     // ---- Footer ----
-    const Ui::Hint l[] = { { "A", "Play" }, { "B", "Back" } };
+    const Ui::Hint l[] = { { "A", "Play" }, { "B", "Back" },
+                           { "1", detail.isFavorite ? "Unfavourite" : "Favourite" },
+                           { "+!", detail.played ? "Unwatched" : "Watched" },
+                           { "2", "Extras" } };   /* short: 5 hints + Focus, Change */
     const Ui::Hint r[] = { { "UD", "Focus" }, { "LR", "Change" } };
-    Ui::footer(l, 2, r, (hasAudio || hasSub) ? 2 : 0);
+    const bool full = detail.specialFeatures > 0;   /* no room left for Focus */
+    Ui::footer(l, full ? 5 : 4, full ? r + 1 : r, (hasAudio || hasSub || hasVersions) ? (full ? 1 : 2) : 0);
+    if (overviewPanel) renderOverviewPanel();
+}
+
+/* The whole overview in a panel over the page */
+void LibraryView::renderOverviewPanel() {
+    const Ui::Palette& p = Ui::pal();
+    GRRLIB_Rectangle(Ui::screenLeft(), 0, Ui::screenWidth(), 480, p.dim, 1);
+    const int PW = OV_PANEL_W + 48, PH = 64 + OV_PANEL_ROWS * 20 + 36;
+    const int PX = (640 - PW) / 2, PY = (450 - PH) / 2;
+    Ui::card(PX, PY, PW, PH, 18, 0.0f);
+    std::string title = fitText(font, filterDejaVu(detail.name, 80), 18, OV_PANEL_W);
+    Ui::text(PX + 24, PY + 16, title.c_str(), 18, p.text);
+    Ui::roundRect(PX + 24, PY + 46, OV_PANEL_W, 1.5f, 0.75f, Ui::alpha(p.cardBorder, 0.6f));
+    const int n = (int)overviewAll.size();
+    for (int i = 0; i < OV_PANEL_ROWS && overviewTop + i < n; i++)
+        Ui::text(PX + 24, PY + 58 + i * 20, overviewAll[overviewTop + i].c_str(), OV_PANEL_SIZE,
+                 Ui::mix(p.text, p.textDim, 0.15f));
+    if (n > OV_PANEL_ROWS)
+        Ui::scrollbar(PX + PW - 14, PY + 58, OV_PANEL_ROWS * 20 - 4, overviewTop, OV_PANEL_ROWS, n);
+    /* hints at the bottom of the panel */
+    const Ui::Hint h[] = { { "UD", "Scroll" }, { "B", "Close" } };
+    const int nh = n > OV_PANEL_ROWS ? 2 : 1;
+    float hw = 0;
+    for (int i = 2 - nh; i < 2; i++) hw += Ui::hintWidth(h[i]);
+    float hx = 320 - (hw - 14) * 0.5f;
+    for (int i = 2 - nh; i < 2; i++) hx += Ui::hint(hx, PY + PH - 28, h[i]);
 }

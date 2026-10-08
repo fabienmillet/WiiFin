@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include "../jellyfin/JellyfinClient.h"
+#include "../jellyfin/RemoteControl.h"
 #include "MusicPlayerView.h"
 #include "BrowseHome.h"
 #include "Keyboard.h"
@@ -22,7 +23,9 @@ public:
     // If pendingPlayUrl is non-empty on return, the caller should play that URL
     // then recreate the LibraryView; otherwise the user just navigated back.
     bool update(ir_t& ir);
-    void render(ir_t& ir);
+    // Draws the screen; false when it drew nothing: the previous picture is
+    // to stay up (a load that may end before a spinner is worth showing).
+    bool render(ir_t& ir);
     void drawLoadingFrame(); // draw+flush one spinning ring frame (also called by network callback)
 
     // Playback finished: keep the current page and its textures (the heap
@@ -42,10 +45,11 @@ public:
     std::string pendingPlaySessionId;     // PlaySessionId from PlaybackInfo (for progress reporting)
     long long   pendingPlayStartTimeTicks = 0; // seek offset passed to the transcoder (100-ns ticks)
     long long   pendingPlayRuntimeTicks  = 0; // RunTimeTicks from Jellyfin (for progress bar duration)
+    JellyfinClient::PlaybackChoice pendingPlayHow; // direct play or transcode
 
     // Music play request (set when returning true from a music library)
     bool                              pendingPlayIsMusic  = false;
-    std::vector<MusicOverlay::Track>  pendingMusicTracks;
+    std::vector<MusicTrack>  pendingMusicTracks;
     int                               pendingMusicTrackIdx = 0;
 
     // Episode list context for the player overlay (next/prev navigation)
@@ -105,6 +109,8 @@ private:
         SearchInput,          // virtual keyboard for search query
         SearchLoad,           // blocking: search API call
         SearchReady,          // show search results
+        SpecialsLoad,         // blocking: a film's or a series' special features
+        SpecialsReady,        // show them (LibrarySpecials.cpp)
         Error
     };
     State state = State::LibsInit;
@@ -133,6 +139,14 @@ private:
     std::string parentLibName;
     int         parentItemPage   = 0;
     bool        inItemsDrilldown = false;
+
+    // Loading: no spinner for the first LOADING_GRACE_MS (the previous
+    // picture stays), then at least SPINNER_MIN_MS of it: no blinking.
+    static const int LOADING_GRACE_MS = 150;
+    static const int SPINNER_MIN_MS   = 300;
+    unsigned long long loadingSince = 0;   // ms, 0: not loading
+    unsigned long long spinnerSince = 0;   // ms, 0: no spinner shown
+    bool loadingWait();                    // true: keep the previous picture
 
     std::string errMsg;
     std::string loggedErr;     /* last error written to the log */
@@ -186,9 +200,22 @@ private:
     State              detailReturnState = State::PostersReady; // where B goes from detail
     bool               detailIsEpisode   = false; // true → use 16:9 thumbnail layout
     std::vector<std::string> detailLines;    // pre-computed word-wrapped overview (built once)
+    /* the whole overview, in a panel over the page (- or A on it) */
+    static const int DETAIL_OV_LINES = 5, OV_PANEL_SIZE = 15, OV_PANEL_W = 500, OV_PANEL_ROWS = 13;
+    std::vector<std::string> overviewAll;
+    bool overviewCut   = false;   // the page shows only part of it
+    bool overviewPanel = false;
+    int  overviewTop   = 0;
+    float detailOvY0 = 0, detailOvY1 = 0;   // where the page draws it (pointer)
+    std::vector<std::string> wrapText(const std::string& text, int size, float w, int maxLines);
+    void renderOverviewPanel();
     int detailAudioSel = 0;  // index into detail.audioStreams
     int detailSubSel   = -1; // index into detail.subtitleStreams; -1 = off
-    int detailFocusRow = 0;  // 0 = audio row focused, 1 = subtitle row focused
+    int detailFocusRow = 0;  // 0 = audio row focused, 1 = subtitle row focused, -1 = version
+    int detailVersionSel = 0;  // index into detail.versions (several files)
+    void selectVersion(int v); // its tracks in the audio / subtitle rows
+    void selectDefaultTracks(int audioIndex, int subIndex);   // stream indexes, -1 none
+    const std::string& detailSourceId() const;   // the version played
     int resumeSel      = 0;  // 0 = Continue, 1 = Start Over (used in ResumePrompt state)
 
     // TV show navigation
@@ -197,6 +224,15 @@ private:
     std::vector<JellyfinSeason>  seasons;
     int seasonSel = 0;
     int seasonTop = 0;
+    /* the seasons' posters (Posters and List + Cover views): seasonTex[i]
+     * for seasons[i], the first SEASON_TEX_MAX; the series' poster for the
+     * others, those without one and the Special Features tile */
+    std::vector<GRRLIB_texImg*> seasonTex;
+    GRRLIB_texImg* seriesPosterTex = nullptr;
+    static const int SEASON_TEX_MAX = 20;
+    bool seasonGrid() const;
+    GRRLIB_texImg* seasonPoster(int i) const;
+    void freeSeasonPosters();
     std::string currentSeasonId;
     std::string currentSeasonName;
     std::vector<JellyfinEpisode> episodes;
@@ -236,7 +272,8 @@ private:
     State       seasonsCallerState = State::PostersReady; // where B goes from season list
 
     // Music tabs (only active when currentLibType == "music")
-    int         musicTab       = 0;     // 0=Albums, 1=Suggestions, 2=Playlists
+    int         musicTab       = 0;     // 0 Albums, 1 Suggestions, 2 Artists, 3 Playlists, 4 Songs
+    bool        musicOpening   = false; // the library just opened (Songs if no album)
     std::string musicLibId;             // root music library id
     bool        musicIsPlaylist = false;// true when MusicTracksLoad should use getPlaylistTracks
 
@@ -340,9 +377,60 @@ private:
     char       letterFlash = 0;
     std::string userName;
     bool       browsePage     = false;  // catalog shown instead of the home rows
+
+    // Sort & filter of a film or series library's titles (2 in its list or
+    // grid; LibrarySort.cpp): kept while the library stays open
+    struct ListSort {
+        int sort  = 0;    // 0 name, 1 year, 2 rating, 3 date added
+        int genre = -1;   // index in sortGenres, -1 every genre
+        int show  = 0;    // 0 all, 1 not watched, 2 watched, 3 favourites
+    };
+    ListSort    listSort;
+    std::string listSortLib;            // the library listSort is for
+    std::vector<JellyfinItem> sortGenres;   // its genres
+    bool        sortPanel = false;
+    int         sortRow   = 0;          // 0 sort, 1 genre, 2 show
+    ListSort    sortEdit;               // the panel's choice, until A
+    bool        seriesFavorite = false; // the open series (1 on its seasons)
+    int         seriesSpecials = 0;     // its special features (a "season" row)
+
+    // Special features (LibrarySpecials.cpp): of a film (2 on its page) or
+    // a series (the last row of its seasons)
+    std::vector<JellyfinItem> specials;
+    std::vector<std::string>  specialsTypes;   // their kinds, in list order
+    std::string specialsOfId, specialsOfName;  // the film / series
+    State       specialsBack       = State::DetailReady;   // the film page, or the seasons
+    State       specialsFilmReturn = State::ItemsReady;    // the film page's own way back
+    int         specialsSel = 0, specialsTop = 0;
+    int         specialsGroup = -1;    // folders: -1 the kinds, else the kind shown
+    bool        specialsFolders() const;   // many of several kinds: a folder per kind
+    void        openSpecials(const std::string& id, const std::string& name, State back);
+    void        loadSpecials();
+    bool        updateSpecials(ir_t& ir, bool aPressed);
+    void        renderSpecials(ir_t& ir);
+    std::vector<int> specialsShown() const;   // indexes of the rows (items or kinds)
+    static const char* const SPECIALS_ROW;    // the seasons' "Special Features" row id
+    /* 1: the item a favourite or not any more, on the server */
+    void        toggleFavorite(const std::string& id, bool& favorite);
+    /* +: watched or not any more (the home rows follow: next up...) */
+    void        togglePlayed(const std::string& id, bool& played);
+    bool        sortable() const;       // this list can be sorted
+    std::string sortQuery() const;      // "&SortBy=...&GenreIds=...", "" by name
+    std::string sortSummary() const;    // "Year · Drama", "" by name with no filter
+    void        openSortPanel();
+    void        updateSortPanel();
+    void        renderSortPanel();
     bool       tracksFromHome = false;  // album opened from the carousel home
     bool       episodesFromHome = false; // season opened from the carousel home
     bool flixHome() const;
+    /* The interface sounds: what is highlighted, which page or tab is
+     * shown (compared before and after each frame's input) */
+    unsigned focusKey() const;
+    unsigned pageKey() const;
+    static bool loadingState(State s);   /* a screen that only fetches */
+    /* "Play on..." from the server (Remote): the items fetched, then the
+     * music player or the video's page and playback; true = play it */
+    bool startRemotePlay(const Remote::PlayRequest& r);
     bool updateState(ir_t& ir);
     void openItem(const JellyfinItem& it, State returnState);
     void openLibrary(int index);

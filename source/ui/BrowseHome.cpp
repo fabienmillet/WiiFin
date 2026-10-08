@@ -224,12 +224,15 @@ void BrowseHome::buildHome(const std::vector<JellyfinLibrary>& libs)
 
     snprintf(q, sizeof(q),
              "/Users/%s/Items?Filters=IsFavorite&Recursive=true"
-             "&IncludeItemTypes=Movie,Series&SortBy=SortName&Limit=%d", uid.c_str(), MAX_ITEMS);
+             "&IncludeItemTypes=Movie,Series,Episode&SortBy=SortName&Limit=%d", uid.c_str(), MAX_ITEMS);
     add("My Favorites", q, false);
     snprintf(q, sizeof(q),
              "/Users/%s/Items?Filters=IsFavorite&Recursive=true"
              "&IncludeItemTypes=MusicAlbum&SortBy=SortName&Limit=%d", uid.c_str(), MAX_ITEMS);
     add("Favorite Albums", q, true);
+    int favs = 0;
+    for (const auto& r : rows) if (r.title == "My Favorites") favs = (int)r.items.size();
+    SYS_Report("[Home] %d rows, %d favourite titles\n", (int)rows.size(), favs);
 }
 
 /* "browse" page: the libraries themselves, then every title of each library
@@ -242,6 +245,10 @@ void BrowseHome::buildCatalog(const std::vector<JellyfinLibrary>& libs)
     {
         Row r;
         r.title = "Libraries";
+        /* Jellyfin draws each library's picture itself, 16:9 with the name
+         * across the middle: shown whole, not cut to a portrait poster (that
+         * kept a blurred strip of it, a few letters of the name) */
+        r.wide  = true;
         for (const auto& lib : libs) {
             JellyfinItem it;
             it.id   = lib.id;
@@ -298,7 +305,7 @@ const JellyfinItem* BrowseHome::selectedItem() const
 
 float BrowseHome::tileW(const Row& r) const
 {
-    return (r.square ? POSTER_H : POSTER_W) * WiiUtils::wsScaleX();
+    return (r.wide ? POSTER_H * 16.0f / 9.0f : r.square ? POSTER_H : POSTER_W) * WiiUtils::wsScaleX();
 }
 
 float BrowseHome::stride(const Row& r) const
@@ -418,7 +425,10 @@ void BrowseHome::loaderLoop()
         const JellyfinItem& it = rows[r].items[i];
         /* Episodes: the series poster fits a portrait tile better */
         const std::string& id = (it.type == "Episode" && !it.seriesId.empty()) ? it.seriesId : it.id;
-        int h = (int)POSTER_H, w = rows[r].square ? h : (int)POSTER_W;
+        /* the size drawn: Jellyfin fits the picture inside it, so a smaller
+         * or narrower request came back blurred once cropped */
+        int h = (int)POSTER_H,
+            w = rows[r].wide ? (int)(POSTER_H * 16.0f / 9.0f) : rows[r].square ? h : (int)POSTER_W;
         std::string bytes;
         client.getItemImageBytes(serverUrl, auth, id, w, h, bytes);
         /* seasons without artwork of their own: use the series poster */
@@ -475,7 +485,7 @@ BrowseHome::Action BrowseHome::update(const ir_t& ir, bool& irMode)
     if (up || down || left || right) irMode = false;
 
     if (Input::is1Pressed()) return Action::Search;
-    if (Input::isRPressed()) return Action::Browse;
+    if (Input::isActionPressed()) return Action::Browse;
     if (mode == Mode::Catalog && Input::isBackPressed()) return Action::Back;
 
     /* ---- Pointer ---- */
@@ -850,7 +860,7 @@ void BrowseHome::render(const ir_t& ir)
 
     /* Button hints along the bottom */
     {
-        const Ui::Hint hHome[] = { { "A", "Open" }, { "1", "Search" }, { "+", "Browse" } };
+        const Ui::Hint hHome[] = { { "A", "Open" }, { "1", "Search" }, { "+!", "Browse" } };
         const Ui::Hint hCat[]  = { { "A", "Open" }, { "1", "Search" }, { "B", "Home" } };
         const Ui::Hint* h = mode == Mode::Catalog ? hCat : hHome;
         float w = 0;

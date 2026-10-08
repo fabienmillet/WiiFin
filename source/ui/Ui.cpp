@@ -6,6 +6,8 @@
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
+#include <string>
+#include <vector>
 #include <ogc/lwp_watchdog.h>
 
 /* GRRLIB's 2D model-view matrix (defined in GRRLIB_core.c, not in its headers) */
@@ -71,13 +73,36 @@ const char* themeName(Theme t)
     default:          return "Light";
     }
 }
-const Palette& pal()
+static const Palette& themePal()
 {
     switch (s_theme) {
     case Theme::Dark: return DARK;
     case Theme::Flix: return FLIX;
     default:          return LIGHT;
     }
+}
+/* Solid colours: each gradient becomes its middle colour, without the
+ * pinstripes (the bands a gradient shows on a 480i TV, issue 22) */
+static bool s_solid = false;
+void setSolidColors(bool on) { s_solid = on; }
+static bool s_clock12 = false;
+void setClock12h(bool on) { s_clock12 = on; }
+bool clock12h()           { return s_clock12; }
+bool solidColors()           { return s_solid; }
+const Palette& pal()
+{
+    if (!s_solid) return themePal();
+    static Palette flat;
+    static int     flatFor = -1;
+    if (flatFor != (int)s_theme) {
+        flat = themePal();
+        flat.bgTop  = flat.bgBottom   = mix(flat.bgTop,   flat.bgBottom,   0.5f);
+        flat.cardTop = flat.cardBottom = mix(flat.cardTop, flat.cardBottom, 0.5f);
+        flat.barTop = flat.barBottom  = mix(flat.barTop,  flat.barBottom,  0.5f);
+        flat.stripe = 0;
+        flatFor = (int)s_theme;
+    }
+    return flat;
 }
 void setFont(GRRLIB_ttfFont* f) { s_font = f; }
 GRRLIB_ttfFont* font()          { return s_font; }
@@ -432,6 +457,9 @@ ButtonStyle buttonStyle()                 { return s_buttonStyle; }
 
 const char* buttonName(const char* b)
 {
+    /* "+!": + as an action of its own (Input::isActionPressed), Z on a
+     * GameCube controller (its R, the page turner, is a trigger) */
+    if (strcmp(b, "+!") == 0) return s_buttonStyle == ButtonStyle::GameCube ? "Z" : "+";
     if (s_buttonStyle == ButtonStyle::WiiRemote) return b;
     static const struct { const char* wii; const char* classic; const char* gc; } MAP[] = {
         { "1",    "Y",    "Y" },
@@ -534,9 +562,20 @@ void bottomBar(const Hint* left, int nLeft, const Hint* right, int nRight)
     struct tm lt;
     localtime_r(&now, &lt);
     char clock[8], date[24];
-    strftime(clock, sizeof(clock), "%H:%M", &lt);
-    strftime(date, sizeof(date), "%a %d/%m", &lt);
-    textCentered(320, top + 7, clock, 26, p.text);
+    if (s_clock12) {
+        /* 1:31 and a small PM after it, the pair centred */
+        snprintf(clock, sizeof(clock), "%d:%02d", lt.tm_hour % 12 ? lt.tm_hour % 12 : 12, lt.tm_min);
+        const char* ampm = lt.tm_hour < 12 ? "AM" : "PM";
+        const float cw = textWidth(clock, 26), aw = textWidth(ampm, 13);
+        const float cx = 320 - (cw + 4 + aw) * 0.5f;
+        text(cx, top + 7, clock, 26, p.text);
+        text(cx + cw + 4, top + 18, ampm, 13, p.textDim);
+        strftime(date, sizeof(date), "%a %m/%d", &lt);
+    } else {
+        strftime(clock, sizeof(clock), "%H:%M", &lt);
+        textCentered(320, top + 7, clock, 26, p.text);
+        strftime(date, sizeof(date), "%a %d/%m", &lt);
+    }
     textCentered(320, top + 36, date, 13, p.textDim);
 
     /* hints out to the screen edges (wide screens have room there), never
@@ -755,6 +794,73 @@ void spinner(GRRLIB_texImg* ring, float cx, float cy)
     GRRLIB_SetMidHandle(ring, true);
     GRRLIB_DrawImg(cx, cy, ring, angle, 1.0f, 1.0f, theme() == Theme::Light ? 0x34BEEDFF : (theme() == Theme::Flix ? 0xE52A30FF : 0xFFFFFFFF));
     GRRLIB_SetMidHandle(ring, false);
+}
+
+/* ---- Notice: a message from the server ---------------------------------- */
+
+static std::string s_noticeHeader, s_noticeText;
+static u64         s_noticeFrom = 0, s_noticeUntil = 0;
+
+void showNotice(const std::string& header, const std::string& text, int ms)
+{
+    s_noticeHeader = header;
+    s_noticeText   = text;
+    s_noticeFrom   = ticks_to_millisecs(gettime());
+    s_noticeUntil  = s_noticeFrom + (u64)(ms > 0 ? ms : 5000);
+}
+
+void drawNotice()
+{
+    if (!s_noticeUntil) return;
+    u64 now = ticks_to_millisecs(gettime());
+    if (now >= s_noticeUntil) { s_noticeUntil = 0; return; }
+    /* slides in from the top, fades out over its last 300 ms */
+    float in  = (now - s_noticeFrom) / 250.0f;
+    float out = (s_noticeUntil - now) / 300.0f;
+    float k   = in < 1.0f ? in : 1.0f;
+    if (out < k) k = out < 0.0f ? 0.0f : out;
+
+    const Palette& p = pal();
+    const int HS = 17, TS = 15, LH = 20, MAXW = 460, PAD = 18;
+    /* the text in lines that fit (words; '\n' breaks), four at most */
+    std::vector<std::string> lines;
+    size_t pos = 0;
+    while (pos <= s_noticeText.size() && lines.size() < 4) {
+        size_t e = s_noticeText.find('\n', pos);
+        std::string para = s_noticeText.substr(pos, e == std::string::npos ? std::string::npos : e - pos);
+        pos = e == std::string::npos ? s_noticeText.size() + 1 : e + 1;
+        std::string cur;
+        size_t w = 0;
+        while (w <= para.size() && lines.size() < 4) {
+            size_t sp = para.find(' ', w);
+            std::string word = para.substr(w, sp == std::string::npos ? std::string::npos : sp - w);
+            w = sp == std::string::npos ? para.size() + 1 : sp + 1;
+            std::string trial = cur.empty() ? word : cur + " " + word;
+            if (!cur.empty() && textWidth(trial.c_str(), TS) > MAXW - 2 * PAD) {
+                lines.push_back(cur);
+                cur = word;
+            } else {
+                cur = trial;
+            }
+        }
+        if (!cur.empty() && lines.size() < 4) lines.push_back(cur);
+    }
+    const std::string& head = s_noticeHeader.empty() ? std::string("Message") : s_noticeHeader;
+    int wNeed = textWidth(head.c_str(), HS);
+    for (const auto& l : lines) { int lw = textWidth(l.c_str(), TS); if (lw > wNeed) wNeed = lw; }
+    float w = wNeed + 2 * PAD + 6;
+    if (w > MAXW) w = MAXW;
+    if (w < 220) w = 220;
+    float h = PAD + HS + 6 + lines.size() * LH + PAD - 4;
+    float x = 320 - w / 2, y = 18 - (1.0f - k) * (h + 30);
+
+    shadow(x, y + 3, w, h, 14, 8.0f, alpha(p.shadow, k));
+    roundRect(x, y, w, h, 14, alpha(p.cardTop, k), alpha(p.cardBottom, k));
+    roundBorder(x, y, w, h, 14, 1.5f, alpha(p.cardBorder, k));
+    roundRect(x + 10, y + 12, 4, h - 24, 2, alpha(p.accent, k));
+    text(x + PAD + 6, y + PAD - 4, head.c_str(), HS, alpha(p.accent, k));
+    for (size_t i = 0; i < lines.size(); ++i)
+        text(x + PAD + 6, y + PAD + HS + 4 + i * LH, lines[i].c_str(), TS, alpha(p.text, k));
 }
 
 } // namespace Ui
