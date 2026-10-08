@@ -1,0 +1,30 @@
+name: MPlayer CE
+
+# Run by hand (Actions > MPlayer CE > Run workflow): rebuilds libmplayer.a and
+# libfribidi.a from MPlayer CE's source (tools/mplayer/build.sh, see
+# MPLAYER_CE_BUILD.md), compares them object by object with the libraries in
+# libs/mplayer-ce-build, and offers them as an artifact.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # compiles in devkitpro/devkitppc:20260221 through Docker
+      - name: Build
+        run: tools/mplayer/build.sh
+
+      - name: Differences with libs/mplayer-ce-build
+        run: cat tools/mplayer/out/compare.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mplayer-ce-libs
+          path: |
+            tools/mplayer/out/lib/libmplayer.a
+            tools/mplayer/out/lib/libfribidi.a
+            tools/mplayer/out/compare.txt
+            tools/mplayer/out/make.log

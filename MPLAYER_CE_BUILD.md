@@ -1,216 +1,77 @@
 # Building MPlayer CE for WiiFin
 
-WiiFin uses a patched build of [MPlayer CE](https://github.com/extremscorner/mplayer-ce) compiled as a static library (`libmplayer.a`).  
-The build is **optional** — without it, WiiFin falls back to a stub player and still compiles cleanly.
+WiiFin plays video with [MPlayer CE](https://github.com/extremscorner/mplayer-ce), built as a static library. The repository ships it prebuilt in `libs/mplayer-ce-build/` (`libmplayer.a`, `libfribidi.a`). The `Makefile` links it when it is there; without it, WiiFin still compiles but cannot play video.
 
----
+`tools/mplayer/build.sh` rebuilds both libraries from source:
 
-## Prerequisites
-
-- devkitPro with `devkitPPC`, `libogc`, and `wii-dev` portlibs installed
-- `ppc-fribidi` built and available (see below)
-- Standard build tools: `make`, `git`, `ar`
-
----
-
-## 1. Clone MPlayer CE
-
-```bash
-git clone https://github.com/extremscorner/mplayer-ce.git ~/mplayer-ce
-cd ~/mplayer-ce/mplayer
+```sh
+tools/mplayer/build.sh             # builds into tools/mplayer/out/lib and compares with libs/mplayer-ce-build
+tools/mplayer/build.sh --install   # the same, then replaces libs/mplayer-ce-build
 ```
 
----
+It needs Docker, git and Python 3. The build takes about a minute. The **MPlayer CE** workflow (Actions → MPlayer CE → Run workflow) does the same on GitHub and offers the libraries as an artifact.
 
-## 2. Apply the WiiFin patch
+## How it is built
 
-The patch is in `libs/mplayer-ce/wii_player_patch.diff` and covers:
+| Step | What it does |
+|---|---|
+| Source | MPlayer CE at commit `9ea3e576` (2011-07-07, its last), fetched by hash. |
+| `tools/mplayer/configure.py` | Adapts MPlayer CE's Wii configuration: a library (`DISABLE_MAIN`: `main()` becomes `mplayer_main()`) for today's devkitPPC, no networking, DVD or libass. Keeps only the FFmpeg decoders, parsers and demuxers WiiFin needs, with `CONFIG_SMALL` and precomputed tables. |
+| `tools/mplayer/wiifin.patch` | WiiFin's changes to MPlayer CE's code (below). |
+| Compiler | `devkitpro/devkitppc:20260221`: GCC 15.2, the compiler of the libraries in the repository. |
+| `tools/mplayer/objects.txt` | The objects that make `libmplayer.a`. |
 
-- Renaming `main()` → `mplayer_main()` under `DISABLE_MAIN`
-- `setjmp`/`longjmp`-based exit so WiiFin can stop playback without `exit()`
-- Stream-opened callback (`g_stream_opened_cb`) for Jellyfin session reporting
-- Overlay integration globals (`g_mplayer_time_pos`, `g_mplayer_duration`, `g_mplayer_paused`, seek/volume control)
-- Loading indicator logic with `g_wiifin_loading_active` and `mpgxForceLoadingFrame()`
-- GX overlay callback slots in `gx_supp.c`/`gx_supp.h` (`g_wiifin_overlay_cb`, `g_wiifin_gx_overlay_cb`)
-- Y/U/V texture clearing to proper YCbCr black (avoids purple screen during loading)
-- XFB allocation with black-clear in `mpgxInit()`
-- `mpgxRunOverlay()` called in `flip_page()` before `mpgxPushFrame()`
-- Fix `ov_gx_draw()` loading indicator ordering (before `ov_visible` check)
-- Jellyfin known-duration fallback when MPEG-TS demuxer cannot determine length
+## WiiFin's changes (`wiifin.patch`)
 
-> **Video output is provided by WiiFin.** `source/player/vo_wiifin.c` defines `video_out_gx` and the `mpgx*`/`mpviClear` entry points that the rest of the library calls, so the linker never pulls `vo_gx.o` / `gx_supp.o` from `libmplayer.a`. The GX/overlay changes listed above (overlay callbacks, XFB allocation, `ov_gx_draw()`) are therefore unused: WiiFin keeps GRRLIB running, MPlayer runs on its own thread and only hands decoded frames over as textures. If you rebuild the library, keep the `vo_gx.o` and `gx_supp.o` symbol sets unchanged or update `vo_wiifin.c` accordingly.
+- **`mplayer.c`**
+  - `mplayer_main()` starts from a clean state on each call, since WiiFin plays one video after another in the same process.
+  - It ends with a `longjmp` back to WiiFin instead of `exit()`.
+  - It reads WiiFin's seek and volume requests and publishes the position, duration and pause state.
+  - It handles the loading indicator, calls WiiFin back once the stream is open (playback reporting) and writes `[mplayer] ...` stages to the log.
+  - It does not load fonts, and does not pause on a low cache (WiiFin rebuffers itself).
+  - It reads `-cache-min` on every call; MPlayer CE kept the first call's value. This one is not in the libraries in the repository.
+- **`mp_msg.c`**: MPlayer's messages go to `SYS_Report`, which is WiiFin's log.
+- **`stream/stream.c`**: registers WiiFin's HTTP and HTTPS streams (`stream_info_http_wii`, `stream_info_https_wii`, in `source/player/stream_wiifin.cpp`).
+- **`stream/cache2.c`**: the cache thread runs at priority 80; WiiFin's `pacePrefetch` adjusts it while playing. The prefill waits without polling input.
+- **`libao2/ao_gekko.c`**: 4 audio buffers instead of 32, so little sound is queued ahead of the picture.
+- **`libmpdemux/demux_lavf.c`**: prefers the WAVE tag of the codec over the container's (MPEG-TS stream types).
+- **`osdep/getch2-gekko.c`**: leaves the controllers to WiiFin.
+- **`osdep/plat_gekko.c`**: `plat_init` only sets MPlayer's folders; WiiFin sets up the IOS, the video, the devices and the network.
+- **Fixes for the current devkitPPC**:
+  - `struct stat`, `nanosleep`, `if_config` and `TVPal576IntDfScale` changed;
+  - stubs for what devkitPro no longer has (`wiifin/wii_stubs.c`: iconv, NTFS);
+  - headers for ext2 and NTFS (`wiifin/*.h`).
+- **`wiifin/register_mpegts.c`**: `register_mpegts_demuxer()`, called by WiiFin, registers FFmpeg's MPEG-TS demuxer.
 
-Apply with:
+WiiFin replaces part of the library at link time:
+- `source/player/vo_wiifin.c` provides the video output (`video_out_gx` and the `mpgx*` functions), so `vo_gx.o` and `gx_supp.o` are not linked.
+- `stream_wiifin.cpp` provides the HTTP and HTTPS streams.
 
-```bash
-patch -p2 < /path/to/WiiFin/libs/mplayer-ce/wii_player_patch.diff
+## Changing MPlayer
+
+```sh
+tools/mplayer/build.sh --work     # tools/mplayer/out/work: a git tree of MPlayer CE with wiifin.patch applied
+# edit tools/mplayer/out/work/mplayer/...
+tools/mplayer/build.sh --patch    # writes wiifin.patch from it
+tools/mplayer/build.sh            # builds and compares
 ```
 
-> The patch is intentionally a guide rather than a mechanical diff — some hunks require manual context matching due to upstream changes. Read through it if `patch` rejects hunks.
+Then test with the new libraries before installing them: the smoke test and the playback scenarios of `tools/test` (see its README).
 
----
+## Against the libraries in the repository
 
-## 3. Configure
+`build.sh` compares the result with `libs/mplayer-ce-build/libmplayer.a`, object by object (code size, symbols defined and used), in `tools/mplayer/out/compare.txt`. The libraries in the repository were built by hand and their source was lost. `wiifin.patch` was reconstructed from them by comparing objects, and is checked by the playback scenarios: the same results and A/V offset with either library.
 
-Copy and adapt the provided GC config as a starting point:
+The remaining differences, out of 457 objects:
 
-```bash
-cp config.gc.mak config.mak
-```
-
-Key changes required in `config.mak`:
-
-| Option | Value | Reason |
-|--------|-------|--------|
-| Remove `-mpaired`, `-mstring` | — | Dropped in GCC 15 |
-| `-mogc` → `-mrvl` | everywhere | Wii target |
-| Add to CFLAGS | `-DHW_RVL -DDISABLE_MAIN` | Wii + library mode |
-| Add to CFLAGS | `-Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-discarded-qualifiers` | GCC 15 compat |
-| `WII` | `no` | Use `vo_gx.c`, not `vo_wii.c` |
-| `HAVE_PAIRED` | `no` | No paired-single intrinsics |
-| `HAVE_PTHREADS` | `yes` | |
-| `HW_RVL` | `yes` | |
-| `GEKKO` | `yes` | |
-| Remove from EXTRALIBS | `-liconv -lbba` | Not available |
-| Add include paths | freetype2, fribidi | |
-
-In `config.h`, ensure:
-
-```c
-#define MAXPATHLEN 4096
-#define HAVE_PTHREADS 1
-#define HAVE_PAIRED 0
-#define HAVE_THREADS 1
-#undef CONFIG_ICONV
-```
-
-Also add `extern` to the `MPLAYER_DATADIR`/`MPLAYER_CONFDIR` declarations if they cause duplicate-symbol errors.
-
----
-
-## 4. Build fribidi (cross-compile)
-
-```bash
-# From the mplayer-ce repo root
-cd libfribidi   # or wherever fribidi sources are
-./configure --host=powerpc-eabi --prefix="$(pwd)/out" CC=powerpc-eabi-gcc
-# Patch libtool: replace powerpc-gekko-* with powerpc-eabi-*
-sed -i 's/powerpc-gekko-/powerpc-eabi-/g' libtool
-make && make install
-```
-
----
-
-## 5. Build `libmplayer.a`
-
-```bash
-cd ~/mplayer-ce/mplayer
-make   # compilation succeeds; the final link step will fail — that's expected
-```
-
-Then bundle all objects (including FFmpeg sublibraries) into a single archive:
-
-```bash
-AR=/opt/devkitpro/devkitPPC/bin/powerpc-eabi-ar
-
-rm -rf /tmp/mplayer_objs
-mkdir -p /tmp/mplayer_objs/{avformat,avcodec,avutil,postproc,swscale}
-
-for lib in avformat avcodec avutil postproc swscale; do
-  (cd /tmp/mplayer_objs/$lib && $AR x ~/mplayer-ce/mplayer/ffmpeg/lib${lib}/lib${lib}.a)
-done
-
-# Collect WiiFin-specific mplayer objects (exclude ffmpeg/ subdirs)
-find . -name "*.o" ! -path "./ffmpeg/*" | xargs $AR rcs libmplayer.a
-# Append ffmpeg objects
-find /tmp/mplayer_objs -name "*.o" | xargs $AR rs libmplayer.a
-```
-
-The `--start-group`/`--end-group` flags in `WiiFin/Makefile` handle circular references between FFmpeg sub-libraries at link time.
-
----
-
-## 6. Add Wii HTTP/HTTPS stream modules
-
-> **Superseded at link time.** `source/player/stream_wiifin.cpp` defines `stream_info_http_wii` / `stream_info_https_wii`, so the archive's `stream_http_wii.o` / `stream_https_wii.o` are no longer linked. Their chunked-transfer parser lost sync when a chunk-size line was split across two reads (common on Wi-Fi or behind a reverse proxy) and ended the stream after a few KB. The steps below only matter if you want the library to stay self-contained.
-
-`libmplayer.a` has no built-in HTTP stream handler (only `stream_ffmpeg` for `ffmpeg://`). WiiFin ships two custom stream modules:
-
-| File | Protocol | Notes |
-|------|----------|-------|
-| `stream/stream_https_wii.c` | `https://` | mbedTLS + libogc |
-| `stream/stream_http_wii.c` | `http://` | plain TCP + libogc, no TLS |
-
-Both must be present in the cloned `mplayer-ce/mplayer/stream/` directory (they are tracked in the WiiFin repo as source files).  
-`stream/stream.c` must also declare and register both modules in `auto_open_streams[]` under `#ifdef GEKKO`.
-
-Use the helper script to compile and inject all three objects in one step:
-
-```bash
-bash /path/to/WiiFin/repo/../mplayer-ce/build_https.sh
-```
-
-> `build_https.sh` compiles `stream_https_wii.c`, `stream_http_wii.c`, and `stream.c` (with `-Iffmpeg` for `libavutil` headers), then adds all three `.o` files to both library paths via `ar r`.
-
-Alternatively, compile manually:
-
-```bash
-GCC=/opt/devkitpro/devkitPPC/bin/powerpc-eabi-gcc
-AR=/opt/devkitpro/devkitPPC/bin/powerpc-eabi-ar
-CFLAGS="-O2 -mcpu=750 -meabi -mrvl -msdata -mmultiple -pipe \
-  -std=gnu99 -DGEKKO -DHW_RVL -DDISABLE_MAIN \
-  -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE \
-  -I/opt/devkitpro/portlibs/ppc/include \
-  -I/opt/devkitpro/libogc/include \
-  -I/path/to/WiiFin/libs/mbedtls/include \
-  -I. -Wno-undef -Wno-redundant-decls"
-
-cd ~/mplayer-ce/mplayer
-$GCC $CFLAGS -c -o stream/stream_https_wii.o stream/stream_https_wii.c
-$GCC $CFLAGS -c -o stream/stream_http_wii.o  stream/stream_http_wii.c
-$GCC $CFLAGS -Iffmpeg -c -o stream/stream.o  stream/stream.c
-$AR r /path/to/WiiFin/libs/mplayer-ce-build/libmplayer.a \
-    stream/stream_https_wii.o stream/stream_http_wii.o stream/stream.o
-```
-
----
-
-## 7. Install into WiiFin
-
-```bash
-mkdir -p /path/to/WiiFin/libs/mplayer-ce-build
-cp libmplayer.a /path/to/WiiFin/libs/mplayer-ce-build/
-cp /path/to/fribidi/out/lib/libfribidi.a /path/to/WiiFin/libs/mplayer-ce-build/
-```
-
-The WiiFin `Makefile` automatically detects `libs/mplayer-ce-build/libmplayer.a` and links it in.
-
----
-
-## Playback configuration
-
-The transcoding parameters are tuned for real Wii hardware in `source/jellyfin/JellyfinClient.cpp`:
-
-| Parameter | Value |
-|-----------|-------|
-| Video codec | `mpeg2video` |
-| Audio codec | `mp3` |
-| Container | `ts` (MPEG-TS) |
-| Max resolution | 848×480 |
-| Max framerate | 24 fps |
-| Max streaming bitrate | 1 Mbps |
-| Max audio channels | 2 |
-
-MPlayer is invoked (see `source/player/WiiPlayer.cpp`) with:
-
-```
-mplayer -noconsolecontrols -v -msglevel demux=4 -fs \
-  -demuxer lavf \
-  -lavfdopts format=mpegts:probesize=32768:analyzeduration=1 \
-  -vo gx:colorspace=1 -ao gekko \
-  -cache 4096 -cache-min 5 -cache-seek-min 5 \
-  -autosync 10 -mc 15 -delay 0.3 \
-  -lavdopts fast:skiploopfilter=all:skipidct=nonref:skipframe=nonref \
-  -hardframedrop \
-  [-ss <secs>]   # conditional: applied when resuming mid-stream
-```
+| Objects | Difference |
+|---|---|
+| `h264`, `h264_cabac`, `h264_cavlc`, `mpeg12`, `mpeg4videodec`, `h263dec`, `ac3dec` | A few bytes of stack frame and register use, with the same symbols; no source change found. |
+| `mpegts`, `register_mpegts` | Compiled by hand with other options at the time. |
+| `fst`, `gcfst`, `iso`, `ftp_devoptab` | The `st_spare*` fields that no longer exist were rewritten differently. |
+| `stream` | Upstream `free_stream()` closes descriptors with `net_close`; WiiFin's streams have none. |
+| `mplayer` | 4 bytes: the video output time in MPlayer's status line, a 64-bit timer truncated to 32 bits, is fixed (the reference did not count it). |
+| `plat_gekko` | The folder names are copied by `snprintf` in the reference. |
+| `gx_supp`, `vo_gx` | Changed in the reference, not linked by WiiFin. |
+| `ehcmodule.elf`, `stream_http(s)_wii` | In the reference only; not linked by WiiFin. |
+| `utils`, `opt`, `options`, `audioconvert` | Same-name objects in a different order. |

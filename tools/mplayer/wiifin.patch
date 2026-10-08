@@ -1,0 +1,935 @@
+diff --git a/mplayer/libao2/ao_gekko.c b/mplayer/libao2/ao_gekko.c
+index 44083e5b4c38627cb54b4cd2462dc47132b7601c..2190742d31e44e650c1b61e1b6ec35fcecef4155 100644
+--- a/mplayer/libao2/ao_gekko.c
++++ b/mplayer/libao2/ao_gekko.c
+@@ -43,7 +43,7 @@
+ 
+ 
+ #define BUFFER_SIZE 8192
+-#define BUFFER_COUNT 32
++#define BUFFER_COUNT 4		// WiiFin: little audio queued, the picture follows the sound closely
+ 
+ #define HW_CHANNELS 2
+ 
+diff --git a/mplayer/libmpdemux/demux_lavf.c b/mplayer/libmpdemux/demux_lavf.c
+index 616ed545a27bd21c142678ab14aa714d1a81f2c2..8d280a9bcefd59c786e09287a36bdb087dcf5ca7 100644
+--- a/mplayer/libmpdemux/demux_lavf.c
++++ b/mplayer/libmpdemux/demux_lavf.c
+@@ -283,6 +283,14 @@ static void handle_stream(demuxer_t *demuxer, AVFormatContext *avfc, int i) {
+                 codec->codec_tag= 0;
+             if(!codec->codec_tag)
+                 codec->codec_tag= av_codec_get_tag(mp_wav_taglists, codec->codec_id);
++            else {
++                // The container's tag (an MPEG-TS stream type for instance)
++                // is not always the WAVE tag codecs.conf knows: prefer the
++                // one for the codec id when there is one.
++                unsigned int wav_tag = av_codec_get_tag(mp_wav_taglists, codec->codec_id);
++                if (wav_tag && wav_tag != codec->codec_tag)
++                    codec->codec_tag = wav_tag;
++            }
+             wf->wFormatTag= codec->codec_tag;
+             wf->nChannels= codec->channels;
+             wf->nSamplesPerSec= codec->sample_rate;
+diff --git a/mplayer/mp_msg.c b/mplayer/mp_msg.c
+index bad659c9d9a00c8efa4b582b057edd7d120c051e..4d1b3b8dd17c96b4b977a54a55ca88b8633b43dd 100644
+--- a/mplayer/mp_msg.c
++++ b/mplayer/mp_msg.c
+@@ -22,6 +22,9 @@
+ #include <string.h>
+ 
+ #include "config.h"
++#ifdef DISABLE_MAIN
++#include <ogc/system.h>
++#endif
+ #include "osdep/getch2.h"
+ 
+ #ifdef CONFIG_ICONV
+@@ -229,7 +232,12 @@ void mp_msg_va(int mod, int lev, const char *format, va_list va){
+ 
+     // as a status line normally is intended to be overwitten by next status line
+     // output a '\n' to get a normal message on a separate line
++#ifdef DISABLE_MAIN
++    // WiiFin: messages go to its log (SYS_Report) rather than the console
++    if (statusline && lev != MSGL_STATUS) SYS_Report("\n");
++#else
+     if (statusline && lev != MSGL_STATUS) fprintf(stream, "\n");
++#endif
+     statusline = lev == MSGL_STATUS;
+ 
+     if (header)
+@@ -238,7 +246,11 @@ void mp_msg_va(int mod, int lev, const char *format, va_list va){
+     len = strlen(tmp);
+     header = len && (tmp[len-1] == '\n' || tmp[len-1] == '\r');
+ 
++#ifdef DISABLE_MAIN
++    SYS_Report("%s", tmp);
++#else
+     fprintf(stream, "%s", tmp);
++#endif
+     if (mp_msg_color)
+         fprintf(stream, "\033[0m");
+     fflush(stream);
+diff --git a/mplayer/mpcommon.c b/mplayer/mpcommon.c
+index 15c57e34832f451292bfd1902dbc20c57104c761..5d0ba69598cf5f1761e944fdc7aaebb347347cd4 100644
+--- a/mplayer/mpcommon.c
++++ b/mplayer/mpcommon.c
+@@ -432,6 +432,7 @@ int common_init(void)
+     }
+ #endif
+ 
++#ifndef DISABLE_MAIN /* WiiFin: no fonts to load, it draws its own interface */
+     // check font
+ #ifdef CONFIG_FREETYPE
+     init_freetype();
+@@ -464,6 +465,7 @@ int common_init(void)
+ #endif
+     }
+ 
++#endif
+     vo_init_osd();
+ 
+ #ifdef CONFIG_ASS
+diff --git a/mplayer/mplayer.c b/mplayer/mplayer.c
+index da53e721876b12c76c0745177a8ed36cf07f66a4..fa49f6533595d6c348dcf76574ac40e5ee037c62 100644
+--- a/mplayer/mplayer.c
++++ b/mplayer/mplayer.c
+@@ -31,6 +31,12 @@
+ #include <time.h>
+ #include <unistd.h>
+ #include <assert.h>
++#ifdef DISABLE_MAIN
++#include <setjmp.h>
++#include <ogc/system.h>
++extern jmp_buf g_mplayer_jmp;  /* defined in WiiFin's WiiPlayer.cpp */
++extern volatile int g_mplayer_paused;
++#endif
+ #include <sys/stat.h>
+ #include <sys/time.h>
+ #include <sys/types.h>
+@@ -892,6 +898,9 @@ void exit_player_with_rc(enum exit_reason how, int rc)
+ #endif /* CONFIG_NETWORKING */
+ 
+   if (mpctx->user_muted && !mpctx->edl_muted) mixer_mute(&mpctx->mixer);
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] exit how=%d rc=%d mod=%s\n", how, rc, current_module ? current_module : "?");
++#endif
+   uninit_player(INITIALIZED_ALL);
+ #if defined(__MINGW32__) || defined(__CYGWIN__)
+   timeEndPeriod(1);
+@@ -959,7 +968,12 @@ void exit_player_with_rc(enum exit_reason how, int rc)
+ 
+   	plat_deinit (rc);
+ #endif  
++#ifdef DISABLE_MAIN
++  longjmp(g_mplayer_jmp, rc == 0 ? 1 : rc);
++  __builtin_unreachable();
++#else
+   exit(rc);
++#endif
+ }
+ 
+ void exit_player(enum exit_reason how)
+@@ -2529,6 +2543,9 @@ static int sleep_until_update(double *time_frame, double *aq_sleep_time)
+ int reinit_video_chain(void) {
+     sh_video_t * const sh_video = mpctx->sh_video;
+     double ar=-1.0;
++#ifdef DISABLE_MAIN
++    SYS_Report("[mplayer] reinit_video_chain() ENTER\n");
++#endif
+     //================== Init VIDEO (codec & libvo) ==========================
+     if(!fixed_vo || !(initialized_flags&INITIALIZED_VO)){
+     current_module="preinit_libvo";
+@@ -2536,6 +2553,9 @@ int reinit_video_chain(void) {
+     //shouldn't we set dvideo->id=-2 when we fail?
+     vo_config_count=0;
+     //if((mpctx->video_out->preinit(vo_subdevice))!=0){
++#ifdef DISABLE_MAIN
++    SYS_Report("[mplayer] init_best_video_out(video_driver_list)...\n");
++#endif
+     if(!(mpctx->video_out=init_best_video_out(video_driver_list))){
+       mp_msg(MSGT_CPLAYER,MSGL_FATAL,MSGTR_ErrorInitializingVODevice);
+       goto err_out;
+@@ -2617,10 +2637,16 @@ int reinit_video_chain(void) {
+   current_module="init_video_codec";
+ 
+   mp_msg(MSGT_CPLAYER,MSGL_INFO,"==========================================================================\n");
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] video_out=%p, calling init_best_video_codec...\n", mpctx->video_out);
++#endif
+   init_best_video_codec(sh_video,video_codec_list,video_fm_list);
+   mp_msg(MSGT_CPLAYER,MSGL_INFO,"==========================================================================\n");
+ 
+   if(!sh_video->initialized){
++#ifdef DISABLE_MAIN
++    SYS_Report("[mplayer] video codec init FAILED\n");
++#endif
+     if(!fixed_vo) uninit_player(INITIALIZED_VO);
+     goto err_out;
+   }
+@@ -2894,6 +2920,9 @@ static void pause_loop(void)
+     if (mpctx->audio_out && mpctx->sh_audio)
+         mpctx->audio_out->pause(); // pause audio, keep data if possible
+ 
++#ifdef DISABLE_MAIN
++    g_mplayer_paused = 1;  /* the main loop does not run while paused */
++#endif
+     while ( (cmd = mp_input_get_cmd(20, 1, 1)) == NULL || cmd->pausing == 4) {
+         if (cmd) {
+           cmd = mp_input_get_cmd(0,1,0);
+@@ -2921,6 +2950,9 @@ static void pause_loop(void)
+         cmd = mp_input_get_cmd(0,1,0);
+         mp_cmd_free(cmd);
+     }
++#ifdef DISABLE_MAIN
++    g_mplayer_paused = 0;
++#endif
+     mpctx->osd_function=OSD_PLAY;
+     if (mpctx->audio_out && mpctx->sh_audio) {
+         if (mpctx->eof) // do not play remaining audio if we e.g.  switch to the next file
+@@ -3091,8 +3123,31 @@ static int error_playing;
+ 
+ /* This preprocessor directive is a hack to generate a mplayer-nomain.o object
+  * file for some tools to link against. */
+-#ifndef DISABLE_MAIN
++#ifdef DISABLE_MAIN
++/* Called once, right after the stream URL is opened: Jellyfin has then
++ * received the GET and started the transcode, and WiiFin reports the
++ * playback start. */
++void (*g_stream_opened_cb)(void) = NULL;
++
++/* WiiFin's player integration, defined in WiiPlayer.cpp */
++extern volatile float g_mplayer_time_pos;
++extern volatile float g_mplayer_duration;
++extern volatile float g_wiifin_seek_secs;
++extern volatile int   g_wiifin_vol_delta;
++/* Duration from Jellyfin (s), when the MPEG-TS demuxer finds none */
++extern volatile float g_wiifin_known_duration;
++/* Loading indicator, cleared here once a frame with a timestamp shows */
++extern volatile int   g_wiifin_loading_active;
++extern float g_wiifin_loading_start_pos;
++void mpgxForceLoadingFrame(void);
++void mpgxWaitDrawDone(void);
++void mpgxRunOverlay(void);
++void mpgxPushFrame(void);
++
++int mplayer_main(int argc,char* argv[]){
++#else
+ int main(int argc,char* argv[]){
++#endif
+ 
+ 
+ // movie info:
+@@ -3103,8 +3158,40 @@ int i;
+ 
+ int gui_no_filename=0;
+ 
++#ifdef DISABLE_MAIN
++  /* WiiFin calls mplayer_main() once per video in the same process:
++   * start from the state a new process would have. */
++  mpctx_s = (MPContext){
++    .osd_function = OSD_PLAY,
++    .begin_skip = MP_NOPTS_VALUE,
++    .play_tree_step = 1,
++    .global_sub_pos = -1,
++    .set_of_sub_pos = -1,
++    .file_format = DEMUXER_TYPE_UNKNOWN,
++    .loop_times = -1,
++  };
++  audio_time_usage = 0;
++  total_time_usage_start = 0;
++  total_frame_cnt = 0;
++  drop_frame_cnt = 0;
++  max_framesize = 0;
++  output_quality = 0;
++  default_max_pts_correction = -1;
++  max_pts_correction = 0;
++  c_total = 0;
++  play_n_frames = -1;
++  play_n_frames_mf = -1;
++  low_cache = false;
++  restore_points_changed = false;
++  filename = NULL;
++  initialized_flags = 0;
++#endif
++
+ #ifdef GEKKO
+   plat_init(&argc, &argv);
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] plat_init done, argc=%d argv[1]=%s\n", argc, argc > 1 ? argv[1] : "(none)");
++#endif
+   fileplaying = (char *)malloc(sizeof(char) * MAXPATHLEN);
+   load_restore_points();
+ #endif
+@@ -3154,6 +3241,9 @@ int gui_no_filename=0;
+       }
+     }
+     }
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] cmdline parsed: filename=%s opt_exit=%d\n", filename ? filename : "(null)", opt_exit);
++#endif
+ 
+   print_version("MPlayer");
+ #if (defined(__MINGW32__) || defined(__CYGWIN__)) && defined(CONFIG_GUI)
+@@ -3172,6 +3262,9 @@ int gui_no_filename=0;
+ #endif
+     if (!common_init())
+         exit_player_with_rc(EXIT_NONE, 0);
++#ifdef DISABLE_MAIN
++    SYS_Report("[mplayer] common_init ok, filename=%s\n", filename ? filename : "(null)");
++#endif
+ 
+ #ifndef CONFIG_GUI
+     if(use_gui){
+@@ -3590,6 +3683,9 @@ while (player_idle_mode && !filename) {
+   //mpctx->stream=NULL;
+ 
+   current_module="open_stream";
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] === STAGE: open_stream ===\n");
++#endif
+ #ifdef GEKKO
+ 
+   // rodries
+@@ -3597,7 +3693,13 @@ while (player_idle_mode && !filename) {
+   static float orig_stream_cache_min_percent=-1;
+   static float orig_stream_cache_seek_min_percent=-1;
+   static int orig_stream_cache_size=-1;
++#ifdef DISABLE_MAIN
++  /* each mplayer_main() call parses its own -cache-min: take it, not the
++   * first call's */
++  if(1)
++#else
+   if(orig_stream_cache_min_percent==-1 && orig_stream_cache_seek_min_percent==-1)
++#endif
+   {
+     orig_stream_cache_min_percent=stream_cache_min_percent;
+     orig_stream_cache_seek_min_percent=stream_cache_seek_min_percent;
+@@ -3628,13 +3730,26 @@ while (player_idle_mode && !filename) {
+     }
+ #endif
+   //end rodries
++#endif
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] calling open_stream()...\n");
+ #endif
+   mpctx->stream=open_stream(filename,0,&mpctx->file_format);
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] open_stream() returned stream=%p file_format=%d\n", mpctx->stream, mpctx->file_format);
++#endif
+   if(!mpctx->stream) { // error...
+     mpctx->eof = libmpdemux_was_interrupted(PT_NEXT_ENTRY);
+     goto goto_next_file;
+   }
+   initialized_flags|=INITIALIZED_STREAM;
++#ifdef DISABLE_MAIN
++  if (g_stream_opened_cb) {
++    void (*cb)(void) = g_stream_opened_cb;
++    g_stream_opened_cb = NULL;   /* once */
++    cb();
++  }
++#endif
+   //strcpy(fileplaying,filename_recode(filename));
+   strcpy(fileplaying,filename);
+ 
+@@ -3729,12 +3844,21 @@ if(stream_cache_size>0){
+   int res;
+   current_module="enable_cache";
+ stream_cache_min_percent=1.0;  
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] === STAGE: enable_cache (size=%d min=%.1f%%) ===\n", stream_cache_size, stream_cache_min_percent);
++#endif
+   res = stream_enable_cache(mpctx->stream,stream_cache_size*1024,
+                           stream_cache_size*1024*(stream_cache_min_percent / 100.0),
+                           stream_cache_size*1024*(stream_cache_seek_min_percent / 100.0));
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] stream_enable_cache returned %d\n", res);
++#endif
+   if(res == 0)
+     if((mpctx->eof = libmpdemux_was_interrupted(PT_NEXT_ENTRY))) goto goto_next_file;
+ }
++#endif
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] === STAGE: demux_open ===\n");
+ #endif
+ 	if(!IsLoopAvi(NULL))
+     {
+@@ -3776,6 +3900,9 @@ stream_cache_min_percent=1.0;
+ current_module="demux_open";
+ 
+ mpctx->demuxer=demux_open(mpctx->stream,mpctx->file_format,audio_id,video_id,dvdsub_id,filename);
++#ifdef DISABLE_MAIN
++SYS_Report("[mplayer] demux_open() returned %p\n", mpctx->demuxer);
++#endif
+ 
+ // HACK to get MOV Reference Files working
+ 
+@@ -3874,6 +4001,9 @@ if (ts_prog) {
+ }
+ // select audio stream
+ select_audio(mpctx->demuxer, audio_id, audio_lang);
++#ifdef DISABLE_MAIN
++SYS_Report("[mplayer] sh_audio=%p sh_video=%p\n", mpctx->sh_audio, mpctx->sh_video);
++#endif
+ 
+ // DUMP STREAMS:
+ if((stream_dump_type)&&(stream_dump_type<4)){
+@@ -4041,8 +4171,14 @@ if (select_subtitle(mpctx)) {
+       }
+   }
+ 
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] === STAGE: reinit_video_chain (sh_video=%p) ===\n", mpctx->sh_video);
++#endif
+   if (mpctx->sh_video)
+       reinit_video_chain();
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] reinit_video_chain done, sh_video=%p\n", mpctx->sh_video);
++#endif
+ 
+       if (mpctx->sh_video) {
+           if (vo_flags & 0x08 && vo_spudec)
+@@ -4053,6 +4189,9 @@ if (select_subtitle(mpctx)) {
+ #endif
+       } else if (!mpctx->sh_audio)
+           goto goto_next_file;
++#ifdef DISABLE_MAIN
++  SYS_Report("[mplayer] === STAGE: MAIN LOOP (sh_video=%p sh_audio=%p) ===\n", mpctx->sh_video, mpctx->sh_audio);
++#endif
+ 
+ //================== MAIN: ==========================
+ current_module="main";
+@@ -4230,6 +4369,7 @@ mpctx->osd_function=OSD_PLAY;
+ mpctx->set_of_sub_size=aux;
+ }
+ 
++#ifndef DISABLE_MAIN /* WiiFin: no fonts to load, it draws its own interface */
+ if (mpctx->sh_video)
+ {
+ 	int width = mpctx->sh_video->disp_w;
+@@ -4283,6 +4423,7 @@ if (mpctx->sh_video)
+ 			sub_font = vo_font;
+ 	}
+ }
++#endif
+ 
+ vo_osd_changed(OSDTYPE_SUBTITLE);
+ vo_osd_changed(OSDTYPE_PROGBAR);
+@@ -4424,7 +4565,12 @@ if (!edl_needs_reset) {
+         if(vo_config_count && first_frame) mpctx->video_out->flip_page();
+         mpctx->num_buffered_frames--;
+ 
++#ifdef GEKKO
++        /* GetTimer() is 64-bit here: the difference wraps like t2 */
++        vout_time_usage += (unsigned int)(GetTimer() - t2) * 0.000001;
++#else
+         vout_time_usage += (GetTimer() - t2) * 0.000001;
++#endif
+     }
+ }
+ //====================== A-V TIMESTAMP CORRECTION: =========================
+@@ -4492,6 +4638,7 @@ if(auto_quality>0){
+   current_module="pause";
+ 
+ #ifdef CONFIG_STREAM_CACHE
++#ifndef DISABLE_MAIN /* WiiFin pauses on a low cache itself */
+     //low cache
+ 	if (stream_cache_size > 0.0 && stream_cache_min_percent> 1.0 && cache_fill_status<4.0 && cache_fill_status>=0.0 && !IsLoopAvi(NULL)) {
+    		if(mpctx->osd_function == OSD_PAUSE)
+@@ -4505,7 +4652,9 @@ if(auto_quality>0){
+ 			low_cache=true;
+ 		}
+ 	}
+-	else if (mpctx->osd_function == OSD_PAUSE) {
++	else
++#endif
++	if (mpctx->osd_function == OSD_PAUSE) {
+       
+       if(low_cache) 
+ 	  {
+@@ -4599,6 +4748,64 @@ if(step_sec>0) {
+     loop_seek = 1;
+   }
+ 
++#ifdef DISABLE_MAIN
++  /* seek and volume requests from WiiFin */
++  if (g_wiifin_seek_secs >= 0.0f) {
++    rel_seek_secs      = g_wiifin_seek_secs;
++    abs_seek_pos       = SEEK_ABSOLUTE;
++    g_wiifin_seek_secs = -1.0f;
++  }
++  if (g_wiifin_vol_delta) {
++    int vd = g_wiifin_vol_delta;
++    g_wiifin_vol_delta = 0;
++    if (vd > 0) mixer_incvolume(&mpctx->mixer);
++    else        mixer_decvolume(&mpctx->mixer);
++  }
++  /* state for WiiFin's player */
++  if (mpctx->sh_video)
++    g_mplayer_time_pos = (float)mpctx->sh_video->pts;
++  g_mplayer_duration = mpctx->demuxer
++    ? (float)demuxer_get_time_length(mpctx->demuxer) : 0.0f;
++  if (g_mplayer_duration <= 0.5f && g_wiifin_known_duration > 0.5f)
++    g_mplayer_duration = g_wiifin_known_duration;
++  g_mplayer_paused = (mpctx->osd_function == OSD_PAUSE) ? 1 : 0;
++  /* The loading indicator goes once a frame with a timestamp is decoded
++   * (or after 1500 rounds for streams without timestamps); until then a
++   * loading frame is pushed, nothing else would reach the screen.  A few
++   * frames are pushed again afterwards so the overlay settles. */
++  {
++    static int loading_iter = 0;
++    static int post_loading_frames = 0;
++    if (g_wiifin_loading_active) {
++      loading_iter++;
++      post_loading_frames = 0;
++      if (g_wiifin_loading_start_pos < 0.0f && g_mplayer_time_pos > 0.0f)
++        g_wiifin_loading_start_pos = g_mplayer_time_pos;
++      if (g_wiifin_loading_start_pos >= 0.0f || loading_iter > 1500) {
++        SYS_Report("[mplayer] loading_active cleared (iter=%d time=%.1f)\n", loading_iter, g_mplayer_time_pos);
++        g_wiifin_loading_active = 0;
++        loading_iter = 0;
++        mpgxWaitDrawDone();
++        mpgxRunOverlay();
++        mpgxPushFrame();
++        post_loading_frames = 1;
++      } else {
++        mpgxForceLoadingFrame();
++      }
++    } else {
++      if (post_loading_frames > 0 && post_loading_frames < 120) {
++        post_loading_frames++;
++        if ((post_loading_frames & 3) == 0) {
++          mpgxWaitDrawDone();
++          mpgxRunOverlay();
++          mpgxPushFrame();
++        }
++      }
++      loading_iter = 0;
++    }
++  }
++#endif
++
+ if(rel_seek_secs || abs_seek_pos){
+   if (seek(mpctx, rel_seek_secs, abs_seek_pos) >= 0) {
+         // Set OSD:
+@@ -4806,4 +5013,3 @@ exit_player_with_rc(EXIT_EOF, 0);
+ 
+ return 1;
+ }
+-#endif /* DISABLE_MAIN */
+diff --git a/mplayer/osdep/fst.c b/mplayer/osdep/fst.c
+index 5e028401b2e9aae8b67cc17a80b9ea9fbca40177..e570f5c2e1e0dd0ba043b8c68b2c391d91635d28 100644
+--- a/mplayer/osdep/fst.c
++++ b/mplayer/osdep/fst.c
+@@ -373,11 +373,8 @@ static void stat_entry(DIR_ENTRY *entry, struct stat *st) {
+     st->st_rdev = st->st_dev;
+     st->st_size = entry->size;
+     st->st_atime = 0;
+-    st->st_spare1 = 0;
+     st->st_mtime = 0;
+-    st->st_spare2 = 0;
+     st->st_ctime = 0;
+-    st->st_spare3 = 0;
+     st->st_blksize = SECTOR_SIZE;
+     st->st_blocks = (entry->size + SECTOR_SIZE - 1) / SECTOR_SIZE;
+     st->st_spare4[0] = 0;
+diff --git a/mplayer/osdep/ftp_devoptab.c b/mplayer/osdep/ftp_devoptab.c
+index be0fdd4c9dd8ed73b8f5bce04f7e399b60aaede7..8ceab2dd1b82e130ca156aff85fa084ebadd2402 100644
+--- a/mplayer/osdep/ftp_devoptab.c
++++ b/mplayer/osdep/ftp_devoptab.c
+@@ -2441,11 +2441,8 @@ static int dentry_to_stat(FTPDIRENTRY *dentry, struct stat *st)
+ 	st->st_gid = 2; // Faked
+ 	st->st_size = dentry->size;
+ 	st->st_atime = 0;
+-	st->st_spare1 = 0;
+ 	st->st_mtime = 0;
+-	st->st_spare2 = 0;
+ 	st->st_ctime = 0;
+-	st->st_spare3 = 0;
+ 	st->st_blksize = 1024;
+ 	st->st_blocks = (st->st_size + st->st_blksize - 1) / st->st_blksize; // File size in blocks
+ 	st->st_spare4[0] = 0;
+@@ -2625,7 +2622,7 @@ bool ftpInitDevice(const char* name, const char *user, const char *password, con
+ 	for(i=0;i<MAX_FTP_MOUNTED && FTPEnv[i].name!=NULL;i++);
+ 	if(i==MAX_FTP_MOUNTED) return false; //all allowed ftp connections reached
+ 
+-	if (if_config(myIP, NULL, NULL, true) < 0)
++	if (if_config(myIP, NULL, NULL, true, 5) < 0)
+ 		return false;
+ 
+ 	_FTP_lock();
+diff --git a/mplayer/osdep/gcfst.c b/mplayer/osdep/gcfst.c
+index 9a8e226b0b6f1c4c26614e25b065a84d99de034b..8214941662025599c8a4cae706d79090fe8b70fe 100644
+--- a/mplayer/osdep/gcfst.c
++++ b/mplayer/osdep/gcfst.c
+@@ -296,11 +296,8 @@ static void stat_entry(DIR_ENTRY *entry, struct stat *st) {
+     st->st_rdev = st->st_dev;
+     st->st_size = entry->size;
+     st->st_atime = 0;
+-    st->st_spare1 = 0;
+     st->st_mtime = 0;
+-    st->st_spare2 = 0;
+     st->st_ctime = 0;
+-    st->st_spare3 = 0;
+     st->st_blksize = SECTOR_SIZE;
+     st->st_blocks = (entry->size + SECTOR_SIZE - 1) / SECTOR_SIZE;
+     st->st_spare4[0] = 0;
+diff --git a/mplayer/osdep/getch2-gekko.c b/mplayer/osdep/getch2-gekko.c
+index c24540a9c72b872ddc1f73f3545551d85a945dc8..f430234568770b0bd6f85c2b96beae6ea49d16d3 100644
+--- a/mplayer/osdep/getch2-gekko.c
++++ b/mplayer/osdep/getch2-gekko.c
+@@ -64,6 +64,12 @@ bool nunchuk_update = false;
+ 
+ static int getch2_status = false;
+ 
++#ifdef DISABLE_MAIN
++/* Set by WiiFin while it draws its own interface: it reads the
++ * controllers itself then. */
++volatile int g_wiifin_gx_active = 0;
++#endif
++
+ static const pad_map pad_maps[] = {
+ 	{ PAD_BUTTON_A,		WPAD_BUTTON_A,		'a' },
+ 	{ PAD_BUTTON_B,		WPAD_BUTTON_B,		'b' },
+@@ -113,6 +119,10 @@ void reset_screen_position()
+ 
+ void getch2_enable()
+ {
++#ifdef DISABLE_MAIN
++	/* WiiFin owns the controllers and the keyboard */
++	return;
++#endif
+ 	if (!getch2_status)
+ 	{
+ 		PAD_Init();
+@@ -133,7 +143,7 @@ void getch2_enable()
+ 
+ void getch2_disable()
+ {
+-#ifdef HW_RVL
++#if defined(HW_RVL) && !defined(DISABLE_MAIN)
+ 	if (getch2_status)
+ 	{
+ 		WPAD_Disconnect(WPAD_CHAN_ALL);
+@@ -264,6 +274,9 @@ void getch2(void)
+ 		
+ #ifdef HW_RVL
+ 		u8 battery = 0;
++#ifdef DISABLE_MAIN
++		if (!g_wiifin_gx_active) {
++#endif
+ 		WPAD_ScanPads();
+ 		
+ 		for (int channel = 0; channel < WPAD_MAX_WIIMOTES; channel++)
+@@ -365,6 +378,9 @@ void getch2(void)
+ 		
+ 		double scale = (pow((double)battery, 2) / UCHAR_MAX) / UCHAR_MAX;
+ 		WPAD_SetIdleTimeout((scale * 240) + 60);
++#ifdef DISABLE_MAIN
++		}
++#endif
+ #endif
+ 		
+ 		if ((m_screenleft_shift != _m_screenleft_shift) ||
+diff --git a/mplayer/osdep/gx_supp.c b/mplayer/osdep/gx_supp.c
+index 225717a7c4f517f09444a606c113f544b2546878..44bce51de73e758ee54d8ff83507ca7ca708d2c0 100644
+--- a/mplayer/osdep/gx_supp.c
++++ b/mplayer/osdep/gx_supp.c
+@@ -112,7 +112,7 @@ void mpviSetup(int video_mode, bool overscan)
+ 			vmode = &TVNtsc480Prog;
+ 			break;
+ 		case 3:		// PAL (50Hz)
+-			vmode = &TVPal574IntDfScale;
++			vmode = &TVPal576IntDfScale;
+ 			break;
+ 		case 4:		// PAL (60Hz)
+ 			vmode = &TVEurgb60Hz480IntDf;
+diff --git a/mplayer/osdep/iso.c b/mplayer/osdep/iso.c
+index b1eab2db8dbf90478c26df3d86cfd52277bec3f1..debdc1745386c3d614f08065161325731156a92d 100644
+--- a/mplayer/osdep/iso.c
++++ b/mplayer/osdep/iso.c
+@@ -440,11 +440,8 @@ static void stat_entry(DIR_ENTRY *entry, struct stat *st) {
+     st->st_rdev = st->st_dev;
+     st->st_size = entry->size;
+     st->st_atime = 0;
+-    st->st_spare1 = 0;
+     st->st_mtime = 0;
+-    st->st_spare2 = 0;
+     st->st_ctime = 0;
+-    st->st_spare3 = 0;
+     st->st_blksize = SECTOR_SIZE;
+     st->st_blocks = (entry->size + SECTOR_SIZE - 1) / SECTOR_SIZE;
+     st->st_spare4[0] = 0;
+diff --git a/mplayer/osdep/plat_gekko.c b/mplayer/osdep/plat_gekko.c
+index 700ac936681d81aecd752e2d66d1a7f269925e9d..32c2275261672bde94101b423cd8428896d4f2ec 100644
+--- a/mplayer/osdep/plat_gekko.c
++++ b/mplayer/osdep/plat_gekko.c
+@@ -39,6 +39,11 @@
+ #include "gx_supp.h"
+ #include "plat_gekko.h"
+ 
++/* declared extern in config.h (GCC 10+ no longer merges common symbols) */
++char MPLAYER_DATADIR[100];
++char MPLAYER_CONFDIR[100];
++char MPLAYER_LIBDIR[100];
++
+ 
+ #ifdef HW_RVL
+ #include "mload.h"
+@@ -394,7 +399,7 @@ static int wait_for_network_initialisation()
+ 	{
+ 		if (initialise_network() >= 0) {
+ 			char myIP[16];
+-			if (if_config(myIP, NULL, NULL, true) < 0)
++			if (if_config(myIP, NULL, NULL, true, 5) < 0)
+ 			{
+ 				sleep(5);
+ 				continue;
+@@ -657,6 +662,18 @@ void plat_init(int *argc, char **argv[])
+ 	ARQ_Reset();
+ #elif defined(HW_RVL)
+ 	L2Enhance();
++#ifdef DISABLE_MAIN
++	/* WiiFin sets up the IOS, the video, the devices and the network
++	 * itself: MPlayer only needs its folders. */
++	{
++		const char *dir = "sd:/apps/WiiFin";
++		snprintf(MPLAYER_DATADIR, sizeof(MPLAYER_DATADIR), "%s", dir);
++		snprintf(MPLAYER_CONFDIR, sizeof(MPLAYER_CONFDIR), "%s", dir);
++		snprintf(MPLAYER_LIBDIR, sizeof(MPLAYER_LIBDIR), "%s", dir);
++		setenv("HOME", dir, 1);
++		return;
++	}
++#endif
+ 	bool ehci = false;
+ 	
+ 	if (FindIOS(202)) {
+diff --git a/mplayer/osdep/wiilight.c b/mplayer/osdep/wiilight.c
+index defd52fff21b80fe9142b821b532b929baabb794..44a92f9406f6f90977529511918042c82e315a67 100644
+--- a/mplayer/osdep/wiilight.c
++++ b/mplayer/osdep/wiilight.c
+@@ -110,9 +110,9 @@ static void * _wiilight_loop(void *arg){
+ 		timeOn=_wiilight_timeOn;
+ 		timeOff=_wiilight_timeOff;
+ 		_wiilight_turn(1);
+-		nanosleep(&timeOn);
++		nanosleep(&timeOn, NULL);
+ 		if(timeOff.tv_nsec>0) _wiilight_turn(0);
+-		nanosleep(&timeOff);
++		nanosleep(&timeOff, NULL);
+ 	}
+ 	
+ 	return NULL;
+diff --git a/mplayer/stream/cache2.c b/mplayer/stream/cache2.c
+index c3693cca469738e884f56993c61abaa054b13fc1..feb989c6ec9e090b006c4390480432f84c8b8429 100644
+--- a/mplayer/stream/cache2.c
++++ b/mplayer/stream/cache2.c
+@@ -76,7 +76,7 @@ static void *ThreadProc(void *s);
+ 
+ #if defined(GEKKO)
+ #define GEKKO_THREAD_STACKSIZE (512 * 1024)
+-#define GEKKO_THREAD_PRIO 70
++#define GEKKO_THREAD_PRIO 80
+ #ifndef HW_DOL
+ static u8 gekko_stack[GEKKO_THREAD_STACKSIZE] ATTRIBUTE_ALIGN (32);
+ #else
+@@ -613,11 +613,20 @@ int stream_enable_cache(stream_t *stream,int size,int min,int seek_limit){
+ 	force_osd();
+ 	}
+ 	
+-	if(s->eof) break; // file is smaller than prefill size
++	if(s->eof) { // file is smaller than prefill size
++	  mp_msg(MSGT_CACHE,MSGL_V,"CACHE_PRE: eof break at %"PRId64" bytes\n",
++	         (int64_t)(s->max_filepos-s->read_filepos));
++	  break;
++	}
++#ifdef DISABLE_MAIN
++	/* WiiFin stops a stream itself: no input to poll while prefilling */
++	usleep(PREFILL_SLEEP_TIME * 1000);
++#else
+ 	if(stream_check_interrupt(PREFILL_SLEEP_TIME)) {
+ 	  res = 0;
+ 	  goto err_out;
+         }
++#endif
+     }
+     mp_msg(MSGT_CACHE,MSGL_STATUS,"\n");
+     return 1; // parent exits
+diff --git a/mplayer/stream/stream.c b/mplayer/stream/stream.c
+index 2caaa26a42de66849c7f09ad72411da5a7c3f92e..567ba68f69c136b362165201c0a43d0ccae51218 100644
+--- a/mplayer/stream/stream.c
++++ b/mplayer/stream/stream.c
+@@ -33,6 +33,9 @@
+ #include <assert.h>
+ 
+ #include "config.h"
++#ifdef DISABLE_MAIN
++#include <ogc/system.h>
++#endif
+ 
+ #if HAVE_WINSOCK2_H
+ #include <winsock2.h>
+@@ -85,6 +88,11 @@ extern const stream_info_t stream_info_file;
+ extern const stream_info_t stream_info_ifo;
+ extern const stream_info_t stream_info_dvd;
+ extern const stream_info_t stream_info_bluray;
++#ifdef GEKKO
++/* HTTP and HTTPS through the Wii's network stack (WiiFin's stream_wiifin.cpp) */
++extern const stream_info_t stream_info_https_wii;
++extern const stream_info_t stream_info_http_wii;
++#endif
+ 
+ static const stream_info_t* const auto_open_streams[] = {
+   &stream_info_bd,
+@@ -148,6 +156,10 @@ static const stream_info_t* const auto_open_streams[] = {
+ 
+   &stream_info_null,
+   &stream_info_mf,
++#ifdef GEKKO
++  &stream_info_https_wii,
++  &stream_info_http_wii,
++#endif
+   &stream_info_file,
+   NULL
+ };
+@@ -227,6 +239,10 @@ stream_t* open_stream_full(const char* filename,int mode, char** options, int* f
+   stream_t* s;
+   char *redirected_url = NULL;
+ 
++#ifdef DISABLE_MAIN
++  SYS_Report("[stream] open_stream_full: %.120s\n", filename);
++#endif
++
+   for(i = 0 ; auto_open_streams[i] ; i++) {
+     sinfo = auto_open_streams[i];
+     if(!sinfo->protocols) {
+diff --git a/mplayer/wiifin/ext2.h b/mplayer/wiifin/ext2.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..fe12f6c2b2c440020a2f1bcbac89f49a41a6baf2
+--- /dev/null
++++ b/mplayer/wiifin/ext2.h
+@@ -0,0 +1,10 @@
++/* libext2fs is not part of devkitPro any more: never called by WiiFin
++ * (plat_init's mounting is skipped under DISABLE_MAIN). */
++#pragma once
++#include <stdbool.h>
++#include <gctypes.h>
++#include <ogc/disc_io.h>
++#define EXT2_FLAG_DEFAULT 0
++bool ext2Mount(const char *name, const DISC_INTERFACE *interface, sec_t startSector,
++               u32 cachePageCount, u32 cachePageSize, u32 flags);
++void ext2Unmount(const char *name);
+diff --git a/mplayer/wiifin/ntfs.h b/mplayer/wiifin/ntfs.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..373e1cc8e274c24b828caf9a5d2d27f69ec514b2
+--- /dev/null
++++ b/mplayer/wiifin/ntfs.h
+@@ -0,0 +1,11 @@
++/* libntfs is not part of devkitPro any more: MPlayer CE's NTFS mounting
++ * links to the stubs in wii_stubs.c (no NTFS). */
++#pragma once
++#include <stdbool.h>
++#include <gctypes.h>
++#include <ogc/disc_io.h>
++#define NTFS_DEFAULT 0x00000000
++#define NTFS_RECOVER 0x00000008
++bool ntfsMount(const char *name, const DISC_INTERFACE *interface, sec_t startSector,
++               u32 cachePageCount, u32 cachePageSize, u32 flags);
++void ntfsUnmount(const char *name, bool force);
+diff --git a/mplayer/wiifin/register_mpegts.c b/mplayer/wiifin/register_mpegts.c
+new file mode 100644
+index 0000000000000000000000000000000000000000..60fd40ae6e09a4042bb46e95f06cdb16373bd004
+--- /dev/null
++++ b/mplayer/wiifin/register_mpegts.c
+@@ -0,0 +1,16 @@
++/* WiiFin calls this before playing: registers FFmpeg's MPEG-TS demuxer
++ * (Jellyfin's streams) once, for -demuxer lavf. */
++#include "libavformat/avformat.h"
++
++extern AVInputFormat ff_mpegts_demuxer;
++
++void register_mpegts_demuxer(void);
++
++void register_mpegts_demuxer(void)
++{
++    AVInputFormat *f = NULL;
++    while ((f = av_iformat_next(f)))
++        if (f == &ff_mpegts_demuxer)
++            return;
++    av_register_input_format(&ff_mpegts_demuxer);
++}
+diff --git a/mplayer/wiifin/wii_stubs.c b/mplayer/wiifin/wii_stubs.c
+new file mode 100644
+index 0000000000000000000000000000000000000000..8539749fd34a5a89c011a3be11134c55196c9f5f
+--- /dev/null
++++ b/mplayer/wiifin/wii_stubs.c
+@@ -0,0 +1,70 @@
++/* What MPlayer CE's Wii build links to but devkitPro no longer provides,
++ * or WiiFin does not use: iconv (an identity copy), the PPC-specific init
++ * hooks of FFmpeg (no AltiVec on the Wii), a cache flush and NTFS. */
++#include <stdbool.h>
++#include <stddef.h>
++#include <string.h>
++#include <gctypes.h>
++#include <ogc/disc_io.h>
++
++typedef void *iconv_t;
++
++iconv_t iconv_open(const char *tocode, const char *fromcode)
++{
++    (void)tocode; (void)fromcode;
++    return (iconv_t)-1;
++}
++
++/* Copies as many bytes as fit, unconverted. */
++size_t iconv(iconv_t cd, char **inbuf, size_t *inbytesleft,
++             char **outbuf, size_t *outbytesleft)
++{
++    (void)cd;
++    if (!inbuf || !*inbuf || !outbuf || !*outbuf)
++        return 0;
++    size_t copy = *inbytesleft < *outbytesleft ? *inbytesleft : *outbytesleft;
++    memcpy(*outbuf, *inbuf, copy);
++    *inbuf += copy;
++    *inbytesleft -= copy;
++    *outbuf += copy;
++    *outbytesleft -= copy;
++    return 0;
++}
++
++int iconv_close(iconv_t cd)
++{
++    (void)cd;
++    return 0;
++}
++
++void DCBlockFlush(void *ptr)
++{
++    __asm__ volatile ("dcbf 0,%0" : : "r"(ptr) : "memory");
++}
++
++struct FmtConvertContext;
++struct AVCodecContext;
++struct H264DSPContext;
++
++void ff_fmt_convert_init_ppc(struct FmtConvertContext *c, struct AVCodecContext *avctx)
++{
++    (void)c; (void)avctx;
++}
++
++void ff_h264dsp_init_ppc(struct H264DSPContext *c, const int bit_depth, const int chroma_format_idc)
++{
++    (void)c; (void)bit_depth; (void)chroma_format_idc;
++}
++
++bool ntfsMount(const char *name, const DISC_INTERFACE *interface, sec_t startSector,
++               u32 cachePageCount, u32 cachePageSize, u32 flags)
++{
++    (void)name; (void)interface; (void)startSector;
++    (void)cachePageCount; (void)cachePageSize; (void)flags;
++    return false;
++}
++
++void ntfsUnmount(const char *name, bool commit)
++{
++    (void)name; (void)commit;
++}
