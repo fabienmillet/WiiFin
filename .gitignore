@@ -9,6 +9,8 @@ tools/.venv/
 # tools/test: generated media, builds, Dolphin folders, frames
 tools/test/media/
 tools/test/out/
+# tools/mplayer: MPlayer CE source, build and libraries (build.sh)
+tools/mplayer/out/
 *.su
 GRRLIB_core.o
 

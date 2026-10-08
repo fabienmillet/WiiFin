@@ -7,8 +7,16 @@ name: Build
 #
 # By hand (Actions > Build > Run workflow), a version can be stamped into
 # the build, and with "release" ticked a GitHub release v<version> is
-# published with the three files once every check passes.
+# published with the three files once every check passes (a pre-release
+# when the version has a dash: 1.0.0-rc1).
+#
+# The devkitPro and Jellyfin images are pinned (the build job's container,
+# tools/test/server.sh), so a new release cannot break the build or the
+# tests unseen.  Every Monday the workflow runs with their latest versions
+# instead: a failure there means it is time to update a pin, or the code.
 on:
+  schedule:
+    - cron: '0 5 * * 1'
   push:
     paths-ignore: ['**.md', 'README/**', 'assets/preview*']
   pull_request:
@@ -35,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     # devkitPPC, libogc and the portlibs come with the image: setup.sh then
     # finds them installed and never calls devkitPro's package server.
-    container: devkitpro/devkitppc:latest
+    container: ${{ github.event_name == 'schedule' && 'devkitpro/devkitppc:latest' || 'devkitpro/devkitppc:20260503' }}
     outputs:
       version: ${{ steps.version.outputs.version }}
 
@@ -80,6 +88,9 @@ jobs:
           mkdir -p pkg/apps/WiiFin
           cp WiiFin.dol pkg/apps/WiiFin/boot.dol
           cp apps/WiiFin/meta.xml pkg/apps/WiiFin/meta.xml
+          # Chinese and Korean, read from the SD card (too big for the DOL)
+          mkdir -p pkg/apps/WiiFin/fonts
+          cp data/fonts/cjk/NotoSansCJK-WiiFin.otf data/fonts/cjk/OFL.txt pkg/apps/WiiFin/fonts/
           sed -i "s|<version>.*</version>|<version>$v</version>|" pkg/apps/WiiFin/meta.xml
           sed -i "s|<release_date>.*</release_date>|<release_date>$(date -u +%Y%m%d%H%M%S)</release_date>|" \
             pkg/apps/WiiFin/meta.xml
@@ -96,12 +107,11 @@ jobs:
             WiiFin.wad
             WiiFin-hbc.zip
 
-      # The same WiiFin with the button presses of tools/test/playback.script
-      # instead of a controller, for the playback job
+      # The same WiiFin taking its button presses from tour.txt on the SD
+      # card instead of a controller, for the playback job
       - name: Playback test build
-        shell: bash
         run: |
-          NOPROFILE=1 BUILD_ONLY=1 tools/test/tour.sh "$(cat tools/test/playback.script)"
+          NOPROFILE=1 BUILD_ONLY=1 tools/test/tour.sh ""
           cp tools/test/out/build/WiiFin.dol WiiFin-playback.dol
 
       - uses: actions/upload-artifact@v4
@@ -143,7 +153,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: tools/test
+          sparse-checkout: |
+            tools/test
+            data/fonts/cjk
 
       - uses: actions/download-artifact@v4
         with:
@@ -156,21 +168,35 @@ jobs:
           sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           sudo flatpak install -y --noninteractive flathub org.DolphinEmu.dolphin-emu
 
-      # Counter Film (h264) and Xvid Film, served alone by Jellyfin in Docker
+      # Counter, Subtitle and Xvid Film, the direct play formats (Z1..Z8),
+      # Shuffle Show and Test Album (the Singles library); the throttled
+      # proxy carries 2.4 Mb/s
       - name: Jellyfin
+        env:
+          JELLYFIN_IMAGE: ${{ github.event_name == 'schedule' && 'jellyfin/jellyfin:latest' || '' }}
         run: |
-          tools/test/make_media.sh playback
-          ONLY=playback tools/test/server.sh
+          tools/test/make_media.sh playback music
+          MOVIES=playback MIXED='' tools/test/server.sh 300k
 
-      - name: Play, seek and resume
-        run: dbus-run-session -- xvfb-run -a tools/test/playback.sh WiiFin-playback.dol 600
+      # tools/test/scenarios (see tools/test/README.md): transcode and
+      # direct play, seeks and resumes, audio tracks, drawn subtitles, the
+      # throttled link, episodes in a row (also from Continue Watching), trickplay,
+      # the music player, the interface sounds (and custom ones), the
+      # server's remote control, skipping intros and credits
+      - name: Playback scenarios
+        run: |
+          failed=''
+          for s in resume resume-transcode xvid formats audio-track https https-ecdsa slow subtitles subtitles-switch subtitles-big next next-from-home trickplay music-formats sounds sounds-off remote remote-play remote-queue segments stuck japanese music-favorite sort-favorite music-tabs specials cjk watched settings home-sounds music-quiet season-posters overview favorite-home versions; do
+            dbus-run-session -- xvfb-run -a tools/test/playback.sh "$s" WiiFin-playback.dol 600 || failed="$failed $s"
+          done
+          [ -z "$failed" ] || { echo "::error::failed:$failed"; exit 1; }
 
-      - name: Keep the log
+      - name: Keep the logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playback-log
-          path: tools/test/out/playback/log.txt
+          name: playback-logs
+          path: tools/test/out/playback/*/log.txt
           retention-days: 7
 
   release:
@@ -190,6 +216,8 @@ jobs:
           name: WiiFin v${{ needs.build.outputs.version }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
+          # 1.0.0-rc1, 1.1.0-beta...: a pre-release, for testers
+          prerelease: ${{ contains(needs.build.outputs.version, '-') }}
           files: |
             WiiFin.dol
             WiiFin.wad

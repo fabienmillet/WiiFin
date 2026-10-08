@@ -64,7 +64,7 @@ body:
     id: wiifin_version
     attributes:
       label: WiiFin Version / Commit
-      placeholder: "e.g. 0.1.3, or commit SHA"
+      placeholder: "e.g. 1.0.0-rc1, or commit SHA"
     validations:
       required: true
 
