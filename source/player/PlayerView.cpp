@@ -3,9 +3,12 @@
 #include "../ui/Ui.h"
 #include "WiiPlayer.h"
 #include "VideoSurface.h"
+#include "Trickplay.h"
+#include "Subtitles.h"
 #include "../input/Input.h"
 
 #include <ogc/lwp_watchdog.h>
+#include <math.h>
 #include <stdio.h>
 
 /* ---- Layout (640x480 virtual screen) ---------------------------------- */
@@ -65,9 +68,10 @@ void PlayerView::setContext(const PlayerViewContext& c)
     ctx          = c;
     pickAudio    = c.currentAudio;
     pickSub      = c.currentSub;
-    introSkipped = false;
+    skippedSegments = 0;
     seekPending  = false;
     seekInFlight = false;
+    seekInPlaceSince = false;
     lastSeenPos  = -1.0f;
 }
 
@@ -90,13 +94,30 @@ float PlayerView::duration() const
     return 0.0f;
 }
 
-bool PlayerView::introVisible() const
+int PlayerView::activeSegment() const
 {
-    if (!ctx.intro.hasIntro || introSkipped || !busyMsg.empty()) return false;
-    float showAt = ctx.intro.showPromptAt > 0 ? ctx.intro.showPromptAt : ctx.intro.introStart;
-    float hideAt = ctx.intro.hidePromptAt > 0 ? ctx.intro.hidePromptAt : ctx.intro.introEnd + 2.0f;
+    if (!busyMsg.empty()) return -1;
     float pos = position();
-    return pos >= showAt && pos < hideAt;
+    const auto& segs = ctx.intro.segments;
+    for (int i = 0; i < (int)segs.size() && i < 32; ++i) {
+        if (skippedSegments & (1u << i)) continue;
+        /* not in its last second: skipping would land about there anyway */
+        if (pos >= segs[i].start && pos < segs[i].end - 1.0f) return i;
+    }
+    return -1;
+}
+
+/* Credits with an episode after them: straight to it, as Netflix does */
+const char* PlayerView::segmentLabel(int i) const
+{
+    switch (ctx.intro.segments[i].kind) {
+    case MediaSegment::Recap:      return "Skip recap";
+    case MediaSegment::Preview:    return "Skip preview";
+    case MediaSegment::Commercial: return "Skip ad";
+    case MediaSegment::Outro:
+        return ctx.episodeIdx + 1 < (int)ctx.episodes.size() ? "Next episode" : "Skip credits";
+    default:                       return "Skip intro";
+    }
 }
 
 bool PlayerView::controlsVisible() const
@@ -123,8 +144,20 @@ void PlayerView::nudgeSeek(float delta)
     if (dur > 0.0f && target > dur - 5.0f) target = dur - 5.0f;
     seekPending   = true;
     seekPendingTo = target;
-    seekCommitAt  = nowMs() + 800;
+    seekCommitAt  = nowMs() + 400;   /* presses closer than this add up */
     showControls();
+}
+
+void PlayerView::remoteSeek(float secs)
+{
+    nudgeSeek(secs - (seekPending ? seekPendingTo : position()));
+}
+
+void PlayerView::remoteTrack(bool audio, int index)
+{
+    if (audio) pickAudio = index;
+    else       pickSub   = index;
+    injected = audio ? Action::Audio : Action::Sub;
 }
 
 float PlayerView::displayPosition() const
@@ -132,6 +165,58 @@ float PlayerView::displayPosition() const
     if (seekPending)  return seekPendingTo;
     if (seekInFlight) return seekTo;
     return position();
+}
+
+void PlayerView::seekInPlace()
+{
+    seekInPlaceSince = true;
+    seekInPlaceFrom  = g_mplayer_time_pos;
+    seekInPlaceAt    = nowMs();
+}
+
+/* The current cue, lines wrapped to the screen, white with a black outline
+ * (readable on any picture), its last line ending at y = bottom. */
+void PlayerView::drawSubtitle(float bottom)
+{
+    const Subtitles::Cue* cue = subtitles->at(position());
+    if (!cue) return;
+    const int SIZE = 24, LINE_H = 29;
+    const float maxW = Ui::screenWidth() - 60;
+    std::vector<std::string> lines;
+    size_t p = 0;
+    while (p <= cue->text.size()) {
+        size_t e = cue->text.find('\n', p);
+        std::string para = cue->text.substr(p, e == std::string::npos ? std::string::npos : e - p);
+        p = e == std::string::npos ? cue->text.size() + 1 : e + 1;
+        /* word wrap; a word too long for a line (Japanese and Chinese have
+         * no spaces) is cut between its characters */
+        std::string cur;
+        size_t w = 0;
+        while (w < para.size()) {
+            size_t sp = para.find(' ', w);
+            std::string word = para.substr(w, sp == std::string::npos ? std::string::npos : sp - w);
+            w = sp == std::string::npos ? para.size() : sp + 1;
+            std::string trial = cur.empty() ? word : cur + " " + word;
+            if (Ui::textWidth(trial.c_str(), SIZE) <= maxW) { cur = trial; continue; }
+            if (!cur.empty()) { lines.push_back(cur); cur.clear(); }
+            while (Ui::textWidth(word.c_str(), SIZE) > maxW) {
+                size_t n = Text::fitBytes(Ui::font(), word.c_str(), SIZE, maxW);
+                lines.push_back(word.substr(0, n));
+                word.erase(0, n);
+            }
+            cur = word;
+        }
+        if (!cur.empty()) lines.push_back(cur);
+    }
+    if (lines.size() > 4) lines.erase(lines.begin(), lines.end() - 4);
+    float y = bottom - lines.size() * LINE_H;
+    const float cx = (Ui::screenLeft() + Ui::screenRight()) * 0.5f;
+    static const float OFF[8][2] = { {-2,0},{2,0},{0,-2},{0,2},{-1.5f,-1.5f},{1.5f,-1.5f},{-1.5f,1.5f},{1.5f,1.5f} };
+    for (const std::string& l : lines) {
+        for (const auto& o : OFF) Ui::textCentered(cx + o[0], y + o[1], l.c_str(), SIZE, 0x000000E0);
+        Ui::textCentered(cx, y, l.c_str(), SIZE, 0xFFFFFFFF);
+        y += LINE_H;
+    }
 }
 
 void PlayerView::toast(const std::string& msg, int ms)
@@ -202,7 +287,8 @@ void PlayerView::hitTest(const ir_t& ir)
                 hoverRow = panelTop + i;
         return;
     }
-    if (!controlsVisible()) return;
+    /* still on screen while they fade out: still clickable */
+    if (!controlsVisible() && controlsAlpha < 0.3f) return;
     hoverBar = inRect(ir, BAR_X - 8, BAR_Y - 12, BAR_W + 16, BAR_H + 24);
     for (int i = 0; i < BTN_COUNT; ++i)
         if (inRect(ir, BTN_X0 + i * (BTN_W + BTN_GAP), BTN_Y, BTN_W, BTN_H))
@@ -221,6 +307,13 @@ void PlayerView::toggleZoom()
 
 PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
 {
+    /* a seek in this stream is over once MPlayer shows a picture from
+     * elsewhere: until then it may still show one or two from here */
+    if (seekInPlaceSince && !g_wiifin_loading_active &&
+        (fabsf(g_mplayer_time_pos - seekInPlaceFrom) > 1.0f || nowMs() - seekInPlaceAt > 4000)) {
+        seekInPlaceSince = false;
+        seekInFlight     = false;
+    }
     {
         float t = g_mplayer_time_pos;
         if (t != lastSeenPos || g_mplayer_paused || g_wiifin_loading_active) {
@@ -229,12 +322,19 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
         }
     }
 
-    /* Pointer movement reveals the controls */
+    /* Pointer movement reveals the controls.  A hand holding the remote
+     * shakes the pointer a few pixels all the time: while they are hidden,
+     * only a real move brings them back (24 px from where the pointer was
+     * half a second ago); once they show, any movement keeps them up. */
     if (ir.valid) {
+        const u64 now = nowMs();
+        if (lastIrX < 0.0f || now - irAnchorMs > 500) { lastIrX = ir.x; lastIrY = ir.y; irAnchorMs = now; }
         float dx = ir.x - lastIrX, dy = ir.y - lastIrY;
-        if (lastIrX >= 0.0f && dx * dx + dy * dy > 16.0f) showControls();
-        lastIrX = ir.x;
-        lastIrY = ir.y;
+        float need = controlsVisible() ? 4.0f : 24.0f;
+        if (dx * dx + dy * dy > need * need) {
+            showControls();
+            lastIrX = ir.x; lastIrY = ir.y; irAnchorMs = now;
+        }
     } else {
         lastIrX = lastIrY = -1.0f;
     }
@@ -243,6 +343,7 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
 
     if (down & WPAD_BUTTON_HOME) return Action::Home;
     if (!busyMsg.empty()) return Action::None;   /* switching streams */
+    if (injected != Action::None) { Action a = injected; injected = Action::None; return a; }
 
     const bool hasNext = ctx.episodeIdx + 1 < (int)ctx.episodes.size();
     const bool hasPrev = !ctx.episodes.empty() && ctx.episodeIdx > 0;
@@ -268,15 +369,26 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
         return Action::None;
     }
 
-    const bool visible = controlsVisible();
+    const bool visible = controlsVisible() || controlsAlpha >= 0.3f;   /* fading out: still there */
     Action act = Action::None;
 
     if (down & WPAD_BUTTON_A) {
-        if (hoverIntro || (introVisible() && hoverButton < 0 && !hoverBar)) {
-            introSkipped = true;
-            seekInFlight = true;
-            seekTo = ctx.intro.introEnd + 0.5f;
-            act = Action::SeekTo;
+        /* the pointer skips with the button only (a click on the bar meant
+         * the bar, even as the controls faded); without one, A anywhere */
+        if (hoverIntro || (!ir.valid && introVisible() && hoverButton < 0 && !hoverBar)) {
+            int i = activeSegment();
+            const MediaSegment& seg = ctx.intro.segments[i];
+            skippedSegments |= 1u << i;
+            if (seg.kind == MediaSegment::Outro && hasNext) {
+                act = Action::Next;
+            } else {
+                float to = seg.end + 0.3f, dur = duration();
+                if (dur > 0.0f && to > dur - 2.0f) to = dur - 2.0f;   /* credits at the very end */
+                SYS_Report("[Segments] %s: to %.1f s\n", segmentLabel(i), (double)to);
+                seekInFlight = true;
+                seekTo = to;
+                act = Action::SeekTo;
+            }
         } else if (visible && hoverBar && duration() > 0.0f) {
             float frac = (ir.x - BAR_X) / (float)BAR_W;
             if (frac < 0.0f) frac = 0.0f;
@@ -370,9 +482,20 @@ void PlayerView::render(const ir_t& ir)
     if (controlsAlpha > 0.99f) controlsAlpha = 1.0f;
     const float k = controlsAlpha;
 
+    /* Subtitles: at the bottom, lifted over the control panel when it shows */
+    if (subtitles && !subtitles->empty()) {
+        const float e = 1 - (1 - k) * (1 - k);
+        drawSubtitle(452.0f + (PANEL_Y - 12.0f - 452.0f) * e);
+    }
+
     /* ---- Loading / busy ---- */
     const bool stalled = buffering() || rebufPercent >= 0;
-    if (!busyMsg.empty() || g_wiifin_loading_active || !hasVideo || stalled) {
+    /* a short load (a seek in the file: a fraction of a second) shows no
+     * spinner, it would only flash over the picture */
+    if (!g_wiifin_loading_active) loadingSince = 0;
+    else if (!loadingSince)       loadingSince = nowMs();
+    const bool loadingLong = g_wiifin_loading_active && nowMs() - loadingSince > 250;
+    if (!busyMsg.empty() || loadingLong || !hasVideo || stalled) {
         if (hasVideo) GRRLIB_Rectangle(Ui::screenLeft(), 0, Ui::screenWidth(), 480, 0x00000099, 1);
         drawSpinner(320.0f, 220.0f);
         char msg[48];
@@ -430,15 +553,39 @@ void PlayerView::render(const ir_t& ir)
             Ui::circle(kx, ky, kr, p.cardTop);
             Ui::roundBorder(kx - kr, ky - kr, kr * 2, kr * 2, kr, 2.0f, p.accent);
         }
+        /* Where a seek would land: under the pointer on the bar, or the
+         * target of the -10s / +10s presses still to be played.  Its time
+         * in a bubble, with the trickplay thumbnail above when there is one. */
+        float previewAt = -1.0f, px = 0.0f;
         if (hoverBar && dur > 0.0f) {
             float f = (ir.x - BAR_X) / (float)BAR_W;
             if (f < 0.0f) f = 0.0f;
             if (f > 1.0f) f = 1.0f;
-            std::string t = fmtTime(f * dur);
+            previewAt = f * dur;
+            px = ir.x;
+        } else if ((seekPending || seekInFlight) && dur > 0.0f) {
+            previewAt = pos;
+            px = BAR_X + BAR_W * frac;
+        }
+        /* asked for whenever the controls show, so the tile is there by the
+         * time the user seeks */
+        GRRLIB_texImg* thumb = trickplay ? trickplay->thumbnail(previewAt >= 0.0f ? previewAt : pos, previewAt >= 0.0f)
+                                         : nullptr;
+        if (previewAt >= 0.0f) {
+            std::string t = fmtTime(previewAt);
             int w = Ui::textWidth(t.c_str(), 14) + 20;
-            Ui::roundRect(ir.x - w / 2, BAR_Y - 34, w, 22, 11, p.accent, p.accentDark);
-            Ui::triangle(ir.x - 5, BAR_Y - 12, ir.x + 5, BAR_Y - 12, ir.x, BAR_Y - 7, p.accentDark);
-            Ui::textCentered(ir.x, BAR_Y - 31, t.c_str(), 14, p.textOnAccent);
+            if (thumb) {
+                const float TW = 160.0f, sc = TW / thumb->w, th = thumb->h * sc;
+                float tx = px - TW / 2, ty = BAR_Y - 40 - th;
+                if (tx < Ui::screenLeft() + 8)        tx = Ui::screenLeft() + 8;
+                if (tx > Ui::screenRight() - 8 - TW)  tx = Ui::screenRight() - 8 - TW;
+                Ui::shadow(tx - 3, ty - 3, TW + 6, th + 6, 6, 6.0f, p.shadow);
+                Ui::roundRect(tx - 3, ty - 3, TW + 6, th + 6, 6, p.accentDark);
+                GRRLIB_DrawImg(tx, ty, thumb, 0, sc, sc, 0xFFFFFFFF);
+            }
+            Ui::roundRect(px - w / 2, BAR_Y - 34, w, 22, 11, p.accent, p.accentDark);
+            Ui::triangle(px - 5, BAR_Y - 12, px + 5, BAR_Y - 12, px, BAR_Y - 7, p.accentDark);
+            Ui::textCentered(px, BAR_Y - 31, t.c_str(), 14, p.textOnAccent);
         }
         Ui::text(BAR_X, TIME_Y, fmtTime(pos).c_str(), 15, p.text);
         Ui::textRight(BAR_X + BAR_W, TIME_Y, dur > 0.0f ? fmtTime(dur).c_str() : "--:--", 15, p.textDim);
@@ -496,7 +643,7 @@ void PlayerView::render(const ir_t& ir)
 
     /* ---- Skip intro ---- */
     if (introVisible()) {
-        Ui::button(INTRO_X, INTRO_Y, INTRO_W, INTRO_H, "Skip intro", 16,
+        Ui::button(INTRO_X, INTRO_Y, INTRO_W, INTRO_H, segmentLabel(activeSegment()), 16,
                    hoverIntro ? Ui::pulse() : 0.35f);
     }
 

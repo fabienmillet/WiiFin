@@ -6,6 +6,9 @@
 #include <vector>
 #include "../jellyfin/JellyfinClient.h"
 
+class Trickplay;
+class Subtitles;
+
 /* -----------------------------------------------------------------------
  * PlayerViewContext — what is playing; refreshed by App for each stream.
  * ----------------------------------------------------------------------- */
@@ -64,12 +67,22 @@ public:
      * the cache, -1 otherwise. */
     void setRebuffering(int percent) { rebufPercent = percent; }
 
+    /* Thumbnails shown over the seek bar while seeking; nullptr: none. */
+    void setTrickplay(Trickplay* t) { trickplay = t; }
+
+    /* Text subtitles drawn over the picture (not burned in); nullptr: none.
+     * currentSub: the track the picker shows as current. */
+    void setSubtitles(Subtitles* s, int currentSub) { subtitles = s; ctx.currentSub = currentSub; pickSub = currentSub; }
+
     Action update(u32 btnsDown, const ir_t& ir);
     void   render(const ir_t& ir);
 
     int   chosenAudio() const { return pickAudio; }
     int   chosenSub()   const { return pickSub; }
     float seekTarget()  const { return seekTo; }
+    /* The seek is done by MPlayer in the same stream (direct play): the
+     * target shows until MPlayer is there. */
+    void  seekInPlace();
 
     /* Absolute playback position in seconds. */
     float position() const;
@@ -78,6 +91,14 @@ public:
     bool  buffering() const;
 
     void toast(const std::string& msg, int ms = 2000);
+
+    /* The server's remote control (Remote): a seek to an absolute position
+     * or by delta s, as the D-pad's (merged, then Action::SeekTo); a track
+     * switch (Jellyfin stream index, -1 = no subtitles), as the picker's:
+     * the next update() returns Action::Audio / Sub. */
+    void remoteSeek(float secs);
+    void remoteNudge(float delta) { nudgeSeek(delta); }
+    void remoteTrack(bool audio, int index);
 
 private:
     enum class Panel { None, Audio, Sub };
@@ -89,6 +110,9 @@ private:
     PlayerViewContext ctx;
     std::string busyMsg;
     int         rebufPercent = -1;
+    Trickplay*  trickplay = nullptr;
+    Subtitles*  subtitles = nullptr;
+    void drawSubtitle(float bottom);
 
     Panel panel        = Panel::None;
     int   panelSel     = 0;
@@ -97,8 +121,9 @@ private:
     float controlsAlpha = 0.0f;
     std::string toastMsg;
     u64   toastUntil   = 0;
-    float lastIrX = -1.0f, lastIrY = -1.0f;
-    bool  introSkipped = false;
+    float lastIrX = -1.0f, lastIrY = -1.0f;   /* where the pointer rested */
+    u64   irAnchorMs = 0;
+    unsigned skippedSegments = 0;   /* bit i: segment i skipped (or not wanted) */
 
     /* Stall detection: the position stops moving while not paused when
      * MPlayer's cache runs dry (slow Wi-Fi or server). */
@@ -110,6 +135,11 @@ private:
 
     /* Left/Right presses accumulate into one seek, committed after a pause */
     bool  seekInFlight  = false;   /* SeekTo returned, new stream not started */
+    bool  seekInPlaceSince = false; /* ... or MPlayer seeking in this one */
+    float seekInPlaceFrom  = 0.0f;  /* MPlayer's position when it was asked */
+    u64   seekInPlaceAt    = 0;
+    u64   loadingSince     = 0;     /* the loading indicator went on, 0 = off */
+    Action injected     = Action::None;   /* remoteTrack */
     bool  seekPending   = false;
     float seekPendingTo = 0.0f;
     u64   seekCommitAt  = 0;
@@ -122,7 +152,10 @@ private:
     bool  hoverIntro  = false;
 
     float duration() const;
-    bool  introVisible() const;
+    bool  introVisible() const { return activeSegment() >= 0; }
+    /* the segment being played that offers its button (ctx.intro), -1 none */
+    int   activeSegment() const;
+    const char* segmentLabel(int i) const;
     bool  controlsVisible() const;
     void  nudgeSeek(float delta);
     float displayPosition() const;

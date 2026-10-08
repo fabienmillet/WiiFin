@@ -8,3 +8,8 @@ extern bool g_wiifin_stream_tls_verify;
  * an answer), and the start of the server's error message. */
 extern int  g_wiifin_stream_fail_status;
 extern char g_wiifin_stream_fail_body[160];
+
+/* Bytes of video received since start-up (every stream): with the cache,
+ * PlaySession tells a dead connection from a picture stuck while the data
+ * comes in. */
+extern volatile unsigned long long g_wiifin_stream_bytes;

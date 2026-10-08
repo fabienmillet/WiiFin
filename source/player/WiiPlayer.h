@@ -31,12 +31,15 @@ int  wii_player_wait(void);
  * Safe from any thread; the session ends shortly after. */
 void wii_player_request_stop(int reason);
 
-/* Close every IOS socket.  MPlayer's cache thread can sit in a blocking
- * net_read() (e.g. on a keep-alive connection after the last chunk), and
- * MPlayer waits for that thread before quitting; closing its socket makes
- * the read fail so shutdown can finish.  Only call while a stop is pending
- * and WiiFin itself has no request in flight. */
+/* Close every IOS socket but WiiFin's own (wii_player_keep_socket).
+ * MPlayer's cache thread can sit in a blocking net_read() (e.g. on a
+ * keep-alive connection after the last chunk), and MPlayer waits for that
+ * thread before quitting; closing its socket makes the read fail so
+ * shutdown can finish. */
 void wii_player_abort_io(void);
+/* sockets wii_player_abort_io leaves open, one per slot (-1: none):
+ * 0 the remote control's WebSocket, 1 JellyfinClient's connection */
+void wii_player_keep_socket(int slot, int fd);
 
 /* ------------------------------------------------------------------
  * Return / stop-reason codes
@@ -83,17 +86,53 @@ extern float cache_fill_status;
 void wii_player_pause_toggle(void);
 void wii_player_seek_abs(float seconds);   /* stream-relative seconds */
 void wii_player_seek_rel(float delta);
+/* A relative seek made by MPlayer itself ("seek <delta> 0"): in an AVI it
+ * stops on the keyframe after the target going forward, before it going
+ * back (an absolute one always takes the next keyframe). */
+void wii_player_seek_by(float delta);
 void wii_player_vol_up(void);
 void wii_player_vol_down(void);
+/* The volume (0-100) and mute, kept by WiiFin for every playback: set
+ * from the server's remote control, sent in the playback reports. */
+void wii_player_set_volume(int v);
+void wii_player_set_mute(int on);
+int  wii_player_volume(void);
+int  wii_player_muted(void);
 
 /* When > 0, adds "-ss <secs>" so MPlayer discards that much stream at start.
  * Set to 3.0f with JellyfinClient's 3 s RESUME_PAD (startTimeTicks > 3 s). */
 extern volatile float g_wiifin_ss_secs;
 
+/* How the next video is read: 0 a transcode (MPEG-TS, FFmpeg's demuxer),
+ * 1 a file as it is, with the demuxer g_wiifin_demuxer: one of MPlayer's
+ * (avi, mkv, mpegps) or FFmpeg's (lavf:mov, lavf:mpegts).  Always named:
+ * MPlayer keeps a previous stream's -demuxer otherwise.  A file is
+ * seekable: MPlayer seeks in it. */
+extern volatile int g_wiifin_direct;
+extern char g_wiifin_demuxer[16];
+/* MPlayer's -aid for the next video, -1 = its first audio track.  Always
+ * passed: MPlayer keeps a previous video's otherwise. */
+extern volatile int g_wiifin_aid;
+/* MPlayer's -fps for the next video, 0 = the stream's own.  A transcode's
+ * is given: MPEG-4 in MPEG-TS from some servers reads as 24000 fps
+ * (23.976 with a 1/24000 time base), and MPlayer then drops nearly every
+ * frame, stuck at the start.  Always passed: MPlayer keeps a previous
+ * video's otherwise. */
+extern volatile float g_wiifin_fps;
+/* tests (wiifin.cfg test_freeze_at): past this position (s) PlaySession's
+ * watchdog sees the picture frozen while the data still comes in, as with
+ * a stream MPlayer cannot show; 0 = off */
+extern float g_wiifin_test_freeze;
+
 /* 1 when the server burns subtitles into the picture.  Its stream then
  * starts with seconds of audio before the first video frame, more than the
  * quick stream probe reads, and MPlayer started without video. */
 extern volatile int g_wiifin_burned_subs;
+
+/* 0: the disc slot stays dark during playback.  1 (default): MPlayer's
+ * audio output pulses it with the sound, as bright as the console's
+ * Slot Illumination setting (Off there keeps it dark too). */
+extern volatile int g_wiifin_disc_light;
 
 /* One-shot callback fired once the stream is opened (on the player thread). */
 extern void (*g_stream_opened_cb)(void);

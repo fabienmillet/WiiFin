@@ -47,6 +47,10 @@ void wiifin_video_release(void);
 /* Writes the cadence statistics gathered since the last call to the log. */
 void wiifin_video_report(const char* when);
 
+/* Frames MPlayer has output since the stream started (decoded in time:
+ * those it dropped behind schedule are not counted). */
+unsigned wiifin_video_frames(void);
+
 /* Main thread, player stopped: forget the current frame. */
 void wiifin_video_clear(void);
 

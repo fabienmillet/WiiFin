@@ -40,6 +40,7 @@ extern "C" volatile int async_quit_request;   /* MPlayer input.c */
 extern "C" float cache_fill_status;           /* MPlayer cache2.c, % ahead */
 
 bool g_wiifin_stream_tls_verify = true;
+volatile unsigned long long g_wiifin_stream_bytes = 0;
 
 /* ---- MPlayer ABI — must match libmplayer.a (stream/stream.h) -------------
  * Offsets verified against stream_https_wii.o: fill_buffer @0, seek @8,
@@ -92,6 +93,7 @@ using mpabi::mp_stream_info;
 
 namespace {
 
+const int STREAMTYPE_FILE    = 0;
 const int STREAMTYPE_STREAM  = 2;
 const int STREAM_READ        = 0;
 const int STREAM_UNSUPPORTED = -1;
@@ -255,6 +257,9 @@ struct HttpStream {
     bool  trailerEmpty = true;
     int   prio = 70;               /* cache thread priority, see pacePrefetch */
     lwp_t opener = LWP_THREAD_NULL; /* MPlayer's own thread: never re-prioritised */
+    /* a whole file (direct play): reopened at any byte with a Range request */
+    std::string url;               /* after redirects */
+    long long total = -1;          /* file size, -1 = a live stream */
 };
 
 bool parseUrl(const std::string& url, bool& tls, std::string& host, int& port, std::string& path) {
@@ -291,13 +296,14 @@ std::string headerValue(const std::string& headers, const char* name) {
 /* Send the GET and read the response headers.  Returns the HTTP status (0 on
  * network error); leftover body bytes stay in st->raw. */
 int request(HttpStream* st, const std::string& host, int port, bool tls,
-            const std::string& path, std::string& headers) {
+            const std::string& path, std::string& headers, long long from = -1) {
     Log::addPrivate(host);
     std::string hostHdr = host + (port == (tls ? 443 : 80) ? "" : ":" + std::to_string(port));
     std::string req = "GET " + path + " HTTP/1.1\r\n"
                       "Host: " + hostHdr + "\r\n"
                       "User-Agent: WiiFin\r\n"
-                      "Accept: */*\r\n"
+                      "Accept: */*\r\n" +
+                      (from >= 0 ? "Range: bytes=" + std::to_string(from) + "-\r\n" : std::string()) +
                       "Connection: close\r\n\r\n";
     if (!connOpen(st->conn, tls, host, port)) return 0;
     if (!connWrite(st->conn, req.data(), (int)req.size())) return 0;
@@ -428,7 +434,7 @@ int fillBuffer(mp_stream* s, char* buffer, int max_len) {
     pacePrefetch(st);
     while (!st->done) {
         int n = decode(st, buffer, max_len);
-        if (n > 0) return n;
+        if (n > 0) { g_wiifin_stream_bytes += (unsigned)n; return n; }
         if (st->done) break;
         /* need more raw data */
         st->rawPos = st->rawLen = 0;
@@ -445,6 +451,41 @@ void closeStream(mp_stream* s) {
     connClose(st->conn);
     delete st;
     s->priv = nullptr;
+}
+
+/* Reads go on from byte pos: a new request for the rest of the file.  The
+ * cache thread calls it, for a demuxer looking for an index (MP4 files
+ * keep theirs at the end) or for a seek in the film. */
+int seekStream(mp_stream* s, long long pos) {
+    HttpStream* st = (HttpStream*)s->priv;
+    if (!st || st->total < 0 || pos < 0 || pos > st->total) return 0;
+    if (pos == st->total) {            /* the end: nothing left to read */
+        connClose(st->conn);
+        st->done = true;
+        s->pos = pos;
+        return 1;
+    }
+    connClose(st->conn);
+    bool tls; std::string host, path; int port;
+    if (!parseUrl(st->url, tls, host, port, path)) return 0;
+    std::string headers;
+    int status = 0;
+    for (int attempt = 0; attempt < 3 && !async_quit_request; ++attempt) {
+        status = request(st, host, port, tls, path, headers, pos);
+        if (status == 206) break;
+        connClose(st->conn);
+        if (status != 0) break;        /* an answer other than a range: give up */
+        usleep(300000);                /* a socket error: try again */
+    }
+    if (status != 206) {
+        SYS_Report("[stream] seek to %lld failed (HTTP %d)\n", pos, status);
+        return 0;
+    }
+    st->chunked   = false;
+    st->remaining = st->total - pos;
+    st->done      = false;
+    s->pos        = pos;
+    return 1;
 }
 
 int openStream(mp_stream* s, int mode, void* opts, int* file_format) {
@@ -492,6 +533,12 @@ int openStream(mp_stream* s, int mode, void* opts, int* file_format) {
     st->chunked = headerValue(headers, "transfer-encoding").find("chunked") != std::string::npos;
     std::string cl = headerValue(headers, "content-length");
     if (!st->chunked && !cl.empty()) st->remaining = atoll(cl.c_str());
+    st->url = url;
+    /* a file of known size that the server serves by byte ranges (Jellyfin's
+     * static streams): seekable; a transcode is a live stream */
+    if (status == 200 && st->remaining > 0 &&
+        headerValue(headers, "accept-ranges").find("bytes") != std::string::npos)
+        st->total = st->remaining;
     g_wiifin_stream_fail_status  = 0;
     g_wiifin_stream_fail_body[0] = 0;
     if (status != 200 && status != 206) {
@@ -515,17 +562,25 @@ int openStream(mp_stream* s, int mode, void* opts, int* file_format) {
         return STREAM_ERROR;
     }
 
-    SYS_Report("[stream] HTTP %d, %s\n", status,
-               st->chunked ? "chunked" : (st->remaining >= 0 ? "content-length" : "until close"));
+    SYS_Report("[stream] HTTP %d, %s%s\n", status,
+               st->chunked ? "chunked" : (st->remaining >= 0 ? "content-length" : "until close"),
+               st->total >= 0 ? ", a file: seekable" : "");
 
     st->opener     = LWP_GetSelf();
     s->priv        = st;
     s->fill_buffer = fillBuffer;
     s->close       = closeStream;
-    s->seek        = nullptr;
     s->fd          = -1;
-    s->type        = STREAMTYPE_STREAM;
-    s->end_pos     = 0;   /* unknown length: like the original module */
+    if (st->total >= 0) {
+        /* a file: MPlayer seeks through s->seek (MP_STREAM_SEEK follows) */
+        s->seek    = seekStream;
+        s->type    = STREAMTYPE_FILE;
+        s->end_pos = st->total;
+    } else {
+        s->seek    = nullptr;
+        s->type    = STREAMTYPE_STREAM;
+        s->end_pos = 0;   /* unknown length: like the original module */
+    }
     return STREAM_OK;
 }
 

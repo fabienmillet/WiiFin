@@ -3,7 +3,7 @@
  *
  * Build requirements:
  *   - mplayer-ce must be built as a static library (libmplayer.a) using the
- *     patches in libs/mplayer-ce/wii_player_patch.diff.
+ *     patches in tools/mplayer/wiifin.patch (MPLAYER_CE_BUILD.md).
  *   - The library path must be passed to the linker (see Makefile).
  *
  * How it works:
@@ -41,7 +41,9 @@ extern "C" {
 
     int mplayer_main(int argc, char** argv);     /* renamed main() */
     void register_mpegts_demuxer(void);          /* register MPEG-TS lavf demuxer */
+    void av_register_all(void);                  /* FFmpeg: every demuxer and codec built in */
     extern volatile int async_quit_request;      /* set 1 to stop  */
+    extern int verbose;                          /* mp_msg.c: each -v adds one */
 
     /* MPlayer input command queue (protected by a mutex in MPlayer CE) */
     struct mp_cmd_t;
@@ -71,6 +73,23 @@ extern "C" {
 
     volatile float g_wiifin_ss_secs = 0.0f;
     volatile int   g_wiifin_burned_subs = 0;
+    volatile float g_wiifin_fps         = 0.0f;
+    float          g_wiifin_test_freeze = 0.0f;
+    volatile int   g_wiifin_disc_light  = 1;
+
+    /* MPlayer's audio output (ao_gekko) reads the console's slot
+     * illumination when a playback starts, and pulses the disc light with
+     * the sound unless it is off: linked with --wrap, it reads this.  Only
+     * during playback: SYS_ResetSystem reads it too, for the standby light. */
+    static volatile int s_in_mplayer = 0;
+    s32 __real_CONF_GetIdleLedMode(void);
+    s32 __wrap_CONF_GetIdleLedMode(void)
+    {
+        return s_in_mplayer && !g_wiifin_disc_light ? 0 : __real_CONF_GetIdleLedMode();
+    }
+    volatile int   g_wiifin_direct = 0;
+    char           g_wiifin_demuxer[16] = "";
+    volatile int   g_wiifin_aid = -1;
 }
 
 volatile int   g_player_stop_reason       = PLAYER_STOP_EOF;
@@ -134,9 +153,19 @@ static int runMplayer(int argc, const char** argv)
             if (!cmd) break;
             mp_cmd_free(cmd);
         }
+        /* FFmpeg's demuxers, all of them first: av_register_all() appends
+         * without checking, so the MPEG-TS one registered before it was
+         * appended again with its "next" cleared, and the list ended there
+         * (MP4, MKV... "Unknown lavf format").  Then MPEG-TS is already in. */
+        av_register_all();
         register_mpegts_demuxer();
+        /* -v adds to MPlayer's verbosity, which stays from one playback to
+         * the next: from the third on, a log line per frame (SD writes) */
+        verbose = 0;
+        s_in_mplayer = 1;
         mplayer_main(argc, const_cast<char**>(argv));
     }
+    s_in_mplayer = 0;   /* also after MPlayer's longjmp */
     return rc;
 }
 
@@ -152,9 +181,24 @@ static void closeLeakedSockets()
     usleep(200000);   /* let IOS process the closures */
 }
 
+/* The volume, 0-100: WiiFin's own record of it, given to every playback
+ * (-volume) and changed with MPlayer's steps (volstep 3).  56: ao_gekko's
+ * start (0x8E of 0xFF).  The server's dashboard shows it (reports). */
+static volatile int s_volume = 56;
+static volatile int s_muted  = 0;
+
+/* WiiFin's own sockets live on: the remote control's WebSocket and
+ * JellyfinClient's connection.  Closed here, the remote thread would write
+ * to a number MPlayer's next socket gets, and a request in flight (the
+ * progress report, a thumbnail) waited 15 s for an answer that could not
+ * come, the next video with it. */
+static volatile s32 s_keptSocket[2] = { -1, -1 };
+void wii_player_keep_socket(int slot, int fd) { if (slot >= 0 && slot < 2) s_keptSocket[slot] = fd; }
+
 void wii_player_abort_io(void)
 {
-    for (s32 fd = 0; fd < 24; ++fd) net_close(fd);
+    for (s32 fd = 0; fd < 24; ++fd)
+        if (fd != s_keptSocket[0] && fd != s_keptSocket[1]) net_close(fd);
 }
 
 /* -----------------------------------------------------------------------
@@ -176,19 +220,39 @@ static void* playThreadFunc(void*)
     addArg("-v");
     addArg("-msglevel"); addArg("demux=4");
     addArg("-fs");
-    addArg("-demuxer"); addArg("lavf"); /* MPlayer's native TS demuxer fails to find
-                                        * the video PID in Jellyfin live-transcoded
-                                        * streams; FFmpeg's lavf parses PAT/PMT. */
-    /* Probe little so playback starts fast, except with burned-in subtitles:
-     * there the first video frame came 5 s (95 KB) after the audio. */
-    addArg("-lavfdopts");
-    addArg(g_wiifin_burned_subs ? "format=mpegts:probesize=1048576:analyzeduration=10"
-                                : "format=mpegts:probesize=32768:analyzeduration=1");
+    const bool directLavf = g_wiifin_direct && strncmp(g_wiifin_demuxer, "lavf:", 5) == 0;
+    char lavfOpts[64];
+    if (!g_wiifin_direct || directLavf) {
+        addArg("-demuxer"); addArg("lavf"); /* MPlayer's native TS demuxer fails to find
+                                            * the video PID in Jellyfin live-transcoded
+                                            * streams; FFmpeg's lavf parses PAT/PMT. */
+        /* Probe little so playback starts fast, except when the stream starts
+         * with seconds of audio before the first video frame: burned-in
+         * subtitles (5 s, 95 KB), and a transcode started mid-file (a seek,
+         * a resume: the audio copied as it is comes at once, the video once
+         * re-encoded, HEVC 1080p for one).  The quick probe then saw no
+         * picture ("0x0"), and only the sound played.  The bigger one stops
+         * as soon as both streams are known.  A file as it is may carry
+         * more streams: a bigger look. */
+        if (directLavf)
+            snprintf(lavfOpts, sizeof(lavfOpts), "format=%s:probesize=524288:analyzeduration=3",
+                     g_wiifin_demuxer + 5);
+        else
+            snprintf(lavfOpts, sizeof(lavfOpts), "%s", g_wiifin_burned_subs || g_wiifin_ss_secs > 0.0f
+                     ? "format=mpegts:probesize=1048576:analyzeduration=10"
+                     : "format=mpegts:probesize=32768:analyzeduration=1");
+        addArg("-lavfdopts"); addArg(lavfOpts);
+    } else if (g_wiifin_demuxer[0]) {
+        /* a file as it is (AVI, MKV, MPEG-PS): MPlayer's own demuxer */
+        addArg("-demuxer"); addArg(g_wiifin_demuxer);
+    }
     addArg("-vo"); addArg("gx");        /* vo_wiifin.c */
     addArg("-ao"); addArg("gekko");
-    /* 8 MB cache, playback starts (and resumes after an underrun) once 8%
-     * ≈ 650 KB ≈ 3 s at 1.6 Mb/s is buffered: enough to ride out Wi-Fi hiccups
-     * and a server transcoding barely faster than real time. */
+    /* 8 MB cache, playback starts once 8% ≈ 650 KB ≈ 3 s at 1.6 Mb/s is
+     * buffered: enough to ride out Wi-Fi hiccups and a server transcoding
+     * barely faster than real time.  Also after a seek: with 4%, the stream
+     * just restarted by the server fell under the rebuffering threshold
+     * within a second on a 2.4 Mb/s link, a 6 s pause instead of 1 s won. */
     addArg("-cache"); addArg("8192");
     addArg("-cache-min"); addArg("8");
     addArg("-cache-seek-min"); addArg("5");
@@ -206,6 +270,15 @@ static void* playThreadFunc(void*)
      * up when the CPU falls behind. */
     addArg("-lavdopts"); addArg("fast:skiploopfilter=all");
     addArg("-hardframedrop");
+    char aidBuf[12];
+    snprintf(aidBuf, sizeof(aidBuf), "%d", (int)g_wiifin_aid);
+    addArg("-aid"); addArg(aidBuf);
+    char volBuf[8];
+    snprintf(volBuf, sizeof(volBuf), "%d", s_muted ? 0 : (int)s_volume);
+    addArg("-volume"); addArg(volBuf);
+    char fpsBuf[16];
+    snprintf(fpsBuf, sizeof(fpsBuf), "%.3f", g_wiifin_fps > 1.0f ? (double)g_wiifin_fps : 0.0);
+    addArg("-fps"); addArg(fpsBuf);
     /* Discard the 3 s RESUME_PAD back-off at demuxer level so output starts
      * at the exact target position. */
     char ssBuf[16];
@@ -304,13 +377,49 @@ void wii_player_seek_abs(float seconds)
     g_wiifin_seek_secs         = seconds;
 }
 
+void wii_player_seek_by(float delta)
+{
+    char cmd[32];
+    snprintf(cmd, sizeof(cmd), "seek %.2f 0", (double)delta);
+    g_wiifin_loading_start_pos = -1.0f;
+    g_wiifin_loading_active    = 1;
+    mp_input_queue_cmd(mp_input_parse_cmd(cmd));
+}
+
 void wii_player_seek_rel(float delta)
 {
     wii_player_seek_abs(g_mplayer_time_pos + delta);
 }
 
-void wii_player_vol_up(void)   { g_wiifin_vol_delta = 1; }
-void wii_player_vol_down(void) { g_wiifin_vol_delta = -1; }
+
+static void sendVolume()
+{
+    char cmd[32];
+    snprintf(cmd, sizeof(cmd), "volume %d 1", s_muted ? 0 : (int)s_volume);
+    mp_input_queue_cmd(mp_input_parse_cmd(cmd));
+}
+
+void wii_player_vol_up(void)
+{
+    if (s_muted) { s_muted = 0; sendVolume(); return; }
+    s_volume = s_volume + 3 > 100 ? 100 : s_volume + 3;
+    g_wiifin_vol_delta = 1;
+}
+void wii_player_vol_down(void)
+{
+    if (s_muted) { s_muted = 0; sendVolume(); return; }
+    s_volume = s_volume - 3 < 0 ? 0 : s_volume - 3;
+    g_wiifin_vol_delta = -1;
+}
+void wii_player_set_volume(int v)
+{
+    s_volume = v < 0 ? 0 : (v > 100 ? 100 : v);
+    s_muted  = 0;
+    sendVolume();
+}
+void wii_player_set_mute(int on) { s_muted = on ? 1 : 0; sendVolume(); }
+int  wii_player_volume(void)     { return s_volume; }
+int  wii_player_muted(void)      { return s_muted; }
 
 /* -----------------------------------------------------------------------
  * Music (audio-only) path
@@ -349,6 +458,8 @@ static void* audioThreadFunc(void*)
 
 int wii_player_play_audio(const char* url)
 {
+    char volBuf[8];
+    snprintf(volBuf, sizeof(volBuf), "%d", s_muted ? 0 : (int)s_volume);
     const char* argv[] = {
         "mplayer",
         "-noconsolecontrols",
@@ -360,6 +471,8 @@ int wii_player_play_audio(const char* url)
         "-cache-min", "5",
         "-autosync", "30",
         "-demuxer", "audio",        /* lavf can't probe non-seekable HTTP MP3 */
+        "-aid", "-1",               /* a video's -aid would stay otherwise */
+        "-volume", volBuf,          /* WiiFin's volume (wii_player_volume) */
         url,
         nullptr
     };

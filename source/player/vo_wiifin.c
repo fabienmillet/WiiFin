@@ -137,9 +137,15 @@ static int          s_write = -1;        /* buffer being filled, -1 none        
 static int          s_front = -1;        /* buffer on screen, -1 none             */
 static volatile int s_front_in_use = 0;
 static int s_write_dirty = 0;            /* s_buf[s_write] holds an unpublished frame */
-/* Jellyfin restarts a transcode mid-GOP: until the first I-frame, P/B frames
- * decode to garbage, so they are not shown. */
-static int s_wait_keyframe = 0;
+/* Every frame goes to the screen from the first one on: each stream starts
+ * on a keyframe (Jellyfin copies the video only when playing from 0, and
+ * re-encodes otherwise).  Waiting for an I-frame here made things worse:
+ * MPlayer drops the first frame or two when it starts late, the keyframe
+ * among them, and a copied DivX/Xvid has its next one 10 s later, so the
+ * sound played over a black screen for that long.  A frame whose display
+ * is dropped is still decoded, so the ones after it are whole. */
+static int s_first_shown = 0;            /* "[vo] first picture" logged */
+static volatile unsigned s_frames = 0;   /* output since the stream started */
 
 /* wall clock - pts, smoothed (ms); see the header comment */
 #define LATENCY_MS   12.0
@@ -362,7 +368,8 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
     s_have_last   = 0;
     _CPU_ISR_Restore(level);
     s_write_dirty   = 0;
-    s_wait_keyframe = 1;
+    s_first_shown   = 0;
+    s_frames        = 0;
     for (int i = 0; s_front_in_use && i < 100; ++i) usleep(2000);
 
     s_img_w    = width;
@@ -411,10 +418,6 @@ static int control(uint32_t request, void* data, ...)
         return query_format(*(uint32_t*)data);
     case VOCTRL_DRAW_IMAGE: {
         mp_image_t* mpi = (mp_image_t*)data;
-        if (s_wait_keyframe) {
-            if (mpi->pict_type == 2 || mpi->pict_type == 3) return VO_TRUE;
-            s_wait_keyframe = 0;
-        }
         if (mpi->flags & MP_IMGFLAG_PLANAR)
             copy_frame(mpi->planes, mpi->stride);
         return VO_TRUE;
@@ -472,6 +475,11 @@ static void flip_page(void)
     s_last_pts  = s_pts[w];
     s_have_last = 1;
     _CPU_ISR_Restore(level);
+    ++s_frames;
+    if (!s_first_shown) {
+        s_first_shown = 1;
+        SYS_Report("[vo] first picture at %.2f s\n", s_last_pts / 1000.0);
+    }
 }
 
 static void check_events(void) {}
@@ -583,6 +591,8 @@ int wiifin_video_acquire(wiifin_video_frame* out)
     _CPU_ISR_Restore(level);
     return ok;
 }
+
+unsigned wiifin_video_frames(void) { return s_frames; }
 
 void wiifin_video_release(void)
 {
