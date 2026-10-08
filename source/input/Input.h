@@ -45,6 +45,10 @@ public:
     static bool isBackPressed();  // alias for B
     static bool isLPressed();     // -
     static bool isRPressed();     // +
+    /* + as an action of its own (Watched, Browse, the keyboard's Enter), not
+     * the next page: Z too, a button where the GameCube's R is a trigger
+     * (hints: "+!") */
+    static bool isActionPressed();
     static bool is1Pressed();
     static bool is2Pressed();
 };

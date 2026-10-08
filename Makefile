@@ -55,8 +55,7 @@ ASSET_OFILES := \
 	$(BUILD)/fx_menu_enter_mp3.o \
 	$(BUILD)/fx_loading_mp3.o \
 	$(BUILD)/fx_backspace_mp3.o \
-	$(BUILD)/fx_back_mp3.o \
-	$(BUILD)/icon_user_png.o
+	$(BUILD)/fx_back_mp3.o
 
 OFILES      := $(ASSET_OFILES) $(SRC_OFILES)
 
@@ -76,7 +75,9 @@ CFLAGS      := -g -O2 -Wall $(WERROR) -MMD -MP $(MACHDEP) $(INCLUDE)
 CXXFLAGS    := $(CFLAGS)
 LDFLAGS     := -g $(MACHDEP) -Wl,-Map,$(TARGET).map -T $(CURDIR)/tools/wii_wiifin.ld \
                -Wl,--wrap=LWP_JoinThread \
-               -Wl,--wrap=SYS_Report       # see source/core/LwpJoinFix.cpp, Log.cpp
+               -Wl,--wrap=SYS_Report \
+               -Wl,--wrap=CONF_GetIdleLedMode \
+               -Wl,--wrap=GRRLIB_Render   # see source/core/LwpJoinFix.cpp, Log.cpp, WiiPlayer.cpp, RenderHook.cpp
 LIBPATHS    := -L$(LIBOGC_LIB) -L/opt/devkitpro/portlibs/wii/lib -L/opt/devkitpro/portlibs/ppc/lib \
                -L$(CURDIR)/libs/mbedtls/lib
 
@@ -207,10 +208,6 @@ $(BUILD)/crt0_pre.o: source/crt0_pre.S
 
 $(BUILD)/stub_zone.o: source/stub_zone.s tools/stub_zone.bin
 	$(CC) $(MACHDEP) -c $< -o $@
-
-$(BUILD)/icon_user_png.o: data/images/icon_user.png
-	xxd -i -n data_icon_user_png $< > $(BUILD)/icon_user_png.h
-	$(CC) -x c -c -o $@ $(BUILD)/icon_user_png.h
 
 # Safe inclusion of dependency files
 -include $(DEPFILES)

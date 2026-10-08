@@ -2,13 +2,17 @@
 #include "App.h"
 #include "../ui/Ui.h"
 #include "Utils.h"
+#include "SoundFX.h"
 #include "../player/VideoSurface.h"
 #include "../player/vo_wiifin.h"
+#include "../player/WiiPlayer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 void App::loadSettings() {
+    /* the clock as the console's region writes it, unless wiifin.cfg says */
+    Ui::setClock12h(CONF_GetRegion() == CONF_REGION_US);
     if (settingsPath.empty()) return;
     FILE* f = fopen(settingsPath.c_str(), "r");
     if (!f) return;
@@ -31,6 +35,12 @@ void App::loadSettings() {
             jellyfinClient.sslVerify = atoi(val) != 0;
         } else if (strcmp(key, "music_enabled") == 0) {
             musicEnabled = atoi(val) != 0;
+        } else if (strcmp(key, "ui_sounds") == 0) {
+            SoundFX::setEnabled(atoi(val) != 0);
+        } else if (strcmp(key, "test_freeze_at") == 0) {
+            g_wiifin_test_freeze = (float)atof(val);   /* tests */
+        } else if (strcmp(key, "log_sounds") == 0) {
+            SoundFX::setLogging(atoi(val) != 0);   /* tests */
         } else if (strcmp(key, "ui_theme") == 0) {
             {
                 int t = atoi(val);
@@ -41,6 +51,8 @@ void App::loadSettings() {
             }
         } else if (strcmp(key, "smooth_motion") == 0) {
             g_wiifin_smooth_motion = atoi(val) != 0;
+        } else if (strcmp(key, "disc_light") == 0) {
+            g_wiifin_disc_light = atoi(val) != 0;
         } else if (strcmp(key, "video_zoom") == 0) {
             VideoSurface::setZoom(atoi(val) == 1 ? VideoSurface::Zoom::Fill : VideoSurface::Zoom::Fit);
         } else if (strcmp(key, "library_view") == 0) {
@@ -48,6 +60,14 @@ void App::loadSettings() {
             if (v >= 0 && v < Ui::LIBRARY_STYLE_COUNT) Ui::setLibraryStyle((Ui::LibraryStyle)v);
         } else if (strcmp(key, "home_layout") == 0) {
             Ui::setHomeLayout(atoi(val) == 1 ? Ui::HomeLayout::Rows : Ui::HomeLayout::Grid);
+        } else if (strcmp(key, "clock_12h") == 0) {
+            Ui::setClock12h(atoi(val) != 0);
+        } else if (strcmp(key, "solid_colors") == 0) {
+            Ui::setSolidColors(atoi(val) != 0);
+        } else if (strcmp(key, "direct_play") == 0) {
+            jellyfinClient.directPlay = atoi(val) != 0;
+        } else if (strcmp(key, "device_id") == 0) {
+            JellyfinClient::setDeviceId(val);   /* tests: several Dolphins, one id each */
         } else if (strcmp(key, "screen_area_asked") == 0) {
             screenAreaAsked = atoi(val) != 0;
         } else if (strcmp(key, "safe_area") == 0) {
@@ -104,17 +124,34 @@ static std::string sanitizeConfigValue(const std::string& s) {
     return out;
 }
 
+void App::logSettings() {
+    int l, t, r, b;
+    Ui::safeArea(l, t, r, b);
+    SYS_Report("[Settings] ssl %d, music %d, sounds %d, quality %s, direct %d, smooth %d, "
+               "theme %s, home %s, view %d, light %d, area %d,%d,%d,%d, solid %d, clock %s\n",
+               jellyfinClient.sslVerify, musicEnabled, SoundFX::enabled(),
+               JellyfinClient::videoQualityName(jellyfinClient.videoQuality), jellyfinClient.directPlay,
+               g_wiifin_smooth_motion, Ui::themeName(Ui::theme()),
+               Ui::homeLayout() == Ui::HomeLayout::Rows ? "rows" : "grid", (int)Ui::libraryStyle(),
+               (int)g_wiifin_disc_light, l, t, r, b, Ui::solidColors(), Ui::clock12h() ? "12h" : "24h");
+}
+
 void App::saveSettings() {
     if (settingsPath.empty()) return;
     FILE* f = fopen(settingsPath.c_str(), "w");
     if (!f) return;
     fprintf(f, "ssl_verify=%d\n",      jellyfinClient.sslVerify ? 1 : 0);
     fprintf(f, "music_enabled=%d\n",    musicEnabled ? 1 : 0);
+    fprintf(f, "ui_sounds=%d\n",        SoundFX::enabled() ? 1 : 0);
     fprintf(f, "video_quality=%d\n",    jellyfinClient.videoQuality);
+    fprintf(f, "direct_play=%d\n",      jellyfinClient.directPlay ? 1 : 0);
     fprintf(f, "ui_theme=%d\n",         (int)Ui::theme());
     fprintf(f, "home_layout=%d\n",      (int)Ui::homeLayout());
     fprintf(f, "library_view=%d\n",     (int)Ui::libraryStyle());
+    fprintf(f, "solid_colors=%d\n",     Ui::solidColors() ? 1 : 0);
+    fprintf(f, "clock_12h=%d\n",        Ui::clock12h() ? 1 : 0);
     fprintf(f, "smooth_motion=%d\n",    g_wiifin_smooth_motion ? 1 : 0);
+    fprintf(f, "disc_light=%d\n",     g_wiifin_disc_light ? 1 : 0);
     fprintf(f, "video_zoom=%d\n",       (int)VideoSurface::zoom());
     {
         int l, t, r, b;

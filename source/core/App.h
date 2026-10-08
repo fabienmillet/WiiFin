@@ -19,6 +19,7 @@ private:
     void loop();
     void loadSettings();
     void saveSettings();
+    void logSettings();   // one line, on leaving Settings (tests, bug reports)
 
     GRRLIB_texImg* logoTex = nullptr;
     GRRLIB_texImg* btnTex = nullptr;
@@ -26,6 +27,10 @@ private:
     GRRLIB_texImg* ringTex            = nullptr;
     GRRLIB_ttfFont* font = nullptr;
     GRRLIB_ttfFont* jpFont = nullptr;
+    /* the SD card's fonts/ (Chinese, Korean...): fallbacks after jpFont */
+    std::vector<GRRLIB_ttfFont*> sdFonts;
+    std::vector<void*>           sdFontData;   /* FreeType reads them in place */
+    void loadSdFonts(const std::string& dir);
     ir_t ir;
     JellyfinClient jellyfinClient;
     bool musicEnabled = true;

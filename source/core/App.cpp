@@ -13,12 +13,17 @@
 #include "../ui/SettingsView.h"
 #include "../ui/LibraryView.h"
 #include "../jellyfin/JellyfinClient.h"
+#include "../jellyfin/RemoteControl.h"
 
 #include <grrlib.h>
 #include <wiiuse/wpad.h>
 #include <fat.h>
 #include <sdcard/wiisd_io.h>
 #include <errno.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include <algorithm>
+#include <dirent.h>
 #include <stdio.h>
 #include <gccore.h>
 #include <sys/iosupport.h>
@@ -160,6 +165,7 @@ void App::init(const char* argv0) {
     cursorPointerTex    = GRRLIB_LoadTexture(data_cursors_PointerP1_64_png);
     font   = GRRLIB_LoadTTF(wii_font_ttf, wii_font_ttf_len);
     jpFont = GRRLIB_LoadTTF(jp_font_ttf, jp_font_ttf_len);
+    Text::setFallback(jpFont);   /* Japanese titles, subtitles... in any text */
     Ui::setFont(font);
     ringTex = GRRLIB_LoadTexture(data_ring_png);
 
@@ -249,18 +255,81 @@ void App::init(const char* argv0) {
         if (f) { fclose(f); settingsPath = probes[i]; break; }
     }
 
-    if (!settingsPath.empty())
+    if (!settingsPath.empty()) {
         Log::open(settingsPath.substr(0, settingsPath.rfind('/') + 1));
+        loadSdFonts(settingsPath.substr(0, settingsPath.rfind('/') + 1));
+    }
     SYS_Report("[WiiFin] v%s, IOS%d v%d, %s, MEM1 %u KB / MEM2 %u KB free, settings %s\n",
                WIIFIN_VERSION, (int)IOS_GetVersion(), (int)IOS_GetRevision(),
                WiiUtils::widescreen ? "16:9" : "4:3",
                (unsigned)(SYS_GetArena1Size() / 1024), (unsigned)(SYS_GetArena2Size() / 1024),
                settingsPath.empty() ? "(none)" : settingsPath.c_str());
+    /* One DeviceId per console (a hash of its id: the log is public);
+     * wiifin.cfg's device_id, read by loadSettings, overrides it */
+    {
+        u32 id = 0;
+        if (ES_GetDeviceID(&id) >= 0 && id) {
+            u32 h = 2166136261u;
+            for (int i = 0; i < 4; ++i) h = (h ^ ((id >> (i * 8)) & 0xFF)) * 16777619u;
+            char buf[24];
+            snprintf(buf, sizeof(buf), "wiifin-%08x", (unsigned)h);
+            JellyfinClient::setDeviceId(buf);
+        }
+    }
     loadSettings();
     /* DHCP takes a few seconds: get it going while the menus show */
     jellyfinClient.startNetwork();
-    MusicBGM::init(musicEnabled);
-    SoundFX::init();
+    /* the SD card's sounds/ folder, next to wiifin.cfg, may replace the
+     * built-in sounds and music */
+    {
+        std::string dir = settingsPath.empty() ? "" : settingsPath.substr(0, settingsPath.rfind('/') + 1);
+        MusicBGM::loadCustom(dir.c_str());
+        MusicBGM::init(musicEnabled);
+        SoundFX::init(dir.c_str());
+    }
+}
+
+/* Fonts in <dir>fonts/ (.ttf, .otf, .ttc), by name: fallbacks for what the
+ * built-in fonts lack, Chinese and Korean for one (the Homebrew Channel
+ * package brings a Noto Sans CJK subset).  Read whole into memory, MEM2 by
+ * then (FreeType keeps reading them). */
+void App::loadSdFonts(const std::string& dir)
+{
+    std::string fdir = dir + "fonts";
+    DIR* d = opendir(fdir.c_str());
+    if (!d) return;
+    std::vector<std::string> names;
+    while (struct dirent* e = readdir(d)) {
+        std::string n = e->d_name;
+        size_t dot = n.rfind('.');
+        std::string ext = dot == std::string::npos ? "" : n.substr(dot);
+        for (char& c : ext) c = (char)tolower((unsigned char)c);
+        if (ext == ".ttf" || ext == ".otf" || ext == ".ttc") names.push_back(n);
+    }
+    closedir(d);
+    std::sort(names.begin(), names.end());
+    for (const std::string& n : names) {
+        std::string path = fdir + "/" + n;
+        FILE* f = fopen(path.c_str(), "rb");
+        if (!f) continue;
+        fseek(f, 0, SEEK_END);
+        long size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        void* buf = size > 0 && size <= (24L << 20) ? malloc((size_t)size) : nullptr;
+        bool ok = buf && fread(buf, 1, (size_t)size, f) == (size_t)size;
+        fclose(f);
+        GRRLIB_ttfFont* font = ok ? GRRLIB_LoadTTF((const u8*)buf, (s32)size) : nullptr;
+        if (!font) {
+            free(buf);
+            SYS_Report("[Text] fonts/%s: cannot be read (%ld bytes)\n", n.c_str(), size);
+            continue;
+        }
+        sdFonts.push_back(font);
+        sdFontData.push_back(buf);
+        Text::addFallback(font);
+        SYS_Report("[Text] fonts/%s: %ld KB at %p, %ld glyphs\n", n.c_str(), size / 1024, buf,
+                   (long)((FT_Face)font->face)->num_glyphs);
+    }
 }
 
 /* First launch: CRT TVs cut the edges of the picture (overscan) and their
@@ -271,11 +340,30 @@ void App::offerScreenCalibration(ir_t& ir) {
     if (screenAreaAsked || l || t || r || b) { screenAreaAsked = true; return; }
     screenAreaAsked = true;
     const Ui::Palette& p = Ui::pal();
+    auto drawPointer = [&]() {
+        if (ir.valid && cursorPointerTex) {
+            orient_t orient; WPAD_Orientation(WPAD_CHAN_0, &orient);
+            GRRLIB_DrawImg((int)ir.x - 20, (int)ir.y - 4, cursorPointerTex, orient.roll, 1, 1, 0xFFFFFFFF);
+        }
+    };
+    const int BY = 256, BW2 = 140, BH2 = 40;
+    const int bx[2] = { 170, 330 };
+    int sel = 0;   /* 0 = Adjust, 1 = Not now */
     for (;;) {
         Input::update();
         Input::readIR(ir);
         if (g_app_powerOff || g_app_reset) return;
-        if (Input::isBackPressed()) break;
+        int was = sel;
+        if (Input::isLeftPressed())  sel = 0;
+        if (Input::isRightPressed()) sel = 1;
+        if (ir.valid)
+            for (int i = 0; i < 2; ++i)
+                if (ir.x >= bx[i] && ir.x <= bx[i] + BW2 && ir.y >= BY && ir.y <= BY + BH2) sel = i;
+        if (sel != was) SoundFX::play(SoundFX::FX::Select);
+        if (Input::isBackPressed() || (Input::isAJustPressed() && sel == 1)) {
+            SoundFX::play(SoundFX::FX::Back);
+            break;
+        }
         if (Input::isAJustPressed()) {
             SoundFX::play(SoundFX::FX::Start);
             SettingsView sv(btnTex, font, jellyfinClient, musicEnabled);
@@ -285,6 +373,7 @@ void App::offerScreenCalibration(ir_t& ir) {
                 Input::readIR(ir);
                 sv.update(ir);
                 sv.render(ir);
+                drawPointer();
                 GRRLIB_Render();
             }
             break;
@@ -295,11 +384,12 @@ void App::offerScreenCalibration(ir_t& ir) {
         Ui::textCentered(320, 182, "Older TVs (CRT) often cut the edges of the picture.", 15, p.textDim);
         Ui::textCentered(320, 204, "You can shrink it to fit now, or later in", 15, p.textDim);
         Ui::textCentered(320, 226, "Settings > Screen Area.", 15, p.textDim);
-        Ui::button(170, 256, 140, 40, "Adjust", 18, Ui::pulse());
-        Ui::button(330, 256, 140, 40, "Not now", 18, 0.0f);
-        const Ui::Hint l2[] = { { "A", "Adjust" } };
+        Ui::button(bx[0], BY, BW2, BH2, "Adjust", 18, sel == 0 ? Ui::pulse() : 0.0f);
+        Ui::button(bx[1], BY, BW2, BH2, "Not now", 18, sel == 1 ? Ui::pulse() : 0.0f);
+        const Ui::Hint l2[] = { { "A", "Select" } };
         const Ui::Hint r2[] = { { "B", "Not now" } };
         Ui::bottomBar(l2, 1, r2, 1);
+        drawPointer();
         GRRLIB_Render();
     }
     saveSettings();
@@ -378,6 +468,10 @@ void App::loop() {
         LibraryView lv(font, jpFont, cursorPointerTex, ringTex,
                        jellyfinClient, auth, p.serverUrl);
         lv.setUserName(p.username);
+        /* the server's remote control, while this profile is open */
+        jellyfinClient.postCapabilities(p.serverUrl, auth);
+        Remote::start(p.serverUrl, auth.accessToken, jellyfinClient.sslVerify);
+        struct RemoteOff { ~RemoteOff() { Remote::stop(); } } remoteOff;
         for (;;) {
             while (true) {
                 Input::update();
@@ -385,13 +479,13 @@ void App::loop() {
                 if (g_app_powerOff || g_app_reset) { running = false; break; }
                 if (Input::isHomePressed() && showHomeOverlay()) { running = false; break; }
                 if (lv.update(ir)) break;
-                lv.render(ir);
-                GRRLIB_Render();
+                if (lv.render(ir)) GRRLIB_Render();
+                else               VIDEO_WaitVSync();   /* the previous picture stays */
             }
             if (!running) return;
             if (lv.pendingPlayIsMusic) {
                 lv.pendingPlayIsMusic = false;
-                SoundFX::play(SoundFX::FX::Start);
+                SoundFX::play(SoundFX::FX::Play);
                 MusicPlayerView mpv(font, jellyfinClient, auth, p.serverUrl);
                 mpv.setCursorTex(cursorPointerTex);
                 mpv.setTracks(lv.pendingMusicTracks, lv.pendingMusicTrackIdx);
@@ -497,9 +591,10 @@ void App::loop() {
         if (g_app_reset) running = false;
         else if (Input::isHomePressed() && showHomeOverlay()) running = false;
         if (g_app_powerOff) running = false;
-        if (ir.valid) irMode = true;
+        irMode = ir.valid;   /* no pointer on the screen: the D-pad drives, A acts on the highlighted item */
         if (Input::isUpPressed())   { selectedIndex = (selectedIndex - 1 + MENU_COUNT) % MENU_COUNT; irMode = false; }
         if (Input::isDownPressed()) { selectedIndex = (selectedIndex + 1) % MENU_COUNT; irMode = false; }
+        if (Input::isUpPressed() || Input::isDownPressed()) SoundFX::play(SoundFX::FX::Move);
 
         // --- IR hover updates selection (no action yet) ---
         bool irHovered = false;
@@ -549,6 +644,7 @@ void App::loop() {
                         GRRLIB_Render();
                     }
                     saveSettings();
+                    logSettings();
                     MusicBGM::setEnabled(musicEnabled);
                     break;
                 }
@@ -607,8 +703,11 @@ void App::loop() {
     GRRLIB_FreeTexture(cursorPointerTex);
     GRRLIB_FreeTexture(ringTex);
     Text::clearCache();
+    Text::setFallback(nullptr);
     GRRLIB_FreeTTF(font);
     GRRLIB_FreeTTF(jpFont);
+    for (GRRLIB_ttfFont* f : sdFonts) GRRLIB_FreeTTF(f);
+    for (void* d : sdFontData) free(d);
     GRRLIB_Exit();
     ConnectView::shutdownUsbKeyboard();
     WPAD_Shutdown();

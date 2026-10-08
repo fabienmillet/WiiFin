@@ -25,7 +25,8 @@ static size_t s_earlyLen = 0;
  * publicly, so it must not say where the server is. */
 static std::vector<std::string> s_private;
 
-/* Hide what a line may carry about the user: credentials and user id (in
+/* Hide what a line may carry about the user: credentials, user and device
+ * ids (in
  * stream URLs and request bodies), IPv4 addresses (server, Wii, router) and
  * the server's name. */
 static std::string mask(const char* in)
@@ -37,6 +38,7 @@ static std::string mask(const char* in)
 
     static const char* const keys[] = {
         "ApiKey=", "api_key=", "Token=\"", "Pw\":\"", "UserId=", "UserId\":\"", "Users/",
+        "DeviceId=",
     };
     for (const char* k : keys) {
         size_t kl = strlen(k);

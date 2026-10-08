@@ -58,7 +58,7 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
     int prevHoverMain = -1;
     int prevHoverPop  = -1;
 
-    MusicBGM::pause();
+    MusicBGM::stopMusic();   /* its own sounds still play */
     SoundFX::play(SoundFX::FX::MenuEnter);
 
     while (true) {

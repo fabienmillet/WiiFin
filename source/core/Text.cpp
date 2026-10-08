@@ -7,6 +7,9 @@
 #include <string.h>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
+#include <ogc/system.h>   /* SYS_Report */
 #include <utility>
 
 /* GRRLIB's 2D model-view matrix (defined in GRRLIB_core.c, not in its headers) */
@@ -30,6 +33,10 @@ struct FaceSize {
 };
 
 std::map<std::pair<void*, unsigned>, FaceSize> s_cache;
+
+/* for the characters a font lacks, tried in order: the built-in Japanese
+ * one, then the SD card's (fonts/: Chinese, Korean...) */
+std::vector<GRRLIB_ttfFont*> s_fallbacks;
 
 float s_left  = 0.0f;   /* drawing x of frame pixel 0         */
 float s_scale = 1.0f;   /* frame pixels per drawing unit (x)  */
@@ -73,6 +80,48 @@ u32 nextCodePoint(const unsigned char*& s)
  * linear filtering: drawn 1:1 on whole pixels that is exactly the bitmap,
  * and when the picture is scaled (screen area setting) thin strokes and
  * edge rows blend instead of being skipped. */
+/* Characters drawn as something else, whatever the font has: every kind
+ * of space (no-break, the narrow one of French typography...) as a space;
+ * format characters (zero-width spaces, BOM, soft hyphen, direction
+ * marks) as nothing (0); and C1 controls, which are Windows-1252 bytes
+ * mis-converted (subtitles: ’ … – and the no-break space), as what they
+ * were.  cp itself: drawn as it is. */
+u32 normalize(u32 cp)
+{
+    if (cp == 0x00A0 || (cp >= 0x2000 && cp <= 0x200A) || cp == 0x202F ||
+        cp == 0x205F || cp == 0x3000 || cp == 0x2028 || cp == 0x2029)
+        return ' ';
+    if ((cp >= 0x200B && cp <= 0x200F) || (cp >= 0x2060 && cp <= 0x2064) || cp == 0xFEFF ||
+        cp == 0x00AD || (cp >= 0x202A && cp <= 0x202E))
+        return 0;
+    if (cp >= 0x80 && cp <= 0x9F) {
+        static const u16 CP1252[32] = {
+            0x20AC, 0,      0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
+            0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0,      0x017D, 0,
+            0,      0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
+            0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0,      0x017E, 0x0178,
+        };
+        return CP1252[cp - 0x80];
+    }
+    return cp;
+}
+
+/* A character the font lacks, as one it has (typographic quotes and
+ * dashes as plain ones, full-width forms as ASCII); cp itself = none
+ * (then the fallback font's, or a space) */
+u32 substitute(u32 cp)
+{
+    if (cp >= 0x2018 && cp <= 0x201B) return '\'';
+    if (cp >= 0x201C && cp <= 0x201F) return '"';
+    if (cp == 0x00AB || cp == 0x00BB) return '"';
+    if (cp >= 0x2010 && cp <= 0x2015) return '-';
+    if (cp == 0x2026) return '.';
+    if (cp == 0x2032) return '\'';
+    if (cp == 0x2033) return '"';
+    if (cp >= 0xFF01 && cp <= 0xFF5E) return cp - 0xFEE0;   /* full-width ！？Ａ１ */
+    return cp;
+}
+
 const Glyph& glyph(GRRLIB_ttfFont* font, unsigned size, FaceSize& fs, u32 cp)
 {
     auto it = fs.glyphs.find(cp);
@@ -81,9 +130,42 @@ const Glyph& glyph(GRRLIB_ttfFont* font, unsigned size, FaceSize& fs, u32 cp)
     Glyph g;
     FT_Face face = (FT_Face)font->face;
     setSize(face, size);
-    g.index = FT_Get_Char_Index(face, cp);
-    if (FT_Load_Glyph(face, g.index, FT_LOAD_RENDER) == 0) {
-        FT_GlyphSlot slot = face->glyph;
+    u32 draw = cp >= 0x80 ? normalize(cp) : cp;
+    if (draw == 0) return fs.glyphs.emplace(cp, g).first->second;   /* nothing, no advance */
+    g.index = FT_Get_Char_Index(face, draw);
+    FT_Face from = face;          /* the font the glyph comes from */
+    FT_UInt load = g.index;
+    if (g.index == 0 && draw >= 0x80) {
+        u32 sub = substitute(draw);
+        if (sub != draw) load = g.index = FT_Get_Char_Index(face, sub);
+        /* none: a fallback font's (Japanese, then the SD card's), else a
+         * space rather than the font's box between words */
+        for (size_t i = 0; g.index == 0 && from == face && i < s_fallbacks.size(); ++i) {
+            if (s_fallbacks[i]->face == font->face) continue;
+            FT_Face fb = (FT_Face)s_fallbacks[i]->face;
+            FT_UInt fi = FT_Get_Char_Index(fb, draw);
+            if (fi) {
+                setSize(fb, size); from = fb; load = fi;
+                /* tests: which fallback drew something (1 the Japanese one,
+                 * 2 the first of the SD card's...), once each */
+                static unsigned s_used = 0;
+                if (i < 32 && !(s_used & (1u << i))) {
+                    s_used |= 1u << i;
+                    SYS_Report("[Text] fallback font %u drew U+%04X\n", (unsigned)i + 1, (unsigned)draw);
+                }
+            }
+        }
+        if (from == face && g.index == 0) {
+            load = g.index = FT_Get_Char_Index(face, ' ');
+            /* in the log once (tests: no character of a title or a subtitle
+             * may be missing from both fonts) */
+            static std::unordered_set<u32> s_missing;
+            if (s_missing.size() < 64 && s_missing.insert(draw).second)
+                SYS_Report("[Text] no glyph for U+%04X\n", (unsigned)draw);
+        }
+    }
+    if (FT_Load_Glyph(from, load, FT_LOAD_RENDER) == 0) {
+        FT_GlyphSlot slot = from->glyph;
         const FT_Bitmap& bm = slot->bitmap;
         g.advance = (slot->advance.x / 64.0f) / s_scale;
         g.left    = (s16)slot->bitmap_left;
@@ -190,6 +272,51 @@ void Text::print(int x, int y, GRRLIB_ttfFont* font, const char* utf8,
 
     GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
     GX_SetVtxDesc(GX_VA_TEX0, GX_NONE);
+}
+
+/* Every glyph of a size is kept: a film's worth of Japanese subtitles is
+ * thousands of them, so past this many that size starts again.  Between
+ * frames only: the GPU draws the frame's glyphs from their texels until
+ * GRRLIB_Render has waited for it. */
+void Text::endFrame()
+{
+    for (auto& fsEntry : s_cache) {
+        FaceSize& fs = fsEntry.second;
+        if (fs.glyphs.size() < 1500) continue;
+        for (auto& e : fs.glyphs) free(e.second.data);
+        fs.glyphs.clear();
+        fs.kerning.clear();
+    }
+}
+
+void Text::setFallback(GRRLIB_ttfFont* font)
+{
+    s_fallbacks.clear();
+    if (font) s_fallbacks.push_back(font);
+}
+
+void Text::addFallback(GRRLIB_ttfFont* font)
+{
+    if (font) s_fallbacks.push_back(font);
+}
+
+size_t Text::fitBytes(GRRLIB_ttfFont* font, const char* utf8, unsigned int size, float maxW)
+{
+    if (!font || !utf8) return 0;
+    FaceSize& fs = faceSize(font, size);
+    const unsigned char* s = (const unsigned char*)utf8;
+    const unsigned char* last = s;
+    float pen = 0;
+    u32 prev = 0;
+    while (*s) {
+        const unsigned char* at = s;
+        const Glyph& g = glyph(font, size, fs, nextCodePoint(s));
+        pen += kerning(font, size, fs, prev, g.index) + g.advance;
+        if (pen > maxW && at != (const unsigned char*)utf8) return (size_t)(at - (const unsigned char*)utf8);
+        prev = g.index;
+        last = s;
+    }
+    return (size_t)(last - (const unsigned char*)utf8);
 }
 
 void Text::clearCache()

@@ -170,6 +170,7 @@ bool Input::isBPressed()     { return buttonsDown & WPAD_BUTTON_B; }
 bool Input::isBackPressed()  { return buttonsDown & WPAD_BUTTON_B; }
 bool Input::isLPressed()     { return buttonsDown & WPAD_BUTTON_MINUS; }
 bool Input::isRPressed()     { return buttonsDown & WPAD_BUTTON_PLUS; }
+bool Input::isActionPressed() { return buttonsDown & (WPAD_BUTTON_PLUS | BTN_ZOOM); }
 bool Input::is1Pressed()     { return buttonsDown & WPAD_BUTTON_1; }
 bool Input::is2Pressed()     { return buttonsDown & WPAD_BUTTON_2; }
 
