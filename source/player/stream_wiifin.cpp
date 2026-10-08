@@ -260,6 +260,7 @@ struct HttpStream {
     /* a whole file (direct play): reopened at any byte with a Range request */
     std::string url;               /* after redirects */
     long long total = -1;          /* file size, -1 = a live stream */
+    int   resumes   = 0;           /* reconnections since data last came */
 };
 
 bool parseUrl(const std::string& url, bool& tls, std::string& host, int& port, std::string& path) {
@@ -428,18 +429,32 @@ void pacePrefetch(HttpStream* st) {
     }
 }
 
+int seekStream(mp_stream* s, long long pos);
+
 int fillBuffer(mp_stream* s, char* buffer, int max_len) {
     HttpStream* st = (HttpStream*)s->priv;
     if (!st) return 0;
     pacePrefetch(st);
     while (!st->done) {
         int n = decode(st, buffer, max_len);
-        if (n > 0) { g_wiifin_stream_bytes += (unsigned)n; return n; }
+        if (n > 0) { g_wiifin_stream_bytes += (unsigned)n; st->resumes = 0; return n; }
         if (st->done) break;
         /* need more raw data */
         st->rawPos = st->rawLen = 0;
         n = connRead(st->conn, st->raw, (int)sizeof(st->raw));
-        if (n <= 0) break;   /* closed, timed out or quitting */
+        if (n <= 0) {
+            /* closed or timed out before the end of a file (the server
+             * dropping a connection read slowly, a seek's new request cut
+             * short): MPlayer would take it for the end of the film, so go
+             * on from that byte with a new request; not when quitting */
+            if (st->total < 0 || st->chunked || st->remaining <= 0 || async_quit_request ||
+                ++st->resumes > 3)
+                break;
+            const long long at = st->total - st->remaining;
+            SYS_Report("[stream] cut at %lld of %lld bytes, going on from there\n", at, st->total);
+            if (!seekStream(s, at)) break;
+            continue;
+        }
         st->rawLen = n;
     }
     return 0;
