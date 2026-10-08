@@ -1,10 +1,13 @@
 #include "JellyfinClient.h"
+#include <algorithm>
 #include "../core/ExitZone.h"
 #include "../core/Log.h"
 #include "../core/NetConnect.h"
+#include "../player/WiiPlayer.h"   /* the volume, for the reports */
 #include <network.h>
 #include <ogc/if_config.h>
 #include <ogc/lwp.h>
+#include <ogc/mutex.h>
 #include <ogc/lwp_watchdog.h>
 #include <sys/filio.h>
 #include <string.h>
@@ -26,7 +29,11 @@ extern unsigned char data_cacert_pem[];
 extern unsigned int  data_cacert_pem_len;
 
 #include "../version.h"
-#define WIIFIN_CLIENT_HDR "MediaBrowser Client=\"WiiFin\", Device=\"Nintendo Wii\", DeviceId=\"wiifin-wii\", Version=\"" WIIFIN_VERSION "\""
+/* Sent with every request; one per console, see setDeviceId() */
+static std::string s_deviceId = "wiifin-wii";
+
+void JellyfinClient::setDeviceId(const std::string& id) { if (!id.empty()) s_deviceId = id; }
+const std::string& JellyfinClient::deviceId() { return s_deviceId; }
 
 #include <ogcsys.h>
 
@@ -34,6 +41,8 @@ extern unsigned int  data_cacert_pem_len;
 // mbedTLS BIO callbacks: wrap libogc net_read / net_write
 // ---------------------------------------------------------------------------
 namespace {
+
+void connLockInit();   /* below, with the kept-alive connection */
 
 int wii_tls_send(void* ctx, const unsigned char* buf, size_t len) {
     s32 fd = *(s32*)ctx;
@@ -109,6 +118,7 @@ void* JellyfinClient::netThreadMain(void* self) {
 }
 
 void JellyfinClient::startNetwork() {
+    connLockInit();   /* at boot, before any other thread makes a request */
     if (networkReady || netBusy) return;
     if (netThread) {                  /* previous attempt finished: reap it */
         LWP_JoinThread(netThread, nullptr);
@@ -149,12 +159,33 @@ bool JellyfinClient::discoverServers(std::vector<DiscoveredServer>& out) {
     s32 sock = net_socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0) {
         errMsg = "UDP socket failed";
+        SYS_Report("[Discover] socket: %d\n", (int)sock);
         return false;
     }
 
     // Enable broadcast
     u32 broadcastOn = 1;
-    net_setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcastOn, sizeof(broadcastOn));
+    s32 r = net_setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcastOn, sizeof(broadcastOn));
+    if (r < 0) SYS_Report("[Discover] SO_BROADCAST: %d\n", (int)r);
+
+    /* Bound to a port of its own: the servers answer to the port the question
+     * came from, and the Wii's IOS does not always pick one on sendto.  A
+     * port given: the console's IOS refuses port 0 (EINVAL; Dolphin takes
+     * it).  One from the dynamic range, another if it is taken. */
+    for (int tries = 0; tries < 4; ++tries) {
+        struct sockaddr_in local;
+        memset(&local, 0, sizeof(local));
+        local.sin_family      = AF_INET;
+        local.sin_port        = htons((u16)(49152 + (gettime() + tries * 4099) % 16384));
+        local.sin_addr.s_addr = INADDR_ANY;
+        r = net_bind(sock, (struct sockaddr*)&local, (socklen_t)sizeof(local));
+        if (r >= 0) break;
+        SYS_Report("[Discover] bind: %d\n", (int)r);
+    }
+    /* Non-blocking: the answers are read by polling as well as through
+     * net_select, which IOS does not always wake up for UDP. */
+    u32 nb = 1;
+    net_ioctl(sock, FIONBIO, &nb);
 
     // Build the two broadcast targets:
     //  1) 255.255.255.255 (limited broadcast)
@@ -170,37 +201,42 @@ bool JellyfinClient::discoverServers(std::vector<DiscoveredServer>& out) {
     destSubnet.sin_family = AF_INET;
     destSubnet.sin_port   = htons(7359);
     // Compute (ip & mask) | ~mask — fall back gracefully if IP unknown
+    bool haveSubnet = false;
     if (!localIp_.empty() && !localMask_.empty()) {
         u32 ip4   = ntohl(inet_addr(localIp_.c_str()));
         u32 mask4 = ntohl(inet_addr(localMask_.c_str()));
-        if (ip4 != 0xFFFFFFFFu && mask4 != 0xFFFFFFFFu)
+        if (ip4 != 0xFFFFFFFFu && mask4 != 0xFFFFFFFFu && mask4 != 0) {
             destSubnet.sin_addr.s_addr = htonl((ip4 & mask4) | (~mask4));
-        else
-            destSubnet.sin_addr.s_addr = 0xFFFFFFFFu;
-    } else {
-        destSubnet.sin_addr.s_addr = 0xFFFFFFFFu;
+            haveSubnet = true;
+        }
     }
 
-    SYS_Report("[Discover] localIp=%s\n", localIp_.c_str());
+    SYS_Report("[Discover] from %s, mask %s\n", localIp_.c_str(), localMask_.c_str());
 
+    /* The address length is 8, not sizeof: libogc's net_sendto writes it
+     * into the address as its sa_len, and the console's IOS takes 8 only
+     * (EINVAL on each question otherwise; Dolphin takes 16). */
+    const socklen_t IOS_ADDR_LEN = 8;
     const char* msg = "Who is JellyfinServer?";
-    auto sendBroadcast = [&]() {
-        net_sendto(sock, msg, (s32)strlen(msg), 0,
-                   (struct sockaddr*)&dest255,   (socklen_t)sizeof(dest255));
-        net_sendto(sock, msg, (s32)strlen(msg), 0,
-                   (struct sockaddr*)&destSubnet, (socklen_t)sizeof(destSubnet));
+    auto sendBroadcast = [&](int round) {
+        s32 a = net_sendto(sock, msg, (s32)strlen(msg), 0,
+                           (struct sockaddr*)&dest255, IOS_ADDR_LEN);
+        s32 b = haveSubnet ? net_sendto(sock, msg, (s32)strlen(msg), 0,
+                                        (struct sockaddr*)&destSubnet, IOS_ADDR_LEN)
+                           : 0;
+        SYS_Report("[Discover] question %d: to all %d, to the subnet %d\n", round, (int)a, (int)b);
     };
-    sendBroadcast();
+    sendBroadcast(1);
 
     // Time-based collection using gettime() — independent of net_select resolution.
-    // • Exit 100 ms after first server found (LAN responses are nearly instantaneous).
-    // • Hard cap: 2000 ms if nothing found.
-    // • Re-broadcast at 800 ms to catch slow responders.
-    const u32 MAX_MS   = 2000;
-    const u32 FOUND_MS = 100;
+    // • Exit 300 ms after the first server found (other servers answer too).
+    // • Hard cap: 3000 ms if nothing found, asking again at 800 and 1600 ms
+    //   (a Wi-Fi link drops a broadcast now and then).
+    const u32 MAX_MS   = 3000;
+    const u32 FOUND_MS = 300;
     u64 startTicks = gettime();
     u64 foundTicks = 0;
-    bool rebroadcasted = false;
+    int round = 1;
     char buf[1024];
 
     while (true) {
@@ -209,43 +245,40 @@ bool JellyfinClient::discoverServers(std::vector<DiscoveredServer>& out) {
         if (foundTicks > 0 && (u32)ticks_to_millisecs(gettime() - foundTicks) >= FOUND_MS)
             break;
 
-        if (!rebroadcasted && elapsedMs >= 800) {
-            sendBroadcast();
-            rebroadcasted = true;
-        }
+        if (out.empty() && round < 3 && elapsedMs >= (u32)round * 800) sendBroadcast(++round);
 
         fd_set rfds;
         FD_ZERO(&rfds);
         FD_SET(sock, &rfds);
         struct timeval tv = {0, 50000};
-        int sel = net_select(sock + 1, &rfds, nullptr, nullptr, &tv);
-        if (sel <= 0) {
-            // Timeout with no data: if we already have results, stop now
-            if (!out.empty()) break;
-            continue;
-        }
+        net_select(sock + 1, &rfds, nullptr, nullptr, &tv);   /* a wait, at most 50 ms */
 
-        struct sockaddr_in from;
-        socklen_t fromLen = (socklen_t)sizeof(from);
-        int n = (int)net_recvfrom(sock, buf, (s32)(sizeof(buf) - 1), 0,
-                                  (struct sockaddr*)&from, &fromLen);
-        if (n <= 0) continue;
-        buf[n] = '\0';
+        /* every answer waiting, whatever select said */
+        for (;;) {
+            struct sockaddr_in from;
+            socklen_t fromLen = IOS_ADDR_LEN;   /* as for sendto */
+            int n = (int)net_recvfrom(sock, buf, (s32)(sizeof(buf) - 1), 0,
+                                      (struct sockaddr*)&from, &fromLen);
+            if (n <= 0) break;
+            buf[n] = '\0';
 
-        std::string json(buf, n);
-        std::string address = jsonGetString(json, "Address");
-        std::string name    = jsonGetString(json, "Name");
-        if (address.empty()) continue;
+            std::string json(buf, n);
+            std::string address = jsonGetString(json, "Address");
+            std::string name    = jsonGetString(json, "Name");
+            SYS_Report("[Discover] answer of %d bytes: %s\n", n,
+                       address.empty() ? "no address in it" : "a server");
+            if (address.empty()) continue;
 
-        bool dup = false;
-        for (const auto& s : out)
-            if (s.address == address) { dup = true; break; }
-        if (!dup) {
-            DiscoveredServer ds;
-            ds.name    = name.empty() ? address : name;
-            ds.address = address;
-            out.push_back(ds);
-            if (foundTicks == 0) foundTicks = gettime();
+            bool dup = false;
+            for (const auto& s : out)
+                if (s.address == address) { dup = true; break; }
+            if (!dup) {
+                DiscoveredServer ds;
+                ds.name    = name.empty() ? address : name;
+                ds.address = address;
+                out.push_back(ds);
+                if (foundTicks == 0) foundTicks = gettime();
+            }
         }
     }
 
@@ -352,7 +385,7 @@ bool JellyfinClient::parseUrl(const std::string& rawUrl,
 }
 
 // Decode JSON string escape sequences (\uXXXX, \", \\, etc.) to UTF-8.
-static std::string decodeJsonString(const std::string& s) {
+static std::string decodeJsonString(const std::string& s, bool newlines = false) {
     std::string out;
     out.reserve(s.size());
     for (size_t i = 0; i < s.size(); i++) {
@@ -362,7 +395,7 @@ static std::string decodeJsonString(const std::string& s) {
                 case '"':  out += '"';  break;
                 case '\\': out += '\\'; break;
                 case '/':  out += '/';  break;
-                case 'n':              break; // skip literal newlines in names
+                case 'n':  if (newlines) out += '\n'; break; // names: none
                 case 'r':              break;
                 case 't':  out += ' '; break;
                 case 'u': {
@@ -397,7 +430,7 @@ static std::string decodeJsonString(const std::string& s) {
     return out;
 }
 
-std::string JellyfinClient::jsonGetString(const std::string& json, const std::string& key) {
+std::string JellyfinClient::jsonGetString(const std::string& json, const std::string& key, bool newlines) {
     std::string search = "\"" + key + "\":\"";
     size_t pos = json.find(search);
     if (pos == std::string::npos) return "";
@@ -413,7 +446,7 @@ std::string JellyfinClient::jsonGetString(const std::string& json, const std::st
             raw += json[pos++];
         }
     }
-    return decodeJsonString(raw);
+    return decodeJsonString(raw, newlines);
 }
 
 bool JellyfinClient::jsonGetBool(const std::string& json, const std::string& key) {
@@ -549,13 +582,14 @@ int JellyfinClient::httpRequest(const std::string& url,
                                  const std::string& contentType,
                                  const std::string& body,
                                  const std::string& authToken,
-                                 std::string& responseBody) {
+                                 std::string& responseBody,
+                                 size_t maxResponse) {
     std::string host, basePath;
     int port;
     bool isHttps;
     if (!parseUrl(url, host, port, basePath, isHttps)) return -1;
     return request(isHttps, host, port, basePath, method, contentType, body,
-                   authToken, responseBody);
+                   authToken, responseBody, maxResponse);
 }
 
 // Wii RTC is unreliable and many home Jellyfin servers use self-signed certificates
@@ -623,13 +657,28 @@ u64 nowMs() { return ticks_to_millisecs(gettime()); }
 
 void closeConn() {
     if (!s_conn.open) return;
-    /* No close_notify: the socket may already have been closed behind our
-     * back (MPlayer closes every IOS socket when a video session ends). */
+    /* No close_notify: the server may have dropped it already (an idle
+     * keep-alive connection); wii_player_abort_io leaves it alone. */
     if (s_conn.tls) mbedtls_ssl_free(&s_conn.ssl);
+    wii_player_keep_socket(1, -1);
     net_close(s_conn.sock);
     s_conn.open = false;
     s_conn.sock = -1;
 }
+
+/* One request at a time on s_conn: during playback the trickplay loader and
+ * MPlayer's "stream opened" report run beside the main thread.  Recursive:
+ * a request may recover the network, which closes the connection. */
+mutex_t s_connLock = LWP_MUTEX_NULL;
+
+void connLockInit() {
+    if (s_connLock == LWP_MUTEX_NULL) LWP_MutexInit(&s_connLock, true);
+}
+
+struct ConnGuard {
+    ConnGuard()  { connLockInit(); LWP_MutexLock(s_connLock); }
+    ~ConnGuard() { LWP_MutexUnlock(s_connLock); }
+};
 
 bool loadCa(std::string& err) {
     if (s_tls.caLoaded) return true;
@@ -760,6 +809,7 @@ bool openConn(bool tls, const struct sockaddr_in& addr, const std::string& host,
         SYS_Report("[TLS] handshake with %s:%d in %llu ms (%s)\n", host.c_str(), port,
                    nowMs() - t0, mbedtls_ssl_get_ciphersuite(&s_conn.ssl));
     }
+    wii_player_keep_socket(1, sock);   /* MPlayer's clean-up leaves it */
     s_conn.open      = true;
     s_conn.tls       = tls;
     s_conn.host      = host;
@@ -848,7 +898,7 @@ enum class ExResult { Ok, Stale, Failed };
  * received): the caller reconnects and sends the request again. */
 ExResult exchange(const char* req, int reqLen, const std::string& body, bool reused,
                   int& status, std::string& responseBody, bool& keepAlive,
-                  std::string& err) {
+                  std::string& err, size_t maxResponse) {
     if (!connWrite((const unsigned char*)req, reqLen) ||
         (!body.empty() && !connWrite((const unsigned char*)body.data(), (int)body.size()))) {
         if (reused) return ExResult::Stale;
@@ -856,7 +906,14 @@ ExResult exchange(const char* req, int reqLen, const std::string& body, bool reu
         return ExResult::Failed;
     }
 
+    /* The response goes to a static buffer: no heap for the usual small
+     * ones.  A request allowing more (maxResponse) moves on to the heap
+     * once it is full, doubling the room up to that size. */
     static char rawBuf[256 * 1024] DEAD_AT_EXIT;
+    char*  raw  = rawBuf;
+    size_t cap  = sizeof(rawBuf);
+    char*  heap = nullptr;
+    struct Free { char*& p; ~Free() { free(p); } } freeHeap{heap};
     int  rawLen     = 0;
     int  bodyStart  = -1;     /* offset of the body once headers are parsed */
     long contentLen = -1;
@@ -874,38 +931,55 @@ ExResult exchange(const char* req, int reqLen, const std::string& body, bool reu
             if (rawLen == 0 && reused) return ExResult::Stale;
             break;
         }
-        int canCopy = (int)(sizeof(rawBuf) - 1) - rawLen;
-        if (canCopy <= 0) { keepAlive = false; break; }   /* response too large */
+        if ((size_t)(rawLen + ret) >= cap && cap < maxResponse) {
+            size_t ncap = cap * 2 > maxResponse ? maxResponse : cap * 2;
+            char* grown = (char*)(heap ? realloc(heap, ncap) : malloc(ncap));
+            if (grown) {
+                if (!heap) memcpy(grown, rawBuf, (size_t)rawLen);
+                heap = raw = grown;
+                cap  = ncap;
+            }
+        }
+        int canCopy = (int)(cap - 1) - rawLen;
         if (ret < canCopy) canCopy = ret;
-        memcpy(rawBuf + rawLen, buf, (size_t)canCopy);
-        rawLen += canCopy;
+        if (canCopy > 0) {
+            memcpy(raw + rawLen, buf, (size_t)canCopy);
+            rawLen += canCopy;
+        }
+        if (canCopy < ret) {
+            /* response too large: cut, and the connection with it (the rest
+             * of this read is lost: waiting for more would only time out) */
+            SYS_Report("[HTTP] response over %u KB, cut\n", (unsigned)(cap / 1024));
+            keepAlive = false;
+            break;
+        }
 
         if (bodyStart < 0) {
-            rawBuf[rawLen] = '\0';
-            const char* sep = strstr(rawBuf, "\r\n\r\n");
+            raw[rawLen] = '\0';
+            const char* sep = strstr(raw, "\r\n\r\n");
             if (!sep) continue;
-            bodyStart = (int)(sep - rawBuf) + 4;
-            if (strncmp(rawBuf, "HTTP/", 5) == 0) {
-                const char* sp = strchr(rawBuf, ' ');
+            bodyStart = (int)(sep - raw) + 4;
+            if (strncmp(raw, "HTTP/", 5) == 0) {
+                const char* sp = strchr(raw, ' ');
                 if (sp) status = atoi(sp + 1);
             }
-            std::string te = headerValue(rawBuf, bodyStart, "transfer-encoding");
-            std::string cl = headerValue(rawBuf, bodyStart, "content-length");
-            std::string cn = headerValue(rawBuf, bodyStart, "connection");
+            std::string te = headerValue(raw, bodyStart, "transfer-encoding");
+            std::string cl = headerValue(raw, bodyStart, "content-length");
+            std::string cn = headerValue(raw, bodyStart, "connection");
             chunked    = te.find("chunked") != std::string::npos;
             contentLen = cl.empty() ? -1 : atol(cl.c_str());
             noBody     = status == 204 || status == 304 || (status >= 100 && status < 200);
             if (cn.find("close") != std::string::npos ||
-                strncmp(rawBuf, "HTTP/1.0", 8) == 0) keepAlive = false;
+                strncmp(raw, "HTTP/1.0", 8) == 0) keepAlive = false;
             /* Without a length the body ends when the server closes */
             if (!chunked && contentLen < 0 && !noBody) keepAlive = false;
         }
         int have = rawLen - bodyStart;
         if (noBody)                complete = true;
-        else if (chunked)          complete = chunkedComplete(rawBuf + bodyStart, have);
+        else if (chunked)          complete = chunkedComplete(raw + bodyStart, have);
         else if (contentLen >= 0)  complete = have >= contentLen;
     }
-    rawBuf[rawLen] = '\0';
+    raw[rawLen] = '\0';
     if (!complete) keepAlive = false;
 
     if (status == 0) {
@@ -914,7 +988,7 @@ ExResult exchange(const char* req, int reqLen, const std::string& body, bool reu
         return ExResult::Failed;
     }
     if (bodyStart >= 0)
-        responseBody = decodeChunked(rawBuf, bodyStart - 4, rawBuf + bodyStart, rawLen - bodyStart);
+        responseBody = decodeChunked(raw, bodyStart - 4, raw + bodyStart, rawLen - bodyStart);
     else
         responseBody = "";
     return ExResult::Ok;
@@ -929,6 +1003,7 @@ mbedtls_x509_crt* wiifin_ca_chain() {
 }
 
 void JellyfinClient::dropConnection() {
+    ConnGuard g;
     closeConn();
 }
 
@@ -948,7 +1023,9 @@ int JellyfinClient::request(bool tls, const std::string& host, int port,
                             const std::string& contentType,
                             const std::string& body,
                             const std::string& authToken,
-                            std::string& responseBody) {
+                            std::string& responseBody,
+                            size_t maxResponse) {
+    ConnGuard g;
     std::string err;
     Log::addPrivate(host);   /* never write the server's name to the log */
     /* failures go to the log (path only: queries may hold search terms) */
@@ -969,13 +1046,15 @@ int JellyfinClient::request(bool tls, const std::string& host, int port,
         "%s %s HTTP/1.1\r\n"
         "Host: %s\r\n"
         "Connection: keep-alive\r\n"
-        "Authorization: " WIIFIN_CLIENT_HDR "%s\r\n"
+        "Authorization: MediaBrowser Client=\"WiiFin\", Device=\"Nintendo Wii\", "
+        "DeviceId=\"%s\", Version=\"" WIIFIN_VERSION "\"%s\r\n"
         "%s"
         "Content-Length: %zu\r\n"
         "\r\n",
         method.c_str(),
         path.empty() ? "/" : path.c_str(),
         hostHdr.c_str(),
+        s_deviceId.c_str(),
         authHdr.c_str(),
         ctHdr.c_str(),
         body.size()
@@ -1013,7 +1092,7 @@ int JellyfinClient::request(bool tls, const std::string& host, int port,
         int  status    = 0;
         bool keepAlive = false;
         ExResult r = exchange(req, reqLen, body, reused, status, responseBody,
-                              keepAlive, err);
+                              keepAlive, err, maxResponse);
         if (r == ExResult::Stale) { closeConn(); continue; }
         if (r == ExResult::Failed) { closeConn(); return fail(err); }
         if (keepAlive) s_conn.lastUseMs = nowMs();
@@ -1242,15 +1321,17 @@ bool JellyfinClient::getItems(const std::string& serverUrl,
                                const std::string& parentId,
                                int startIndex, int limit,
                                std::vector<JellyfinItem>& out,
-                               int& totalCount) {
-    char qs[512];
+                               int& totalCount,
+                               const std::string& extra) {
+    char qs[768];
     snprintf(qs, sizeof(qs),
-        "/Users/%s/Items?ParentId=%s"
-        "&SortBy=SortName&SortOrder=Ascending"
+        "/Users/%s/Items?ParentId=%s%s%s"
         "&Fields=ProductionYear,UserData,RunTimeTicks"
         "&EnableImages=false"
         "&Limit=%d&StartIndex=%d",
-        auth.userId.c_str(), parentId.c_str(), limit, startIndex);
+        auth.userId.c_str(), parentId.c_str(),
+        extra.find("SortBy=") == std::string::npos ? "&SortBy=SortName&SortOrder=Ascending" : "",
+        extra.c_str(), limit, startIndex);
     std::string url  = serverUrl + qs;
     std::string resp;
     int status = httpRequest(url, "GET", "", "", auth.accessToken, resp);
@@ -1332,9 +1413,11 @@ bool JellyfinClient::getItemImageBytes(const std::string& serverUrl,
                                         const std::string& itemId,
                                         int maxWidth, int maxHeight,
                                         std::string& outBytes) {
+    /* format=Jpg: JPEG is the only format WiiFin decodes, and Jellyfin
+     * sends some pictures as PNG (the ones it draws for libraries) */
     char qs[256];
     snprintf(qs, sizeof(qs),
-        "/Items/%s/Images/Primary?fillWidth=%d&fillHeight=%d&maxWidth=%d&maxHeight=%d&quality=82",
+        "/Items/%s/Images/Primary?fillWidth=%d&fillHeight=%d&maxWidth=%d&maxHeight=%d&quality=82&format=Jpg",
         itemId.c_str(), maxWidth, maxHeight, maxWidth, maxHeight);
     std::string url = serverUrl + qs;
     int status = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
@@ -1353,7 +1436,7 @@ bool JellyfinClient::getItemBackdropBytes(const std::string& serverUrl,
                                            std::string& outBytes) {
     char sizeqs[128];
     snprintf(sizeqs, sizeof(sizeqs),
-             "?maxWidth=%d&maxHeight=%d&quality=82", maxWidth, maxHeight);
+             "?maxWidth=%d&maxHeight=%d&quality=82&format=Jpg", maxWidth, maxHeight);
 
     if (item.type == "Episode") {
         // Episode still (Thumb)
@@ -1388,7 +1471,7 @@ bool JellyfinClient::getItemDetail(const std::string& serverUrl,
                                     const std::string& itemId,
                                     JellyfinItemDetail& out) {
     std::string url = serverUrl + "/Items/" + itemId
-        + "?Fields=Overview,Genres,OfficialRating,RunTimeTicks,MediaStreams,UserData";
+        + "?Fields=Overview,Genres,OfficialRating,RunTimeTicks,MediaStreams,MediaSources,UserData";
     std::string resp;
     int status = httpRequest(url, "GET", "", "", auth.accessToken, resp);
     if (status != 200) {
@@ -1398,11 +1481,16 @@ bool JellyfinClient::getItemDetail(const std::string& serverUrl,
 
     out.id                    = jsonGetString(resp, "Id");
     out.name                  = jsonGetString(resp, "Name");
-    out.overview              = jsonGetString(resp, "Overview");
+    out.overview              = jsonGetString(resp, "Overview", true);   /* its paragraphs */
     out.officialRating        = jsonGetString(resp, "OfficialRating");
     out.year                  = jsonGetInt(resp,    "ProductionYear");
     out.runtimeTicks          = jsonGetLongLong(resp, "RunTimeTicks");
     out.playbackPositionTicks = jsonGetLongLong(resp, "PlaybackPositionTicks");
+    out.isFavorite            = jsonGetBool(resp, "IsFavorite");
+    out.played                = jsonGetBool(resp, "Played");
+    out.specialFeatures       = jsonGetInt(resp, "SpecialFeatureCount") + jsonGetInt(resp, "LocalTrailerCount");
+    out.seriesId              = jsonGetString(resp, "SeriesId");
+    out.seasonId              = jsonGetString(resp, "SeasonId");
 
     // Genres array: ["Action","Comedy",...]
     {
@@ -1462,45 +1550,84 @@ bool JellyfinClient::getItemDetail(const std::string& serverUrl,
         }
     }
 
-    // MediaStreams: audio and subtitle tracks
+    // MediaStreams: audio and subtitle tracks (of the default file)
+    parseStreams(resp, out.audioStreams, out.subtitleStreams);
+
+    // MediaSources: when the title has several files, each one's tracks
     {
-        size_t mp = resp.find("\"MediaStreams\":");
-        if (mp != std::string::npos) {
-            size_t lb = resp.find('[', mp);
-            if (lb != std::string::npos) {
-                size_t pos = lb + 1;
-                while (pos < resp.size()) {
-                    while (pos < resp.size() && resp[pos] != '{' && resp[pos] != ']') pos++;
-                    if (pos >= resp.size() || resp[pos] == ']') break;
-                    int depth = 0; bool inStr = false;
-                    size_t objStart = pos;
-                    for (; pos < resp.size(); pos++) {
-                        char c = resp[pos];
-                        if (inStr) {
-                            if (c == '\\') pos++;
-                            else if (c == '"') inStr = false;
-                        } else {
-                            if (c == '"') inStr = true;
-                            else if (c == '{') depth++;
-                            else if (c == '}') { if (--depth == 0) { pos++; break; } }
-                        }
-                    }
-                    std::string obj = resp.substr(objStart, pos - objStart);
-                    std::string t = jsonGetString(obj, "Type");
-                    MediaStream ms;
-                    ms.index        = jsonGetInt(obj, "Index");
-                    ms.type         = t;
-                    ms.displayTitle = jsonGetString(obj, "DisplayTitle");
-                    ms.language     = jsonGetString(obj, "Language");
-                    ms.codec        = jsonGetString(obj, "Codec");
-                    if      (t == "Audio"    && out.audioStreams.size()    < 8)  out.audioStreams.push_back(ms);
-                    else if (t == "Subtitle" && out.subtitleStreams.size() < 16) out.subtitleStreams.push_back(ms);
-                }
+        size_t mp = resp.find("\"MediaSources\":");
+        size_t pos = mp == std::string::npos ? std::string::npos : resp.find('[', mp);
+        std::vector<MediaVersion> vs;
+        if (pos != std::string::npos) {
+            pos++;
+            std::string obj;
+            while (vs.size() < 8 && !(obj = nextJsonObject(resp, pos)).empty()) {
+                MediaVersion v;
+                v.id   = jsonGetString(obj, "Id");
+                v.name = jsonGetString(obj, "Name");
+                if (v.name.empty()) v.name = "Version " + std::to_string(vs.size() + 1);
+                parseStreams(obj, v.audio, v.subs);
+                if (obj.find("\"DefaultAudioStreamIndex\":") != std::string::npos)
+                    v.defaultAudio = jsonGetInt(obj, "DefaultAudioStreamIndex");
+                if (obj.find("\"DefaultSubtitleStreamIndex\":") != std::string::npos)
+                    v.defaultSub = jsonGetInt(obj, "DefaultSubtitleStreamIndex");
+                if (!v.id.empty()) vs.push_back(v);
             }
         }
+        /* the item's own file (else the first): its tracks to start with */
+        for (size_t i = 0; i < vs.size(); i++)
+            if (i == 0 || vs[i].id == itemId) {
+                out.defaultAudioIndex = vs[i].defaultAudio;
+                out.defaultSubIndex   = vs[i].defaultSub;
+            }
+        if (vs.size() > 1) out.versions = vs;
     }
 
     return true;
+}
+
+/* The next {...} of a JSON array from pos (just after '[' or a previous
+ * object), pos moved past it; empty at the array's end */
+std::string JellyfinClient::nextJsonObject(const std::string& s, size_t& pos) {
+    while (pos < s.size() && s[pos] != '{' && s[pos] != ']') pos++;
+    if (pos >= s.size() || s[pos] == ']') return "";
+    int depth = 0; bool inStr = false;
+    size_t objStart = pos;
+    for (; pos < s.size(); pos++) {
+        char c = s[pos];
+        if (inStr) {
+            if (c == '\\') pos++;
+            else if (c == '"') inStr = false;
+        } else {
+            if (c == '"') inStr = true;
+            else if (c == '{') depth++;
+            else if (c == '}') { if (--depth == 0) { pos++; break; } }
+        }
+    }
+    return s.substr(objStart, pos - objStart);
+}
+
+/* The audio and subtitle tracks of the first "MediaStreams" array in json */
+void JellyfinClient::parseStreams(const std::string& json, std::vector<MediaStream>& audio,
+                                  std::vector<MediaStream>& subs) {
+    size_t mp = json.find("\"MediaStreams\":");
+    if (mp == std::string::npos) return;
+    size_t pos = json.find('[', mp);
+    if (pos == std::string::npos) return;
+    pos++;
+    std::string obj;
+    while (!(obj = nextJsonObject(json, pos)).empty()) {
+        std::string t = jsonGetString(obj, "Type");
+        MediaStream ms;
+        ms.index        = jsonGetInt(obj, "Index");
+        ms.type         = t;
+        ms.displayTitle = jsonGetString(obj, "DisplayTitle");
+        ms.language     = jsonGetString(obj, "Language");
+        ms.codec        = jsonGetString(obj, "Codec");
+        ms.isText       = jsonGetBool(obj, "IsTextSubtitleStream");
+        if      (t == "Audio"    && audio.size() < 8)  audio.push_back(ms);
+        else if (t == "Subtitle" && subs.size()  < 16) subs.push_back(ms);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1552,6 +1679,20 @@ bool JellyfinClient::getEpisodes(const std::string& serverUrl,
     return fetchEpisodes(serverUrl + qs, auth, out);
 }
 
+/* a long series is more than the 256 KB of a response (about 300 episodes):
+ * up to 4 MB, on the heap */
+bool JellyfinClient::getSeriesEpisodes(const std::string& serverUrl,
+                                        const JellyfinAuth& auth,
+                                        const std::string& seriesId,
+                                        std::vector<JellyfinEpisode>& out) {
+    char qs[512];
+    snprintf(qs, sizeof(qs),
+        "/Shows/%s/Episodes?UserId=%s&IsMissing=false"
+        "&Fields=IndexNumber,ParentIndexNumber,UserData&EnableImages=false",
+        seriesId.c_str(), auth.userId.c_str());
+    return fetchEpisodes(serverUrl + qs, auth, out, 4u << 20);
+}
+
 bool JellyfinClient::getShuffledEpisodes(const std::string& serverUrl,
                                           const JellyfinAuth& auth,
                                           const std::string& seriesId,
@@ -1568,9 +1709,9 @@ bool JellyfinClient::getShuffledEpisodes(const std::string& serverUrl,
 }
 
 bool JellyfinClient::fetchEpisodes(const std::string& url, const JellyfinAuth& auth,
-                                   std::vector<JellyfinEpisode>& out) {
+                                   std::vector<JellyfinEpisode>& out, size_t maxResponse) {
     std::string resp;
-    int status = httpRequest(url, "GET", "", "", auth.accessToken, resp);
+    int status = httpRequest(url, "GET", "", "", auth.accessToken, resp, maxResponse);
     if (status != 200) {
         if (status >= 0) errMsg = "getEpisodes failed (HTTP " + std::to_string(status) + ")";
         return false;
@@ -1586,6 +1727,7 @@ bool JellyfinClient::fetchEpisodes(const std::string& url, const JellyfinAuth& a
         e.indexNumber           = c->self->jsonGetInt(obj,    "IndexNumber");
         e.seasonNumber          = c->self->jsonGetInt(obj,    "ParentIndexNumber");
         e.playbackPositionTicks = c->self->jsonGetLongLong(obj, "PlaybackPositionTicks");
+        e.played                = c->self->jsonGetBool(obj, "Played");
         if (!e.id.empty()) c->out->push_back(e);
     }, &ctx);
 
@@ -1758,7 +1900,7 @@ bool JellyfinClient::getGlobalFavorites(const std::string& serverUrl,
                                          int& totalCount) {
     char qs[512];
     snprintf(qs, sizeof(qs),
-        "/Users/%s/Items?IncludeItemTypes=Movie,Series,MusicAlbum"
+        "/Users/%s/Items?IncludeItemTypes=Movie,Series,Episode,MusicAlbum"
         "&Filters=IsFavorite"
         "&SortBy=SortName&SortOrder=Ascending"
         "&Fields=ProductionYear,UserData,RunTimeTicks"
@@ -2176,17 +2318,21 @@ bool JellyfinClient::getPlaylistTracks(const std::string& serverUrl,
 // ---------------------------------------------------------------------------
 
 const char* JellyfinClient::videoQualityName(int q) {
-    static const char* names[VIDEO_QUALITY_COUNT] = { "Low", "Normal", "High" };
+    static const char* names[VIDEO_QUALITY_COUNT] = { "Low", "Normal", "High", "Max" };
     return (q >= 0 && q < VIDEO_QUALITY_COUNT) ? names[q] : names[1];
 }
 
 int JellyfinClient::videoBitrate() const {
     /* MPEG-4 ASP at 640 px.  Decoding cost grows with the bitrate (Dolphin,
      * grainy 1080p source: 15% of real time at 1.5 Mb/s, 25% at 2.5, 39% at
-     * 4), so High stops at 3.5 to leave headroom on real hardware.  Playback
-     * steps down on its own when the link can't keep up. */
-    static const int bitrates[VIDEO_QUALITY_COUNT] = { 1500000, 2500000, 3500000 };
-    int q = effectiveQuality();
+     * 4), so High stops at 3.5 to leave headroom on real hardware; Max (5)
+     * is for wired adapters and sharp sources, at the risk of stutter.
+     * Playback steps down on its own when the link can't keep up. */
+    return qualityBitrate(effectiveQuality());
+}
+
+int JellyfinClient::qualityBitrate(int q) {
+    static const int bitrates[VIDEO_QUALITY_COUNT] = { 1500000, 2500000, 3500000, 5000000 };
     return bitrates[(q >= 0 && q < VIDEO_QUALITY_COUNT) ? q : 1];
 }
 
@@ -2197,23 +2343,296 @@ int JellyfinClient::videoBitrate() const {
  * is left alone. */
 void JellyfinClient::measureLink(const std::string& serverUrl, const JellyfinAuth& auth) {
     if (linkMeasuredFor == serverUrl) return;
-    std::string body;
+    /* Two downloads, 64 then 128 KB (Jellyfin rounds sizes up to a power of
+     * two; 256 KB would not fit in the response buffer with the headers),
+     * and the speed from the difference: the request's own time (round
+     * trip, server, TLS) cancels out.  One download of 128 KB took it for
+     * slow transfer and capped the quality to Low on links that carry High. */
+    std::string small, big;
     u64 t0 = nowMs();
-    int status = httpRequest(serverUrl + "/Playback/BitrateTest?size=300000", "GET", "", "",
-                             auth.accessToken, body);
-    u64 ms = nowMs() - t0;
-    if (status != 200 || body.size() < 100000) {
-        SYS_Report("[Net] link speed not measured (HTTP %d)\n", status);
+    int s1 = httpRequest(serverUrl + "/Playback/BitrateTest?size=65536", "GET", "", "",
+                         auth.accessToken, small);
+    u64 t1 = nowMs();
+    int s2 = httpRequest(serverUrl + "/Playback/BitrateTest?size=131072", "GET", "", "",
+                         auth.accessToken, big);
+    u64 t2 = nowMs();
+    if (s1 != 200 || s2 != 200 || big.size() <= small.size()) {
+        SYS_Report("[Net] link speed not measured (HTTP %d, %d)\n", s1, s2);
         return;                                  /* try again next playback */
     }
     linkMeasuredFor = serverUrl;
-    double kbps = body.size() * 8.0 / (ms ? ms : 1);
-    static const int bitrates[VIDEO_QUALITY_COUNT] = { 1500000, 2500000, 3500000 };
+    long long msSmall = (long long)(t1 - t0), msBig = (long long)(t2 - t1);
+    long long ms = msBig - msSmall;
+    double bytes = (double)(big.size() - small.size());
+    if (ms < 5) { ms = msBig; bytes = (double)big.size(); }   /* too close to tell: the plain rate */
+    double kbps = bytes * 8.0 / (double)(ms > 0 ? ms : 1);
+    linkKbps = (int)kbps;
     int cap = VIDEO_QUALITY_COUNT - 1;
-    while (cap > 0 && (bitrates[cap] + 128000) / 1000.0 * 1.3 > kbps) --cap;
+    while (cap > 0 && (qualityBitrate(cap) + 128000) / 1000.0 * 1.3 > kbps) --cap;
     linkCap = cap;
-    SYS_Report("[Net] link %.1f Mb/s (%u bytes in %llu ms): quality up to %s\n",
-               kbps / 1000.0, (unsigned)body.size(), ms, videoQualityName(cap));
+    SYS_Report("[Net] link %.1f Mb/s (%u bytes in %lld ms, %u in %lld ms): quality up to %s\n",
+               kbps / 1000.0, (unsigned)small.size(), msSmall, (unsigned)big.size(), msBig,
+               videoQualityName(cap));
+}
+
+// ---------------------------------------------------------------------------
+// Direct play
+// ---------------------------------------------------------------------------
+namespace {
+/* What MPlayer CE decodes in real time on the Wii's 729 MHz CPU, all in
+ * software: cautious limits, to widen with measurements on a console.
+ * Not in the build at all: HEVC, VP9, AV1, MS-MPEG4 (DivX 3), WMV in ASF,
+ * DTS (in it, but too heavy next to a picture).  The device profile sent to
+ * Jellyfin and the reasons WiiFin gives for a transcode both come from
+ * these tables. */
+struct DirectFormat {
+    const char* containers;   /* as Jellyfin names them */
+    const char* demuxer;      /* MPlayer's own, or FFmpeg's (lavf:<format>) */
+    const char* video;
+    const char* audio;
+};
+const DirectFormat FORMATS[] = {
+    { "avi",            "avi",    "mpeg4,h264,mpeg1video,mpeg2video",     "mp3,mp2,ac3,aac" },
+    { "mkv,webm",       "mkv",    "mpeg4,h264,mpeg1video,mpeg2video,vp8", "mp3,mp2,ac3,aac,vorbis,flac" },
+    /* FFmpeg's MP4 demuxer: MPlayer's own lost H.264 reference frames
+     * ("Frame num gap": a picture falling apart into grey blocks) */
+    { "mp4,m4v,mov",    "lavf:mov",    "mpeg4,h264",                      "aac,mp3,ac3" },
+    { "ts,mpegts,m2ts", "lavf:mpegts", "mpeg2video,h264,mpeg4",           "mp2,mp3,ac3,aac" },
+    { "mpeg,mpg,vob",   "mpegps", "mpeg1video,mpeg2video",                "mp2,mp3,ac3" },
+};
+struct VideoLimit {
+    const char* codecs;
+    int width, height;
+    int level;      /* 0: none */
+    int bitrate;    /* 0: none */
+};
+const VideoLimit VIDEO_LIMITS[] = {
+    { "mpeg4,mpeg1video,mpeg2video", 720, 576, 0,  0 },
+    { "h264",                        720, 480, 31, 2500000 },
+    { "vp8",                         640, 480, 0,  0 },
+};
+const int MAX_FPS = 30;
+/* audio channels: AC3 5.1 is mixed down cheaply, the others are stereo.
+ * Not in AVI: FFmpeg-made ones describe 5.1 audio with a WAVEFORMATEXTENSIBLE
+ * header that MPlayer CE's AVI demuxer misreads (the AC3 went to the PCM
+ * decoder: noise, and the picture fell to 2 fps). */
+int maxChannels(const std::string& codec, const DirectFormat* f) {
+    return codec == "ac3" && !(f && strcmp(f->demuxer, "avi") == 0) ? 6 : 2;
+}
+
+/* name is one of the comma-separated list */
+bool inList(const char* list, const std::string& name) {
+    if (name.empty()) return false;
+    for (const char* p = list; *p; ) {
+        const char* e = strchr(p, ',');
+        size_t n = e ? (size_t)(e - p) : strlen(p);
+        if (n == name.size() && strncmp(p, name.c_str(), n) == 0) return true;
+        if (!e) break;
+        p = e + 1;
+    }
+    return false;
+}
+/* any name of a comma-separated list (Jellyfin's "mov,mp4,m4a" containers) */
+const DirectFormat* formatOf(const std::string& containers) {
+    size_t p = 0;
+    while (p <= containers.size()) {
+        size_t e = containers.find(',', p);
+        std::string c = containers.substr(p, e == std::string::npos ? std::string::npos : e - p);
+        for (const DirectFormat& f : FORMATS) if (inList(f.containers, c)) return &f;
+        if (e == std::string::npos) break;
+        p = e + 1;
+    }
+    return nullptr;
+}
+
+std::string condition(const char* prop, int value, bool required) {
+    return std::string("{\"Condition\":\"LessThanEqual\",\"Property\":\"") + prop +
+           "\",\"Value\":\"" + std::to_string(value) + "\",\"IsRequired\":" +
+           (required ? "true" : "false") + "}";
+}
+
+/* "DirectPlayProfiles", "CodecProfiles"... of the device profile */
+std::string directProfile() {
+    std::string s = "\"DirectPlayProfiles\":[";
+    for (size_t i = 0; i < sizeof(FORMATS) / sizeof(FORMATS[0]); ++i)
+        s += std::string(i ? "," : "") + "{\"Type\":\"Video\",\"Container\":\"" + FORMATS[i].containers +
+             "\",\"VideoCodec\":\"" + FORMATS[i].video + "\",\"AudioCodec\":\"" + FORMATS[i].audio + "\"}";
+    s += "],\"TranscodingProfiles\":[],\"CodecProfiles\":[";
+    for (const VideoLimit& v : VIDEO_LIMITS) {
+        s += std::string("{\"Type\":\"Video\",\"Codec\":\"") + v.codecs + "\",\"Conditions\":[" +
+             condition("Width", v.width, true) + "," + condition("Height", v.height, true) + "," +
+             condition("VideoFramerate", MAX_FPS, false);
+        if (v.level)   s += "," + condition("VideoLevel", v.level, false) + "," +
+                             condition("VideoBitDepth", 8, false);
+        if (v.bitrate) s += "," + condition("VideoBitrate", v.bitrate, false);
+        s += "]},";
+    }
+    s += "{\"Type\":\"VideoAudio\",\"Codec\":\"mp3,mp2,aac,vorbis,flac\",\"Conditions\":[" +
+         condition("AudioChannels", 2, false) + "]},"
+         "{\"Type\":\"VideoAudio\",\"Codec\":\"ac3\",\"Conditions\":[" +
+         condition("AudioChannels", 6, false) + "]},"
+         "{\"Type\":\"VideoAudio\",\"Codec\":\"ac3\",\"Container\":\"avi\",\"Conditions\":[" +
+         condition("AudioChannels", 2, false) + "]}"
+         "],\"SubtitleProfiles\":[]";
+    return s;
+}
+
+/* The object of the first stream of that type ("Video", "Audio") */
+std::string streamOfType(const std::string& json, const char* type) {
+    size_t t = json.find(std::string("\"Type\":\"") + type + "\"");
+    if (t == std::string::npos) return "";
+    size_t o = json.rfind('{', t), e = json.find('}', t);
+    return (o == std::string::npos || e == std::string::npos) ? "" : json.substr(o, e - o + 1);
+}
+
+void addReason(std::string& r, const char* why) {
+    if (r.find(why) == std::string::npos) r += (r.empty() ? "" : ",") + std::string(why);
+}
+} // namespace
+
+bool JellyfinClient::getDirectPlayUrl(const std::string& serverUrl,
+                                      const JellyfinAuth& auth,
+                                      const std::string& itemId,
+                                      const std::string& mediaSourceId,
+                                      int audioStreamIndex,
+                                      int subtitleStreamIndex,
+                                      DirectPlay& out)
+{
+    out = DirectPlay();
+    /* the reasons Jellyfin's dashboard shows for the transcode */
+    if (!directPlay || forceReencode) { out.reasons = "DirectPlayError"; return false; }
+    if (subtitleStreamIndex >= 0)     { out.reasons = "SubtitleCodecNotSupported"; return false; }
+    measureLink(serverUrl, auth);
+    /* what the link carries, with a margin; the Wii's Wi-Fi and its CPU
+     * give out above 8 Mb/s anyway */
+    int maxBps = linkKbps > 0 ? (int)(linkKbps * 1000LL * 3 / 4) : 4000000;
+    if (maxBps > 8000000) maxBps = 8000000;
+
+    char url[512];
+    snprintf(url, sizeof(url), "%s/Items/%s/PlaybackInfo?UserId=%s&DeviceId=%s",
+             serverUrl.c_str(), itemId.c_str(), auth.userId.c_str(), s_deviceId.c_str());
+    std::string body =
+        "{\"UserId\":\"" + auth.userId + "\","
+        "\"MediaSourceId\":\"" + mediaSourceId + "\","
+        "\"AudioStreamIndex\":" + std::to_string(audioStreamIndex) + ","
+        "\"SubtitleStreamIndex\":-1,"   /* none: else the default track had to be burned in */
+        "\"MaxStreamingBitrate\":" + std::to_string(maxBps) + ","
+        "\"IsPlayback\":true,\"AutoOpenLiveStream\":true,"
+        "\"EnableDirectPlay\":true,\"EnableDirectStream\":false,\"EnableTranscoding\":false,"
+        "\"DeviceProfile\":{\"MaxStreamingBitrate\":" + std::to_string(maxBps) + "," +
+        directProfile() + "}}";
+    std::string resp;
+    int status = httpRequest(url, "POST", "application/json", body, auth.accessToken, resp);
+    if (status != 200) {
+        SYS_Report("[DirectPlay] PlaybackInfo HTTP %d\n", status);
+        out.reasons = "DirectPlayError";
+        return false;
+    }
+    std::string video = streamOfType(resp, "Video"), audio = streamOfType(resp, "Audio");
+    /* the audio tracks, in file order: the chosen one is checked, and
+     * MPlayer is told which one to play (-aid) */
+    std::vector<std::string> tracks;
+    for (size_t p = resp.find("\"Type\":\"Audio\""); p != std::string::npos;
+         p = resp.find("\"Type\":\"Audio\"", p + 1)) {
+        size_t o = resp.rfind('{', p), e = resp.find('}', p);
+        if (o != std::string::npos && e != std::string::npos) tracks.push_back(resp.substr(o, e - o + 1));
+    }
+    int chosen = -1;
+    for (size_t i = 0; i < tracks.size(); ++i)
+        if (jsonGetInt(tracks[i], "Index") == audioStreamIndex) chosen = (int)i;
+    if (chosen > 0) audio = tracks[chosen];
+    out.container  = jsonGetString(resp, "Container");
+    out.videoCodec = jsonGetString(video, "Codec");
+    out.audioCodec = jsonGetString(audio, "Codec");
+    out.width      = jsonGetInt(video, "Width");
+    out.height     = jsonGetInt(video, "Height");
+    {
+        size_t p = video.find("\"RealFrameRate\":");
+        out.fps = p != std::string::npos ? (float)atof(video.c_str() + p + 16) : 0.0f;
+    }
+    const DirectFormat* fmt = formatOf(out.container);
+    if (fmt) out.demuxer = fmt->demuxer;
+
+    /* why not, in Jellyfin's words, for the dashboard */
+    std::string why;
+    if (!fmt) addReason(why, "ContainerNotSupported");
+    else {
+        if (!inList(fmt->video, out.videoCodec)) addReason(why, "VideoCodecNotSupported");
+        if (!audio.empty() && !inList(fmt->audio, out.audioCodec)) addReason(why, "AudioCodecNotSupported");
+    }
+    for (const VideoLimit& v : VIDEO_LIMITS) {
+        if (!inList(v.codecs, out.videoCodec)) continue;
+        if (out.width > v.width || out.height > v.height) addReason(why, "VideoResolutionNotSupported");
+        if (v.level && jsonGetInt(video, "Level") > v.level) addReason(why, "VideoLevelNotSupported");
+        if (v.level && jsonGetInt(video, "BitDepth") > 8)   addReason(why, "VideoBitDepthNotSupported");
+        if (v.bitrate && jsonGetInt(video, "BitRate") > v.bitrate) addReason(why, "VideoBitrateNotSupported");
+    }
+    if (out.fps > MAX_FPS + 0.5f) addReason(why, "VideoFramerateNotSupported");
+    if (!audio.empty() && jsonGetInt(audio, "Channels") > maxChannels(out.audioCodec, fmt))
+        addReason(why, "AudioChannelsNotSupported");
+    if (jsonGetInt(resp, "Bitrate") > maxBps) addReason(why, "ContainerBitrateExceedsLimit");
+
+    bool can = jsonGetBool(resp, "SupportsDirectPlay");
+    /* Another track than the first: MPlayer's -aid counts the audio tracks
+     * from 0 in MKV and FFmpeg's demuxers (MP4, TS), and is the stream
+     * number in an AVI (Jellyfin's index).  MPEG-PS numbers them its own way:
+     * transcoded. */
+    if (chosen > 0 && fmt) {
+        if (strcmp(fmt->demuxer, "avi") == 0) out.aid = audioStreamIndex;
+        else if (strcmp(fmt->demuxer, "mpegps") != 0) out.aid = chosen;
+        else { can = false; addReason(why, "SecondaryAudioNotSupported"); }
+    }
+    if (!can && why.empty()) why = "DirectPlayError";
+    SYS_Report("[DirectPlay] %s %s %dx%d %.2f fps, %s (track %d of %u), link cap %d kb/s: %s%s\n",
+               out.container.c_str(), out.videoCodec.c_str(), out.width, out.height,
+               (double)out.fps, out.audioCodec.c_str(), chosen < 0 ? 1 : chosen + 1,
+               (unsigned)tracks.size(), maxBps / 1000,
+               can ? "direct" : "transcode, ", can ? "" : why.c_str());
+    if (!can) { out.reasons = why; return false; }
+    out.playSessionId = jsonGetString(resp, "PlaySessionId");
+    out.url = addScheme(serverUrl) + "/Videos/" + itemId + "/stream?static=true&MediaSourceId=" +
+              mediaSourceId + "&DeviceId=" + s_deviceId + "&PlaySessionId=" + out.playSessionId +
+              "&ApiKey=" + auth.accessToken;
+    return true;
+}
+
+bool JellyfinClient::getPlaybackUrl(const std::string& serverUrl,
+                                    const JellyfinAuth& auth,
+                                    const std::string& itemId,
+                                    const std::string& mediaSourceId,
+                                    int audioStreamIndex,
+                                    int subtitleStreamIndex,
+                                    long long startTimeTicks,
+                                    std::string& outUrl,
+                                    std::string& outPlaySessionId,
+                                    PlaybackChoice& how,
+                                    bool allowDirect)
+{
+    how = PlaybackChoice();
+    DirectPlay dp;
+    if (allowDirect && getDirectPlayUrl(serverUrl, auth, itemId, mediaSourceId,
+                                        audioStreamIndex, subtitleStreamIndex, dp)) {
+        outUrl           = dp.url;
+        outPlaySessionId = dp.playSessionId;
+        how.direct  = true;
+        how.demuxer = dp.demuxer;
+        how.fps     = dp.fps;
+        how.aid     = dp.aid;
+        return true;
+    }
+    if (!getTranscodingUrl(serverUrl, auth, itemId, mediaSourceId, audioStreamIndex,
+                           subtitleStreamIndex, startTimeTicks, outUrl, outPlaySessionId,
+                           allowDirect ? dp.reasons : std::string("DirectPlayError")))
+        return false;
+    /* the transcode's frame rate: the source's, held to the URL's
+     * MaxFramerate (the player is told it: see g_wiifin_fps) */
+    how.fps = dp.fps;
+    size_t m = outUrl.find("MaxFramerate=");
+    if (m != std::string::npos) {
+        float cap = (float)atof(outUrl.c_str() + m + 13);
+        if (cap > 1.0f && (how.fps <= 1.0f || cap < how.fps)) how.fps = cap;
+    }
+    return true;
 }
 
 bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
@@ -2224,7 +2643,8 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
                                         int subtitleStreamIndex,
                                         long long startTimeTicks,
                                         std::string& outUrl,
-                                        std::string& outPlaySessionId)
+                                        std::string& outPlaySessionId,
+                                        const std::string& transcodeReasons)
 {
     // Snap startTimeTicks 3 seconds back so Jellyfin can output a full GOP before
     // the resume point — guarantees audio and video are aligned at stream start.
@@ -2237,8 +2657,8 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     // Query string: only DeviceId — all playback control fields go in the body.
     char fullUrl[512];
     snprintf(fullUrl, sizeof(fullUrl),
-        "%s/Items/%s/PlaybackInfo?UserId=%s&DeviceId=wiifin-wii",
-        serverUrl.c_str(), itemId.c_str(), auth.userId.c_str());
+        "%s/Items/%s/PlaybackInfo?UserId=%s&DeviceId=%s",
+        serverUrl.c_str(), itemId.c_str(), auth.userId.c_str(), s_deviceId.c_str());
 
     // EnableDirectPlay and EnableDirectStream MUST be false in the JSON body.
     // Jellyfin reads these from the body; the same-named query params are ignored
@@ -2335,6 +2755,9 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     urlReplaceParam(relUrl, "MaxVideoBitDepth", "8");
     urlReplaceParam(relUrl, "MaxWidth", "640");
     urlReplaceParam(relUrl, "MaxHeight", "480");
+    /* why, for the server's dashboard: what kept the file from playing as
+     * it is (else Jellyfin says DirectPlayError, direct play being off here) */
+    if (!transcodeReasons.empty()) urlReplaceParam(relUrl, "TranscodeReasons", transcodeReasons.c_str());
 
     // When subtitles are off (subtitleStreamIndex < 0), Jellyfin may still
     // auto-select the media's default subtitle track and embed
@@ -2384,21 +2807,52 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
 // Playback reporting
 // ---------------------------------------------------------------------------
 
+namespace {
+/* "PlayMethod", stream indexes and the rest of a playback report body */
+std::string reportFields(const char* playMethod, int audio, int sub)
+{
+    std::string f = std::string("\"PlayMethod\":\"") + (playMethod ? playMethod : "Transcode") + "\",";
+    /* the dashboard's volume slider follows WiiFin's */
+    f += "\"VolumeLevel\":" + std::to_string(wii_player_volume()) + ",";
+    if (audio >= 0) f += "\"AudioStreamIndex\":" + std::to_string(audio) + ",";
+    if (sub >= 0)   f += "\"SubtitleStreamIndex\":" + std::to_string(sub) + ",";
+    return f;
+}
+} // namespace
+
+bool JellyfinClient::postCapabilities(const std::string& serverUrl, const JellyfinAuth& auth)
+{
+    const std::string body =
+        "{\"PlayableMediaTypes\":[\"Video\",\"Audio\"],"
+        "\"SupportedCommands\":[\"DisplayMessage\",\"VolumeUp\",\"VolumeDown\",\"SetVolume\","
+        "\"Mute\",\"Unmute\",\"ToggleMute\","
+        "\"SetAudioStreamIndex\",\"SetSubtitleStreamIndex\"],"
+        "\"SupportsMediaControl\":true,"
+        "\"SupportsPersistentIdentifier\":true}";
+    std::string resp;
+    int status = httpRequest(serverUrl + "/Sessions/Capabilities/Full", "POST", "application/json",
+                             body, auth.accessToken, resp);
+    SYS_Report("[Remote] capabilities: HTTP %d\n", status);
+    return status == 204 || status == 200;
+}
+
 bool JellyfinClient::reportPlaybackStart(const std::string& serverUrl,
                                           const JellyfinAuth& auth,
                                           const std::string& itemId,
                                           const std::string& mediaSourceId,
-                                          const std::string& playSessionId)
+                                          const std::string& playSessionId,
+                                          const char* playMethod,
+                                          int audioStreamIndex,
+                                          int subtitleStreamIndex)
 {
     std::string body =
         "{\"ItemId\":\"" + itemId + "\","
         "\"MediaSourceId\":\"" + mediaSourceId + "\","
-        "\"PlaySessionId\":\"" + playSessionId + "\","
-        "\"PlayMethod\":\"Transcode\","
-        "\"AudioStreamIndex\":1,"
-        "\"CanSeek\":false,"
+        "\"PlaySessionId\":\"" + playSessionId + "\"," +
+        reportFields(playMethod, audioStreamIndex, subtitleStreamIndex) +
+        "\"CanSeek\":true,"
         "\"IsPaused\":false,"
-        "\"IsMuted\":false}";
+        "\"IsMuted\":" + std::string(wii_player_muted() ? "true" : "false") + "}";
 
     std::string resp;
     int status = httpRequest(serverUrl + "/Sessions/Playing",
@@ -2414,19 +2868,20 @@ bool JellyfinClient::reportPlaybackProgress(const std::string& serverUrl,
                                              const std::string& mediaSourceId,
                                              const std::string& playSessionId,
                                              long long positionTicks,
-                                             bool isPaused)
+                                             bool isPaused,
+                                             const char* playMethod,
+                                             int audioStreamIndex,
+                                             int subtitleStreamIndex)
 {
-    char ticksBuf[32];
-    snprintf(ticksBuf, sizeof(ticksBuf), "%lld", positionTicks);
-
     std::string body =
         "{\"ItemId\":\"" + itemId + "\","
         "\"MediaSourceId\":\"" + mediaSourceId + "\","
-        "\"PlaySessionId\":\"" + playSessionId + "\","
-        "\"PlayMethod\":\"Transcode\","
-        "\"PositionTicks\":" + ticksBuf + ","
+        "\"PlaySessionId\":\"" + playSessionId + "\"," +
+        reportFields(playMethod, audioStreamIndex, subtitleStreamIndex) +
+        "\"PositionTicks\":" + std::to_string(positionTicks) + ","
+        "\"CanSeek\":true,"
         "\"IsPaused\":" + (isPaused ? "true" : "false") + ","
-        "\"IsMuted\":false}";
+        "\"IsMuted\":" + std::string(wii_player_muted() ? "true" : "false") + "}";
 
     std::string resp;
     int status = httpRequest(serverUrl + "/Sessions/Playing/Progress",
@@ -2464,7 +2919,7 @@ bool JellyfinClient::deleteActiveEncoding(const std::string& serverUrl,
 {
     if (playSessionId.empty()) return true;
     std::string url = serverUrl + "/Videos/ActiveEncodings"
-                      "?DeviceId=wiifin-wii&PlaySessionId=" + playSessionId;
+                      "?DeviceId=" + s_deviceId + "&PlaySessionId=" + playSessionId;
     std::string resp;
     int status = httpRequest(url, "DELETE", "", "", auth.accessToken, resp);
     SYS_Report("[WiiPlayer] deleteActiveEncoding status=%d\n", status);
@@ -2472,58 +2927,252 @@ bool JellyfinClient::deleteActiveEncoding(const std::string& serverUrl,
 }
 
 // ---------------------------------------------------------------------------
-// Intro / credits timestamps — Jellyfin Intro Skipper plugin
-// GET /Episode/{id}/IntroTimestamps
+// Segments to skip (intro, recap, credits...)
+//   GET /MediaSegments/{id}  (10.10+)
+//     {"Items":[{"Type":"Intro","StartTicks":600000000,"EndTicks":1200000000},...]}
+//   GET /Episode/{id}/IntroSkipperSegments  (Intro Skipper on older servers)
+//     {"Introduction":{"Valid":true,"Start":60.0,"End":120.0},"Credits":{...}}
+//   GET /Episode/{id}/IntroTimestamps  (its first versions)
+//     {"Valid":true,"IntroStart":60.0,"IntroEnd":120.0}
+// None of them (404: no plugin, an old server) is no segment, not an error.
 // ---------------------------------------------------------------------------
 bool JellyfinClient::getIntroTimestamps(const std::string& serverUrl,
                                          const JellyfinAuth& auth,
                                          const std::string& episodeId,
                                          IntroInfo& out)
 {
-    out = IntroInfo{};  /* clear output */
-    std::string url = serverUrl + "/Episode/" + episodeId + "/IntroTimestamps";
-    std::string resp;
-    int status = httpRequest(url, "GET", "", "", auth.accessToken, resp);
-    if (status == 404) return true;   /* plugin not installed: not an error */
-    if (status != 200) return true;   /* any other failure: silent, no intro */
-
-    /* Expected JSON:
-     * {
-     *   "Valid": true,
-     *   "IntroStart": 60.0,
-     *   "IntroEnd":  120.0,
-     *   "ShowSkipPromptAt": 55.0,
-     *   "HideSkipPromptAt": 125.0
-     * }
-     * Use a simple string search avoiding full JSON parse.
-     */
-    auto getFloat = [&](const std::string& key) -> float {
-        std::string search = "\"" + key + "\":";
-        size_t p = resp.find(search);
-        if (p == std::string::npos) return 0.0f;
-        p += search.size();
-        while (p < resp.size() && (resp[p] == ' ' || resp[p] == '\t')) ++p;
-        return (float)atof(resp.c_str() + p);
+    out = IntroInfo{};
+    auto add = [&](MediaSegment::Kind k, float start, float end) {
+        if (end - start < 1.0f || start < 0.0f) return;
+        MediaSegment m; m.kind = k; m.start = start; m.end = end;
+        out.segments.push_back(m);
     };
+    auto number = [](const std::string& obj, const char* key) -> double {
+        std::string search = std::string("\"") + key + "\":";
+        size_t p = obj.find(search);
+        return p == std::string::npos ? -1.0 : atof(obj.c_str() + p + search.size());
+    };
+    std::string resp;
 
-    bool valid = jsonGetBool(resp, "Valid");
-    if (!valid) return true;
+    if (httpRequest(serverUrl + "/MediaSegments/" + episodeId, "GET", "", "", auth.accessToken, resp) == 200) {
+        struct Ctx { std::vector<std::string> objs; };
+        Ctx ctx;
+        forEachItemObject(resp, [](const std::string& obj, void* c) {
+            static_cast<Ctx*>(c)->objs.push_back(obj);
+        }, &ctx);
+        for (const std::string& o : ctx.objs) {
+            std::string type = jsonGetString(o, "Type");
+            static const struct { const char* name; MediaSegment::Kind kind; } KINDS[] = {
+                { "Intro", MediaSegment::Intro }, { "Recap", MediaSegment::Recap },
+                { "Preview", MediaSegment::Preview }, { "Commercial", MediaSegment::Commercial },
+                { "Outro", MediaSegment::Outro },
+            };
+            for (const auto& k : KINDS)
+                if (type == k.name)
+                    add(k.kind, (float)(number(o, "StartTicks") / 1e7), (float)(number(o, "EndTicks") / 1e7));
+        }
+    }
+    if (out.segments.empty() &&
+        httpRequest(serverUrl + "/Episode/" + episodeId + "/IntroSkipperSegments", "GET", "", "",
+                    auth.accessToken, resp) == 200) {
+        static const struct { const char* key; MediaSegment::Kind kind; } KEYS[] = {
+            { "\"Introduction\":", MediaSegment::Intro }, { "\"Recap\":", MediaSegment::Recap },
+            { "\"Preview\":", MediaSegment::Preview }, { "\"Credits\":", MediaSegment::Outro },
+        };
+        for (const auto& k : KEYS) {
+            size_t p = resp.find(k.key);
+            if (p == std::string::npos) continue;
+            size_t e = resp.find('}', p);
+            std::string obj = resp.substr(p, e == std::string::npos ? std::string::npos : e - p);
+            if (obj.find("\"Valid\":true") == std::string::npos) continue;
+            add(k.kind, (float)number(obj, "Start"), (float)number(obj, "End"));
+        }
+    }
+    if (out.segments.empty() &&
+        httpRequest(serverUrl + "/Episode/" + episodeId + "/IntroTimestamps", "GET", "", "",
+                    auth.accessToken, resp) == 200 && jsonGetBool(resp, "Valid"))
+        add(MediaSegment::Intro, (float)number(resp, "IntroStart"), (float)number(resp, "IntroEnd"));
 
-    out.hasIntro     = true;
-    out.introStart   = getFloat("IntroStart");
-    out.introEnd     = getFloat("IntroEnd");
-    out.showPromptAt = getFloat("ShowSkipPromptAt");
-    out.hidePromptAt = getFloat("HideSkipPromptAt");
-
-    /* Clamp to sane range */
-    if (out.introEnd <= out.introStart) { out = IntroInfo{}; }
+    std::sort(out.segments.begin(), out.segments.end(),
+              [](const MediaSegment& a, const MediaSegment& b) { return a.start < b.start; });
+    if (!out.segments.empty())
+        SYS_Report("[Segments] %u to skip\n", (unsigned)out.segments.size());
     return true;
+}
+
+// ---------------------------------------------------------------------------
+// Trickplay thumbnails (Jellyfin 10.9+)
+// GET /Users/{u}/Items/{id}?Fields=Trickplay answers, among the rest:
+//   "Trickplay":{"<mediaSourceId>":{"320":{"Width":320,"Height":180,
+//     "TileWidth":10,"TileHeight":10,"ThumbnailCount":15,"Interval":10000,...}}}
+// ---------------------------------------------------------------------------
+bool JellyfinClient::getTrickplayInfo(const std::string& serverUrl,
+                                      const JellyfinAuth& auth,
+                                      const std::string& itemId,
+                                      const std::string& mediaSourceId,
+                                      TrickplayInfo& out)
+{
+    out = TrickplayInfo{};
+    std::string url = serverUrl + "/Users/" + auth.userId + "/Items/" + itemId + "?Fields=Trickplay";
+    std::string resp;
+    if (httpRequest(url, "GET", "", "", auth.accessToken, resp) != 200) return false;
+
+    size_t p = resp.find("\"Trickplay\":{");
+    if (p == std::string::npos) return false;
+    p += 12;                                     /* the map's '{' */
+    /* this media source's sizes, or the first source's */
+    size_t src = mediaSourceId.empty() ? std::string::npos
+                                       : resp.find("\"" + mediaSourceId + "\":{", p);
+    src = src != std::string::npos ? resp.find('{', src) : resp.find('{', p + 1);
+    if (src == std::string::npos) return false;
+
+    /* each size is an object one level down: keep the narrowest */
+    int depth = 0;
+    size_t start = 0;
+    for (size_t i = src; i < resp.size(); ++i) {
+        if (resp[i] == '{') {
+            if (++depth == 2) start = i;
+        } else if (resp[i] == '}') {
+            if (depth == 2) {
+                std::string o = resp.substr(start, i + 1 - start);
+                TrickplayInfo t;
+                t.width      = jsonGetInt(o, "Width");
+                t.height     = jsonGetInt(o, "Height");
+                t.tileW      = jsonGetInt(o, "TileWidth");
+                t.tileH      = jsonGetInt(o, "TileHeight");
+                t.count      = jsonGetInt(o, "ThumbnailCount");
+                t.intervalMs = jsonGetInt(o, "Interval");
+                if (t.ok() && (!out.ok() || t.width < out.width)) out = t;
+            }
+            if (--depth == 0) break;
+        }
+    }
+    SYS_Report("[Trickplay] %s: %dx%d, %d thumbnails every %d ms\n",
+               out.ok() ? "found" : "none", out.width, out.height, out.count, out.intervalMs);
+    return out.ok();
+}
+
+bool JellyfinClient::getTrickplayTile(const std::string& serverUrl,
+                                      const JellyfinAuth& auth,
+                                      const std::string& itemId,
+                                      const std::string& mediaSourceId,
+                                      int width, int index,
+                                      std::string& outBytes)
+{
+    char path[160];
+    snprintf(path, sizeof(path), "/Videos/%s/Trickplay/%d/%d.jpg?MediaSourceId=%s",
+             itemId.c_str(), width, index, mediaSourceId.c_str());
+    outBytes.clear();
+    return httpRequest(serverUrl + path, "GET", "", "", auth.accessToken, outBytes) == 200;
+}
+
+bool JellyfinClient::getSubtitleSrt(const std::string& serverUrl,
+                                    const JellyfinAuth& auth,
+                                    const std::string& itemId,
+                                    const std::string& mediaSourceId,
+                                    int streamIndex,
+                                    std::string& outSrt)
+{
+    char path[200];
+    snprintf(path, sizeof(path), "/Videos/%s/%s/Subtitles/%d/0/Stream.srt",
+             itemId.c_str(), mediaSourceId.c_str(), streamIndex);
+    outSrt.clear();
+    /* an anime's ASS track (karaoke, effects) can be megabytes as SRT */
+    int st = httpRequest(serverUrl + path, "GET", "", "", auth.accessToken, outSrt, 4 * 1024 * 1024);
+    SYS_Report("[Subtitles] track %d: HTTP %d, %u bytes\n", streamIndex, st, (unsigned)outSrt.size());
+    return st == 200 && !outSrt.empty();
 }
 
 // ---------------------------------------------------------------------------
 // Fetch Audio tracks for a MusicAlbum
 // GET /Users/{userId}/Items?ParentId={albumId}&IncludeItemTypes=Audio
 // ---------------------------------------------------------------------------
+bool JellyfinClient::getIsFavorite(const std::string& serverUrl, const JellyfinAuth& auth,
+                                    const std::string& itemId, bool& favorite, int* specials)
+{
+    std::string resp;
+    int status = httpRequest(serverUrl + "/Users/" + auth.userId + "/Items/" + itemId,
+                             "GET", "", "", auth.accessToken, resp);
+    if (status != 200) return false;
+    favorite = jsonGetBool(resp, "IsFavorite");
+    if (specials) *specials = jsonGetInt(resp, "SpecialFeatureCount") + jsonGetInt(resp, "LocalTrailerCount");
+    return true;
+}
+
+bool JellyfinClient::getSpecialFeatures(const std::string& serverUrl, const JellyfinAuth& auth,
+                                         const std::string& itemId, std::vector<JellyfinItem>& out)
+{
+    out.clear();
+    struct Ctx { JellyfinClient* self; std::vector<JellyfinItem>* out; };
+    Ctx ctx{ this, &out };
+    bool any = false;
+    /* both answer a bare array: read as the "Items" of a list */
+    for (const char* route : { "/LocalTrailers", "/SpecialFeatures" }) {
+        std::string resp;
+        if (httpRequest(serverUrl + "/Items/" + itemId + route + "?userId=" + auth.userId,
+                        "GET", "", "", auth.accessToken, resp) != 200) continue;
+        any = true;
+        forEachItemObject("{\"Items\":" + resp + "}", [](const std::string& obj, void* vctx) {
+            Ctx* c = static_cast<Ctx*>(vctx);
+            JellyfinItem it;
+            it.id           = c->self->jsonGetString(obj, "Id");
+            it.name         = c->self->jsonGetString(obj, "Name");
+            it.type         = c->self->jsonGetString(obj, "Type");
+            it.extraType    = c->self->jsonGetString(obj, "ExtraType");
+            it.runtimeTicks = c->self->jsonGetLongLong(obj, "RunTimeTicks");
+            it.playbackPositionTicks = c->self->jsonGetLongLong(obj, "PlaybackPositionTicks");
+            if (it.extraType.empty()) it.extraType = it.type == "Trailer" ? "Trailer" : "Extra";
+            if (!it.id.empty()) c->out->push_back(it);
+        }, &ctx);
+    }
+    if (!any) errMsg = "No special features";
+    return any;
+}
+
+bool JellyfinClient::getItemsByIds(const std::string& serverUrl,
+                                    const JellyfinAuth& auth,
+                                    const std::vector<std::string>& ids,
+                                    std::vector<JellyfinItem>& outItems,
+                                    std::vector<JellyfinAudioItem>& outAudio)
+{
+    outItems.clear();
+    outAudio.clear();
+    if (ids.empty()) return false;
+    std::string list;
+    for (size_t i = 0; i < ids.size() && i < 200; ++i) list += (i ? "," : "") + ids[i];
+    std::string url = serverUrl + "/Users/" + auth.userId + "/Items?Ids=" + list +
+                      "&Fields=RunTimeTicks,AlbumArtist,Album,SeriesId&EnableImages=false";
+    std::string resp;
+    int status = httpRequest(url, "GET", "", "", auth.accessToken, resp, 2u << 20);
+    if (status != 200) {
+        if (status >= 0) errMsg = "getItemsByIds failed (HTTP " + std::to_string(status) + ")";
+        return false;
+    }
+    struct Ctx { JellyfinClient* self; std::vector<JellyfinItem> items; std::vector<JellyfinAudioItem> audio; };
+    Ctx ctx{ this, {}, {} };
+    forEachItemObject(resp, [](const std::string& obj, void* vctx) {
+        Ctx* c = static_cast<Ctx*>(vctx);
+        JellyfinItem it;
+        it.id           = c->self->jsonGetString(obj, "Id");
+        it.name         = c->self->jsonGetString(obj, "Name");
+        it.type         = c->self->jsonGetString(obj, "Type");
+        it.seriesId     = c->self->jsonGetString(obj, "SeriesId");
+        it.runtimeTicks = c->self->jsonGetLongLong(obj, "RunTimeTicks");
+        JellyfinAudioItem a;
+        a.id           = it.id;
+        a.name         = it.name;
+        a.artist       = c->self->jsonGetString(obj, "AlbumArtist");
+        a.album        = c->self->jsonGetString(obj, "Album");
+        a.runtimeTicks = it.runtimeTicks;
+        if (!it.id.empty()) { c->items.push_back(it); c->audio.push_back(a); }
+    }, &ctx);
+    /* the server's order is its own: back to the one asked for */
+    for (const std::string& id : ids)
+        for (size_t i = 0; i < ctx.items.size(); ++i)
+            if (ctx.items[i].id == id) { outItems.push_back(ctx.items[i]); outAudio.push_back(ctx.audio[i]); break; }
+    return !outItems.empty();
+}
+
 bool JellyfinClient::getAlbumTracks(const std::string& serverUrl,
                                      const JellyfinAuth& auth,
                                      const std::string& albumId,
@@ -2564,6 +3213,125 @@ bool JellyfinClient::getAlbumTracks(const std::string& serverUrl,
 }
 
 // ---------------------------------------------------------------------------
+// Music player: one track's details, favourites, autoplay
+// ---------------------------------------------------------------------------
+namespace {
+/* The strings of "key":["a","b"] */
+std::vector<std::string> jsonStringArray(const std::string& json, const std::string& key) {
+    std::vector<std::string> out;
+    size_t p = json.find("\"" + key + "\":[");
+    if (p == std::string::npos) return out;
+    p += key.size() + 4;
+    while (p < json.size() && json[p] != ']') {
+        if (json[p] != '"') { ++p; continue; }
+        std::string raw;
+        for (++p; p < json.size() && json[p] != '"'; ++p) {
+            if (json[p] == '\\' && p + 1 < json.size()) raw += json[p++];
+            raw += json[p];
+        }
+        ++p;
+        out.push_back(decodeJsonString(raw));
+    }
+    return out;
+}
+} // namespace
+
+bool JellyfinClient::getAudioTrackInfo(const std::string& serverUrl,
+                                       const JellyfinAuth& auth,
+                                       const std::string& itemId,
+                                       AudioTrackInfo& out)
+{
+    out = AudioTrackInfo();
+    std::string resp;
+    if (httpRequest(serverUrl + "/Users/" + auth.userId + "/Items/" + itemId, "GET", "", "",
+                    auth.accessToken, resp) != 200)
+        return false;
+    for (const std::string& a : jsonStringArray(resp, "Artists"))
+        out.artists += (out.artists.empty() ? "" : ", ") + a;
+    if (out.artists.empty()) out.artists = jsonGetString(resp, "AlbumArtist");
+    out.album         = jsonGetString(resp, "Album");
+    out.albumId       = jsonGetString(resp, "AlbumId");
+    out.parentId      = jsonGetString(resp, "ParentId");
+    out.year          = jsonGetInt(resp, "ProductionYear");
+    out.isFavorite    = jsonGetBool(resp, "IsFavorite");
+    out.hasImage      = resp.find("\"ImageTags\":{\"Primary\"") != std::string::npos;
+    out.albumHasImage = !jsonGetString(resp, "AlbumPrimaryImageTag").empty();
+    return true;
+}
+
+bool JellyfinClient::setPlayed(const std::string& serverUrl, const JellyfinAuth& auth,
+                               const std::string& itemId, bool played)
+{
+    /* /UserPlayedItems since 10.9; the older route for older servers */
+    std::string resp;
+    const char* method = played ? "POST" : "DELETE";
+    int st = httpRequest(serverUrl + "/UserPlayedItems/" + itemId + "?userId=" + auth.userId,
+                         method, "", "", auth.accessToken, resp);
+    if (st == 404)
+        st = httpRequest(serverUrl + "/Users/" + auth.userId + "/PlayedItems/" + itemId,
+                         method, "", "", auth.accessToken, resp);
+    SYS_Report("[Played] %s: HTTP %d\n", played ? "on" : "off", st);
+    return st == 200 || st == 204;
+}
+
+bool JellyfinClient::setFavorite(const std::string& serverUrl,
+                                 const JellyfinAuth& auth,
+                                 const std::string& itemId,
+                                 bool favorite)
+{
+    /* /UserFavoriteItems since 10.9; the older route for older servers */
+    std::string resp;
+    const char* method = favorite ? "POST" : "DELETE";
+    int st = httpRequest(serverUrl + "/UserFavoriteItems/" + itemId + "?userId=" + auth.userId,
+                         method, "", "", auth.accessToken, resp);
+    if (st == 404)
+        st = httpRequest(serverUrl + "/Users/" + auth.userId + "/FavoriteItems/" + itemId,
+                         method, "", "", auth.accessToken, resp);
+    SYS_Report("[Favorite] %s: HTTP %d\n", favorite ? "on" : "off", st);
+    return st == 200 || st == 204;
+}
+
+bool JellyfinClient::getAutoplayTracks(const std::string& serverUrl,
+                                       const JellyfinAuth& auth,
+                                       const std::string& itemId,
+                                       const std::string& parentId,
+                                       int limit,
+                                       std::vector<JellyfinAudioItem>& out)
+{
+    out.clear();
+    auto fetch = [&](const std::string& pathAndQuery) {
+        std::string resp;
+        if (httpRequest(serverUrl + pathAndQuery, "GET", "", "", auth.accessToken, resp) != 200)
+            return;
+        struct Ctx { JellyfinClient* self; std::vector<JellyfinAudioItem>* out; const std::string* skip; };
+        Ctx ctx{ this, &out, &itemId };
+        forEachItemObject(resp, [](const std::string& obj, void* vctx) {
+            Ctx* c = static_cast<Ctx*>(vctx);
+            JellyfinAudioItem it;
+            it.id           = c->self->jsonGetString(obj, "Id");
+            it.name         = c->self->jsonGetString(obj, "Name");
+            it.artist       = c->self->jsonGetString(obj, "AlbumArtist");
+            it.album        = c->self->jsonGetString(obj, "Album");
+            it.runtimeTicks = c->self->jsonGetLongLong(obj, "RunTimeTicks");
+            if (!it.id.empty() && it.id != *c->skip && c->self->jsonGetString(obj, "Type") == "Audio")
+                c->out->push_back(it);
+        }, &ctx);
+    };
+    char q[256];
+    snprintf(q, sizeof(q), "/Items/%s/InstantMix?UserId=%s&Limit=%d&Fields=RunTimeTicks&EnableImages=false",
+             itemId.c_str(), auth.userId.c_str(), limit);
+    fetch(q);
+    if (out.empty() && !parentId.empty()) {
+        snprintf(q, sizeof(q), "/Users/%s/Items?ParentId=%s&IncludeItemTypes=Audio&Recursive=true"
+                 "&SortBy=Random&Limit=%d&Fields=RunTimeTicks&EnableImages=false",
+                 auth.userId.c_str(), parentId.c_str(), limit);
+        fetch(q);
+    }
+    SYS_Report("[Music] autoplay: %u tracks\n", (unsigned)out.size());
+    return !out.empty();
+}
+
+// ---------------------------------------------------------------------------
 // Build a direct audio stream URL via POST /Items/{id}/PlaybackInfo.
 // Requests an audio-only MP3 transcode so MPlayer can play it without video.
 // ---------------------------------------------------------------------------
@@ -2572,7 +3340,9 @@ bool JellyfinClient::getAudioStreamUrl(const std::string& serverUrl,
                                         const std::string& itemId,
                                         long long startTimeTicks,
                                         std::string& outUrl,
-                                        std::string& outPlaySessionId)
+                                        std::string& outPlaySessionId,
+                                        std::string* outPlayMethod,
+                                        int* outAudioIndex)
 {
     /* Step 1: POST PlaybackInfo with AutoOpenLiveStream:false to obtain a
      * PlaySessionId only, without opening any server-side transcode session.
@@ -2582,8 +3352,8 @@ bool JellyfinClient::getAudioStreamUrl(const std::string& serverUrl,
     char fullUrl[512];
     snprintf(fullUrl, sizeof(fullUrl),
         "%s/Items/%s/PlaybackInfo"
-        "?UserId=%s&DeviceId=wiifin-wii",
-        serverUrl.c_str(), itemId.c_str(), auth.userId.c_str());
+        "?UserId=%s&DeviceId=%s",
+        serverUrl.c_str(), itemId.c_str(), auth.userId.c_str(), s_deviceId.c_str());
 
     char bodyBuf[512];
     snprintf(bodyBuf, sizeof(bodyBuf),
@@ -2616,34 +3386,66 @@ bool JellyfinClient::getAudioStreamUrl(const std::string& serverUrl,
         return false;
     }
 
-    /* Step 2: Build a direct /Audio/{id}/universal URL.
-     * MPlayer CE decodes MP3 in software on the PowerPC, so any standard
-     * MP3 bitrate (including 320 kbps) plays natively without transcoding.
-     * MaxAudioBitRate=320000 lets Jellyfin direct-stream the source file
-     * when it is already MP3 ≤320 kbps; it will only transcode to 320 kbps
-     * when the source uses a different codec (e.g. FLAC, AAC, OGG). */
+    /* Sent as it is when MPlayer CE plays it (its audio demuxer reads MP3,
+     * FLAC and WAV): MP3 up to 320 kb/s, FLAC and WAV in stereo up to 48 kHz
+     * (the Wii outputs 16-bit stereo at 48 kHz: more is converted on its
+     * CPU for nothing).  Anything else is transcoded to MP3.
+     * Not /Audio/{id}/universal: it opens a PlaybackInfo of its own and
+     * runs the transcode under that PlaySessionId, so the server took our
+     * reports for direct play and the transcode was never stopped. */
+    std::string container = jsonGetString(resp, "Container");
+    std::string codec;
+    int bitrate = 0, index = 0, rate = 0, channels = 0, bits = 0;
+    {
+        size_t t = resp.find("\"Type\":\"Audio\"");
+        if (t != std::string::npos) {
+            size_t o = resp.rfind('{', t), e = resp.find('}', t);
+            if (o != std::string::npos && e != std::string::npos) {
+                std::string stream = resp.substr(o, e - o + 1);
+                codec    = jsonGetString(stream, "Codec");
+                bitrate  = jsonGetInt(stream, "BitRate");
+                index    = jsonGetInt(stream, "Index");
+                rate     = jsonGetInt(stream, "SampleRate");
+                channels = jsonGetInt(stream, "Channels");
+                bits     = jsonGetInt(stream, "BitDepth");
+            }
+        }
+    }
+    const bool mp3  = container == "mp3" && codec == "mp3";
+    const bool flac = container == "flac" && codec == "flac";
+    const bool wav  = container == "wav" && (codec == "pcm_s16le" || codec == "pcm_s24le");
+    /* why not, in Jellyfin's words, for the dashboard */
+    std::string why;
+    auto add = [&](const char* r) { why += (why.empty() ? "" : ",") + std::string(r); };
+    if (!mp3 && !flac && !wav) {
+        if (container != "mp3" && container != "flac" && container != "wav") add("ContainerNotSupported");
+        else add("AudioCodecNotSupported");
+    }
+    if (mp3 && bitrate > 320000) add("AudioBitrateNotSupported");
+    if ((flac || wav) && rate > 48000) add("AudioSampleRateNotSupported");
+    if ((flac || wav) && bits > 24) add("AudioBitDepthNotSupported");
+    if (channels > 2) add("AudioChannelsNotSupported");
+    const bool direct = why.empty();
+    if (outPlayMethod) *outPlayMethod = direct ? "DirectPlay" : "Transcode";
+    if (outAudioIndex) *outAudioIndex = index;
+    SYS_Report("[AudioPlaybackInfo] %s %s %d kb/s %d Hz %d ch: %s%s\n", container.c_str(), codec.c_str(),
+               bitrate / 1000, rate, channels, direct ? "sent as it is" : "transcoded to MP3, ",
+               why.c_str());
+
     char audioUrl[1024];
     std::string schemedSvr = addScheme(serverUrl);
-    snprintf(audioUrl, sizeof(audioUrl),
-        "%s/Audio/%s/universal"
-        "?UserId=%s"
-        "&DeviceId=wiifin-wii"
-        "&PlaySessionId=%s"
-        "&MediaSourceId=%s"
-        "&Container=mp3"
-        "&AudioCodec=mp3"
-        "&MaxAudioBitRate=320000"
-        "&MaxAudioChannels=2"
-        "&TranscodingContainer=mp3"
-        "&TranscodingProtocol=http"
-        "&StartTimeTicks=%lld"
-        "&ApiKey=%s",
-        schemedSvr.c_str(), itemId.c_str(),
-        auth.userId.c_str(),
-        outPlaySessionId.c_str(),
-        itemId.c_str(),
-        (long long)startTimeTicks,
-        auth.accessToken.c_str());
+    if (direct)
+        snprintf(audioUrl, sizeof(audioUrl),
+            "%s/Audio/%s/stream?static=true&MediaSourceId=%s&DeviceId=%s&PlaySessionId=%s&ApiKey=%s",
+            schemedSvr.c_str(), itemId.c_str(), itemId.c_str(), s_deviceId.c_str(),
+            outPlaySessionId.c_str(), auth.accessToken.c_str());
+    else
+        snprintf(audioUrl, sizeof(audioUrl),
+            "%s/Audio/%s/stream.mp3?MediaSourceId=%s&DeviceId=%s&PlaySessionId=%s"
+            "&AudioCodec=mp3&AudioBitRate=320000&MaxAudioChannels=2&StartTimeTicks=%lld"
+            "&TranscodeReasons=%s&ApiKey=%s",
+            schemedSvr.c_str(), itemId.c_str(), itemId.c_str(), s_deviceId.c_str(),
+            outPlaySessionId.c_str(), (long long)startTimeTicks, why.c_str(), auth.accessToken.c_str());
     outUrl = audioUrl;
 
     SYS_Report("[AudioPlaybackInfo] sessionId=%s\n", outPlaySessionId.c_str());
