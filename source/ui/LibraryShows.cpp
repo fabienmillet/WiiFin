@@ -4,6 +4,8 @@
 #include "Ui.h"
 #include "../input/Input.h"
 #include <stdio.h>
+#include <math.h>
+#include <ogc/lwp_watchdog.h>
 
 using namespace LibDraw;
 
@@ -202,10 +204,25 @@ void LibraryView::renderEpisodes(ir_t& ir) {
             tx += bw + 10;
         }
         const bool seen = episodes[idx].played;
-        std::string labelStr = fitText(font, filterDejaVu(episodes[idx].name, 60), 18,
-                                       LIST_X + LIST_W - 16 - tx - (seen ? 34 : 0));
-        Ui::text(tx, ry + 11, labelStr.c_str(), 18,
-                 seen ? Ui::mix(p.textDim, p.accentDark, f) : Ui::mix(p.text, p.accentDark, f));
+        const int  avail = LIST_X + LIST_W - 16 - tx - (seen ? 34 : 0);
+        const u32  col = seen ? Ui::mix(p.textDim, p.accentDark, f) : Ui::mix(p.text, p.accentDark, f);
+        const std::string full = filterDejaVu(episodes[idx].name, 200);
+        const float tw = Ui::textWidth(full.c_str(), 18);
+        if (sel && tw > avail) {
+            /* too long: the whole title scrolls in a loop, after a pause */
+            const unsigned long long now = ticks_to_millisecs(gettime());
+            if (marqueeIdx != idx) { marqueeIdx = idx; marqueeSince = now; }
+            const float GAP = 48.0f, SPEED = 40.0f;   /* px, px a second */
+            const unsigned long long PAUSE = 1500, el = now - marqueeSince;
+            const float off = el < PAUSE ? 0.0f : fmodf((el - PAUSE) * SPEED / 1000.0f, tw + GAP);
+            Ui::clip(tx, ry, avail, ROW_H);
+            Ui::text(tx - off, ry + 11, full.c_str(), 18, col);
+            Ui::text(tx - off + tw + GAP, ry + 11, full.c_str(), 18, col);
+            Ui::clipReset();
+        } else {
+            std::string labelStr = fitText(font, full, 18, avail);
+            Ui::text(tx, ry + 11, labelStr.c_str(), 18, col);
+        }
         if (seen)   /* watched: a check on the right */
             Ui::textRight(LIST_X + LIST_W - 16, ry + 11, "\xe2\x9c\x93", 18, p.ok);
     }

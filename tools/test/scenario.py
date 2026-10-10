@@ -22,6 +22,7 @@ A scenario file holds, one per line (# starts a comment):
                             SD card; ffmpeg makes the MP3s)
     overview <name> <text>  the synopsis of that film or episode on the server
                             (\\n: a new paragraph), locked against refreshes
+    title <name> <text>     its title, the same way (found again by its file)
     sdfile <file> <to>      a file of the repository (path from its root) to
                             apps/WiiFin/<to> on the SD card (e.g. a font)
     remote <log text> <ms> <command> [args]
@@ -93,7 +94,9 @@ def parse(path):
         elif w[0] == 'positions-reset':
             sc['positions_reset'] = True
         elif w[0] == 'overview':
-            sc.setdefault('overviews', []).append((w[1], w[2].replace('\\n', '\n')))
+            sc.setdefault('edits', []).append((w[1], 'Overview', w[2].replace('\\n', '\n')))
+        elif w[0] == 'title':
+            sc.setdefault('edits', []).append((w[1], 'Name', w[2]))
         elif w[0] == 'sound':
             sc.setdefault('sounds', []).append(w[1])
         elif w[0] == 'sdfile':
@@ -174,7 +177,7 @@ def set_positions(sc, url, sess):
         q = urllib.request.Request('%s/UserItems/%s/UserData?userId=%s' % (url, it['Id'], user), data=body,
                                    headers=dict(auth, **{'Content-Type': 'application/json'}), method='POST')
         urllib.request.urlopen(q).read()
-    for name, text in sc.get('overviews', []):
+    for name, field, text in sc.get('edits', []):
         it = next((i for i in items if i['Name'].startswith(name)
                    or os.path.basename(i.get('Path', '')).startswith(name)), None)
         if not it:
@@ -182,11 +185,11 @@ def set_positions(sc, url, sess):
         q = urllib.request.Request('%s/Items/%s?userId=%s' % (url, it['Id'], user), headers=auth)
         full = json.load(urllib.request.urlopen(q))
         # the item's update takes the whole of it, lists included
-        body = {k: full.get(k) for k in ('Id', 'Name', 'OriginalTitle', 'ProductionYear', 'PremiereDate',
-                                          'OfficialRating', 'IndexNumber', 'ParentIndexNumber')}
-        body.update(Overview=text, LockData=True, LockedFields=['Overview'], Genres=full.get('Genres', []),
-                    Tags=full.get('Tags', []), People=full.get('People', []), Studios=[],
-                    ProviderIds=full.get('ProviderIds', {}), Taglines=full.get('Taglines', []))
+        body = {k: full.get(k) for k in ('Id', 'Name', 'Overview', 'OriginalTitle', 'ProductionYear',
+                                          'PremiereDate', 'OfficialRating', 'IndexNumber', 'ParentIndexNumber')}
+        body.update({field: text}, LockData=True, LockedFields=['Name', 'Overview'],
+                    Genres=full.get('Genres', []), Tags=full.get('Tags', []), People=full.get('People', []),
+                    Studios=[], ProviderIds=full.get('ProviderIds', {}), Taglines=full.get('Taglines', []))
         q = urllib.request.Request('%s/Items/%s' % (url, it['Id']), data=json.dumps(body).encode(),
                                    headers=dict(auth, **{'Content-Type': 'application/json'}), method='POST')
         urllib.request.urlopen(q).read()

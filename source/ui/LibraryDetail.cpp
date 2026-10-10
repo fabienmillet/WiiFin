@@ -398,18 +398,22 @@ void LibraryView::drawDetailView(ir_t& ir) {
 void LibraryView::renderOverviewPanel() {
     const Ui::Palette& p = Ui::pal();
     GRRLIB_Rectangle(Ui::screenLeft(), 0, Ui::screenWidth(), 480, p.dim, 1);
-    const int PW = OV_PANEL_W + 48, PH = 64 + OV_PANEL_ROWS * 20 + 36;
+    /* the title on up to three lines: the whole name of a long episode */
+    const std::vector<std::string> title = wrapText(filterDejaVu(detail.name, 200), 18, OV_PANEL_W, 3);
+    const int TH = 22 * (title.empty() ? 1 : (int)title.size());
+    const int PW = OV_PANEL_W + 48, PH = 42 + TH + OV_PANEL_ROWS * 20 + 36;
     const int PX = (640 - PW) / 2, PY = (450 - PH) / 2;
     Ui::card(PX, PY, PW, PH, 18, 0.0f);
-    std::string title = fitText(font, filterDejaVu(detail.name, 80), 18, OV_PANEL_W);
-    Ui::text(PX + 24, PY + 16, title.c_str(), 18, p.text);
-    Ui::roundRect(PX + 24, PY + 46, OV_PANEL_W, 1.5f, 0.75f, Ui::alpha(p.cardBorder, 0.6f));
+    for (size_t i = 0; i < title.size(); i++)
+        Ui::text(PX + 24, PY + 16 + (int)i * 22, title[i].c_str(), 18, p.text);
+    const int LY = PY + 36 + TH;   /* the text, under the title's line */
+    Ui::roundRect(PX + 24, LY - 12, OV_PANEL_W, 1.5f, 0.75f, Ui::alpha(p.cardBorder, 0.6f));
     const int n = (int)overviewAll.size();
     for (int i = 0; i < OV_PANEL_ROWS && overviewTop + i < n; i++)
-        Ui::text(PX + 24, PY + 58 + i * 20, overviewAll[overviewTop + i].c_str(), OV_PANEL_SIZE,
+        Ui::text(PX + 24, LY + i * 20, overviewAll[overviewTop + i].c_str(), OV_PANEL_SIZE,
                  Ui::mix(p.text, p.textDim, 0.15f));
     if (n > OV_PANEL_ROWS)
-        Ui::scrollbar(PX + PW - 14, PY + 58, OV_PANEL_ROWS * 20 - 4, overviewTop, OV_PANEL_ROWS, n);
+        Ui::scrollbar(PX + PW - 14, LY, OV_PANEL_ROWS * 20 - 4, overviewTop, OV_PANEL_ROWS, n);
     /* hints at the bottom of the panel */
     const Ui::Hint h[] = { { "UD", "Scroll" }, { "B", "Close" } };
     const int nh = n > OV_PANEL_ROWS ? 2 : 1;
