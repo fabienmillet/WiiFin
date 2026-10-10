@@ -56,25 +56,33 @@ s = s.replace('void Input::update() {', '''#include <ogc/system.h>
 #define TOUR_POINTER_ON  0x04000000u
 #define TOUR_POINTER_OFF 0x02000000u
 void tourPointer(bool on);
+void tourPointerAt(int x, int y);
 /* Presses: the built-in script, or sd:/apps/WiiFin/tour.txt when present
  * ("<ms> <hex buttons>" per line, see playback.sh) */
 u32 tourButtons() {
     static u64 t0 = 0; if (!t0) t0 = ticks_to_millisecs(gettime());
     u64 t = ticks_to_millisecs(gettime()) - t0;
-    static struct { u64 at; u32 btn; } sc[256] = { %s { 0xFFFFFFFFull, 0 } };
+    static struct { u64 at; u32 btn; int x, y; } sc[256] = { %s { 0xFFFFFFFFull, 0, -1, -1 } };
     static int i = -1;
     if (i < 0) {
         i = 0;
         if (FILE* f = fopen("sd:/apps/WiiFin/tour.txt", "r")) {
-            int n = 0; unsigned long long at; unsigned b;
-            while (n < 255 && fscanf(f, "%%llu %%x", &at, &b) == 2) { sc[n].at = at; sc[n].btn = b; n++; }
+            int n = 0; unsigned long long at; unsigned b; int x, y; char line[96];
+            while (n < 255 && fgets(line, sizeof(line), f)) {
+                /* "<ms> <hex buttons> [x y]": a pointer put at x, y (drawing units) */
+                x = y = -1;
+                if (sscanf(line, "%%llu %%x %%d %%d", &at, &b, &x, &y) < 2) continue;
+                sc[n].at = at; sc[n].btn = b; sc[n].x = x; sc[n].y = y; n++;
+            }
             sc[n].at = 0xFFFFFFFFull; sc[n].btn = 0;
             fclose(f);
             SYS_Report("[TOUR] %%d presses from tour.txt\\n", n);
         }
     }
     if (t >= sc[i].at) {
-        u32 b = sc[i++].btn;
+        u32 b = sc[i].btn;
+        if (b & TOUR_POINTER_ON) tourPointerAt(sc[i].x, sc[i].y);
+        i++;
         SYS_Report("[TOUR] t=%%llu press %%x\\n", t, b);
         if (b & TOUR_POINTER_ON)  tourPointer(true);
         if (b & TOUR_POINTER_OFF) tourPointer(false);
@@ -88,8 +96,16 @@ s += '''
  * while it is on are counted, with and without the pointer sprite. */
 #include <grrlib.h>
 #include "../core/SoundFX.h"
+#include "../ui/Ui.h"
 extern "C" { GRRLIB_texImg* g_tour_cursor = nullptr; }
 static volatile bool s_pointer = false;
+static float s_px = 636, s_py = 300;   /* raw Wii Remote coordinates */
+/* x, y in drawing units (Ui: wider than 640 in 16:9), -1: the default spot */
+void tourPointerAt(int x, int y) {
+    if (x <= 0 && y <= 0) { s_px = 636; s_py = 300; return; }   /* built-in scripts: 0, 0 */
+    s_px = (x - Ui::screenLeft()) * 640.0f / (Ui::screenRight() - Ui::screenLeft());
+    s_py = (float)y;
+}
 static int s_frames = 0, s_withCursor = 0;
 static bool s_cursorDrawn = false;
 void tourPointer(bool on) {
@@ -101,7 +117,7 @@ extern "C" s32 __real_WPAD_IR(int chan, struct ir_t* ir);
 extern "C" s32 __wrap_WPAD_IR(int chan, struct ir_t* ir) {
     s32 r = __real_WPAD_IR(chan, ir);
     ir->valid = s_pointer ? 1 : 0;
-    if (s_pointer) { ir->x = 636; ir->y = 300; ir->sx = 636; ir->sy = 300; ir->angle = 0; }
+    if (s_pointer) { ir->x = s_px; ir->y = s_py; ir->sx = s_px; ir->sy = s_py; ir->angle = 0; }
     return r;
 }
 extern "C" void __real_GRRLIB_DrawImg(const f32 x, const f32 y, const GRRLIB_texImg* tex, const f32 deg,

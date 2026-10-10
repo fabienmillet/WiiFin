@@ -8,6 +8,17 @@
 using namespace LibDraw;
 
 // One horizontally scrolling row of poster cards with its end chevrons.
+/* The pointer picks the card it is over (it only switched rows before:
+ * A then opened the card chosen with the D-pad, the first one by default) */
+int LibraryView::suggestionHover(const ir_t& ir, int rowY, int off, int n) const {
+    if (!ir.valid || ir.y < rowY || ir.y >= rowY + SG_CH) return -1;
+    for (int si = 0; si < SUGG_VISIBLE && off + si < n; si++) {
+        int cx = SG_X0 + si * (SG_CW + SG_GAP);
+        if (ir.x >= cx && ir.x < cx + SG_CW) return off + si;
+    }
+    return -1;
+}
+
 void LibraryView::drawSuggestionRow(ir_t& ir, int rowY, const std::vector<JellyfinItem>& list,
                                     GRRLIB_texImg* const* texs, int off, int selIdx, bool rowActive,
                                     bool preferSeries, bool showProgress) {
@@ -105,6 +116,12 @@ bool LibraryView::updateMovieSuggestions(ir_t& ir, bool aPressed) {
                 if (hoverRow >= 0) { movieSuggestRow = hoverRow; irMode = true; }
                 lastIrRow = hoverRow;
             }
+            if (irMode) {
+                int h0 = suggestionHover(ir, SG_ROW0_YH, movieSuggestContOff, (int)movieContItems.size());
+                int h1 = suggestionHover(ir, SG_ROW1_YH, movieSuggestRecOff, (int)movieRecentItems.size());
+                if (h0 >= 0)      { movieSuggestRow = 0; movieSuggestContSel = h0; }
+                else if (h1 >= 0) { movieSuggestRow = 1; movieSuggestRecSel  = h1; }
+            }
         }
 
         if (aPressed) {
@@ -184,6 +201,12 @@ bool LibraryView::updateTVSuggestions(ir_t& ir, bool aPressed) {
                 if (hoverRow >= 0) { tvSuggestRow = hoverRow; irMode = true; }
                 lastIrRowTV = hoverRow;
             }
+            if (irMode) {
+                int h0 = suggestionHover(ir, SG_ROW0_YH, tvSuggestContOff, (int)tvContItems.size());
+                int h1 = suggestionHover(ir, SG_ROW1_YH, tvSuggestRecOff, (int)tvRecentItems.size());
+                if (h0 >= 0)      { tvSuggestRow = 0; tvSuggestContSel = h0; }
+                else if (h1 >= 0) { tvSuggestRow = 1; tvSuggestRecSel  = h1; }
+            }
         }
 
         if (aPressed) {
@@ -247,6 +270,10 @@ bool LibraryView::updateTVUpcoming(ir_t& ir, bool aPressed) {
             if (tvUpcomingSel >= tvUpcomingOff + SUGG_VISIBLE)
                 tvUpcomingOff = tvUpcomingSel - SUGG_VISIBLE + 1;
         }
+        if (irMode) {   /* the card under the pointer (row drawn at y 80) */
+            int h = suggestionHover(ir, 80, tvUpcomingOff, nu);
+            if (h >= 0) tvUpcomingSel = h;
+        }
         if (aPressed && nu > 0 && tvUpcomingSel < nu) {
             detailItemId        = tvUpcomingItems[tvUpcomingSel].id;
             detailReturnState   = State::TVUpcomingReady;
@@ -302,6 +329,15 @@ bool LibraryView::updateMusicSuggestions(ir_t& ir, bool aPressed) {
         }
         if (musicSuggestSel < 0) musicSuggestSel = 0;
         if (musicSuggestSel >= nr && nr > 0) musicSuggestSel = nr - 1;
+        /* the album under the pointer (grid as renderMusicSuggestions draws
+         * it): only the D-pad moved the selection, so A opened the first */
+        if (irMode && ir.valid) {
+            const int AC = 120, GAP = 18, GRID_X = (640 - (4 * AC + 3 * GAP)) / 2;
+            for (int i = 0; i < nr && i < cols * 2; i++) {
+                int cx = GRID_X + (i % cols) * (AC + GAP), cy = i < cols ? 74 : 74 + AC + 16 + 18;
+                if (ir.x >= cx && ir.x < cx + AC && ir.y >= cy && ir.y < cy + AC) musicSuggestSel = i;
+            }
+        }
 
         if (aPressed && nr > 0 && musicSuggestSel < nr) {
             const JellyfinItem& item = musicRecentItems[musicSuggestSel];

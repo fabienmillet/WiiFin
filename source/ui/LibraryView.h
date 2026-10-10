@@ -463,6 +463,8 @@ private:
     static const int SG_CW  = POSTER_W;  // card width (130)
     static const int SG_CH  = 160;       // card height
     static const int SG_GAP = 20;        // 4 x 130 + 3 x 20 = 580 fits in 640
+    /* the item of a suggestion row under the pointer, -1 none */
+    int  suggestionHover(const ir_t& ir, int rowY, int off, int n) const;
     void drawSuggestionRow(ir_t& ir, int rowY, const std::vector<JellyfinItem>& list,
                            GRRLIB_texImg* const* texs, int off, int selIdx, bool rowActive,
                            bool preferSeries, bool showProgress);

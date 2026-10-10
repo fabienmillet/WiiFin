@@ -39,7 +39,8 @@ A scenario file holds, one per line (# starts a comment):
     <ms> <button> [note]    a press, ms after WiiFin first reads the buttons:
                             A B 1 2 PLUS MINUS HOME UP DOWN LEFT RIGHT, ZL (the
                             zoom button, as the GameCube's Z), POINTER /
-                            NOPOINTER (shows / hides a pointer), or END (the end)
+                            NOPOINTER (shows / hides a pointer; POINTER@x,y puts
+                            it there, in drawing units), or END (the end)
     expect streams <n>      number of streams opened
     expect advance <s>      least video progress per stream (default 5)
     expect url <k> <text>   stream k's URL contains <text>
@@ -106,9 +107,13 @@ def parse(path):
         elif w[0] == 'expect':
             sc['expect'].append(w[1:])
         elif w[0].isdigit():
+            at = ''
+            if w[1].startswith('POINTER@'):   # POINTER@x,y: the pointer at that spot
+                at = ' ' + w[1][8:].replace(',', ' ')
+                w[1] = 'POINTER'
             if w[1] not in BUTTONS:
                 sys.exit('%s:%d: unknown button %s' % (path, n, w[1]))
-            sc['presses'].append((int(w[0]), BUTTONS[w[1]], ' '.join(w[2:]) or w[1]))
+            sc['presses'].append((int(w[0]), BUTTONS[w[1]], ' '.join(w[2:]) or w[1], at))
         else:
             sys.exit('%s:%d: cannot read %r' % (path, n, line.strip()))
     return sc
@@ -129,7 +134,7 @@ def write_sd(sc, sd, sess):
         'profile_count=1', 'profile.0.server_url=' + sc['server'], 'profile.0.username=wii',
         'profile.0.server_name=Jellyfin Test', 'profile.0.user_id=' + user, 'profile.0.access_token=' + token]
     open(os.path.join(d, 'wiifin.cfg'), 'w').write('\n'.join(cfg) + '\n')
-    open(os.path.join(d, 'tour.txt'), 'w').write(''.join('%d %x\n' % p[:2] for p in sc['presses']))
+    open(os.path.join(d, 'tour.txt'), 'w').write(''.join('%d %x%s\n' % (p[0], p[1], p[3]) for p in sc['presses']))
     # custom sounds and files: this scenario's only (another one's would stay
     # on the card)
     sd_sounds = os.path.join(d, 'sounds')
@@ -265,7 +270,7 @@ def check(sc, log_path):
                 not any(w in l for w in wanted):
             fails.append(l)
     # each POINTER .. NOPOINTER stretch: the screen must draw the pointer
-    notes = [n for _, b, n in sc['presses'] if b == BUTTONS['POINTER']]
+    notes = [n for _, b, n, _ in sc['presses'] if b == BUTTONS['POINTER']]
     checks = [tuple(map(int, m.groups())) for l in log
               for m in [re.match(r'\[POINTER\] (\d+) frames, pointer drawn on (\d+)', l)] if m]
     for k, (frames, drawn) in enumerate(checks):
