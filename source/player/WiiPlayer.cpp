@@ -280,12 +280,12 @@ static void* playThreadFunc(void*)
     snprintf(fpsBuf, sizeof(fpsBuf), "%.3f", g_wiifin_fps > 1.0f ? (double)g_wiifin_fps : 0.0);
     addArg("-fps"); addArg(fpsBuf);
     /* Discard the 3 s RESUME_PAD back-off at demuxer level so output starts
-     * at the exact target position. */
+     * at the exact target position.  Always given: MPlayer keeps its options
+     * from one run to the next, and the last -ss came back on a film played
+     * from the start, or a music track (3 s of it gone after a resume). */
     char ssBuf[16];
-    if (g_wiifin_ss_secs > 0.0f) {
-        snprintf(ssBuf, sizeof(ssBuf), "%.1f", (double)g_wiifin_ss_secs);
-        addArg("-ss"); addArg(ssBuf);
-    }
+    snprintf(ssBuf, sizeof(ssBuf), "%.1f", g_wiifin_ss_secs > 0.0f ? (double)g_wiifin_ss_secs : 0.0);
+    addArg("-ss"); addArg(ssBuf);
     addArg(s_play_url.c_str());
     argv[argc] = nullptr;
 
@@ -472,6 +472,7 @@ int wii_player_play_audio(const char* url)
         "-autosync", "30",
         "-demuxer", "audio",        /* lavf can't probe non-seekable HTTP MP3 */
         "-aid", "-1",               /* a video's -aid would stay otherwise */
+        "-ss", "0",                 /* and its -ss: the track started that far in */
         "-volume", volBuf,          /* WiiFin's volume (wii_player_volume) */
         url,
         nullptr
