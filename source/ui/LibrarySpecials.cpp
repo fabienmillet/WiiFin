@@ -13,18 +13,19 @@ using namespace LibDraw;
 
 namespace {
 
-/* Jellyfin's ExtraType, in the order they are listed, and as shown */
-const struct { const char* type; const char* label; } KINDS[] = {
-    { "Trailer",         "Trailer" },
-    { "Featurette",      "Featurette" },
-    { "BehindTheScenes", "Behind the Scenes" },
-    { "DeletedScene",    "Deleted Scene" },
-    { "Interview",       "Interview" },
-    { "Scene",           "Scene" },
-    { "Short",           "Short" },
-    { "Clip",            "Clip" },
-    { "Sample",          "Sample" },
-    { "ThemeVideo",      "Theme Video" },
+/* Jellyfin's ExtraType, in the order they are listed, and as shown: one
+ * video, and a folder of them */
+const struct { const char* type; const char* label; const char* plural; } KINDS[] = {
+    { "Trailer",         "Trailer",           "Trailers" },
+    { "Featurette",      "Featurette",        "Featurettes" },
+    { "BehindTheScenes", "Behind the Scenes", "Behind the Scenes" },
+    { "DeletedScene",    "Deleted Scene",     "Deleted Scenes" },
+    { "Interview",       "Interview",         "Interviews" },
+    { "Scene",           "Scene",             "Scenes" },
+    { "Short",           "Short",             "Shorts" },
+    { "Clip",            "Clip",              "Clips" },
+    { "Sample",          "Sample",            "Samples" },
+    { "ThemeVideo",      "Theme Video",       "Theme Videos" },
 };
 const int KIND_COUNT = (int)(sizeof(KINDS) / sizeof(KINDS[0]));
 
@@ -35,6 +36,10 @@ int kindRank(const std::string& t) {
 const char* kindLabel(const std::string& t) {
     int r = kindRank(t);
     return r < KIND_COUNT ? KINDS[r].label : "Extra";
+}
+const char* kindFolder(const std::string& t) {
+    int r = kindRank(t);
+    return r < KIND_COUNT ? KINDS[r].plural : "Extras";
 }
 
 } // namespace
@@ -134,7 +139,7 @@ void LibraryView::renderSpecials(ir_t& ir)
 {
     const Ui::Palette& p = Ui::pal();
     std::string title = specialsOfName + "  \xc2\xb7  Special Features";
-    if (specialsFolders() && specialsGroup >= 0) title += std::string("  \xc2\xb7  ") + kindLabel(specialsTypes[specialsGroup]);
+    if (specialsFolders() && specialsGroup >= 0) title += std::string("  \xc2\xb7  ") + kindFolder(specialsTypes[specialsGroup]);
     drawBreadcrumb(title, 20, 580);
     headerLine(46);
 
@@ -155,7 +160,7 @@ void LibraryView::renderSpecials(ir_t& ir)
             const std::string& t = specialsTypes[rows[idx]];
             int count = 0;
             for (const JellyfinItem& it : specials) count += it.extraType == t;
-            name = kindLabel(t);
+            name = kindFolder(t);
             snprintf(right, sizeof(right), "%d video%s", count, count > 1 ? "s" : "");
         } else {       /* a video: its kind and length */
             const JellyfinItem& it = specials[rows[idx]];
