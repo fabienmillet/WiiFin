@@ -18,8 +18,6 @@
 static const float TAB_W = 180, TAB_X0 = (640 - 3 * TAB_W) / 2, TAB_Y = 52, TAB_H = 30;
 
 // USB keyboard callback — appends char to a shared buffer
-static char usbChar = 0;
-static void usbCallback(char c) { usbChar = c; }
 
 // ---------------------------------------------------------------------------
 // Background discovery thread
@@ -173,7 +171,11 @@ void ConnectView::setFields(const std::string& url, const std::string& uname) {
 static int s_usbKb = 0;            /* 0 not tried, 1 running, -1 failed */
 
 void ConnectView::initUsbKeyboard() {
-    if (s_usbKb == 0) s_usbKb = KEYBOARD_Init(usbCallback) >= 0 ? 1 : -1;
+    /* no callback: with one, libwiikeyboard starts a thread that empties the
+     * event queue every 10 ms into a stdin buffer (the callback only runs
+     * when stdin is read, which WiiFin never does), and most keys went
+     * there instead of to KEYBOARD_GetEvent below (#19) */
+    if (s_usbKb == 0) s_usbKb = KEYBOARD_Init(nullptr) >= 0 ? 1 : -1;
     usbKbInited = s_usbKb > 0;
 }
 
@@ -208,18 +210,6 @@ ConnectResult ConnectView::update(ir_t& ir) {
                 }
             }
         }
-    }
-    // USB callback char
-    if (usbChar) {
-        int fi = (int)focusedField;
-        if (fi <= 2) {
-            if (usbChar == '\b' || usbChar == 127) {
-                if (!fields[fi].empty()) fields[fi].pop_back();
-            } else if (usbChar >= 32 && usbChar < 127) {
-                fields[fi] += usbChar;
-            }
-        }
-        usbChar = 0;
     }
 
     // Status timer
