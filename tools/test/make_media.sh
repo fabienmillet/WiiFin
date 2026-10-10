@@ -194,6 +194,24 @@ if want formats && [ ! -f "$M/movies/$ZC/$ZC.mkv" ]; then
     printf '<?xml version="1.0" encoding="utf-8"?>\n<movie>\n  <title>ZC Subtitle Sync</title>\n  <year>2021</year>\n  <lockdata>true</lockdata>\n</movie>\n' \
         > "$M/movies/$ZC/movie.nfo"
 fi
+# the same with an MP3 sound, which a transcode copies as is, and a keyframe
+# every 10 s: resumed mid-GOP, the copied sound starts at the keyframe before
+ZD="ZD Subtitle Sync MP3 (2022)"
+if want formats && [ ! -f "$M/movies/$ZD/$ZD.mkv" ]; then
+    SRT=$(mktemp --suffix=.srt)
+    for i in $(seq 0 89); do
+        printf '%d\n00:%02d:%02d,000 --> 00:%02d:%02d,999\nS %d\n\n' \
+            $((i + 1)) $((i / 60)) $((i % 60)) $((i / 60)) $((i % 60)) $i
+    done > "$SRT"
+    gen "movies/$ZD/$ZD.mkv" \
+        -f lavfi -i "testsrc2=size=640x360:rate=24000/1001,drawtext=text='%{eif\\:floor(t)\\:d}':fontsize=160:fontcolor=white:box=1:boxcolor=black:x=(w-tw)/2:y=40" \
+        -f lavfi -i "sine=f=500:sample_rate=48000" -i "$SRT" -t 90 -map 0 -map 1 -map 2 \
+        $X264 -profile:v main -level 3.0 -b:v 1000k -g 240 -keyint_min 240 -sc_threshold 0 \
+        -c:a libmp3lame -b:a 128k -c:s srt -metadata:s:s:0 language=eng -disposition:s:0 default
+    rm -f "$SRT"
+    printf '<?xml version="1.0" encoding="utf-8"?>\n<movie>\n  <title>ZD Subtitle Sync MP3</title>\n  <year>2022</year>\n  <lockdata>true</lockdata>\n</movie>\n' \
+        > "$M/movies/$ZD/movie.nfo"
+fi
 
 # two versions of a film: the files "<folder> - <label>" of one folder
 ZB="ZB Two Versions (2019)"
@@ -262,7 +280,8 @@ if want playback; then
              "Z4 MP4 Index Last (2013)" "Z5 MPEG2 PS (2003)" "Z6 MPEG2 TS (2008)" \
              "Z7 MKV Two Audio (2015)" "Z8 MKV Big Subtitles (2016)" \
              "Z9 あずまんが大王 THE ANIMATION (2002)" "ZA 서울의 봄 北京故事 (2020)" \
-             "ZB Two Versions (2019)" "ZC Subtitle Sync (2021)"; do
+             "ZB Two Versions (2019)" "ZC Subtitle Sync (2021)" \
+             "ZD Subtitle Sync MP3 (2022)"; do
         # what playback/ lacks (a file deleted to make it again, extras
         # added since) linked in; what it has stays
         cp -al -n "$M/movies/$d" "$M/playback/"

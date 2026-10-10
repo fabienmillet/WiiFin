@@ -2794,6 +2794,11 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
         // the next keyframe, the sound playing over a black screen.  A
         // re-encode starts clean, with a keyframe every half second.
         urlReplaceParam(relUrl, "AllowVideoStreamCopy", "false");
+        // A sound copied as is (an MP3 source) starts at the keyframe before
+        // the position, the re-encoded picture on it: the stream's times
+        // then count from that keyframe, and the position (subtitles, bar)
+        // came the gap ahead, 4 to 7 s.  Re-encoded, both start on it.
+        urlReplaceParam(relUrl, "AllowAudioStreamCopy", "false");
     }
     outUrl = addScheme(serverUrl) + relUrl;
     {

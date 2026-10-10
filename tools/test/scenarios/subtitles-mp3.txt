@@ -1,0 +1,34 @@
+# ZD Subtitle Sync MP3 (an SRT cue "S n" for each burned second n, an MP3
+# sound, a keyframe every 10 s) resumed at 1:00 with direct play off.  An
+# MP3 sound is copied as is by the transcode: cut at 0:57, it starts at the
+# keyframe before (0:50) and the stream's times count from there, so each
+# cue showed 7 s ahead of its second.  The sound must be re-encoded too.
+server http://127.0.0.1:18096
+position ZD 60
+cfg direct_play=0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 RIGHT
+15600 RIGHT
+16200 RIGHT      Z1
+16800 DOWN
+17100 DOWN
+17400 DOWN
+17700 DOWN
+18000 DOWN
+18300 DOWN
+18600 DOWN
+18900 DOWN
+19200 DOWN
+19500 DOWN
+19800 DOWN
+20100 DOWN
+21000 A          ZD
+24500 A          Play
+26000 A          Continue
+50000 B
+51000 B
+53000 END
+expect log [Subtitles]
+expect url 1 AllowAudioStreamCopy=false

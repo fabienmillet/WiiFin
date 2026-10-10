@@ -45,7 +45,7 @@ tools/test/measure_av.py
 tools/test/make_media.sh playback music
 MOVIES=playback MIXED= tools/test/server.sh 300k
 NOPROFILE=1 BUILD_ONLY=1 tools/test/tour.sh ""
-for s in resume resume-transcode xvid formats audio-track https https-ecdsa slow subtitles subtitles-switch subtitles-big next next-from-home trickplay music-formats sounds sounds-off remote remote-play remote-queue segments stuck japanese music-favorite sort-favorite music-tabs specials cjk watched settings home-sounds music-quiet season-posters overview favorite-home versions music-after-video subtitles-transcode subtitles-resume; do tools/test/playback.sh $s; done
+for s in resume resume-transcode xvid formats audio-track https https-ecdsa slow subtitles subtitles-switch subtitles-big next next-from-home trickplay music-formats sounds sounds-off remote remote-play remote-queue segments stuck japanese music-favorite sort-favorite music-tabs specials cjk watched settings home-sounds music-quiet season-posters overview favorite-home versions music-after-video subtitles-transcode subtitles-resume subtitles-mp3; do tools/test/playback.sh $s; done
 
 # A server that keeps its accounts, with your own music as the Songs library
 KEEP=tools/test/out/keep MOVIES=playback MIXED= MUSIC=~/Music tools/test/server.sh 300k
@@ -74,6 +74,7 @@ commands, and what the log must or must not show):
 | `subtitles` | Subtitle Film with its SRT track, on from the start as the server picks it for the user (its subtitle mode, the file's flags): drawn by WiiFin over the picture, the film played as it is |
 | `subtitles-transcode` | Subtitle Film transcoded: Jellyfin's MPEG-TS starts at 1.4 s, the position (subtitles, bar, resume point) starts at 0 all the same |
 | `subtitles-resume` | ZC Subtitle Sync resumed at 0:20, transcoded: MPlayer's -ss 3 finds nothing to skip, the position counts from the stream's head and each cue shows on its second |
+| `subtitles-mp3` | ZD Subtitle Sync MP3 resumed at 1:00, transcoded: its MP3 sound, which a transcode copies from the keyframe before, is re-encoded too (`AllowAudioStreamCopy=false`), so each cue shows on its second |
 | `subtitles-switch` | Subtitles turned off on the page, then the SRT track turned on and off in the player: no restart of the stream |
 | `subtitles-big` | Z8's 730 KB SRT track (past the 256 KB response buffer): fetched whole and drawn |
 | `music-formats` | Test Album (`make_media.sh music`, the Singles library) in the music player: MP3, FLAC and WAV as they are, a 96 kHz FLAC and an AAC transcoded, each for its reason |
