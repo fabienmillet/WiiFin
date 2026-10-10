@@ -83,8 +83,9 @@ bool PlayerView::buffering() const
 
 float PlayerView::position() const
 {
-    float t = g_mplayer_time_pos;
-    return ctx.streamOrigin + (t > ctx.startSkip ? t : ctx.startSkip);
+    float t    = wii_player_time_pos();
+    float skip = wii_player_ss_missed() ? 0.0f : ctx.startSkip;
+    return ctx.streamOrigin + (t > skip ? t : skip);
 }
 
 float PlayerView::duration() const
@@ -170,7 +171,7 @@ float PlayerView::displayPosition() const
 void PlayerView::seekInPlace()
 {
     seekInPlaceSince = true;
-    seekInPlaceFrom  = g_mplayer_time_pos;
+    seekInPlaceFrom  = wii_player_time_pos();
     seekInPlaceAt    = nowMs();
 }
 
@@ -310,12 +311,12 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
     /* a seek in this stream is over once MPlayer shows a picture from
      * elsewhere: until then it may still show one or two from here */
     if (seekInPlaceSince && !g_wiifin_loading_active &&
-        (fabsf(g_mplayer_time_pos - seekInPlaceFrom) > 1.0f || nowMs() - seekInPlaceAt > 4000)) {
+        (fabsf(wii_player_time_pos() - seekInPlaceFrom) > 1.0f || nowMs() - seekInPlaceAt > 4000)) {
         seekInPlaceSince = false;
         seekInFlight     = false;
     }
     {
-        float t = g_mplayer_time_pos;
+        float t = wii_player_time_pos();
         if (t != lastSeenPos || g_mplayer_paused || g_wiifin_loading_active) {
             lastSeenPos     = t;
             lastPosChangeMs = nowMs();

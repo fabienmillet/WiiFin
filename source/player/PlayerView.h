@@ -26,7 +26,8 @@ struct PlayerViewContext {
 
     /* The transcode starts at streamOrigin seconds into the item and MPlayer
      * skips its first startSkip seconds, so the absolute position is
-     * streamOrigin + max(g_mplayer_time_pos, startSkip). */
+     * streamOrigin + max(wii_player_time_pos(), startSkip), unless that
+     * skip was missed (wii_player_ss_missed). */
     float streamOrigin = 0.0f;
     float startSkip    = 0.0f;  /* seconds MPlayer discards at start (-ss) */
     float runtime      = 0.0f;  /* item length in seconds, 0 = unknown */

@@ -1,0 +1,20 @@
+# Subtitle Film transcoded (direct_play=0): Jellyfin's MPEG-TS starts its
+# timestamps at 1.4 s, and the position (subtitles, bar, resume point) was
+# that much ahead, the subtitles shown early; WiiFin finds that start at the
+# first picture and counts from it.
+server http://127.0.0.1:18096
+position Subtitle 0
+cfg direct_play=0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 DOWN       Subtitle Film
+15500 A
+19500 A          Play, its subtitles on (the server picks them)
+40000 END
+expect streams 1
+expect url 1 stream.ts
+expect log [Subtitles] track 2: HTTP 200
+expect nolog burning it in
+expect log [Detail] subtitles on: track 2
+expect logre "\[WiiPlayer\] stream timestamps start at 1\.[0-9]+ s"

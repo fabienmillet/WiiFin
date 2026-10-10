@@ -104,11 +104,55 @@ extern volatile bool g_app_reset;
 /* -----------------------------------------------------------------------
  * Shared helpers
  * ----------------------------------------------------------------------- */
+/* When the stream's timestamps start: Jellyfin's MPEG-TS transcodes start
+ * theirs at 1.4 s (ffmpeg's muxer adds twice its 0.7 s muxdelay, unless
+ * the timestamps are copied: burned-in subtitles), and MPlayer gives them
+ * as they are (g_mplayer_time_pos), while its absolute seeks, -ss included,
+ * count from the stream's start.  The position (subtitles, the bar, the
+ * resume point sent, the +-10 s) was that much ahead.  From the start, the
+ * first picture's time is that start.  A resumed transcode asks -ss 3 (the
+ * RESUME_PAD), but only the stream's first bytes are there yet: the seek
+ * finds nothing, playback goes on from the stream's head, and the first
+ * picture is the next keyframe's (2.1 s seen): that is the 1.4 s then.  A
+ * file played as it is keeps its own times. */
+static const float TS_START = 1.4f;
+static float s_streamStart = -1.0f;
+static bool  s_ssMissed    = false;
+
+float wii_player_time_pos()
+{
+    if (s_streamStart < 0.0f && g_wiifin_loading_start_pos >= 0.0f) {
+        float first = g_wiifin_loading_start_pos;
+        float ss    = g_wiifin_ss_secs;
+        if (g_wiifin_direct || g_wiifin_burned_subs) {
+            s_streamStart = 0.0f;
+        } else if (ss <= 0.0f) {
+            s_streamStart = first < 2.0f ? first : TS_START;
+        } else {
+            s_ssMissed    = first < ss + TS_START - 1.0f;
+            s_streamStart = TS_START;
+            if (s_ssMissed)
+                SYS_Report("[WiiPlayer] -ss %.1f missed (first picture at %.2f s), "
+                           "playing from the stream's head\n", (double)ss, (double)first);
+        }
+        if (s_streamStart > 0.05f)
+            SYS_Report("[WiiPlayer] stream timestamps start at %.2f s\n", (double)s_streamStart);
+    }
+    return g_mplayer_time_pos - (s_streamStart > 0.05f ? s_streamStart : 0.0f);
+}
+
+bool wii_player_ss_missed()
+{
+    return s_ssMissed;
+}
+
 static void resetControlState()
 {
     async_quit_request   = 0;
     g_player_stop_reason = PLAYER_STOP_EOF;
     g_mplayer_time_pos   = 0.0f;
+    s_streamStart        = -1.0f;
+    s_ssMissed           = false;
     g_mplayer_duration   = 0.0f;
     g_mplayer_paused     = 0;
     g_wiifin_seek_secs   = -1.0f;
@@ -388,7 +432,7 @@ void wii_player_seek_by(float delta)
 
 void wii_player_seek_rel(float delta)
 {
-    wii_player_seek_abs(g_mplayer_time_pos + delta);
+    wii_player_seek_abs(wii_player_time_pos() + delta);
 }
 
 

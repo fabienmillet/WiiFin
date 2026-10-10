@@ -415,7 +415,7 @@ bool runPlaySession(JellyfinClient& client,
                 requestStop(PLAYER_STOP_SEEK, "Slow connection: lowering quality...");
             }
 
-            float timePos = g_mplayer_time_pos;
+            float timePos = wii_player_time_pos();
             if (g_wiifin_test_freeze > 0.0f && view.position() > g_wiifin_test_freeze)
                 timePos = lastTimePos;   /* tests: a picture that stopped there */
             if (timePos != lastTimePos || g_mplayer_paused || g_wiifin_loading_active) {
@@ -453,14 +453,14 @@ bool runPlaySession(JellyfinClient& client,
             }
 
             if (seekWant >= 0.0f && !stopRequested && !g_wiifin_loading_active &&
-                g_mplayer_time_pos > 0.0f &&
-                (fabsf(g_mplayer_time_pos - seekFrom) > 1.0f || now - seekAt > 3000)) {
-                if (!seekFixed && g_mplayer_time_pos > seekWant + 1.5f) {
+                wii_player_time_pos() > 0.0f &&
+                (fabsf(wii_player_time_pos() - seekFrom) > 1.0f || now - seekAt > 3000)) {
+                if (!seekFixed && wii_player_time_pos() > seekWant + 1.5f) {
                     SYS_Report("[DirectPlay] landed at %.1f s for %.1f s: back to the keyframe before\n",
-                               (double)g_mplayer_time_pos, (double)seekWant);
-                    seekFrom  = g_mplayer_time_pos;
+                               (double)wii_player_time_pos(), (double)seekWant);
+                    seekFrom  = wii_player_time_pos();
                     seekAt    = now;
-                    wii_player_seek_by(seekWant - g_mplayer_time_pos);
+                    wii_player_seek_by(seekWant - wii_player_time_pos());
                     seekFixed = true;
                 } else {
                     seekWant = -1.0f;
@@ -470,12 +470,12 @@ bool runPlaySession(JellyfinClient& client,
             /* Direct play the Wii can't keep up with (MPlayer drops frames
              * behind schedule): on transcoded from here */
             if (how.direct && how.fps > 1.0f && perfFrom > -2.0f && !stopRequested &&
-                !g_mplayer_paused && !g_wiifin_loading_active && g_mplayer_time_pos > 0.0f) {
+                !g_mplayer_paused && !g_wiifin_loading_active && wii_player_time_pos() > 0.0f) {
                 if (perfFrom < 0.0f) {
-                    perfFrom   = g_mplayer_time_pos;
+                    perfFrom   = wii_player_time_pos();
                     perfFrames = wiifin_video_frames();
-                } else if (g_mplayer_time_pos - perfFrom >= 10.0f) {
-                    float rate = (wiifin_video_frames() - perfFrames) / (g_mplayer_time_pos - perfFrom);
+                } else if (wii_player_time_pos() - perfFrom >= 10.0f) {
+                    float rate = (wiifin_video_frames() - perfFrames) / (wii_player_time_pos() - perfFrom);
                     SYS_Report("[DirectPlay] %.1f of %.1f frames a second shown\n",
                                (double)rate, (double)how.fps);
                     perfFrom = -2.0f;
@@ -569,7 +569,7 @@ bool runPlaySession(JellyfinClient& client,
             }
             case PlayerView::Action::SeekTo:
                 if (how.direct) {   /* in the same file: MPlayer seeks */
-                    seekFrom  = g_mplayer_time_pos;
+                    seekFrom  = wii_player_time_pos();
                     seekAt    = ticks_to_millisecs(gettime());
                     wii_player_seek_by(view.seekTarget() - view.position());
                     view.seekInPlace();

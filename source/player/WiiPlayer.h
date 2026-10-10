@@ -85,6 +85,11 @@ extern float cache_fill_status;
  * ------------------------------------------------------------------ */
 void wii_player_pause_toggle(void);
 void wii_player_seek_abs(float seconds);   /* stream-relative seconds */
+/* MPlayer's position from the stream's start (g_mplayer_time_pos is its
+ * own timestamps: 1.4 s ahead on Jellyfin's transcodes) */
+float wii_player_time_pos();
+/* The -ss asked for wasn't done: playback began at the stream's head */
+bool wii_player_ss_missed();
 void wii_player_seek_rel(float delta);
 /* A relative seek made by MPlayer itself ("seek <delta> 0"): in an AVI it
  * stops on the keyframe after the target going forward, before it going
