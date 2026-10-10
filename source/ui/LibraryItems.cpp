@@ -90,6 +90,17 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
     if (haveSel && Ui::libraryStyle() == Ui::LibraryStyle::ListCover)
         feed.requestCover(sel.id);
 
+    /* 2: shuffle.  Music: every song (Songs tab), or the album or playlist
+     * selected; a music video library: clips drawn at random */
+    if (Input::is2Pressed() && !sortable()) {
+        if (currentLibType == "musicvideos") return startVideoShuffle();
+        if (currentLibType == "music") {
+            if (!inItemsDrilldown && musicTab == 4) return startMusicShuffle("", false);
+            if (haveSel && (sel.type == "MusicAlbum" || sel.type == "Playlist"))
+                return startMusicShuffle(sel.id, sel.type == "Playlist");
+        }
+    }
+
     // A: select item (rows still loading are ignored)
     if (aPressed && haveSel) {
         if (ir.valid) {   // with the pointer, only a row under it counts
@@ -467,8 +478,10 @@ void LibraryView::renderItemList(ir_t& ir) {
 
     // Footer: the sort in force beside its button
     const std::string sum = sortSummary();
-    const Ui::Hint l[] = { { "A", "Open" }, { "B", "Back" }, { "2", sum.empty() ? "Sort" : sum.c_str() } };
-    const int nl = sortable() ? 3 : 2;
+    const bool shuffles = !sortable() && (currentLibType == "music" || currentLibType == "musicvideos");
+    const Ui::Hint l[] = { { "A", "Open" }, { "B", "Back" },
+                           { "2", shuffles ? "Shuffle" : sum.empty() ? "Sort" : sum.c_str() } };
+    const int nl = sortable() || shuffles ? 3 : 2;
     if (currentLibType == "music" && !inItemsDrilldown) {
         const Ui::Hint r[] = { { "LR", "A-Z" }, { "-/+", "Tab" } };
         Ui::footer(l, nl, r, 2);

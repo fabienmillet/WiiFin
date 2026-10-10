@@ -51,6 +51,7 @@ public:
     bool                              pendingPlayIsMusic  = false;
     std::vector<MusicTrack>  pendingMusicTracks;
     int                               pendingMusicTrackIdx = 0;
+    bool                              pendingMusicShuffle  = false;  // the player starts shuffled
 
     // Episode list context for the player overlay (next/prev navigation)
     // Non-empty only when playing a TV-show episode.
@@ -331,6 +332,12 @@ private:
     void loadDetail();
     void preparePlay(long long startTicks, const std::vector<JellyfinEpisode>* queue = nullptr);
     bool startShuffle(const std::string& seasonId);   /* "" = whole series */
+    /* 2 in music: an album or a playlist (its id), or every song of the
+     * library ("": the server draws them), played shuffled */
+    bool startMusicShuffle(const std::string& id, bool playlist);
+    /* 2 in a music video library: clips drawn by the server, one after
+     * the other like a shuffled series */
+    bool startVideoShuffle();
     void loadSeasons();
     void loadEpisodes();
     void loadMovieCollections();

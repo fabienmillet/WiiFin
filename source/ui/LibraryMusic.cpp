@@ -41,8 +41,10 @@ bool LibraryView::updateMusicTracks(ir_t& ir, bool aPressed) {
             }
         }
     }
-    // A: play this track (with full album context for prev/next)
-    if (aPressed && n > 0 && musicTrackSel < n) {
+    // A: play this track (with full album context for prev/next); 2: all
+    // of them shuffled
+    const bool shuffle = Input::is2Pressed();
+    if ((aPressed || shuffle) && n > 0 && musicTrackSel < n) {
         pendingMusicTracks.clear();
         for (const auto& at : musicTracks) {
             MusicTrack t;
@@ -53,8 +55,10 @@ bool LibraryView::updateMusicTracks(ir_t& ir, bool aPressed) {
             t.runtimeTicks = at.runtimeTicks;
             pendingMusicTracks.push_back(t);
         }
-        pendingMusicTrackIdx = musicTrackSel;
+        pendingMusicTrackIdx = shuffle ? 0 : musicTrackSel;
+        pendingMusicShuffle  = shuffle;
         pendingPlayIsMusic   = true;
+        if (shuffle) SYS_Report("[Shuffle] %d track(s)\n", n);
         return true;
     }
     return false;
@@ -107,6 +111,6 @@ void LibraryView::renderMusicTracks(ir_t& ir) {
     }
     Ui::scrollbar(614, LIST_Y + 2, MUSIC_TRACKS_VISIBLE * ROW_H - 6, musicTrackTop,
                   MUSIC_TRACKS_VISIBLE, n);
-    const Ui::Hint l[] = { { "A", "Play" }, { "B", "Back" } };
-    Ui::footer(l, 2);
+    const Ui::Hint l[] = { { "A", "Play" }, { "2", "Shuffle" }, { "B", "Back" } };
+    Ui::footer(l, 3);
 }

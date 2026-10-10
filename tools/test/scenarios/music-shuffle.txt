@@ -1,0 +1,20 @@
+# Shuffle in music (2): Test Album opened, 2 plays its five tracks shuffled;
+# back in the library, on the Songs tab, 2 plays songs the server drew.
+server http://127.0.0.1:18096
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12400 RIGHT      Singles
+13000 A          Albums
+16500 A          Test Album
+19500 2          its tracks, shuffled
+27000 B          back to the album
+30000 B          back to the albums
+32000 PLUS       Suggestions
+35000 PLUS       Artists
+38000 PLUS       Playlists
+41000 PLUS       Songs
+44000 2          every song, drawn by the server
+52000 B
+55000 END
+expect logorder "[Shuffle] 5 track(s)" "[WiiPlayer] play_audio:" "[Shuffle] 5 track(s) drawn" "[WiiPlayer] play_audio:"

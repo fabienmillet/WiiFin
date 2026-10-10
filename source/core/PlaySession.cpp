@@ -121,6 +121,7 @@ static float streamOriginSecs(long long startTicks) {
 }
 
 static std::string episodeTitle(const JellyfinEpisode& ep) {
+    if (ep.seasonNumber == 0 && ep.indexNumber == 0) return ep.name;   /* a clip of a shuffle */
     char buf[32];
     snprintf(buf, sizeof(buf), "S%d E%d - ", ep.seasonNumber, ep.indexNumber);
     return buf + ep.name;

@@ -361,6 +361,73 @@ bool LibraryView::startShuffle(const std::string& seasonId)
     return true;
 }
 
+bool LibraryView::startMusicShuffle(const std::string& id, bool playlist)
+{
+    std::vector<JellyfinAudioItem> tracks;
+    bool ok = false;
+    runWithLoading([&]() {
+        if (id.empty()) {
+            std::vector<JellyfinItem> items;
+            char q[256];
+            snprintf(q, sizeof(q), "/Users/%s/Items?ParentId=%s&IncludeItemTypes=Audio&Recursive=true"
+                     "&SortBy=Random&Limit=200", auth.userId.c_str(), currentLibId.c_str());
+            ok = client.getItemsByQuery(serverUrl, auth, q, items);
+            for (const JellyfinItem& it : items) {
+                JellyfinAudioItem a;
+                a.id = it.id; a.name = it.name; a.runtimeTicks = it.runtimeTicks;
+                tracks.push_back(a);
+            }
+        } else {
+            ok = playlist ? client.getPlaylistTracks(serverUrl, auth, id, tracks)
+                          : client.getAlbumTracks(serverUrl, auth, id, tracks);
+        }
+    });
+    if (!ok || tracks.empty()) return false;
+    pendingMusicTracks.clear();
+    for (const JellyfinAudioItem& a : tracks) {
+        MusicTrack t;
+        t.id = a.id; t.title = a.name; t.artist = a.artist; t.album = a.album;
+        t.runtimeTicks = a.runtimeTicks;
+        pendingMusicTracks.push_back(t);
+    }
+    SYS_Report("[Shuffle] %d track(s)%s\n", (int)tracks.size(), id.empty() ? " drawn" : "");
+    pendingMusicTrackIdx = 0;
+    pendingMusicShuffle  = true;
+    pendingPlayIsMusic   = true;
+    return true;
+}
+
+bool LibraryView::startVideoShuffle()
+{
+    std::vector<JellyfinItem> items;
+    bool ok = false;
+    std::string err;
+    freeDetail();
+    runWithLoading([&]() {
+        char q[256];
+        snprintf(q, sizeof(q), "/Users/%s/Items?ParentId=%s&IncludeItemTypes=MusicVideo,Video&Recursive=true"
+                 "&SortBy=Random&Limit=100", auth.userId.c_str(), currentLibId.c_str());
+        ok = client.getItemsByQuery(serverUrl, auth, q, items);
+        if (ok && !items.empty()) ok = client.getItemDetail(serverUrl, auth, items[0].id, detail);
+        if (!ok) err = client.lastError();
+    });
+    if (!ok) { errMsg = err; state = State::Error; return false; }
+    if (items.empty()) return false;
+    /* the queue of a shuffled series: next / previous and the next one at
+     * the end go through it */
+    std::vector<JellyfinEpisode> drawn;
+    for (const JellyfinItem& it : items) {
+        JellyfinEpisode e;
+        e.id = it.id; e.name = it.name;
+        drawn.push_back(e);
+    }
+    SYS_Report("[Shuffle] %d video(s) drawn\n", (int)drawn.size());
+    detailItemId    = drawn[0].id;
+    detailIsEpisode = false;
+    preparePlay(0LL, &drawn);
+    return true;
+}
+
 // ---------------------------------------------------------------
 void LibraryView::loadDetail() {
     if (detailItemId.empty()) { state = State::PostersReady; return; }

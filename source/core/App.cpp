@@ -489,6 +489,8 @@ void App::loop() {
                 MusicPlayerView mpv(font, jellyfinClient, auth, p.serverUrl);
                 mpv.setCursorTex(cursorPointerTex);
                 mpv.setTracks(lv.pendingMusicTracks, lv.pendingMusicTrackIdx);
+                mpv.setShuffleStart(lv.pendingMusicShuffle);
+                lv.pendingMusicShuffle = false;
                 bool wantsExit = mpv.run();
                 if (g_app_powerOff || g_app_reset) { running = false; return; }
                 SoundFX::play(SoundFX::FX::Back);

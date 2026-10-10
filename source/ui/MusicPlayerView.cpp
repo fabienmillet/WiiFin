@@ -1027,6 +1027,10 @@ bool MusicPlayerView::run()
     s.pos = startIdx;
     s.lastInput = nowMs();
     srand((unsigned)gettime());
+    if (shuffleStart) {   /* a random track first, the rest shuffled after it */
+        s.pos = rand() % (int)s.tracks.size();
+        setShuffle(true);
+    }
 
     const bool musicWasRunning = MusicBGM::isRunning();
     MusicBGM::pause();
