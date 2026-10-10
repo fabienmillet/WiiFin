@@ -82,6 +82,12 @@ void drawThumb(GRRLIB_texImg* tex, float x, float y, float w, float h,
     if (prog >= 0.0f) Ui::progress(x + 8, y + h - 12, vw - 16, 5, prog);
 }
 
+float fitHeight(const GRRLIB_texImg* tex, float w, float maxH) {
+    if (!tex || tex->w == 0 || tex->h == 0) return maxH;
+    float h = w * WiiUtils::wsScaleX() * (float)tex->h / (float)tex->w;
+    return h < maxH ? h : maxH;
+}
+
 // Row card for the vertical lists.
 void drawRow(int x, int y, int w, int h, float focus) {
     Ui::card(x, y + 2, w, h - 6, 10, focus);

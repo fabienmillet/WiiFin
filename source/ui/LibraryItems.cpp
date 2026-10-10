@@ -430,8 +430,9 @@ void LibraryView::renderItemList(ir_t& ir) {
 
     // Cover of the selected title (List + Posters)
     if (coverPanel && haveSel) {
-        const float PX = LIST_X + LW + 26, PW = 600 - PX, PH = PW * 1.5f, PY = LIST_Y + 2;
         GRRLIB_texImg* cover = feed.cover(selItem.id);
+        /* its own shape: a square album cover stays square */
+        const float PX = LIST_X + LW + 26, PW = 600 - PX, PH = fitHeight(cover, PW, PW * 1.5f), PY = LIST_Y + 2;
         drawThumb(cover, PX, PY, PW, PH, 0.0f, progressOf(selItem),
                   cover ? nullptr : selItem.name.c_str(), false);
         float ty = PY + PH + 10;

@@ -161,8 +161,8 @@ void LibraryView::renderSeasons(ir_t& ir) {
         Ui::scrollbar(LIST_X + lw + 8, LIST_Y + 2, ITEMS_VISIBLE * ROW_H - 6, seasonTop, ITEMS_VISIBLE, n);
         /* the selected season's poster (List + Posters) */
         if (cover && seasonSel >= 0 && seasonSel < n) {
-            const float PX = LIST_X + lw + 26, PW = 600 - PX, PH = PW * 1.5f, PY = LIST_Y + 2;
             GRRLIB_texImg* t = seasonPoster(seasonSel);
+            const float PX = LIST_X + lw + 26, PW = 600 - PX, PH = fitHeight(t, PW, PW * 1.5f), PY = LIST_Y + 2;
             drawThumb(t, PX, PY, PW, PH, 0.0f, -1.0f, t ? nullptr : seasons[seasonSel].name.c_str(), false);
             std::string name = fitText(font, filterDejaVu(seasons[seasonSel].name, 45), 15, (int)PW);
             Ui::text(PX, PY + PH + 10, name.c_str(), 15, p.text);

@@ -24,6 +24,9 @@ float progressOf(const T& it) {
 void drawThumb(GRRLIB_texImg* tex, float x, float y, float w, float h,
                float focus, float prog = -1.0f, const char* caption = nullptr,
                bool grow = true);
+// The height a picture w wide keeps its own shape at (album and collection
+// art is often square), at most maxH: maxH too without a picture yet.
+float fitHeight(const GRRLIB_texImg* tex, float w, float maxH);
 // Row card for the vertical lists.
 void drawRow(int x, int y, int w, int h, float focus);
 void drawPageArrows(ir_t& ir, int upCy, int dnCy, bool canPrev, bool canNext,

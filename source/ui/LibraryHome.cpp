@@ -402,13 +402,16 @@ void LibraryView::renderGlobalFavorites(ir_t& ir) {
             if (sel != (pass == 1)) continue;
             int px = POSTER_X0 + (i % POSTER_COLS) * POSTER_STRIDE_X;
             int py = GF_Y0 + (i / POSTER_COLS) * POSTER_STRIDE_Y;
-            drawThumb(posterTextures[i], px, py, POSTER_W, POSTER_H,
+            /* centred in its cell at its own shape (square album covers) */
+            const float th = fitHeight(posterTextures[i], POSTER_W, POSTER_H);
+            const int   ty = py + (int)((POSTER_H - th) * 0.5f);
+            drawThumb(posterTextures[i], px, ty, POSTER_W, th,
                       sel ? Ui::pulse() : 0.0f, -1.0f, items[i].name.c_str());
             // Type badge (Movie / Series / Album)
             const char* badge = labelForType(items[i].type);
             int bw = Ui::textWidth(badge, 10) + 12;
-            Ui::roundRect(px + 6, py + POSTER_H - 22, bw, 16, 8, 0x000000A0);
-            Ui::text(px + 12, py + POSTER_H - 20, badge, 10, 0xFFFFFFFF);
+            Ui::roundRect(px + 6, ty + th - 22, bw, 16, 8, 0x000000A0);
+            Ui::text(px + 12, ty + th - 20, badge, 10, 0xFFFFFFFF);
         }
     }
 
