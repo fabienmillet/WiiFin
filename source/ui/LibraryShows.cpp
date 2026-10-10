@@ -18,7 +18,7 @@ static int seasonGridX0(int n)
     int cols = n < SG_COLS ? (n > 0 ? n : 1) : SG_COLS;
     return (640 - ((cols - 1) * SG_STRIDE_X + SG_W)) / 2;
 }
-/* the List + Cover view: the list narrower, the poster on its right */
+/* the List + Posters view: the list narrower, the poster on its right */
 static const int SEASON_LW = 384;
 
 bool LibraryView::updateSeasons(ir_t& ir, bool aPressed) {
@@ -159,7 +159,7 @@ void LibraryView::renderSeasons(ir_t& ir) {
             Ui::text(LIST_X + 16, ry + 11, name.c_str(), 18, Ui::mix(p.text, p.accentDark, f));
         }
         Ui::scrollbar(LIST_X + lw + 8, LIST_Y + 2, ITEMS_VISIBLE * ROW_H - 6, seasonTop, ITEMS_VISIBLE, n);
-        /* the selected season's poster (List + Cover) */
+        /* the selected season's poster (List + Posters) */
         if (cover && seasonSel >= 0 && seasonSel < n) {
             const float PX = LIST_X + lw + 26, PW = 600 - PX, PH = PW * 1.5f, PY = LIST_Y + 2;
             GRRLIB_texImg* t = seasonPoster(seasonSel);

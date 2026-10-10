@@ -798,7 +798,7 @@ void LibraryView::loadSeasons() {
         seriesSpecials = 0;
         if (ok) client.getIsFavorite(serverUrl, auth, currentSeriesId, seriesFavorite, &seriesSpecials);
         if (!ok || !posters) return;
-        /* each season's poster, sized for the List + Cover panel (the grid
+        /* each season's poster, sized for the List + Posters panel (the grid
          * draws them smaller) */
         const int n = (int)seasons.size() < SEASON_TEX_MAX ? (int)seasons.size() : SEASON_TEX_MAX;
         tex.assign(n, nullptr);

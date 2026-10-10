@@ -280,7 +280,7 @@ void SettingsView::render(ir_t& ir) {
                 rows ? "Rows" : "Grid", rows ? p.accent : 0x8A9099FF);
     }
     {
-        static const char* name[Ui::LIBRARY_STYLE_COUNT] = { "Posters", "List", "List + Cover" };
+        static const char* name[Ui::LIBRARY_STYLE_COUNT] = { "Posters", "List", "List + Posters" };
         static const char* desc[Ui::LIBRARY_STYLE_COUNT] = {
             "Browse libraries with their artwork",
             "Libraries as text lists: quickest to browse big ones",

@@ -49,7 +49,7 @@ public:
     bool takeJump(int& index);
     bool jumpPending() const { return jumpState != 0; }
 
-    /* Cover of one title (List + Cover style). */
+    /* Cover of one title (List + Posters style). */
     void requestCover(const std::string& itemId);
     GRRLIB_texImg* cover(const std::string& itemId);   /* null until loaded */
 

@@ -428,7 +428,7 @@ void LibraryView::renderItemList(ir_t& ir) {
     }
     Ui::scrollbar(LIST_X + LW + 8, LIST_Y + 2, LIST_ROWS * LIST_ROW_H - 4, viewTop, LIST_ROWS, n);
 
-    // Cover of the selected title (List + Cover)
+    // Cover of the selected title (List + Posters)
     if (coverPanel && haveSel) {
         const float PX = LIST_X + LW + 26, PW = 600 - PX, PH = PW * 1.5f, PY = LIST_Y + 2;
         GRRLIB_texImg* cover = feed.cover(selItem.id);
