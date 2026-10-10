@@ -214,6 +214,16 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
     return false;
 }
 
+/* The page of the current tab: Collections and Favorites have their own
+ * queries (a page turn reloaded the library's own titles on them) */
+LibraryView::State LibraryView::pageLoadState() const {
+    if (currentLibType == "movies" && !inBoxSetDrilldown) {
+        if (movieTab == 1) return State::CollectionsLoad;
+        if (movieTab == 2) return State::FavoritesLoad;
+    }
+    return State::ItemsInit;
+}
+
 bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
     int n = (int)items.size();
     if (sortPanel) { updateSortPanel(); return false; }
@@ -324,7 +334,7 @@ bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
         if (posterSel >= POSTER_COLS) {
             posterSel -= POSTER_COLS;
         } else if (itemPage > 0) {
-            freePosters(); itemPage--; state = State::ItemsInit;
+            freePosters(); itemPage--; state = pageLoadState();
         }
         irMode = false;
     }
@@ -334,7 +344,7 @@ bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
             posterSel += POSTER_COLS;
         } else {
             int totalPages = (itemTotal + POSTERS_PER_PAGE - 1) / POSTERS_PER_PAGE;
-            if (itemPage + 1 < totalPages) { freePosters(); itemPage++; state = State::ItemsInit; }
+            if (itemPage + 1 < totalPages) { freePosters(); itemPage++; state = pageLoadState(); }
         }
         irMode = false;
     }
@@ -342,14 +352,14 @@ bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
     if (Input::isLPressed() && itemPage > 0) {
         freePosters();
         itemPage--;
-        state = State::ItemsInit;
+        state = pageLoadState();
     }
     if (Input::isRPressed()) {
         int totalPages = (itemTotal + POSTERS_PER_PAGE - 1) / POSTERS_PER_PAGE;
         if (itemPage + 1 < totalPages) {
             freePosters();
             itemPage++;
-            state = State::ItemsInit;
+            state = pageLoadState();
         }
     }
     // Arrow button IR click
@@ -360,12 +370,12 @@ bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
         if (ax >= ARROW_CX - ARROW_HIT_R && ax < ARROW_CX + ARROW_HIT_R) {
             if (ay >= ARROW_UP_CY - ARROW_HIT_R && ay < ARROW_UP_CY + ARROW_HIT_R
                     && itemPage > 0) {
-                freePosters(); itemPage--; state = State::ItemsInit;
+                freePosters(); itemPage--; state = pageLoadState();
                 arrowClicked = true;
             }
             if (ay >= ARROW_DN_CY - ARROW_HIT_R && ay < ARROW_DN_CY + ARROW_HIT_R
                     && itemPage + 1 < totalPages) {
-                freePosters(); itemPage++; state = State::ItemsInit;
+                freePosters(); itemPage++; state = pageLoadState();
                 arrowClicked = true;
             }
         }

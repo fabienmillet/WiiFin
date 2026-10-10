@@ -460,6 +460,7 @@ private:
     // LibraryItems.cpp
     bool updateItemList(ir_t& ir, bool aPressed);
     void renderItemList(ir_t& ir);
+    State pageLoadState() const;   // the load of the current tab's page
     bool updatePosterGrid(ir_t& ir, bool aPressed);
     void renderPosterGrid(ir_t& ir);
     // LibraryShows.cpp
