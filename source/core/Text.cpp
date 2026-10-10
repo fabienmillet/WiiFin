@@ -130,13 +130,15 @@ const Glyph& glyph(GRRLIB_ttfFont* font, unsigned size, FaceSize& fs, u32 cp)
     Glyph g;
     FT_Face face = (FT_Face)font->face;
     setSize(face, size);
-    u32 draw = cp >= 0x80 ? normalize(cp) : cp;
+    /* controls (a tab between two sentences of a subtitle...) have no glyph:
+     * a tab as a space, the others as nothing, never the font's box */
+    u32 draw = cp >= 0x80 ? normalize(cp) : cp == '\t' ? ' ' : cp < 0x20 || cp == 0x7F ? 0 : cp;
     if (draw == 0) return fs.glyphs.emplace(cp, g).first->second;   /* nothing, no advance */
     g.index = FT_Get_Char_Index(face, draw);
     FT_Face from = face;          /* the font the glyph comes from */
     FT_UInt load = g.index;
-    if (g.index == 0 && draw >= 0x80) {
-        u32 sub = substitute(draw);
+    if (g.index == 0) {
+        u32 sub = draw >= 0x80 ? substitute(draw) : draw;
         if (sub != draw) load = g.index = FT_Get_Char_Index(face, sub);
         /* none: a fallback font's (Japanese, then the SD card's), else a
          * space rather than the font's box between words */
