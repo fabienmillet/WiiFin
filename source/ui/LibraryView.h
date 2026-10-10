@@ -258,6 +258,7 @@ private:
     int  continueSel         = 0;
     int  nextUpSel           = 0;
     int  homePage            = 0; // 0=libs, 1=activity
+    bool avatarFocus         = false; // grid home: the profile avatar, reached with Up
     int  actRow              = 0; // 0=CW row, 1=NextUp row (activity page)
     bool detailIsEpisodeHint = false;
 

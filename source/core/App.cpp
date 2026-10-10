@@ -503,6 +503,7 @@ void App::loop() {
                 saveSettings();   /* the zoom may have changed during playback */
                 lv.onPlaybackFinished(lastItemId);
             } else {
+                SYS_Report("[WiiFin] back to the profiles\n");
                 break; // user navigated back (B from libraries grid) — no play requested
             }
         }

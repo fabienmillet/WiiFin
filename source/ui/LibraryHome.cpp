@@ -60,6 +60,13 @@ bool LibraryView::updateHome(ir_t& ir, bool aPressed) {
         SoundFX::play(SoundFX::FX::Back);
         return true;
     }
+    /* without a pointer: Up from the top row of tiles reaches the avatar,
+     * A on it goes back to the profiles (to sign out), Down leaves it */
+    if (avatarFocus) {
+        if (aPressed) { avatarFocus = false; SoundFX::play(SoundFX::FX::Back); return true; }
+        if (Input::isDownPressed() || Input::isBackPressed() || homePage != 0 || irMode) avatarFocus = false;
+        return false;
+    }
 
     if (homePage == 0) {
         // ---- Libraries page ----
@@ -82,7 +89,7 @@ bool LibraryView::updateHome(ir_t& ir, bool aPressed) {
         // D-pad navigation in library grid
         if (Input::isLeftPressed())  { if (libSel > 0)   libSel--; irMode = false; }
         if (Input::isRightPressed()) { if (libSel < n-1) libSel++; irMode = false; }
-        if (Input::isUpPressed())    { int ns = libSel - TILE_COLS; if (ns >= 0) libSel = ns; irMode = false; }
+        if (Input::isUpPressed())    { int ns = libSel - TILE_COLS; if (ns >= 0) libSel = ns; else avatarFocus = true; irMode = false; }
         if (Input::isDownPressed())  { int ns = libSel + TILE_COLS; if (ns < n)  libSel = ns; irMode = false; }
 
         // IR hover
@@ -285,7 +292,8 @@ void LibraryView::renderHome(ir_t& ir) {
 
     // Profile avatar – top right of header (click: back to the profile picker)
     {
-        bool iconHover = ir.valid && fabsf(ir.x - 614.0f) < 24.0f && fabsf(ir.y - 26.0f) < 24.0f;
+        bool iconHover = (ir.valid && fabsf(ir.x - 614.0f) < 24.0f && fabsf(ir.y - 26.0f) < 24.0f) ||
+                         (avatarFocus && homePage == 0);
         Ui::avatar(614, Ui::headerBand() > 0 ? 22 : 26, iconHover ? 17.0f : 15.0f,
                    userName.c_str(), iconHover ? 1.0f : 0.0f);
     }
@@ -298,7 +306,7 @@ void LibraryView::renderHome(ir_t& ir) {
             int row = i / TILE_COLS;
             int tx  = GRID_X + col * (TILE_W + TILE_GAP);
             int ty  = GRID_Y + row * (TILE_H + TILE_GAP);
-            bool sel   = (i == libSel);
+            bool sel   = (i == libSel) && !avatarFocus;
             bool hover = ir.valid &&
                          ir.x >= tx && ir.x <= tx + TILE_W &&
                          ir.y >= ty && ir.y <= ty + TILE_H;
@@ -316,7 +324,7 @@ void LibraryView::renderHome(ir_t& ir) {
             Ui::textCentered(tx + TILE_W / 2, ty + 44, name.c_str(), 18,
                              Ui::mix(p.text, p.accentDark, f));
         }
-        const Ui::Hint l[] = { { "A", "Open" }, { "1", "Search" } };
+        const Ui::Hint l[] = { { "A", avatarFocus ? "Profiles" : "Open" }, { "1", "Search" } };
         const Ui::Hint r[] = { { "-/+", "Tab" } };
         Ui::footer(l, 2, r, 1);
 
