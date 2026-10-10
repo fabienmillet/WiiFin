@@ -385,7 +385,7 @@ void LibraryView::drawDetailView(ir_t& ir) {
 
     // ---- Footer ----
     const Ui::Hint l[] = { { "A", "Play" }, { "B", "Back" },
-                           { "1", detail.isFavorite ? "Unfavourite" : "Favourite" },
+                           { "1", detail.isFavorite ? "Unfavorite" : "Favorite" },
                            { "+!", detail.played ? "Unwatched" : "Watched" },
                            { "2", "Extras" } };   /* short: 5 hints + Focus, Change */
     const Ui::Hint r[] = { { "UD", "Focus" }, { "LR", "Change" } };

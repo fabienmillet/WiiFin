@@ -11,7 +11,7 @@
 using namespace LibDraw;
 
 static const char* const SORTS[] = { "Name", "Year", "Rating", "Date added" };
-static const char* const SHOWS[] = { "All", "Not watched", "Watched", "Favourites" };
+static const char* const SHOWS[] = { "All", "Not watched", "Watched", "Favorites" };
 
 bool LibraryView::sortable() const
 {

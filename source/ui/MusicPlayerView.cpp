@@ -715,7 +715,7 @@ void activate(int c)
     case C_FAV:
         s.favorite = !s.favorite;
         s_jobFavorite = s.favorite ? 1 : 2;
-        toast(s.favorite ? "Added to favourites" : "Removed from favourites");
+        toast(s.favorite ? "Added to favorites" : "Removed from favorites");
         break;
     case C_SHUFFLE:
         setShuffle(!s.shuffle);

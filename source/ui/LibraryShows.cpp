@@ -117,7 +117,7 @@ bool LibraryView::updateEpisodes(ir_t& ir, bool aPressed) {
 void LibraryView::renderSeasons(ir_t& ir) {
     const Ui::Palette& p = Ui::pal();
     drawBreadcrumb(currentSeriesName, 20, seriesFavorite ? 480 : 580);
-    if (seriesFavorite) Ui::textRight(620, 16, "\xe2\x99\xa5 Favourite", 16, 0xE8455AFF);
+    if (seriesFavorite) Ui::textRight(620, 16, "\xe2\x99\xa5 Favorite", 16, 0xE8455AFF);
     headerLine(46);
 
     int n = (int)seasons.size();
@@ -169,7 +169,7 @@ void LibraryView::renderSeasons(ir_t& ir) {
         }
     }
     const Ui::Hint l[] = { { "A", "Select" }, { "2", "Shuffle" }, { "B", "Back" } };
-    const Ui::Hint r[] = { { "1", seriesFavorite ? "Unfavourite" : "Favourite" } };
+    const Ui::Hint r[] = { { "1", seriesFavorite ? "Unfavorite" : "Favorite" } };
     Ui::footer(l, 3, r, 1);
 }
 

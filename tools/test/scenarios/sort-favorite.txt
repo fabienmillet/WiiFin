@@ -14,13 +14,13 @@ position Counter 0
 23300 DOWN       order
 23500 DOWN       genre
 23700 DOWN       show
-24200 LEFT       the favourites
+24200 LEFT       the favorites
 25000 A          apply
 28000 A          the only title: Counter Film
 31000 1          not a favourite any more
 33000 B
 35000 END
 expect log [Favorite] on: HTTP 20
-expect log [Library] sort Year, genre -1, show Favourites, descending
+expect log [Library] sort Year, genre -1, show Favorites, descending
 expect log [Library] 1 titles, sorted / filtered
 expect log [Favorite] off: HTTP 20
