@@ -775,22 +775,8 @@ void LibraryView::loadMovieSuggestions() {
 void LibraryView::loadItems() {
     if (!posterMode) {
         // Text list: the whole library, fetched as it scrolls (ListFeed)
-        std::string filter = "ParentId=" + currentLibId + (sortable() ? sortQuery() : "");
-        if (currentLibType == "music") {
-            /* the tabs, as Jellyfin's: albums, album artists (their own
-             * route: /Items ignores the library for artists), playlists
-             * (none belongs to a library), every track */
-            if (inItemsDrilldown)
-                filter = "AlbumArtistIds=" + currentLibId + "&IncludeItemTypes=MusicAlbum&Recursive=true";
-            else if (musicTab == 2)
-                filter = "/Artists/AlbumArtists?ParentId=" + currentLibId + "&UserId=" + auth.userId;
-            else if (musicTab == 3)
-                filter = "IncludeItemTypes=Playlist&MediaTypes=Audio&Recursive=true";
-            else if (musicTab == 4)
-                filter = "ParentId=" + currentLibId + "&IncludeItemTypes=Audio&Recursive=true";
-            else
-                filter = "ParentId=" + currentLibId + "&IncludeItemTypes=MusicAlbum&Recursive=true";
-        }
+        std::string filter = currentLibType == "music"
+                           ? musicFilter() : "ParentId=" + currentLibId + (sortable() ? sortQuery() : "");
         bool ok = false; std::string err;
         runWithLoading([&]() { ok = feed.open(filter, err); });
         if (!ok) { errMsg = err; state = State::Error; return; }
@@ -821,17 +807,48 @@ void LibraryView::loadItems() {
     int startIndex = itemPage * limit;
     bool ok = false; std::string err;
     runWithLoading([&]() {
-        if (currentLibType == "music" && inItemsDrilldown) {
-            // Artist drilldown: use AlbumArtistIds query (works for IDs from Search/Hints too)
-            ok = client.getAlbumsByArtist(serverUrl, auth, currentLibId, startIndex, limit, items, itemTotal);
+        if (currentLibType == "music") {
+            /* the tab's own query, a page of it (Posters view) */
+            const std::string f = musicFilter();
+            char page[96];
+            snprintf(page, sizeof(page), "&SortBy=SortName&SortOrder=Ascending&StartIndex=%d&Limit=%d",
+                     startIndex, limit);
+            ok = client.getItemsByQuery(serverUrl, auth,
+                                        (f[0] == '/' ? f : "/Users/" + auth.userId + "/Items?" + f) + page,
+                                        items, &itemTotal);
         } else {
             ok = client.getItems(serverUrl, auth, currentLibId, startIndex, limit, items, itemTotal,
                                  sortable() ? sortQuery() : "");
         }
         if (!ok) err = client.lastError();
     });
-    if (!ok) { errMsg = err; state = State::Error; }
-    else     { globFavMode = false; itemSel = 0; viewTop = 0; state = posterMode ? State::PostersLoad : State::ItemsReady; }
+    if (!ok) { errMsg = err; state = State::Error; return; }
+    if (currentLibType == "music" && !inItemsDrilldown) {
+        /* no album (loose files): opened on the Songs tab, as the list does */
+        if (musicTab == 0 && musicOpening && itemTotal == 0) {
+            musicOpening = false;
+            musicTab = 4;
+            SYS_Report("[Library] no album: the Songs tab\n");
+            state = State::ItemsLoad;
+            return;
+        }
+        SYS_Report("[Library] music tab %s: %d\n", kMusicTabs[musicTab], itemTotal);
+    }
+    musicOpening = false;
+    globFavMode = false; itemSel = 0; viewTop = 0; posterSel = 0;
+    state = posterMode ? State::PostersLoad : State::ItemsReady;
+}
+
+/* the tabs, as Jellyfin's: albums, album artists (their own route: /Items
+ * ignores the library for artists), playlists (none belongs to a
+ * library), every track; an artist's albums */
+std::string LibraryView::musicFilter() const {
+    if (inItemsDrilldown)
+        return "AlbumArtistIds=" + currentLibId + "&IncludeItemTypes=MusicAlbum&Recursive=true";
+    if (musicTab == 2) return "/Artists/AlbumArtists?ParentId=" + currentLibId + "&UserId=" + auth.userId;
+    if (musicTab == 3) return "IncludeItemTypes=Playlist&MediaTypes=Audio&Recursive=true";
+    if (musicTab == 4) return "ParentId=" + currentLibId + "&IncludeItemTypes=Audio&Recursive=true";
+    return "ParentId=" + currentLibId + "&IncludeItemTypes=MusicAlbum&Recursive=true";
 }
 
 const char* const LibraryView::SPECIALS_ROW = "special-features";
@@ -1238,7 +1255,8 @@ void LibraryView::openLibrary(int index) {
         sortGenres.clear();
     }
     posterMode       = !Ui::listMode() &&
-                       (currentLibType == "movies" || currentLibType == "tvshows" || currentLibType == "boxsets");
+                       (currentLibType == "movies" || currentLibType == "tvshows" || currentLibType == "boxsets" ||
+                        currentLibType == "music");
     inItemsDrilldown = false;
     if (currentLibType == "movies") {
         movieTab          = 0;

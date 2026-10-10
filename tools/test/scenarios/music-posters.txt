@@ -1,0 +1,23 @@
+# Library View: Posters in a music library (Singles): the albums as square
+# covers in a grid, A opens one, B back; the tabs with -/+: Artists, A on
+# the artist shows its albums, B back; Songs, 2 shuffles them.
+server http://127.0.0.1:18096
+cfg library_view=0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12400 RIGHT      Singles
+13000 A          Albums, as covers
+16500 A          Test Album: its tracks
+19500 B          back to the grid
+21500 PLUS       Suggestions
+24500 PLUS       Artists
+27500 A          the artist: its albums
+30500 B          back to the artists
+32500 PLUS       Playlists
+35000 PLUS       Songs
+38000 2          every song, shuffled
+46000 B
+49000 END
+expect logorder "[Library] music tab Albums: 1" "[Library] music tab Artists: 1" "[Library] music tab Songs: 5" "[Shuffle] 5 track(s) drawn"
+expect log [WiiPlayer] play_audio:

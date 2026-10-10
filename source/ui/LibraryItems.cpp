@@ -1,6 +1,7 @@
 /* LibraryView: A library's content: the text list and the poster grid. */
 #include "LibraryView.h"
 #include "LibraryDraw.h"
+#include "../core/Utils.h"
 #include "Ui.h"
 #include "../input/Input.h"
 #include <stdio.h>
@@ -8,6 +9,73 @@
 #include <ogc/lwp_watchdog.h>   // gettime(), ticks_to_millisecs()
 
 using namespace LibDraw;
+
+bool LibraryView::openMusicItem(const JellyfinItem& sel, int idx)
+{
+    const int itemSel = idx;   /* the list's selection, or the grid's place */
+    if (sel.type == "MusicArtist") {
+        // Drill into artist's albums — reuse item list with artist as parent
+        parentLibId      = currentLibId;
+        parentLibName    = currentLibName;
+        parentItemPage   = posterMode ? itemPage : itemSel;   /* back to that page / row */
+        inItemsDrilldown = true;
+        currentLibId     = sel.id;
+        currentLibName   = sel.name;
+        itemPage         = 0;
+        state            = State::ItemsInit;
+    } else if (sel.type == "MusicAlbum" || sel.type == "Playlist") {
+        musicAlbumId     = sel.id;
+        musicAlbumName   = sel.name;
+        musicAlbumArtist.clear();
+        musicTracks.clear();
+        musicTrackSel    = 0;
+        musicTrackTop    = 0;
+        musicIsPlaylist  = (sel.type == "Playlist");
+        state = State::MusicTracksLoad;
+    } else if (sel.type == "Audio") {
+        // A track of a flat library (files without albums): it and
+        // the tracks around it, in list order, make the queue
+        const int BEFORE = 20, COUNT = 220;
+        int first = itemSel > BEFORE ? itemSel - BEFORE : 0;
+        std::vector<JellyfinItem> range;
+        if (posterMode) range = items;   /* the grid: its page */
+        else {
+            feed.stopWorker();
+            runWithLoading([&]() { feed.fetchRange(first, COUNT, range); });
+        }
+        pendingMusicTracks.clear();
+        pendingMusicTrackIdx = 0;
+        for (const JellyfinItem& it : range) {
+            if (it.type != "Audio") continue;
+            if (it.id == sel.id) pendingMusicTrackIdx = (int)pendingMusicTracks.size();
+            MusicTrack t;
+            t.id           = it.id;
+            t.title        = it.name;
+            t.runtimeTicks = it.runtimeTicks;
+            pendingMusicTracks.push_back(t);
+        }
+        if (pendingMusicTracks.empty() || pendingMusicTracks[pendingMusicTrackIdx].id != sel.id) {
+            MusicTrack t;
+            t.id = sel.id; t.title = sel.name; t.runtimeTicks = sel.runtimeTicks;
+            pendingMusicTracks.assign(1, t);
+            pendingMusicTrackIdx = 0;
+        }
+        pendingPlayIsMusic = true;
+        return true;
+    } else {
+        // Unknown type (Folder, AlbumArtist, etc.) — drill in generically
+        parentLibId      = currentLibId;
+        parentLibName    = currentLibName;
+        parentItemPage   = posterMode ? itemPage : itemSel;   /* back to that page / row */
+        inItemsDrilldown = true;
+        currentLibId     = sel.id;
+        currentLibName   = sel.name;
+        itemPage         = 0;
+        state            = State::ItemsInit;
+    }
+
+    return false;
+}
 
 bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
     // Text list of a whole library (ListFeed): no pages, chunks are
@@ -110,63 +178,7 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
                 return false;
         }
         if (currentLibType == "music") {
-            if (sel.type == "MusicArtist") {
-                // Drill into artist's albums — reuse item list with artist as parent
-                parentLibId      = currentLibId;
-                parentLibName    = currentLibName;
-                parentItemPage   = itemSel;
-                inItemsDrilldown = true;
-                currentLibId     = sel.id;
-                currentLibName   = sel.name;
-                itemPage         = 0;
-                state            = State::ItemsInit;
-            } else if (sel.type == "MusicAlbum" || sel.type == "Playlist") {
-                musicAlbumId     = sel.id;
-                musicAlbumName   = sel.name;
-                musicAlbumArtist.clear();
-                musicTracks.clear();
-                musicTrackSel    = 0;
-                musicTrackTop    = 0;
-                musicIsPlaylist  = (sel.type == "Playlist");
-                state = State::MusicTracksLoad;
-            } else if (sel.type == "Audio") {
-                // A track of a flat library (files without albums): it and
-                // the tracks around it, in list order, make the queue
-                const int BEFORE = 20, COUNT = 220;
-                int first = itemSel > BEFORE ? itemSel - BEFORE : 0;
-                std::vector<JellyfinItem> range;
-                feed.stopWorker();
-                runWithLoading([&]() { feed.fetchRange(first, COUNT, range); });
-                pendingMusicTracks.clear();
-                pendingMusicTrackIdx = 0;
-                for (const JellyfinItem& it : range) {
-                    if (it.type != "Audio") continue;
-                    if (it.id == sel.id) pendingMusicTrackIdx = (int)pendingMusicTracks.size();
-                    MusicTrack t;
-                    t.id           = it.id;
-                    t.title        = it.name;
-                    t.runtimeTicks = it.runtimeTicks;
-                    pendingMusicTracks.push_back(t);
-                }
-                if (pendingMusicTracks.empty() || pendingMusicTracks[pendingMusicTrackIdx].id != sel.id) {
-                    MusicTrack t;
-                    t.id = sel.id; t.title = sel.name; t.runtimeTicks = sel.runtimeTicks;
-                    pendingMusicTracks.assign(1, t);
-                    pendingMusicTrackIdx = 0;
-                }
-                pendingPlayIsMusic = true;
-                return true;
-            } else {
-                // Unknown type (Folder, AlbumArtist, etc.) — drill in generically
-                parentLibId      = currentLibId;
-                parentLibName    = currentLibName;
-                parentItemPage   = itemSel;
-                inItemsDrilldown = true;
-                currentLibId     = sel.id;
-                currentLibName   = sel.name;
-                itemPage         = 0;
-                state            = State::ItemsInit;
-            }
+            return openMusicItem(sel, itemSel);
         } else if (sel.type == "Playlist") {
             musicAlbumId     = sel.id;
             musicAlbumName   = sel.name;
@@ -206,6 +218,34 @@ bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
     int n = (int)items.size();
     if (sortPanel) { updateSortPanel(); return false; }
     if (Input::is2Pressed() && sortable()) { openSortPanel(); return false; }
+    if (Input::is2Pressed() && currentLibType == "musicvideos") return startVideoShuffle();
+    if (currentLibType == "music") {
+        /* 2: every song (Songs), or the album / playlist selected, shuffled */
+        if (Input::is2Pressed()) {
+            if (!inItemsDrilldown && musicTab == 4) return startMusicShuffle("", false);
+            if (posterSel < (int)items.size() &&
+                (items[posterSel].type == "MusicAlbum" || items[posterSel].type == "Playlist"))
+                return startMusicShuffle(items[posterSel].id, items[posterSel].type == "Playlist");
+        }
+        /* B in an artist's albums: back to the page of artists */
+        if (Input::isBackPressed() && inItemsDrilldown) {
+            freePosters();
+            inItemsDrilldown = false;
+            currentLibId   = parentLibId;
+            currentLibName = parentLibName;
+            itemPage       = parentItemPage;
+            state          = State::ItemsInit;
+            return false;
+        }
+        /* -/+: the tabs, as in the list */
+        if (!inItemsDrilldown && (Input::isLPressed() || Input::isRPressed())) {
+            freePosters();
+            musicTab = Input::isLPressed() ? (musicTab + 4) % 5 : (musicTab + 1) % 5;
+            itemPage = 0;
+            state = musicTab == 1 ? State::MusicSuggestionsLoad : State::ItemsInit;
+            return false;
+        }
+    }
     if (Input::isBackPressed()) {
         freePosters();
         if (inBoxSetDrilldown) {
@@ -345,6 +385,8 @@ bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
         }
     }
     // A on a poster: open detail view (skip if an arrow was just clicked)
+    if (!arrowClicked && aPressed && posterSel < n && currentLibType == "music")
+        return openMusicItem(items[posterSel], posterSel);
     if (!arrowClicked && aPressed && posterSel < n) {
         if (!items[posterSel].id.empty()) {
             if (items[posterSel].type == "Series") {
@@ -502,6 +544,8 @@ void LibraryView::renderPosterGrid(ir_t& ir) {
         drawLibHeader(currentLibName, kMovieTabs, 4, movieTab);
     } else if (currentLibType == "tvshows") {
         drawLibHeader(currentLibName, kTvTabs, 3, tvTab);
+    } else if (currentLibType == "music" && !inItemsDrilldown) {
+        drawLibHeader(currentLibName, kMusicTabs, 5, musicTab);
     } else {
         drawBreadcrumb(currentLibName, inBoxSetDrilldown ? 16 : 20, 120);
         headerLine(46);
@@ -521,7 +565,19 @@ void LibraryView::renderPosterGrid(ir_t& ir) {
             if (sel != (pass == 1)) continue;
             int px = POSTER_X0 + (i % POSTER_COLS) * POSTER_STRIDE_X;
             int py = POSTER_Y0 + (i / POSTER_COLS) * POSTER_STRIDE_Y;
-            drawThumb(posterTextures[i], px, py, POSTER_W, POSTER_H,
+            if (currentLibType == "music") {
+                /* square covers, the name under them (no poster says it) */
+                const float th = fitHeight(posterTextures[i], POSTER_W, POSTER_W);
+                drawThumb(posterTextures[i], px, py, POSTER_W, th, sel ? Ui::pulse() : 0.0f, -1.0f,
+                          items[i].name.c_str());
+                int visW = (int)(POSTER_W * WiiUtils::wsScaleX() + 0.5f);
+                std::string t = fitText(font, filterDejaVu(items[i].name, 40), 13, visW);
+                Ui::text(px + 1, py + th + 6, t.c_str(), 13, sel ? p.text : p.textDim);
+                continue;
+            }
+            /* centred in its cell at its own shape (square collection art) */
+            const float th = fitHeight(posterTextures[i], POSTER_W, POSTER_H);
+            drawThumb(posterTextures[i], px, py + (POSTER_H - th) * 0.5f, POSTER_W, th,
                       sel ? Ui::pulse() : 0.0f, progressOf(items[i]), items[i].name.c_str());
         }
     }
@@ -537,6 +593,13 @@ void LibraryView::renderPosterGrid(ir_t& ir) {
     snprintf(pageStr, sizeof(pageStr), "Page %d / %d", itemPage + 1, totalPages);
     const Ui::Hint r[] = { { "", pageStr } };
     const char* center = (posterSel >= 0 && posterSel < n) ? items[posterSel].name.c_str() : nullptr;
+    if (currentLibType == "music") {   /* 2 shuffles; -/+ the tabs */
+        const Ui::Hint lm[] = { { "B", "Back" }, { "2", "Shuffle" } };
+        const Ui::Hint rm[] = { { "-/+", "Tab" }, { "", pageStr } };
+        Ui::footer(lm, 2, inItemsDrilldown ? r : rm, inItemsDrilldown ? (totalPages > 1 ? 1 : 0) : (totalPages > 1 ? 2 : 1), center);
+        if (sortPanel) renderSortPanel();
+        return;
+    }
     Ui::footer(l, sortable() ? 2 : 1, r, totalPages > 1 ? 1 : 0, center);
     if (sortPanel) renderSortPanel();
 }

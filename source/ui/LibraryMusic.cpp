@@ -16,7 +16,7 @@ bool LibraryView::updateMusicTracks(ir_t& ir, bool aPressed) {
         } else if (musicTab == 1)
             state = State::MusicSuggestionsReady;
         else
-            state = State::ItemsReady;
+            state = posterMode ? State::PostersReady : State::ItemsReady;
         return false;
     }
     if (Input::isUpPressed())   {

@@ -338,6 +338,11 @@ private:
     /* 2 in a music video library: clips drawn by the server, one after
      * the other like a shuffled series */
     bool startVideoShuffle();
+    /* the music library's query for its tab (or an artist's albums) */
+    std::string musicFilter() const;
+    /* A on an album, a playlist, an artist or a song, in the list or the
+     * grid (idx: its place there); true when a track starts */
+    bool openMusicItem(const JellyfinItem& sel, int idx);
     void loadSeasons();
     void loadEpisodes();
     void loadMovieCollections();
