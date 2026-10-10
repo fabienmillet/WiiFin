@@ -400,6 +400,7 @@ private:
         int sort  = 0;    // 0 name, 1 year, 2 rating, 3 date added
         int genre = -1;   // index in sortGenres, -1 every genre
         int show  = 0;    // 0 all, 1 not watched, 2 watched, 3 favourites
+        bool desc = false; // the order: name A-Z, the others newest / best first
     };
     ListSort    listSort;
     std::string listSortLib;            // the library listSort is for

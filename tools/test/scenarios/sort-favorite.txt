@@ -11,7 +11,8 @@ position Counter 0
 20000 B          back to the list
 22000 2          sort & filter
 22800 RIGHT      by year
-23300 DOWN
+23300 DOWN       order
+23500 DOWN       genre
 23700 DOWN       show
 24200 LEFT       the favourites
 25000 A          apply
@@ -20,6 +21,6 @@ position Counter 0
 33000 B
 35000 END
 expect log [Favorite] on: HTTP 20
-expect log [Library] sort Year, genre -1, show Favourites
+expect log [Library] sort Year, genre -1, show Favourites, descending
 expect log [Library] 1 titles, sorted / filtered
 expect log [Favorite] off: HTTP 20
