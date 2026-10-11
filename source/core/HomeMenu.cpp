@@ -169,10 +169,6 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
         Ui::roundRect(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, 92, 22, P.barTop, P.barBottom);
         Ui::roundBorder(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, 92, 22, 1.5f, P.barBorder);
         Ui::text(28, 17, tr("HOME Menu"), 26, P.text);
-        {
-            const Ui::Hint close = { "B", N_("Close") };
-            Ui::hint(626 - Ui::hintWidth(close), 22, close);
-        }
         Ui::popOffset();
 
         Ui::pushOffset(0, slideF);
