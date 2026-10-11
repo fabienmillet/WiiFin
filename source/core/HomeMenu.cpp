@@ -10,6 +10,7 @@
 #include <grrlib.h>
 #include <wiiuse/wpad.h>
 #include <cmath>
+#include <ogc/lwp_watchdog.h>
 
 /* -----------------------------------------------------------------------
  * doShowHomeOverlay — full-screen Wii-style HOME menu with confirmation popup.
@@ -59,8 +60,13 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
     int prevHoverMain = -1;
     int prevHoverPop  = -1;
 
+    SYS_Report("[WiiFin] HOME menu\n");
+    /* over a player, silent: ASND started and ended while MPlayer is
+     * paused leaves MPlayer stuck (the audio is MPlayer's, ao_gekko) */
     MusicBGM::stopMusic();   /* its own sounds still play */
     SoundFX::play(SoundFX::FX::MenuEnter);
+    /* HOME closes it too, as on the Wii: not the press that opened it */
+    const u64 openedAt = ticks_to_millisecs(gettime());
 
     while (true) {
         Input::update();
@@ -77,7 +83,8 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
 
         /* ---- Input ---- */
         if (state == 0) {
-            if (Input::isBPressed()) { if (musicEnabled) MusicBGM::resume(); return false; }
+            const bool home = Input::isHomePressed() && ticks_to_millisecs(gettime()) - openedAt > 300;
+            if (Input::isBPressed() || home) { if (musicEnabled) MusicBGM::resume(); return false; }
 
             if (ir.valid) {
                 for (int i = 0; i < 2; i++) {

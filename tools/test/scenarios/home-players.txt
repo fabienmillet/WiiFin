@@ -1,0 +1,29 @@
+# HOME in the players opens the HOME menu over them, paused (in the music
+# player it went back to the library): HOME again closes it, as on the
+# Wii, and the song goes on; in a film, the same.
+server http://127.0.0.1:18096
+positions-reset
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12400 RIGHT      Singles
+13000 A
+16000 A          Test Album
+19000 A          the MP3 track
+22000 HOME       the HOME menu, the song paused
+24000 HOME       closed, the song goes on
+26000 B          the album
+27000 B          the albums
+28500 B          the home
+29200 LEFT
+29500 LEFT       Movies
+30000 A          Movies
+33000 A          Counter Film
+36000 A          Play
+44000 HOME       the HOME menu, the film paused
+46000 B          closed
+48000 B          the controls
+48500 B          stop
+52000 END
+expect logcount 2 [WiiFin] HOME menu
+expect logorder "[WiiFin] HOME menu" "[Background] the music goes on" "[WiiFin] HOME menu"

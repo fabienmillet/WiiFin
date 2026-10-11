@@ -19,7 +19,8 @@
  *   Up/Down    visualizer / seek bar / controls
  *   - / +      previous / next track
  *   1          Up Next panel          2   shuffle
- *   B / HOME   back to the library
+ *   B          back to the library (the song goes on while it plays)
+ *   HOME       the HOME menu, the song paused
  */
 
 #include "MusicPlayerView.h"
@@ -27,6 +28,7 @@
 #include "../core/ExitZone.h"
 #include "../core/MusicBGM.h"
 #include "../core/BackgroundMusic.h"
+#include "../core/AppInternal.h"
 #include "../core/Lang.h"
 #include "../input/Input.h"
 #include "../player/AudioSpectrum.h"
@@ -103,6 +105,11 @@ struct Session {
     std::vector<LyricLine> lyrics;
     bool           lyricsTimed = false;
     float          pendingSeek = 0.0f;   /* a file resumed: seek there once it plays */
+    /* HOME: the song paused, then the HOME menu over the player */
+    int            homeStep = 0;         /* 1: the pause asked, the menu next */
+    bool           homeWasPaused = false;
+    u64            homeAt = 0;
+    bool           wantsExit = false;    /* Wii Menu or Reset chosen there */
     GRRLIB_texImg* art      = nullptr;
     u32            artA = 0, artB = 0;          /* placeholder gradient */
 
@@ -1025,13 +1032,34 @@ void tick(int paused, u32 down, u32 held)
         s.lastInput = now;   /* the screen wakes up, as for a press */
     }
 
+    /* HOME: the song paused (MPlayer pauses on its loop's next turn), then
+     * the HOME menu; closed, the song goes on as it was */
+    if ((down & WPAD_BUTTON_HOME) && !s.homeStep && s.req == Req::None) {
+        s.homeWasPaused = paused != 0;
+        if (!paused) wii_player_pause_toggle();
+        s.homeStep = 1;
+        s.homeAt = now;
+        return;
+    }
+    if (s.homeStep && (paused || s.homeWasPaused || now - s.homeAt > 1500)) {
+        s.homeStep = 0;
+        if (doShowHomeOverlay(Ui::font(), nullptr, s.cursor, false)) {
+            s.wantsExit = true;
+            requestTrack(Req::Leave);
+        } else if (!s.homeWasPaused && g_mplayer_paused) {
+            wii_player_pause_toggle();
+        }
+        s.lastInput = nowMs();
+        return;
+    }
+
     if (!down) return;
     s.lastInput = now;
     if (s.idleK > 0.3f) return;          /* the first press wakes the screen */
 
     if (s.panel) {
         int n = (int)s.order.size();
-        if (down & (WPAD_BUTTON_B | WPAD_BUTTON_1 | WPAD_BUTTON_HOME)) { s.panel = false; return; }
+        if (down & (WPAD_BUTTON_B | WPAD_BUTTON_1)) { s.panel = false; return; }
         if ((down & WPAD_BUTTON_UP) && s.panelSel > 0)       s.panelSel--;
         if ((down & WPAD_BUTTON_DOWN) && s.panelSel < n - 1) s.panelSel++;
         if (s.panelSel < s.panelTop) s.panelTop = s.panelSel;
@@ -1079,7 +1107,7 @@ void tick(int paused, u32 down, u32 held)
     if (down & WPAD_BUTTON_MINUS) requestTrack(Req::Prev);
     if (down & WPAD_BUTTON_1)     activate(C_QUEUE);
     if (down & WPAD_BUTTON_2)     activate(C_SHUFFLE);
-    if (down & (WPAD_BUTTON_B | WPAD_BUTTON_HOME)) requestTrack(Req::Leave);
+    if (down & WPAD_BUTTON_B) requestTrack(Req::Leave);
 }
 
 /* ---- Background thread: one frame --------------------------------------- */
@@ -1424,6 +1452,7 @@ bool MusicPlayerView::run()
     const std::vector<MusicTrack> queueTracks = s.tracks;
     const std::vector<int>        queue       = s.order;
     const int                     queueAt     = s.pos, repeat = s.repeat;
+    const bool                    leaveWii    = s.wantsExit;
     if (s.art) GRRLIB_FreeTexture(s.art);
     delete S;
     S = nullptr;
@@ -1437,5 +1466,5 @@ bool MusicPlayerView::run()
     } else {
         MusicBGM::reinitAudio();
     }
-    return false;
+    return leaveWii;
 }
