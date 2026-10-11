@@ -179,7 +179,7 @@ jobs:
         env:
           JELLYFIN_IMAGE: ${{ github.event_name == 'schedule' && 'jellyfin/jellyfin:latest' || '' }}
         run: |
-          tools/test/make_media.sh playback music
+          tools/test/make_media.sh playback music photos
           MOVIES=playback MIXED='' tools/test/server.sh 300k
 
       # tools/test/scenarios (see tools/test/README.md): transcode and
@@ -190,7 +190,7 @@ jobs:
       - name: Playback scenarios
         run: |
           failed=''
-          for s in resume resume-transcode xvid formats audio-track https https-ecdsa slow subtitles subtitles-switch subtitles-big next next-from-home trickplay music-formats sounds sounds-off remote remote-play remote-queue segments stuck japanese music-favorite sort-favorite music-tabs specials cjk watched settings home-sounds music-quiet season-posters overview favorite-home versions music-after-video grid-profiles long-titles subtitles-transcode subtitles-resume subtitles-mp3 music-shuffle sort-order music-posters language music-sort profile-menu onboarding list-tabs music-visualizers scenes; do
+          for s in resume resume-transcode xvid formats audio-track https https-ecdsa slow subtitles subtitles-switch subtitles-big next next-from-home trickplay music-formats sounds sounds-off remote remote-play remote-queue segments stuck japanese music-favorite sort-favorite music-tabs specials cjk watched settings home-sounds music-quiet season-posters overview favorite-home versions music-after-video grid-profiles long-titles subtitles-transcode subtitles-resume subtitles-mp3 music-shuffle sort-order music-posters language music-sort profile-menu onboarding list-tabs music-visualizers scenes video-playlist lyrics photos music-browsing; do
             dbus-run-session -- xvfb-run -a tools/test/playback.sh "$s" WiiFin-playback.dol 600 || failed="$failed $s"
           done
           [ -z "$failed" ] || { echo "::error::failed:$failed"; exit 1; }
