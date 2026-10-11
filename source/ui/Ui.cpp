@@ -487,6 +487,12 @@ static void buttonDisc(float cx, float cy, const char* b, u32& textColor)
         fill = b[0] == 'A' ? 0x2FB56AFF : 0xD8463CFF;
         textColor = 0xFFFFFFFF;
     }
+    /* the Wii Remote's B is a trigger: a square, as in the Wii's own menus */
+    if (s_buttonStyle == ButtonStyle::WiiRemote && b[0] == 'B' && !b[1]) {
+        roundRect(cx - 9, cy - 9, 18, 18, 4.5f, p.cardBorder);
+        roundRect(cx - 7.5f, cy - 7.5f, 15, 15, 3.5f, fill);
+        return;
+    }
     circle(cx, cy, 9, p.cardBorder);
     circle(cx, cy, 7.5f, fill);
 }
