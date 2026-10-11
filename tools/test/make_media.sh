@@ -22,7 +22,8 @@
 #   shows/   Shuffle Show   2 seasons x 5 episodes of 20 s (shuffle, auto-next)
 #   mixed/   a movie and a show in a library without a type
 #   sync/    Sync Test      white flash + 1 kHz beep every 2 s (A/V offset)
-#   music/   Test Album     5 tagged tracks of 12 s, a cover: MP3, FLAC, WAV
+#   music/   Test Album     5 tagged tracks of 12 s, a cover: MP3 (with timed
+#                           lyrics, an .lrc), FLAC, WAV
 #                           (played as they are), FLAC 24-bit 96 kHz and AAC
 #                           (transcoded); server.sh's "Singles" library
 #   playback/ Counter, Subtitle, Xvid Film and the Z formats (playback.sh), hard links
@@ -304,6 +305,10 @@ if want music; then
     tone 760 44100; tags 5 "AAC Track"
     gen "$A/05 AAC Track.m4a" "${TONE_IN[@]}" -c:a aac -b:a 192k "${TAGS[@]}"
     rm -f "$COVER"
+    # the MP3's lyrics, timed (Jellyfin 10.9+ reads an .lrc beside a song)
+    [ -f "$M/$A/01 MP3 Track.lrc" ] || printf '%s\n' '[ti:MP3 Track]' '[00:00.50]First line of the song' \
+        '[00:03.00]Second line, a little longer' '[00:06.00]Third line' '[00:09.00]Last line' \
+        > "$M/$A/01 MP3 Track.lrc"
 fi
 
 if want playback; then

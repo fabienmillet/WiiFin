@@ -122,6 +122,14 @@ struct AudioTrackInfo {
     bool        isFavorite    = false;
     bool        hasImage      = false;  // the track's own cover (embedded)
     bool        albumHasImage = false;
+    bool        hasLyrics     = false;  // Jellyfin 10.9+: an .lrc beside it, or embedded
+};
+
+/* A line of a song's lyrics, from when it is sung (-1: the lyrics are not
+ * timed) */
+struct LyricLine {
+    long long   startTicks = -1;
+    std::string text;
 };
 
 struct JellyfinAuth {
@@ -461,6 +469,9 @@ public:
                            const JellyfinAuth& auth,
                            const std::string& itemId,
                            AudioTrackInfo& out);
+    /* a song's lyrics, line by line (/Audio/{id}/Lyrics, Jellyfin 10.9+) */
+    bool getLyrics(const std::string& serverUrl, const JellyfinAuth& auth,
+                   const std::string& itemId, std::vector<LyricLine>& out);
 
     // Mark an item watched or not watched (watched clears its resume point).
     bool setPlayed(const std::string& serverUrl, const JellyfinAuth& auth,

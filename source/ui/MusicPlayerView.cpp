@@ -73,10 +73,11 @@ enum class Req { None, Next, Prev, Jump, Ended, Leave };
 
 enum Ctl { C_FAV, C_SHUFFLE, C_PREV, C_PLAY, C_NEXT, C_REPEAT, C_QUEUE, C_COUNT };
 
-/* the visualizers, all drawn from the same bands */
-enum Viz { V_BARS, V_RING, V_BUBBLES, V_WAVE, V_BLOCKS, V_COUNT };
+/* the visualizers, all drawn from the same bands; then the song's lyrics */
+enum Viz { V_BARS, V_RING, V_BUBBLES, V_WAVE, V_BLOCKS, V_LYRICS, V_COUNT };
 /* TRANSLATORS: the music player's visualizers, named when one is picked */
-const char* const VIZ_NAME[V_COUNT] = { N_("Bars"), N_("Ring"), N_("Bubbles"), N_("Wave"), N_("Blocks") };
+const char* const VIZ_NAME[V_COUNT] = { N_("Bars"), N_("Ring"), N_("Bubbles"), N_("Wave"), N_("Blocks"),
+                                        N_("Lyrics") };
 int s_viz = V_BARS;   /* kept for the rest of the session */
 
 struct Bubble { float x, y, r, v, ph; };   /* x, y 0..1 in the box; r 0: none */
@@ -98,6 +99,8 @@ struct Session {
     std::string    title, artist, detail;
     AudioTrackInfo info;
     bool           favorite = false;
+    std::vector<LyricLine> lyrics;
+    bool           lyricsTimed = false;
     GRRLIB_texImg* art      = nullptr;
     u32            artA = 0, artB = 0;          /* placeholder gradient */
 
@@ -604,10 +607,56 @@ void drawBlocks(float x, float base, float w, float h, float a)
     }
 }
 
+/* the line sung now: of timed lyrics, the last one started; else as far
+ * into them as the song is */
+int lyricAt(float pos, float dur)
+{
+    Session& s = *S;
+    const int n = (int)s.lyrics.size();
+    if (n == 0) return -1;
+    if (s.lyricsTimed) {
+        const long long t = (long long)(pos * 10000000.0f);
+        int at = -1;
+        for (int i = 0; i < n; ++i)
+            if (s.lyrics[i].startTicks >= 0 && s.lyrics[i].startTicks <= t) at = i;
+        return at;
+    }
+    int at = dur > 0 ? (int)(pos / dur * n) : 0;
+    return at < n ? at : n - 1;
+}
+
+/* the lyrics around the line sung now, centred in the box; big: the whole
+ * screen's (the idle layout, to sing along) */
+void drawLyrics(float x, float base, float w, float h, float a, bool big)
+{
+    Session& s = *S;
+    const Ui::Palette& p = Ui::pal();
+    const float cx = x + w / 2, cy = base - h / 2;
+    if (s.lyrics.empty()) {
+        Ui::textCentered(cx, cy - 8, tr("No lyrics for this song"), big ? 18 : 14, Ui::alpha(p.textDim, a));
+        return;
+    }
+    const int at = lyricAt(position(), duration()), around = big ? 2 : 1;
+    const int curSize = big ? 26 : 18, size = big ? 18 : 14;
+    const float step = big ? 38.0f : 24.0f;
+    for (int d = -around; d <= around + 1; ++d) {
+        const int i = at + d;
+        if (i < 0 || i >= (int)s.lyrics.size() || s.lyrics[i].text.empty()) continue;
+        if (!big && d > around) continue;
+        const bool now = d == 0;
+        const int sz = now ? curSize : size;
+        const float y = cy + d * step - sz * 0.6f + (big ? 0 : 4);
+        const float fade = now ? 1.0f : 0.75f - 0.2f * (d < 0 ? -d : d);
+        std::string t = LibDraw::fitText(Ui::font(), s.lyrics[i].text, sz, (int)w);
+        Ui::textCentered(cx, y, t.c_str(), sz, Ui::alpha(now ? p.accent : big ? p.text : p.textDim, a * fade));
+    }
+}
+
 /* the visualizer picked, in a box w x h standing on base */
 void drawViz(float x, float base, float w, float h, float a, bool reflect)
 {
     switch (s_viz) {
+    case V_LYRICS:  drawLyrics(x, base, w, h, a, false); break;
     case V_RING:    drawRing(x + w / 2, base - h / 2 + 8, h * 0.26f, h * 0.3f, a, true); break;
     case V_BUBBLES: drawBubbles(x, base, w, h, a); break;
     case V_WAVE:    drawWave(x, base, w, h, a); break;
@@ -813,12 +862,15 @@ void drawScreen(bool live, bool loading)
         if (s_viz == V_RING) drawRing(320, cy, 122, 36, a * 0.7f, false);   /* around the cover */
         /* the bubbles rise behind the cover up to the top of the screen */
         if (s_viz == V_BUBBLES) drawBubbles(Ui::screenLeft() + 20, 470, Ui::screenWidth() - 40, 450, a * 0.6f);
-        drawCover(320 - sz / 2, cy - sz / 2, sz, a);
+        if (s_viz == V_LYRICS)   /* the lyrics in the cover's place: to sing along */
+            drawLyrics(Ui::screenLeft() + 30, 290, Ui::screenWidth() - 60, 260, a, true);
+        else
+            drawCover(320 - sz / 2, cy - sz / 2, sz, a);
         Ui::textCentered(320, 318, LibDraw::fitText(Ui::font(), s.title, 24, 560).c_str(), 24, Ui::alpha(p.text, a));
         if (!s.artist.empty())
             Ui::textCentered(320, 350, LibDraw::fitText(Ui::font(), s.artist, 17, 560).c_str(), 17,
                              Ui::alpha(p.accent, a));
-        if (s_viz != V_RING && s_viz != V_BUBBLES)
+        if (s_viz != V_RING && s_viz != V_BUBBLES && s_viz != V_LYRICS)
             drawViz(Ui::screenLeft() + 20, 470, Ui::screenWidth() - 40, 60, a * 0.6f, false);
         float frac = dur > 0 ? pos / dur : 0;
         Ui::roundRect(220, 384, 200, 3, 1.5f, Ui::alpha(p.cardBorder, 0.5f * a));
@@ -1175,6 +1227,12 @@ void loadTrack()
         std::string album = LibDraw::filterDejaVu(!s.info.album.empty() ? s.info.album : s.cur.album, 80);
         s.detail = album;
         if (s.info.year > 0) s.detail += (album.empty() ? "" : "  \xc2\xb7  ") + std::to_string(s.info.year);
+    }
+    s.lyrics.clear();
+    s.lyricsTimed = false;
+    if (s.info.hasLyrics && s.client->getLyrics(s.serverUrl, s.auth, s.cur.id, s.lyrics)) {
+        for (const LyricLine& l : s.lyrics) if (l.startTicks >= 0) s.lyricsTimed = true;
+        SYS_Report("[Music] lyrics: %d line(s)%s\n", (int)s.lyrics.size(), s.lyricsTimed ? ", timed" : "");
     }
     std::string id = s.info.hasImage ? s.cur.id : (s.info.albumHasImage ? s.info.albumId : "");
     std::string bytes;

@@ -1,0 +1,19 @@
+# A song's lyrics (Test Album's MP3 has an .lrc, timed): fetched with the
+# track, the music player's last "visualizer" shows the line sung now
+# (Left from the bars), lighting the next one as it comes.
+server http://127.0.0.1:18096
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12400 RIGHT      Singles
+13000 A
+16000 A          Test Album
+19000 A          the MP3 track
+23000 UP
+23500 UP         the visualizer
+24000 LEFT       Lyrics
+31000 B
+34000 END
+expect log [Music] lyrics: 4 line(s), timed
+expect log [Music] visualizer Lyrics
+expect log [WiiPlayer] play_audio:

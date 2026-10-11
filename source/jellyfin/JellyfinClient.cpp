@@ -3337,6 +3337,28 @@ bool JellyfinClient::getAudioTrackInfo(const std::string& serverUrl,
     out.isFavorite    = jsonGetBool(resp, "IsFavorite");
     out.hasImage      = resp.find("\"ImageTags\":{\"Primary\"") != std::string::npos;
     out.albumHasImage = !jsonGetString(resp, "AlbumPrimaryImageTag").empty();
+    out.hasLyrics     = jsonGetBool(resp, "HasLyrics");
+    return true;
+}
+
+bool JellyfinClient::getLyrics(const std::string& serverUrl, const JellyfinAuth& auth,
+                               const std::string& itemId, std::vector<LyricLine>& out)
+{
+    out.clear();
+    std::string resp;
+    if (httpRequest(serverUrl + "/Audio/" + itemId + "/Lyrics", "GET", "", "", auth.accessToken, resp) != 200)
+        return false;
+    size_t at = resp.find("\"Lyrics\":");
+    size_t pos = at == std::string::npos ? std::string::npos : resp.find('[', at);
+    if (pos == std::string::npos) return true;
+    pos++;
+    std::string obj;
+    while (out.size() < 1000 && !(obj = nextJsonObject(resp, pos)).empty()) {
+        LyricLine l;
+        l.text = jsonGetString(obj, "Text");
+        if (obj.find("\"Start\":") != std::string::npos) l.startTicks = jsonGetLongLong(obj, "Start");
+        out.push_back(l);
+    }
     return true;
 }
 
