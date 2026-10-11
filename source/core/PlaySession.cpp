@@ -478,8 +478,12 @@ bool runPlaySession(JellyfinClient& client,
             }
 
             /* Direct play the Wii can't keep up with (MPlayer drops frames
-             * behind schedule): on transcoded from here */
-            if (how.direct && how.fps > 1.0f && perfFrom > -2.0f && !stopRequested &&
+             * behind schedule): on transcoded from here.  Not across a seek
+             * still on its way: the jump counted as seconds played without
+             * their frames (0 a second after a chapter, a +10 s) */
+            if (how.direct && perfFrom > -2.0f && seekWant >= 0.0f) {
+                perfFrom = -1.0f;   /* from where it lands */
+            } else if (how.direct && how.fps > 1.0f && perfFrom > -2.0f && !stopRequested &&
                 !g_mplayer_paused && !g_wiifin_loading_active && wii_player_time_pos() > 0.0f) {
                 if (perfFrom < 0.0f) {
                     perfFrom   = wii_player_time_pos();
