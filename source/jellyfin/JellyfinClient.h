@@ -67,6 +67,13 @@ struct MediaVersion {
     int defaultAudio = -1, defaultSub = -1;   // the stream indexes the server picks
 };
 
+/* A chapter of a film or an episode (the Scenes) */
+struct JellyfinChapter {
+    long long   startTicks = 0;
+    std::string name;
+    bool        hasImage   = false;   /* a picture Jellyfin took of it */
+};
+
 struct JellyfinItemDetail {
     std::string id;
     std::string name;
@@ -89,6 +96,7 @@ struct JellyfinItemDetail {
      * (its subtitle mode and languages, the file's default and forced
      * flags): stream indexes, -1 none */
     int defaultAudioIndex = -1, defaultSubIndex = -1;
+    std::vector<JellyfinChapter> chapters;   /* of the default file */
 };
 
 struct JellyfinAudioItem {
@@ -390,6 +398,13 @@ public:
                              int limit,
                              std::vector<JellyfinEpisode>& out);
 
+    /* the chapters of one file (a version is an item of its own) */
+    bool getChapters(const std::string& serverUrl, const JellyfinAuth& auth,
+                     const std::string& itemId, std::vector<JellyfinChapter>& out);
+    /* the picture of chapter index (JPEG) */
+    bool getChapterImageBytes(const std::string& serverUrl, const JellyfinAuth& auth,
+                              const std::string& itemId, int index, int maxWidth, int maxHeight,
+                              std::string& outBytes);
     // Fetch intro/credits timestamps for an episode.
     // Tries the Intro Skipper plugin endpoint first; returns false (no error)
     // if the server responds 404 (plugin not installed or no data for item).
@@ -666,6 +681,7 @@ private:
     // For integer fields
     int  jsonGetInt(const std::string& json, const std::string& key);
     long long jsonGetLongLong(const std::string& json, const std::string& key);
+    void parseChapters(const std::string& resp, std::vector<JellyfinChapter>& out);
 
     // Parse host/port/path from URL; sets isHttps to true for https:// scheme
     bool parseUrl(const std::string& url,

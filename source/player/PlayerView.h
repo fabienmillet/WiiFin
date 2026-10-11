@@ -23,6 +23,8 @@ struct PlayerViewContext {
     int currentSub   = -1;   /* MediaStream::index of the subtitle, -1 = off  */
 
     IntroInfo intro;
+    /* where its chapters start (s): |< and >| go from one to the next */
+    std::vector<float> chapters;
 
     /* The transcode starts at streamOrigin seconds into the item and MPlayer
      * skips its first startSkip seconds, so the absolute position is
@@ -162,6 +164,7 @@ private:
     void  nudgeSeek(float delta);
     float displayPosition() const;
     void  showControls(int ms = 5000);
+    bool  chapterJump(int dir);   /* |< >| through the chapters, when there are */
     void  openPanel(Panel p);
     int   panelCount() const;
     std::string panelLabel(int row) const;

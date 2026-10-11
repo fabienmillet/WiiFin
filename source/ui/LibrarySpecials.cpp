@@ -17,16 +17,16 @@ namespace {
 /* Jellyfin's ExtraType, in the order they are listed, and as shown: one
  * video, and a folder of them */
 const struct { const char* type; const char* label; const char* plural; } KINDS[] = {
-    { "Trailer",         "Trailer",           "Trailers" },
-    { "Featurette",      "Featurette",        "Featurettes" },
-    { "BehindTheScenes", "Behind the Scenes", "Behind the Scenes" },
-    { "DeletedScene",    "Deleted Scene",     "Deleted Scenes" },
-    { "Interview",       "Interview",         "Interviews" },
-    { "Scene",           "Scene",             "Scenes" },
-    { "Short",           "Short",             "Shorts" },
-    { "Clip",            "Clip",              "Clips" },
-    { "Sample",          "Sample",            "Samples" },
-    { "ThemeVideo",      "Theme Video",       "Theme Videos" },
+    { "Trailer",         N_("Trailer"),           N_("Trailers") },
+    { "Featurette",      N_("Featurette"),        N_("Featurettes") },
+    { "BehindTheScenes", N_("Behind the Scenes"), N_("Behind the Scenes") },
+    { "DeletedScene",    N_("Deleted Scene"),     N_("Deleted Scenes") },
+    { "Interview",       N_("Interview"),         N_("Interviews") },
+    { "Scene",           N_("Scene"),             N_("Scenes") },
+    { "Short",           N_("Short"),             N_("Shorts") },
+    { "Clip",            N_("Clip"),              N_("Clips") },
+    { "Sample",          N_("Sample"),            N_("Samples") },
+    { "ThemeVideo",      N_("Theme Video"),       N_("Theme Videos") },
 };
 const int KIND_COUNT = (int)(sizeof(KINDS) / sizeof(KINDS[0]));
 

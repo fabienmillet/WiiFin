@@ -29,6 +29,11 @@ bool LibraryView::updateDetail(ir_t& ir, bool aPressed) {
         overviewTop = 0;
         return false;
     }
+    /* A on the Scenes row: its chapters */
+    if (aPressed && detailFocusRow == 2 && !detail.chapters.empty()) {
+        state = State::ScenesLoad;
+        return false;
+    }
     // A: play
     if (aPressed) {
         if (detail.playbackPositionTicks > 0) {
@@ -59,11 +64,20 @@ bool LibraryView::updateDetail(ir_t& ir, bool aPressed) {
     if (Input::isBackPressed()) {
         freeDetail();
         state = detailReturnState;
-    } else if (Input::isUpPressed()) {
-        /* the version row above the audio one, when there are several files */
-        detailFocusRow = detailFocusRow <= 0 && !detail.versions.empty() ? -1 : 0;
-    } else if (Input::isDownPressed()) {
-        detailFocusRow = detailFocusRow < 0 ? 0 : 1;
+    } else if (Input::isUpPressed() || Input::isDownPressed()) {
+        /* the rows there are: Version (several files), Audio, Subtitles,
+         * Scenes (chapters); Audio when none */
+        std::vector<int> rows;
+        if (!detail.versions.empty())        rows.push_back(-1);
+        if (!detail.audioStreams.empty())    rows.push_back(0);
+        if (!detail.subtitleStreams.empty()) rows.push_back(1);
+        if (!detail.chapters.empty())        rows.push_back(2);
+        int at = -1;
+        for (int i = 0; i < (int)rows.size(); ++i) if (rows[i] == detailFocusRow) at = i;
+        if (rows.empty()) detailFocusRow = 0;
+        else if (at < 0) detailFocusRow = rows[0];
+        else detailFocusRow = rows[Input::isUpPressed() ? (at > 0 ? at - 1 : 0)
+                                                        : (at + 1 < (int)rows.size() ? at + 1 : at)];
     } else if (detailFocusRow < 0 && (Input::isLeftPressed() || Input::isRightPressed())) {
         const int n = (int)detail.versions.size();
         selectVersion((detailVersionSel + (Input::isLeftPressed() ? n - 1 : 1)) % n);
@@ -322,10 +336,12 @@ void LibraryView::drawDetailView(ir_t& ir) {
     // Drawn at a fixed bottom-anchor position so they're always visible.
     const int STREAM_ROW_H = 24;
     const bool hasVersions = !detail.versions.empty();
-    const int STREAM_Y0 = 390 - (hasVersions ? STREAM_ROW_H : 0);   /* the version row first */
+    const bool hasScenes   = !detail.chapters.empty();
+    const int STREAM_Y0 = 390 - (hasVersions ? STREAM_ROW_H : 0)    /* the version row first */
+                              - (hasScenes ? STREAM_ROW_H : 0);     /* the Scenes row last */
     const bool hasAudio = !detail.audioStreams.empty();
     const bool hasSub   = !detail.subtitleStreams.empty();
-    if (hasAudio || hasSub || hasVersions) {
+    if (hasAudio || hasSub || hasVersions || hasScenes) {
         Ui::roundRect(INFO_X, STREAM_Y0 - 8, INFO_W - 14, 1.5f, 0.75f, Ui::alpha(p.cardBorder, 0.6f));
 
         // Validate UTF-8 and truncate at a safe codepoint boundary so the
@@ -358,6 +374,20 @@ void LibraryView::drawDetailView(ir_t& ir) {
         for (int row = hasVersions ? -1 : 0; row < 3; row++) {
             if (row == 0 && !hasAudio) continue;
             if (row == 1 && !hasSub)   continue;
+            if (row == 2) {   /* the Scenes: A opens them */
+                if (!hasScenes) continue;
+                int ry = STREAM_Y0 + (2 + (hasVersions ? 1 : 0)) * STREAM_ROW_H;
+                bool focused = detailFocusRow == 2;
+                if (focused)
+                    Ui::roundRect(INFO_X - 6, ry - 3, INFO_W - 8, STREAM_ROW_H - 3, (STREAM_ROW_H - 3) * 0.5f,
+                                  Ui::mix(p.accent, 0xFFFFFFFF, 0.2f), p.accentDark);
+                char buf[64];
+                snprintf(buf, sizeof(buf), tr("%d chapters"), (int)detail.chapters.size());
+                std::string v = std::string(buf) + "  \xe2\x80\xba";
+                Ui::text(INFO_X + 4, ry, tr("Scenes"), 13, focused ? p.textOnAccent : p.textDim);
+                Text::print(INFO_X + 74, ry, font, v.c_str(), 13, focused ? p.textOnAccent : p.text);
+                continue;
+            }
 
             int ry = STREAM_Y0 + (row + (hasVersions ? 1 : 0)) * STREAM_ROW_H;
             bool focused = (detailFocusRow == row);
@@ -389,13 +419,13 @@ void LibraryView::drawDetailView(ir_t& ir) {
     }
 
     // ---- Footer ----
-    const Ui::Hint l[] = { { "A", "Play" }, { "B", "Back" },
-                           { "1", detail.isFavorite ? "Unfavorite" : "Favorite" },
-                           { "+!", detail.played ? "Unwatched" : "Watched" },
-                           { "2", "Extras" } };   /* short: 5 hints + Focus, Change */
-    const Ui::Hint r[] = { { "UD", "Focus" }, { "LR", "Change" } };
+    const Ui::Hint l[] = { { "A", detailFocusRow == 2 && hasScenes ? N_("Scenes") : N_("Play") }, { "B", N_("Back") },
+                           { "1", detail.isFavorite ? N_("Unfavorite") : N_("Favorite") },
+                           { "+!", detail.played ? N_("Unwatched") : N_("Watched") },
+                           { "2", N_("Extras") } };   /* short: 5 hints + Focus, Change */
+    const Ui::Hint r[] = { { "UD", N_("Focus") }, { "LR", N_("Change") } };
     const bool full = detail.specialFeatures > 0;   /* no room left for Focus */
-    Ui::footer(l, full ? 5 : 4, full ? r + 1 : r, (hasAudio || hasSub || hasVersions) ? (full ? 1 : 2) : 0);
+    Ui::footer(l, full ? 5 : 4, full ? r + 1 : r, (hasAudio || hasSub || hasVersions || hasScenes) ? (full ? 1 : 2) : 0);
     if (overviewPanel) renderOverviewPanel();
 }
 

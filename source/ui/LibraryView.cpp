@@ -1097,6 +1097,7 @@ bool LibraryView::loadingState(State s) {
     case State::TVSuggestionsLoad: case State::TVUpcomingLoad:
     case State::MusicSuggestionsLoad: case State::PlaylistsLoad:
     case State::GlobalFavoritesLoad: case State::SearchLoad: case State::SpecialsLoad:
+    case State::ScenesLoad:
         return true;
     default:
         return false;
@@ -1340,6 +1341,7 @@ bool LibraryView::updateState(ir_t& ir) {
         case State::GlobalFavoritesLoad:   loadGlobalFavorites();    return false;
         case State::SearchLoad:            performSearch();          return false;
         case State::SpecialsLoad:          loadSpecials();           return false;
+        case State::ScenesLoad:            loadScenes();             return false;
 
         // Screens
         case State::LibsReady:             return updateHome(ir, aPressed);
@@ -1348,6 +1350,7 @@ bool LibraryView::updateState(ir_t& ir) {
         case State::PostersReady:          return updatePosterGrid(ir, aPressed);
         case State::SeasonsReady:          return updateSeasons(ir, aPressed);
         case State::SpecialsReady:         return updateSpecials(ir, aPressed);
+        case State::ScenesReady:           return updateScenes(ir, aPressed);
         case State::EpisodesReady:         return updateEpisodes(ir, aPressed);
         case State::MusicTracksReady:      return updateMusicTracks(ir, aPressed);
         case State::MovieSuggestionsReady: return updateMovieSuggestions(ir, aPressed);
@@ -1443,6 +1446,7 @@ bool LibraryView::render(ir_t& ir) {
     case State::PostersReady:           renderPosterGrid(ir); break;
     case State::SeasonsReady:           renderSeasons(ir); break;
     case State::SpecialsReady:          renderSpecials(ir); break;
+    case State::ScenesReady:            renderScenes(ir); break;
     case State::EpisodesReady:          renderEpisodes(ir); break;
     case State::MusicTracksReady:       renderMusicTracks(ir); break;
     case State::MovieSuggestionsReady:  renderMovieSuggestions(ir); break;

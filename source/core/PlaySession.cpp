@@ -227,6 +227,7 @@ bool runPlaySession(JellyfinClient& client,
     std::vector<u64> rebufferTimes;
     float qualityRestartAt = -1.0f;
     IntroInfo intro;
+    std::vector<float> chapters;   /* their starts, s (fetched with intro) */
     bool introFetched = false;
     int  retries      = 0;
     bool everPlayed   = false;   /* this item showed something */
@@ -245,6 +246,11 @@ bool runPlaySession(JellyfinClient& client,
             runWithPlayerUI(view, ir, N_("Loading..."), [&]() {
                 intro = IntroInfo();
                 client.getIntroTimestamps(serverUrl, auth, itemId, intro);
+                /* the chapters of the file played (a version has its own) */
+                std::vector<JellyfinChapter> ch;
+                chapters.clear();
+                if (client.getChapters(serverUrl, auth, mediaSourceId.empty() ? itemId : mediaSourceId, ch))
+                    for (const JellyfinChapter& c : ch) chapters.push_back(c.startTicks / 10000000.0f);
             });
             introFetched = true;
         }
@@ -258,6 +264,7 @@ bool runPlaySession(JellyfinClient& client,
         ctx.currentAudio = audioIdx;
         ctx.currentSub   = subIdx;
         ctx.intro        = intro;
+        ctx.chapters     = chapters;
         /* Burned-in subtitles are transcoded with CopyTimestamps (see
          * getTranscodingUrl): the stream keeps the item's own timestamps, so
          * the position needs no origin, and MPlayer's -ss would land before

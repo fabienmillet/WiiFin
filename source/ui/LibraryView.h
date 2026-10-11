@@ -120,6 +120,8 @@ private:
         SearchReady,          // show search results
         SpecialsLoad,         // blocking: a film's or a series' special features
         SpecialsReady,        // show them (LibrarySpecials.cpp)
+        ScenesLoad,           // blocking: a film's or an episode's chapters and their pictures
+        ScenesReady,          // show them (LibraryScenes.cpp)
         Error
     };
     State state = State::LibsInit;
@@ -441,6 +443,14 @@ private:
     int         specialsGroup = -1;    // folders: -1 the kinds, else the kind shown
     bool        specialsFolders() const;   // many of several kinds: a folder per kind
     void        openSpecials(const std::string& id, const std::string& name, State back);
+    /* the Scenes (chapters) of the page's film or episode */
+    std::vector<JellyfinChapter> scenes;
+    std::vector<GRRLIB_texImg*>  sceneTex;
+    int  sceneSel = 0, sceneTop = 0;
+    void freeScenes();
+    void loadScenes();
+    bool updateScenes(ir_t& ir, bool aPressed);
+    void renderScenes(ir_t& ir);
     void        loadSpecials();
     bool        updateSpecials(ir_t& ir, bool aPressed);
     void        renderSpecials(ir_t& ir);

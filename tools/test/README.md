@@ -45,7 +45,7 @@ tools/test/measure_av.py
 tools/test/make_media.sh playback music
 MOVIES=playback MIXED= tools/test/server.sh 300k
 NOPROFILE=1 BUILD_ONLY=1 tools/test/tour.sh ""
-for s in resume resume-transcode xvid formats audio-track https https-ecdsa slow subtitles subtitles-switch subtitles-big next next-from-home trickplay music-formats sounds sounds-off remote remote-play remote-queue segments stuck japanese music-favorite sort-favorite music-tabs specials cjk watched settings home-sounds music-quiet season-posters overview favorite-home versions music-after-video grid-profiles long-titles subtitles-transcode subtitles-resume subtitles-mp3 music-shuffle sort-order music-posters language music-sort profile-menu onboarding list-tabs music-visualizers; do tools/test/playback.sh $s; done
+for s in resume resume-transcode xvid formats audio-track https https-ecdsa slow subtitles subtitles-switch subtitles-big next next-from-home trickplay music-formats sounds sounds-off remote remote-play remote-queue segments stuck japanese music-favorite sort-favorite music-tabs specials cjk watched settings home-sounds music-quiet season-posters overview favorite-home versions music-after-video grid-profiles long-titles subtitles-transcode subtitles-resume subtitles-mp3 music-shuffle sort-order music-posters language music-sort profile-menu onboarding list-tabs music-visualizers scenes; do tools/test/playback.sh $s; done
 
 # A server that keeps its accounts, with your own music as the Songs library
 KEEP=tools/test/out/keep MOVIES=playback MIXED= MUSIC=~/Music tools/test/server.sh 300k
@@ -104,6 +104,7 @@ commands, and what the log must or must not show):
 | `onboarding` | A new profile's questions (`test_onboarding`): no automatic sign-in, no passcode (the password each time), Grid, List |
 | `list-tabs` | Library View: List in a film library: the tabs as in the grid (-/+), Collections and Favorites as lists; the pointer on a tab and A goes to it |
 | `music-visualizers` | The music player's visualizers: Up twice reaches it, each A the next one (Ring, Bubbles, Wave, Blocks) |
+| `scenes` | ZE Chapters (four chapters): the Scenes row of its page lists them, A on the third plays from 0:30; in the player, >| (the pointer on it) goes to the next chapter, in the same stream |
 | `watched` | Watched / not watched with +: on Counter Film's page (on, then off), then on the first row of Shuffle Show's episode list; its page shows it watched, the zoom button (a GameCube's Z, here a Classic's ZL) unmarks it, and the list follows |
 | `specials` | Special features: on Counter Film's page, 2 lists its trailer and its featurette; the featurette's page, then it plays; B back to the list, then to the film |
 | `japanese` | Z9, a Japanese title with Japanese subtitles: not one character missing from the fonts (`[Text] no glyph`) |

@@ -1,0 +1,41 @@
+# Scenes: ZE Chapters (four chapters, 15 s each) has a Scenes row on its
+# page; A lists them, A on the third plays from 0:30; in the player, the
+# pointer on >| goes to the next chapter (0:45).
+server http://127.0.0.1:18096
+position ZE 0
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies
+15000 RIGHT
+15600 RIGHT
+16200 RIGHT      Z1
+16800 DOWN
+17100 DOWN
+17400 DOWN
+17700 DOWN
+18000 DOWN
+18300 DOWN
+18600 DOWN
+18900 DOWN
+19200 DOWN
+19500 DOWN
+19800 DOWN
+20100 DOWN
+20400 DOWN       ZE
+21500 A          ZE Chapters: its page
+24000 DOWN       the Scenes row
+24500 A          its scenes
+27000 DOWN
+27300 DOWN       Late
+28000 A          plays from 0:30
+34000 POINTER@400,300
+34300 POINTER@512,447 a move: the controls
+35000 A          >|: the next chapter
+38500 NOPOINTER
+41000 B
+42000 B          stop
+45000 END
+expect log [Scenes] 4 chapter(s)
+expect log [Scenes] play from chapter 3 (30 s)
+expect logre "\[Player\] chapter next: to 45\.0 s"
+expect streams 1

@@ -213,6 +213,26 @@ if want formats && [ ! -f "$M/movies/$ZD/$ZD.mkv" ]; then
         > "$M/movies/$ZD/movie.nfo"
 fi
 
+# chapters (the Scenes): four, a quarter of a minute each, the second it
+# is at on the picture
+ZE="ZE Chapters (2023)"
+if want formats && [ ! -f "$M/movies/$ZE/$ZE.mkv" ]; then
+    META=$(mktemp --suffix=.txt)
+    { echo ';FFMETADATA1'
+      i=0
+      for t in Opening Middle Late End; do
+          printf '[CHAPTER]\nTIMEBASE=1/1000\nSTART=%d\nEND=%d\ntitle=%s\n' $((i * 15000)) $((i * 15000 + 15000)) "$t"
+          i=$((i + 1))
+      done; } > "$META"
+    gen "movies/$ZE/$ZE.mkv" \
+        -f lavfi -i "testsrc2=size=640x360:rate=24,drawtext=text='%{eif\\:floor(t)\\:d}':fontsize=160:fontcolor=white:box=1:boxcolor=black:x=(w-tw)/2:y=40" \
+        -f lavfi -i "sine=f=440:sample_rate=48000" -i "$META" -t 60 -map 0 -map 1 -map_metadata 2 -map_chapters 2 \
+        $X264 -profile:v main -level 3.0 -b:v 800k -c:a aac
+    rm -f "$META"
+    printf '<?xml version="1.0" encoding="utf-8"?>\n<movie>\n  <title>ZE Chapters</title>\n  <year>2023</year>\n  <lockdata>true</lockdata>\n</movie>\n' \
+        > "$M/movies/$ZE/movie.nfo"
+fi
+
 # two versions of a film: the files "<folder> - <label>" of one folder
 ZB="ZB Two Versions (2019)"
 if want formats; then
@@ -281,7 +301,7 @@ if want playback; then
              "Z7 MKV Two Audio (2015)" "Z8 MKV Big Subtitles (2016)" \
              "Z9 あずまんが大王 THE ANIMATION (2002)" "ZA 서울의 봄 北京故事 (2020)" \
              "ZB Two Versions (2019)" "ZC Subtitle Sync (2021)" \
-             "ZD Subtitle Sync MP3 (2022)"; do
+             "ZD Subtitle Sync MP3 (2022)" "ZE Chapters (2023)"; do
         # what playback/ lacks (a file deleted to make it again, extras
         # added since) linked in; what it has stays
         cp -al -n "$M/movies/$d" "$M/playback/"

@@ -152,6 +152,33 @@ void PlayerView::nudgeSeek(float delta)
     showControls();
 }
 
+/* |< and >| with chapters: the next one's start, or this one's (the one
+ * before when this one has just started); false past the last or before
+ * the first: then they go to the next or previous episode */
+bool PlayerView::chapterJump(int dir)
+{
+    if (ctx.chapters.size() < 2) return false;
+    const float pos = seekPending ? seekPendingTo : position();
+    float to = -1.0f;
+    if (dir > 0) {
+        for (float c : ctx.chapters) if (c > pos + 1.0f) { to = c; break; }
+    } else {
+        int cur = -1;
+        for (int i = 0; i < (int)ctx.chapters.size(); ++i) if (ctx.chapters[i] <= pos + 0.5f) cur = i;
+        if (cur < 0) return false;
+        if (pos - ctx.chapters[cur] > 3.0f) to = ctx.chapters[cur];
+        else if (cur > 0)                   to = ctx.chapters[cur - 1];
+        else if (pos > 1.0f)                to = 0.0f;
+    }
+    if (to < 0.0f) return false;
+    SYS_Report("[Player] chapter %s: to %.1f s\n", dir > 0 ? "next" : "back", (double)to);
+    seekPending  = false;
+    seekInFlight = true;
+    seekTo       = to;
+    showControls();
+    return true;
+}
+
 void PlayerView::remoteSeek(float secs)
 {
     nudgeSeek(secs - (seekPending ? seekPendingTo : position()));
@@ -402,11 +429,17 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
             act = Action::SeekTo;
         } else if (visible && hoverButton >= 0) {
             switch (hoverButton) {
-            case 0: if (hasPrev) act = Action::Prev; else toast("No previous episode"); break;
+            case 0:
+                if (chapterJump(-1)) { act = Action::SeekTo; break; }
+                if (hasPrev) act = Action::Prev; else toast(tr("No previous episode"));
+                break;
             case 1: nudgeSeek(-10.0f); break;
             case 2: wii_player_pause_toggle(); break;
             case 3: nudgeSeek(+10.0f); break;
-            case 4: if (hasNext) act = Action::Next; else toast("No next episode"); break;
+            case 4:
+                if (chapterJump(+1)) { act = Action::SeekTo; break; }
+                if (hasNext) act = Action::Next; else toast(tr("No next episode"));
+                break;
             case BTN_ZOOM: toggleZoom(); break;
             }
         } else {

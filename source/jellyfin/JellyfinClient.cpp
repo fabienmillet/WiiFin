@@ -1476,12 +1476,64 @@ bool JellyfinClient::getItemBackdropBytes(const std::string& serverUrl,
 // ---------------------------------------------------------------------------
 // Fetch full item metadata  GET /Items/{id}
 // ---------------------------------------------------------------------------
+/* "Chapters":[{"StartPositionTicks":..,"Name":"..","ImageTag":".."},...] */
+void JellyfinClient::parseChapters(const std::string& resp, std::vector<JellyfinChapter>& out) {
+    out.clear();
+    size_t cp = resp.find("\"Chapters\":");
+    if (cp == std::string::npos) return;
+    size_t pos = resp.find('[', cp);
+    if (pos == std::string::npos) return;
+    pos++;
+    while (pos < resp.size() && out.size() < 200) {
+        while (pos < resp.size() && resp[pos] != '{' && resp[pos] != ']') pos++;
+        if (pos >= resp.size() || resp[pos] == ']') break;
+        int depth = 0; bool inStr = false;
+        size_t objStart = pos;
+        for (; pos < resp.size(); pos++) {
+            char c = resp[pos];
+            if (inStr) {
+                if (c == '\\') pos++;
+                else if (c == '"') inStr = false;
+            } else {
+                if (c == '"') inStr = true;
+                else if (c == '{') depth++;
+                else if (c == '}') { if (--depth == 0) { pos++; break; } }
+            }
+        }
+        const std::string obj = resp.substr(objStart, pos - objStart);
+        JellyfinChapter ch;
+        ch.startTicks = jsonGetLongLong(obj, "StartPositionTicks");
+        ch.name       = jsonGetString(obj, "Name");
+        ch.hasImage   = !jsonGetString(obj, "ImageTag").empty();
+        out.push_back(ch);
+    }
+}
+
+bool JellyfinClient::getChapters(const std::string& serverUrl, const JellyfinAuth& auth,
+                                 const std::string& itemId, std::vector<JellyfinChapter>& out) {
+    std::string resp;
+    int status = httpRequest(serverUrl + "/Items/" + itemId + "?Fields=Chapters", "GET", "", "",
+                             auth.accessToken, resp);
+    if (status != 200) return false;
+    parseChapters(resp, out);
+    return true;
+}
+
+bool JellyfinClient::getChapterImageBytes(const std::string& serverUrl, const JellyfinAuth& auth,
+                                          const std::string& itemId, int index, int maxWidth, int maxHeight,
+                                          std::string& outBytes) {
+    char qs[256];
+    snprintf(qs, sizeof(qs), "/Items/%s/Images/Chapter/%d?maxWidth=%d&maxHeight=%d&quality=82&format=Jpg",
+             itemId.c_str(), index, maxWidth, maxHeight);
+    return httpRequest(serverUrl + qs, "GET", "", "", auth.accessToken, outBytes) == 200;
+}
+
 bool JellyfinClient::getItemDetail(const std::string& serverUrl,
                                     const JellyfinAuth& auth,
                                     const std::string& itemId,
                                     JellyfinItemDetail& out) {
     std::string url = serverUrl + "/Items/" + itemId
-        + "?Fields=Overview,Genres,OfficialRating,RunTimeTicks,MediaStreams,MediaSources,UserData";
+        + "?Fields=Overview,Genres,OfficialRating,RunTimeTicks,MediaStreams,MediaSources,UserData,Chapters";
     std::string resp;
     int status = httpRequest(url, "GET", "", "", auth.accessToken, resp);
     if (status != 200) {
@@ -1562,6 +1614,7 @@ bool JellyfinClient::getItemDetail(const std::string& serverUrl,
 
     // MediaStreams: audio and subtitle tracks (of the default file)
     parseStreams(resp, out.audioStreams, out.subtitleStreams);
+    parseChapters(resp, out.chapters);
 
     // MediaSources: when the title has several files, each one's tracks
     {
