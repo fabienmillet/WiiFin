@@ -543,7 +543,7 @@ void drawBubbles(float x, float base, float w, float h, float a)
 {
     Session& s = *S;
     const Ui::Palette& p = Ui::pal();
-    float k = fmaxf(h / VIZ_H, 0.7f);
+    float k = fminf(fmaxf(h / VIZ_H, 0.7f), 2.2f);   /* bigger in a taller box */
     u32 c = Ui::mix(p.accent, 0xFFFFFFFF, 0.2f);
     Ui::roundRect(x, base - 1.5f, w, 3, 1.5f, Ui::alpha(p.accent, a * 0.4f));
     for (const Bubble& b : s.bubbles) {
@@ -811,12 +811,15 @@ void drawScreen(bool live, bool loading)
         float a = idleE;
         float sz = 236 * (1 + fminf(s.beat, 0.3f) * 0.10f), cy = 172 - 40 + 30 * (1 - a);
         if (s_viz == V_RING) drawRing(320, cy, 122, 36, a * 0.7f, false);   /* around the cover */
+        /* the bubbles rise behind the cover up to the top of the screen */
+        if (s_viz == V_BUBBLES) drawBubbles(Ui::screenLeft() + 20, 470, Ui::screenWidth() - 40, 450, a * 0.6f);
         drawCover(320 - sz / 2, cy - sz / 2, sz, a);
         Ui::textCentered(320, 318, LibDraw::fitText(Ui::font(), s.title, 24, 560).c_str(), 24, Ui::alpha(p.text, a));
         if (!s.artist.empty())
             Ui::textCentered(320, 350, LibDraw::fitText(Ui::font(), s.artist, 17, 560).c_str(), 17,
                              Ui::alpha(p.accent, a));
-        if (s_viz != V_RING) drawViz(Ui::screenLeft() + 20, 470, Ui::screenWidth() - 40, 60, a * 0.6f, false);
+        if (s_viz != V_RING && s_viz != V_BUBBLES)
+            drawViz(Ui::screenLeft() + 20, 470, Ui::screenWidth() - 40, 60, a * 0.6f, false);
         float frac = dur > 0 ? pos / dur : 0;
         Ui::roundRect(220, 384, 200, 3, 1.5f, Ui::alpha(p.cardBorder, 0.5f * a));
         Ui::roundRect(220, 384, 200 * fminf(frac, 1.0f), 3, 1.5f, Ui::alpha(p.accent, a));
