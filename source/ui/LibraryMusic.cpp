@@ -5,6 +5,7 @@
 #include "../input/Input.h"
 #include "../core/Lang.h"
 #include <stdio.h>
+#include <algorithm>
 
 using namespace LibDraw;
 
@@ -43,11 +44,18 @@ bool LibraryView::updateMusicTracks(ir_t& ir, bool aPressed) {
         }
     }
     // A: play this track (with full album context for prev/next); 2: all
-    // of them shuffled
+    // of them shuffled.  A playlist's videos play as a series' episodes.
     const bool shuffle = Input::is2Pressed();
     if ((aPressed || shuffle) && n > 0 && musicTrackSel < n) {
+        const bool songs = std::any_of(musicTracks.begin(), musicTracks.end(),
+                                       [](const JellyfinAudioItem& a) { return !a.video; });
+        if (shuffle ? !songs : musicTracks[musicTrackSel].video)
+            return playPlaylistVideos(musicTracks, musicTrackSel, shuffle);
         pendingMusicTracks.clear();
+        pendingMusicTrackIdx = 0;
         for (const auto& at : musicTracks) {
+            if (at.video) continue;
+            if (&at == &musicTracks[musicTrackSel]) pendingMusicTrackIdx = (int)pendingMusicTracks.size();
             MusicTrack t;
             t.id           = at.id;
             t.title        = at.name;
@@ -56,10 +64,10 @@ bool LibraryView::updateMusicTracks(ir_t& ir, bool aPressed) {
             t.runtimeTicks = at.runtimeTicks;
             pendingMusicTracks.push_back(t);
         }
-        pendingMusicTrackIdx = shuffle ? 0 : musicTrackSel;
+        if (shuffle) pendingMusicTrackIdx = 0;
         pendingMusicShuffle  = shuffle;
         pendingPlayIsMusic   = true;
-        if (shuffle) SYS_Report("[Shuffle] %d track(s)\n", n);
+        if (shuffle) SYS_Report("[Shuffle] %d track(s)\n", (int)pendingMusicTracks.size());
         return true;
     }
     return false;

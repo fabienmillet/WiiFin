@@ -108,6 +108,7 @@ struct JellyfinAudioItem {
     int         trackNumber      = 0;
     long long   runtimeTicks     = 0;
     long long   playbackPositionTicks = 0;
+    bool        video = false;   // a playlist's film, episode or clip
 };
 
 /* What the music player shows about the playing track (getAudioTrackInfo) */

@@ -2365,15 +2365,21 @@ bool JellyfinClient::getPlaylistTracks(const std::string& serverUrl,
     Ctx ctx{ this, &out };
     forEachItemObject(resp, [](const std::string& obj, void* vctx) {
         Ctx* c = static_cast<Ctx*>(vctx);
-        // Only add audio-type items
+        // songs, and the videos of a playlist of them
         std::string type = c->self->jsonGetString(obj, "Type");
-        if (type != "Audio") return;
+        const bool video = type == "Movie" || type == "Episode" || type == "Video" || type == "MusicVideo";
+        if (type != "Audio" && !video) return;
         JellyfinAudioItem item;
         item.id                    = c->self->jsonGetString(obj, "Id");
         item.name                  = c->self->jsonGetString(obj, "Name");
+        item.video                 = video;
+        if (type == "Episode") {   /* "Series - Episode" */
+            std::string series = c->self->jsonGetString(obj, "SeriesName");
+            if (!series.empty()) item.name = series + " - " + item.name;
+        }
         item.artist                = c->self->jsonGetString(obj, "AlbumArtist");
         item.album                 = c->self->jsonGetString(obj, "Album");
-        item.trackNumber           = c->self->jsonGetInt(obj,    "IndexNumber");
+        item.trackNumber           = video ? 0 : c->self->jsonGetInt(obj, "IndexNumber");
         item.runtimeTicks          = c->self->jsonGetLongLong(obj, "RunTimeTicks");
         item.playbackPositionTicks = c->self->jsonGetLongLong(obj, "PlaybackPositionTicks");
         if (!item.id.empty())

@@ -1,0 +1,29 @@
+# A playlist of videos (three episodes): its list shows them (it was
+# empty, only songs were kept), A on the second plays from it with the
+# others as the queue, 2 plays them all shuffled.  The Playlists library
+# comes last on the home screen.
+server http://127.0.0.1:18096
+playlist Cartoons "Shuffle Show S01E01" "Shuffle Show S01E02" "Shuffle Show S01E03"
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12300 RIGHT
+12600 RIGHT
+12900 RIGHT
+13200 RIGHT
+13500 RIGHT      Playlists, the last library
+14500 A          Playlists
+17500 A          Cartoons
+20500 DOWN
+21000 A          the second episode
+27000 B          the controls
+27500 B          stop
+31000 2          all of them shuffled
+38000 B          the controls
+38500 B          stop
+42000 END
+expect log [Music] playlist: 0 song(s), 3 video(s)
+expect log [Playlist] 3 video(s), from video 2
+expect log [Playlist] 3 video(s) shuffled, from video 1
+expect logorder "[Playlist] 3 video(s), from video 2" "[Playlist] 3 video(s) shuffled"
+expect streams 2

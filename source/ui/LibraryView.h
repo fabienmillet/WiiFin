@@ -356,6 +356,9 @@ private:
     /* 2 in a music video library: clips drawn by the server, one after
      * the other like a shuffled series */
     bool startVideoShuffle();
+    /* a playlist of videos (its list): from the one at index from, or all
+     * of them shuffled, one after the other like a series' episodes */
+    bool playPlaylistVideos(const std::vector<JellyfinAudioItem>& list, int from, bool shuffle);
     /* the music library's query for its tab (or an artist's albums) */
     std::string musicFilter() const;
     /* a film or series library's list (List views): its tab's titles */

@@ -409,6 +409,16 @@ bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
                 seasonsCallerState = State::PostersReady;
                 seasons.clear(); seasonSel = 0; seasonTop = 0;
                 state = State::SeasonsLoad;
+            } else if (items[posterSel].type == "Playlist") {
+                // its list: songs or videos
+                musicAlbumId     = items[posterSel].id;
+                musicAlbumName   = items[posterSel].name;
+                musicAlbumArtist.clear();
+                musicTracks.clear();
+                musicTrackSel    = 0;
+                musicTrackTop    = 0;
+                musicIsPlaylist  = true;
+                state = State::MusicTracksLoad;
             } else if (items[posterSel].type == "BoxSet") {
                 // Drill into the collection (show its movies)
                 inBoxSetDrilldown = true;

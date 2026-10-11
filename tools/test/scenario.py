@@ -23,6 +23,10 @@ A scenario file holds, one per line (# starts a comment):
     overview <name> <text>  the synopsis of that film or episode on the server
                             (\\n: a new paragraph), locked against refreshes
     title <name> <text>     its title, the same way (found again by its file)
+    playlist <name> <item>...  a playlist of those items (names as for
+                            position), made again for the run; the server's
+                            other playlists are deleted (a Playlists library
+                            only shows up on the home screen while one exists)
     sdfile <file> <to>      a file of the repository (path from its root) to
                             apps/WiiFin/<to> on the SD card (e.g. a font)
     remote <log text> <ms> <command> [args]
@@ -98,6 +102,8 @@ def parse(path):
             sc.setdefault('edits', []).append((w[1], 'Overview', w[2].replace('\\n', '\n')))
         elif w[0] == 'title':
             sc.setdefault('edits', []).append((w[1], 'Name', w[2]))
+        elif w[0] == 'playlist':
+            sc.setdefault('playlists', []).append((w[1], w[2:]))
         elif w[0] == 'sound':
             sc.setdefault('sounds', []).append(w[1])
         elif w[0] == 'sdfile':
@@ -180,6 +186,24 @@ def set_positions(sc, url, sess):
             sys.exit('no item "%s" on the server' % name)
         body = json.dumps({'PlaybackPositionTicks': secs * 10000000, 'Played': False}).encode()
         q = urllib.request.Request('%s/UserItems/%s/UserData?userId=%s' % (url, it['Id'], user), data=body,
+                                   headers=dict(auth, **{'Content-Type': 'application/json'}), method='POST')
+        urllib.request.urlopen(q).read()
+    # playlists: this scenario's, made again; none of any other one
+    q = urllib.request.Request('%s/Items?Recursive=true&IncludeItemTypes=Playlist&userId=%s' % (url, user),
+                               headers=auth)
+    for pl in json.load(urllib.request.urlopen(q))['Items']:
+        urllib.request.urlopen(urllib.request.Request('%s/Items/%s' % (url, pl['Id']), headers=auth,
+                                                      method='DELETE')).read()
+    for name, members in sc.get('playlists', []):
+        ids = []
+        for m in members:
+            it = next((i for i in items if i['Name'].startswith(m)
+                       or os.path.basename(i.get('Path', '')).startswith(m)), None)
+            if not it:
+                sys.exit('no item "%s" on the server' % m)
+            ids.append(it['Id'])
+        body = json.dumps({'Name': name, 'Ids': ids, 'UserId': user, 'MediaType': 'Video'}).encode()
+        q = urllib.request.Request('%s/Playlists' % url, data=body,
                                    headers=dict(auth, **{'Content-Type': 'application/json'}), method='POST')
         urllib.request.urlopen(q).read()
     for name, field, text in sc.get('edits', []):

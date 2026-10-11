@@ -384,14 +384,17 @@ bool LibraryView::startMusicShuffle(const std::string& id, bool playlist)
         }
     });
     if (!ok || tracks.empty()) return false;
+    if (std::none_of(tracks.begin(), tracks.end(), [](const JellyfinAudioItem& a) { return !a.video; }))
+        return playPlaylistVideos(tracks, 0, true);
     pendingMusicTracks.clear();
     for (const JellyfinAudioItem& a : tracks) {
+        if (a.video) continue;
         MusicTrack t;
         t.id = a.id; t.title = a.name; t.artist = a.artist; t.album = a.album;
         t.runtimeTicks = a.runtimeTicks;
         pendingMusicTracks.push_back(t);
     }
-    SYS_Report("[Shuffle] %d track(s)%s\n", (int)tracks.size(), id.empty() ? " drawn" : "");
+    SYS_Report("[Shuffle] %d track(s)%s\n", (int)pendingMusicTracks.size(), id.empty() ? " drawn" : "");
     pendingMusicTrackIdx = 0;
     pendingMusicShuffle  = true;
     pendingPlayIsMusic   = true;
@@ -426,6 +429,43 @@ bool LibraryView::startVideoShuffle()
     detailItemId    = drawn[0].id;
     detailIsEpisode = false;
     preparePlay(0LL, &drawn);
+    return true;
+}
+
+bool LibraryView::playPlaylistVideos(const std::vector<JellyfinAudioItem>& list, int from, bool shuffle)
+{
+    std::vector<JellyfinEpisode> queue;
+    int at = 0;
+    for (int i = 0; i < (int)list.size(); ++i) {
+        if (!list[i].video) continue;
+        if (i == from) at = (int)queue.size();
+        JellyfinEpisode e;
+        e.id = list[i].id; e.name = list[i].name;
+        queue.push_back(e);
+    }
+    if (queue.empty()) return false;
+    if (shuffle) {
+        u32 r = (u32)gettime();
+        for (int i = (int)queue.size() - 1; i > 0; --i) {
+            r = r * 1664525u + 1013904223u;
+            std::swap(queue[i], queue[(r >> 8) % (u32)(i + 1)]);
+        }
+        at = 0;
+    }
+    bool ok = false;
+    std::string err;
+    freeDetail();
+    runWithLoading([&]() {
+        ok = client.getItemDetail(serverUrl, auth, queue[at].id, detail);
+        if (!ok) err = client.lastError();
+    });
+    if (!ok) { errMsg = err; state = State::Error; return false; }
+    SYS_Report("[Playlist] %d video(s)%s, from video %d\n", (int)queue.size(),
+               shuffle ? " shuffled" : "", at + 1);
+    detailItemId    = queue[at].id;
+    detailIsEpisode = !detail.seasonId.empty();
+    preparePlay(0LL, &queue);
+    pendingPlayEpisodeIdx = at;
     return true;
 }
 
@@ -1070,8 +1110,12 @@ void LibraryView::loadMusicTracks() {
         if (ok && musicAlbumArtist.empty() && !musicTracks.empty())
             musicAlbumArtist = musicTracks[0].artist;
     });
-    if (!ok) { errMsg = err; state = State::Error; }
-    else     { musicTrackSel = 0; musicTrackTop = 0; state = State::MusicTracksReady; }
+    if (!ok) { errMsg = err; state = State::Error; return; }
+    const int videos = (int)std::count_if(musicTracks.begin(), musicTracks.end(),
+                                          [](const JellyfinAudioItem& a) { return a.video; });
+    SYS_Report("[Music] %s: %d song(s), %d video(s)\n", musicIsPlaylist ? "playlist" : "album",
+               (int)musicTracks.size() - videos, videos);
+    musicTrackSel = 0; musicTrackTop = 0; state = State::MusicTracksReady;
 }
 
 void LibraryView::clampMusicTrackScroll() {
