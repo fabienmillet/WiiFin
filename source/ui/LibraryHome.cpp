@@ -5,6 +5,7 @@
 #include "../input/Input.h"
 #include "../core/SoundFX.h"
 #include "../core/Lang.h"
+#include "../core/BackgroundMusic.h"
 #include <cmath>
 
 using namespace LibDraw;
@@ -430,11 +431,14 @@ void LibraryView::renderGlobalFavorites(ir_t& ir) {
  * The profile menu, A on the avatar: back to the libraries, the profiles,
  * the settings (signed in still), or WiiFin's own menu
  * --------------------------------------------------------------- */
-static const char* const PROFILE_MENU[4] = {
-    N_("Back to Jellyfin"), N_("Switch Profile"), N_("Settings"), N_("WiiFin Menu")
+static const char* const PROFILE_MENU[5] = {
+    N_("Now Playing"), N_("Back to Jellyfin"), N_("Switch Profile"), N_("Settings"), N_("WiiFin Menu")
 };
+/* Now Playing, first, while the music goes on while browsing */
+static int pmFirst() { return BackgroundMusic::playing() ? 0 : 1; }
+static int pmCount() { return 5 - pmFirst(); }
 static const int PM_W = 300, PM_BH = 42, PM_STEP = 54;
-static int pmTop() { return 240 - (4 * PM_STEP + 50) / 2 + 50; }
+static int pmTop() { return 240 - (pmCount() * PM_STEP + 50) / 2 + 50; }
 
 void LibraryView::openProfileMenu() {
     profileMenu = true;
@@ -446,12 +450,13 @@ void LibraryView::openProfileMenu() {
 
 bool LibraryView::updateProfileMenu(ir_t& ir) {
     if (Input::isBackPressed()) { profileMenu = false; SoundFX::play(SoundFX::FX::Back); return false; }
-    const int was = profileMenuSel;
-    if (Input::isUpPressed())   profileMenuSel = (profileMenuSel + 3) % 4;
-    if (Input::isDownPressed()) profileMenuSel = (profileMenuSel + 1) % 4;
+    const int was = profileMenuSel, n = pmCount();
+    if (profileMenuSel >= n) profileMenuSel = n - 1;   /* the music ended meanwhile */
+    if (Input::isUpPressed())   profileMenuSel = (profileMenuSel + n - 1) % n;
+    if (Input::isDownPressed()) profileMenuSel = (profileMenuSel + 1) % n;
     int hover = -1;
     if (ir.valid)
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < n; ++i) {
             const int by = pmTop() + i * PM_STEP;
             if (ir.x >= 320 - PM_W / 2 && ir.x <= 320 + PM_W / 2 && ir.y >= by && ir.y <= by + PM_BH) hover = i;
         }
@@ -459,26 +464,28 @@ bool LibraryView::updateProfileMenu(ir_t& ir) {
     if (profileMenuSel != was) SoundFX::play(SoundFX::FX::Move);
     if (!Input::isAJustPressed() || (ir.valid && hover < 0)) return false;
     profileMenu = false;
-    switch (profileMenuSel) {
-    case 0: SoundFX::play(SoundFX::FX::Back); return false;
-    case 1: exitTo = Exit::Profiles;   break;
-    case 2: exitTo = Exit::Settings;   break;
+    const int entry = pmFirst() + profileMenuSel;
+    switch (entry) {
+    case 0: exitTo = Exit::NowPlaying; break;
+    case 1: SoundFX::play(SoundFX::FX::Back); return false;
+    case 2: exitTo = Exit::Profiles;   break;
+    case 3: exitTo = Exit::Settings;   break;
     default: exitTo = Exit::WiiFinMenu; break;
     }
-    SoundFX::play(profileMenuSel == 2 ? SoundFX::FX::Open : SoundFX::FX::Back);
+    SoundFX::play(entry == 3 || entry == 0 ? SoundFX::FX::Open : SoundFX::FX::Back);
     return true;
 }
 
 void LibraryView::renderProfileMenu(ir_t& ir) {
     const Ui::Palette& p = Ui::pal();
     Ui::roundRect(Ui::screenLeft(), 0, Ui::screenWidth(), 480, 0, 0x00000090);
-    const int top = pmTop(), H = 4 * PM_STEP + 50 + 20;
+    const int top = pmTop(), n = pmCount(), H = n * PM_STEP + 50 + 20;
     Ui::card(320 - PM_W / 2 - 24, top - 64, PM_W + 48, H, 18, 0.0f);
     Ui::avatar(320 - PM_W / 2 + 4, top - 38, 15.0f, userName.c_str(), 0.0f);
     Ui::text(320 - PM_W / 2 + 28, top - 49, filterDejaVu(userName, 30).c_str(), 18, p.text);
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < n; ++i) {
         profileMenuFocus[i] = Ui::approach(profileMenuFocus[i], i == profileMenuSel ? 1.0f : 0.0f);
-        Ui::button(320 - PM_W / 2, top + i * PM_STEP, PM_W, PM_BH, PROFILE_MENU[i], 18,
+        Ui::button(320 - PM_W / 2, top + i * PM_STEP, PM_W, PM_BH, PROFILE_MENU[pmFirst() + i], 18,
                    profileMenuFocus[i] > 0.01f ? Ui::pulse() * profileMenuFocus[i] : 0.0f);
     }
     const Ui::Hint l[] = { { "A", N_("Select") } };

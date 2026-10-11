@@ -1,0 +1,21 @@
+# The music goes on while browsing: B while a song plays, back in the
+# album with the song going on (the footer says which); the home, the
+# profile menu has Now Playing first: the player again, the same queue.
+server http://127.0.0.1:18096
+cfg home_layout=0
+6000  A          Connect To Jellyfin
+9000  A          the profile: the grid
+12000 RIGHT
+12400 RIGHT      Singles
+13000 A
+16000 A          Test Album
+19000 A          the MP3 track
+23000 B          the album, the song going on
+26000 B          the albums
+27500 B          the home
+29000 UP         the avatar
+29500 A          its menu: Now Playing first
+31000 A          Now Playing: the player again
+36000 B          the song goes on again
+39000 END
+expect logorder "[Background] the music goes on" "[Background] playing 1 of 5" "[WiiFin] profile menu" "[WiiFin] now playing: song 1 of 5" "[Background] stopped" "[Background] the music goes on"

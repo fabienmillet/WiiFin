@@ -119,6 +119,9 @@ void header(const char* title, const char* subtitle = nullptr);
 /* A message (the server's "Send message"): a card at the top of whatever
  * screen is drawn, for ms; drawNotice() draws it (the render hook). */
 void showNotice(const std::string& header, const std::string& text, int ms);
+/* the music that goes on while browsing: the footers say what plays ("":
+ * nothing); any thread */
+void setNowPlaying(const std::string& line);
 void drawNotice();
 
 /* Bottom bar with the clock in the middle and button hints on the sides.

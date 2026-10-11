@@ -47,6 +47,9 @@ public:
     void setCursorTex(GRRLIB_texImg* tex);
     /* start shuffled, on a random track (2 on an album, a playlist...) */
     void setShuffleStart(bool on) { shuffleStart = on; }
+    /* the queue the music while browsing left: its order, the place in it
+     * and how far into that song */
+    void setQueue(const std::vector<int>& order, int pos, float secs, int repeat);
 
     /* Runs the session; returns true if the user chose "Wii Menu". */
     bool run();
@@ -59,5 +62,8 @@ private:
     std::vector<MusicTrack> tracks;
     int              startIdx = 0;
     bool             shuffleStart = false;
+    std::vector<int> queueOrder;     /* setQueue: empty, the tracks in order */
+    int              queuePos = 0, queueRepeat = 0;
+    float            queueSecs = 0.0f;
     GRRLIB_texImg*   cursorTex = nullptr;
 };

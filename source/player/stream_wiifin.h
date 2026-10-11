@@ -13,3 +13,10 @@ extern char g_wiifin_stream_fail_body[160];
  * PlaySession tells a dead connection from a picture stuck while the data
  * comes in. */
 extern volatile unsigned long long g_wiifin_stream_bytes;
+
+/* WiiFin's own reads of an HTTP(S) stream, outside MPlayer (the music that
+ * goes on while browsing), with the same connections: open and read from
+ * one thread; MPlayer's async_quit_request breaks off a read. */
+void* wiifin_http_open(const char* url);                /* nullptr: failed */
+int   wiifin_http_read(void* h, char* buf, int max);    /* 0: the end, or an error */
+void  wiifin_http_close(void* h);

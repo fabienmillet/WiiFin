@@ -26,6 +26,7 @@
 #include "../jellyfin/RemoteControl.h"
 #include "../core/ExitZone.h"
 #include "../core/MusicBGM.h"
+#include "../core/BackgroundMusic.h"
 #include "../core/Lang.h"
 #include "../input/Input.h"
 #include "../player/AudioSpectrum.h"
@@ -101,6 +102,7 @@ struct Session {
     bool           favorite = false;
     std::vector<LyricLine> lyrics;
     bool           lyricsTimed = false;
+    float          pendingSeek = 0.0f;   /* a file resumed: seek there once it plays */
     GRRLIB_texImg* art      = nullptr;
     u32            artA = 0, artB = 0;          /* placeholder gradient */
 
@@ -971,6 +973,7 @@ void tick(int paused, u32 down, u32 held)
     }
 
     /* time spent paused does not count */
+    if (s.pendingSeek > 0.0f && g_mplayer_duration > 0.0f) { seekTo(s.pendingSeek); s.pendingSeek = 0.0f; }
     if (paused && !s.wasPaused) { s.pausedAt = gettime(); s.wasPaused = true; }
     else if (!paused && s.wasPaused) {
         s.pausedSecs += ticks_to_millisecs(gettime() - s.pausedAt) / 1000.0f;
@@ -1260,6 +1263,14 @@ void MusicPlayerView::setTracks(const std::vector<MusicTrack>& t, int idx)
     startIdx = (idx >= 0 && idx < (int)t.size()) ? idx : 0;
 }
 
+void MusicPlayerView::setQueue(const std::vector<int>& order, int pos, float secs, int repeat)
+{
+    queueOrder  = order;
+    queuePos    = pos;
+    queueSecs   = secs;
+    queueRepeat = repeat;
+}
+
 bool MusicPlayerView::run()
 {
     if (tracks.empty()) return false;
@@ -1282,9 +1293,20 @@ bool MusicPlayerView::run()
         s.pos = rand() % (int)s.tracks.size();
         setShuffle(true);
     }
+    float resumeAt = 0.0f;
+    if (!queueOrder.empty()) {   /* back from the music while browsing */
+        s.order  = queueOrder;
+        s.pos    = queuePos < (int)queueOrder.size() ? queuePos : 0;
+        s.repeat = queueRepeat;
+        for (int i = 0; i < (int)s.order.size(); ++i) if (s.order[i] != i) s.shuffle = true;
+        s.panelSel = s.pos;
+        resumeAt = queueSecs;
+    }
 
-    const bool musicWasRunning = MusicBGM::isRunning();
+    /* the music while browsing stops here, the menu music's place kept */
+    const bool musicWasRunning = BackgroundMusic::stop(false) || MusicBGM::isRunning();
     MusicBGM::pause();
+    bool keepPlaying = false;
     int failures = 0;
     Remote::setPlayerActive(true);
     struct RemoteIdle { ~RemoteIdle() { Remote::setPlayerActive(false); } } remoteIdle;
@@ -1293,13 +1315,18 @@ bool MusicPlayerView::run()
         loadTrack();
         std::string url;
         s_sessionId.clear();
-        if (!client.getAudioStreamUrl(serverUrl, auth, s.cur.id, 0, url, s_sessionId,
+        const long long fromTicks = (long long)(resumeAt * 10000000.0f);
+        if (!client.getAudioStreamUrl(serverUrl, auth, s.cur.id, fromTicks, url, s_sessionId,
                                       &s_playMethod, &s_audioIndex)) {
             SYS_Report("[Music] no stream for this track: %s\n", client.lastError().c_str());
             if (++failures >= 3 || s.pos + 1 >= (int)s.order.size()) break;
             s.pos++;
             continue;
         }
+        /* resumed: a transcode starts there, a file is sought once it plays */
+        if (resumeAt > 0.0f && s_playMethod == "DirectPlay") s.pendingSeek = resumeAt;
+        else                                                 s.seekBase = resumeAt;
+        resumeAt = 0.0f;
         stillFrames(true);
 
         /* this track's state */
@@ -1349,7 +1376,13 @@ bool MusicPlayerView::run()
         if (failures >= 3 || g_app_powerOff || g_app_reset) break;
 
         Req r = s.req;
-        if (r == Req::Leave) break;
+        if (r == Req::Leave) {
+            /* B while it plays: the music goes on while browsing (not when
+             * paused, nor when the server asked for something else) */
+            keepPlaying = !s.wasPaused && !Remote::hasPlay() && !g_app_powerOff && !g_app_reset;
+            resumeAt = position();
+            break;
+        }
         int n = (int)s.order.size(), next;
         if (r == Req::Jump) {
             next = s.jumpTo;
@@ -1387,11 +1420,22 @@ bool MusicPlayerView::run()
     }
     GRRLIB_FreeTexture(ring);
 
+    /* the queue, for the music that goes on: the session goes now */
+    const std::vector<MusicTrack> queueTracks = s.tracks;
+    const std::vector<int>        queue       = s.order;
+    const int                     queueAt     = s.pos, repeat = s.repeat;
     if (s.art) GRRLIB_FreeTexture(s.art);
     delete S;
     S = nullptr;
     /* the menu music only when it is on; the sound effects either way */
-    if (musicWasRunning) MusicBGM::resume();
-    else                 MusicBGM::reinitAudio();
+    if (keepPlaying) {
+        MusicBGM::reinitAudio();
+        BackgroundMusic::start(client, serverUrl, auth, queueTracks, queue, queueAt, resumeAt, repeat,
+                               musicWasRunning);
+    } else if (musicWasRunning) {
+        MusicBGM::resume();
+    } else {
+        MusicBGM::reinitAudio();
+    }
     return false;
 }

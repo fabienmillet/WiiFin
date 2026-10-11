@@ -35,7 +35,7 @@ public:
 
     /* Why update() returned true with nothing to play: B on the libraries
      * or the profile menu's choice */
-    enum class Exit { Profiles, Settings, WiiFinMenu };
+    enum class Exit { Profiles, Settings, WiiFinMenu, NowPlaying };
     Exit exitTo = Exit::Profiles;
     /* back from the Settings the profile menu opened: the home again, as
      * the settings left it (theme, home screen, library view) */
@@ -277,7 +277,7 @@ private:
      * WiiFin's menu */
     bool  profileMenu        = false;
     int   profileMenuSel     = 0;
-    float profileMenuFocus[4] = {};
+    float profileMenuFocus[5] = {};
     void openProfileMenu();
     bool updateProfileMenu(ir_t& ir);
     void renderProfileMenu(ir_t& ir);

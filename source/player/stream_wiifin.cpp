@@ -604,6 +604,32 @@ int openStream(mp_stream* s, int mode, void* opts, int* file_format) {
 int  g_wiifin_stream_fail_status = 0;
 char g_wiifin_stream_fail_body[160] = "";
 
+void* wiifin_http_open(const char* url)
+{
+    mp_stream* s = new mp_stream();
+    s->url = strdup(url);
+    if (openStream(s, STREAM_READ, nullptr, nullptr) != STREAM_OK) {
+        free(s->url);
+        delete s;
+        return nullptr;
+    }
+    return s;
+}
+
+int wiifin_http_read(void* h, char* buf, int max)
+{
+    return h ? fillBuffer((mp_stream*)h, buf, max) : 0;
+}
+
+void wiifin_http_close(void* h)
+{
+    mp_stream* s = (mp_stream*)h;
+    if (!s) return;
+    closeStream(s);
+    free(s->url);
+    delete s;
+}
+
 extern "C" {
 
 extern const mp_stream_info stream_info_http_wii;

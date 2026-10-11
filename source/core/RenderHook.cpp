@@ -6,6 +6,7 @@
 #include "../jellyfin/RemoteControl.h"
 #include "../ui/Ui.h"
 #include "Text.h"
+#include "BackgroundMusic.h"
 
 extern "C" {
 void (*g_wiifin_before_render)(void) = nullptr;
@@ -14,6 +15,7 @@ void __real_GRRLIB_Render(void);
 void __wrap_GRRLIB_Render(void)
 {
     Remote::pump();
+    BackgroundMusic::pump();
     Ui::drawNotice();
     if (g_wiifin_before_render) g_wiifin_before_render();
     __real_GRRLIB_Render();

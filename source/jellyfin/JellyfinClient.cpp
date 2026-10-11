@@ -3445,7 +3445,8 @@ bool JellyfinClient::getAudioStreamUrl(const std::string& serverUrl,
                                         std::string& outUrl,
                                         std::string& outPlaySessionId,
                                         std::string* outPlayMethod,
-                                        int* outAudioIndex)
+                                        int* outAudioIndex,
+                                        bool mp3Only)
 {
     /* Step 1: POST PlaybackInfo with AutoOpenLiveStream:false to obtain a
      * PlaySessionId only, without opening any server-side transcode session.
@@ -3525,6 +3526,9 @@ bool JellyfinClient::getAudioStreamUrl(const std::string& serverUrl,
         else add("AudioCodecNotSupported");
     }
     if (mp3 && bitrate > 320000) add("AudioBitrateNotSupported");
+    /* the music while browsing: MP3 only (libmad), started where it was */
+    if (mp3Only && !mp3 && why.empty()) add("AudioCodecNotSupported");   /* FLAC, WAV */
+    if (mp3Only && mp3 && startTimeTicks > 0) add("ContainerNotSupported");   /* a file can't start there */
     if ((flac || wav) && rate > 48000) add("AudioSampleRateNotSupported");
     if ((flac || wav) && bits > 24) add("AudioBitDepthNotSupported");
     if (channels > 2) add("AudioChannelsNotSupported");

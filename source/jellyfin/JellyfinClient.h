@@ -507,7 +507,9 @@ public:
                            std::string& outUrl,
                            std::string& outPlaySessionId,
                            std::string* outPlayMethod = nullptr,
-                           int* outAudioIndex = nullptr);
+                           int* outAudioIndex = nullptr,
+                           bool mp3Only = false);   // the music while browsing: an MP3,
+                                                    // transcoded from startTimeTicks
 
     // Direct play: the file as it is, when MPlayer CE decodes it in real
     // time on the Wii (a cautious device profile: SD MPEG-4 ASP, MPEG-1/2,

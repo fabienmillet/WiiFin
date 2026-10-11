@@ -638,6 +638,25 @@ void bottomBar(const Hint* left, int nLeft, const Hint* right, int nRight)
     for (int i = 0; right && i < nRight; ++i) x += hint(x, top + 15, right[i]);
 }
 
+/* written by the music's thread, read by the footers: two lines, the one
+ * shown flipped once the other is written */
+static char         s_nowPlaying[2][160];
+static volatile int s_nowPlayingAt = 0;
+void setNowPlaying(const std::string& line)
+{
+    const int w = 1 - s_nowPlayingAt;
+    snprintf(s_nowPlaying[w], sizeof(s_nowPlaying[w]), "%s", line.c_str());
+    s_nowPlayingAt = w;
+}
+
+/* a quaver: what plays, in the footers */
+static void noteGlyph(float x, float y, u32 c)
+{
+    circle(x + 3.5f, y + 12, 3.5f, c);
+    roundRect(x + 5.5f, y + 1, 1.8f, 11, 0.9f, c);
+    triangle(x + 7.3f, y + 1, x + 11, y + 5, x + 7.3f, y + 5, c);
+}
+
 void footer(const Hint* left, int nLeft, const Hint* right, int nRight, const char* center)
 {
     const Palette& p = pal();
@@ -657,6 +676,9 @@ void footer(const Hint* left, int nLeft, const Hint* right, int nRight, const ch
         x = xr = 626 - w;
         for (int i = 0; i < nRight; ++i) x += hint(x, top + 5, right[i]);
     }
+    const char* playing = s_nowPlaying[s_nowPlayingAt];
+    const bool music = (!center || !*center) && playing[0];
+    if (music) center = playing;
     if (center && *center) {
         /* centred caption, shortened to the room left between the hints */
         float room = 2.0f * (320.0f - xl > xr - 320.0f ? xr - 320.0f : 320.0f - xl) - 16.0f;
@@ -669,7 +691,13 @@ void footer(const Hint* left, int nLeft, const Hint* right, int nRight, const ch
             buf[len] = 0;
             snprintf(out, sizeof(out), "%s...", buf);
         }
-        if (len > 0) textCentered(320, top + 7, out, 14, p.text);
+        if (len > 0 && music) {
+            const float w = textWidth(out, 14) + 16;
+            noteGlyph(320 - w / 2, top + 8, p.accent);
+            text(320 - w / 2 + 16, top + 7, out, 14, p.accent);
+        } else if (len > 0) {
+            textCentered(320, top + 7, out, 14, p.text);
+        }
     }
 }
 
