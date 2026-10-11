@@ -471,6 +471,9 @@ void App::loop() {
         }
     };
 
+    /* the profile menu's WiiFin Menu: past the profiles, to this menu */
+    bool toMainMenu = false;
+
     /* ---- Helper: launch LibraryView for a saved profile ---- */
     auto runLibraryWithProfile = [&](const SavedProfile& p) {
         JellyfinAuth auth;
@@ -530,7 +533,12 @@ void App::loop() {
                 saveSettings();   /* the zoom may have changed during playback */
                 lv.onPlaybackFinished(lastItemId);
             } else {
-                SYS_Report("[WiiFin] back to the profiles\n");
+                if (lv.exitTo == LibraryView::Exit::WiiFinMenu) {
+                    toMainMenu = true;
+                    SYS_Report("[WiiFin] back to the menu\n");
+                } else {
+                    SYS_Report("[WiiFin] back to the profiles\n");
+                }
                 break; // user navigated back (B from libraries grid) — no play requested
             }
         }
@@ -600,7 +608,11 @@ void App::loop() {
                 }
                 continue;
             }
-            if (res == ProfileResult::AddNew) { runConnect(); continue; }
+            if (res == ProfileResult::AddNew) {
+                runConnect();
+                if (toMainMenu) { toMainMenu = false; return; }
+                continue;
+            }
             if (res == ProfileResult::Selected) {
                 runLibraryWithProfile(profiles[pv.selectedIdx]);
                 continue; /* re-show picker on return */

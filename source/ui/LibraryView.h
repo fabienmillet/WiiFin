@@ -33,6 +33,14 @@ public:
     // reload the detail page for lastItemId (fresh resume position).
     void onPlaybackFinished(const std::string& lastItemId);
 
+    /* Why update() returned true with nothing to play: B on the libraries
+     * or the profile menu's choice */
+    enum class Exit { Profiles, Settings, WiiFinMenu };
+    Exit exitTo = Exit::Profiles;
+    /* back from the Settings the profile menu opened: the home again, as
+     * the settings left it (theme, home screen, library view) */
+    void onSettingsClosed();
+
     // Name of the signed-in user (header avatar).
     void setUserName(const std::string& name) {
         userName = name; browse.setUserName(name); catalog.setUserName(name);
@@ -263,6 +271,14 @@ private:
     int  nextUpSel           = 0;
     int  homePage            = 0; // 0=libs, 1=activity
     bool avatarFocus         = false; // grid home: the profile avatar, reached with Up
+    /* the profile menu (A on the avatar): back, switch profile, settings,
+     * WiiFin's menu */
+    bool  profileMenu        = false;
+    int   profileMenuSel     = 0;
+    float profileMenuFocus[4] = {};
+    void openProfileMenu();
+    bool updateProfileMenu(ir_t& ir);
+    void renderProfileMenu(ir_t& ir);
     int  actRow              = 0; // 0=CW row, 1=NextUp row (activity page)
     bool detailIsEpisodeHint = false;
 

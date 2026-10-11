@@ -48,8 +48,8 @@ bool LibraryView::updateHome(ir_t& ir, bool aPressed) {
             irMode = false;
             break;
         case BrowseHome::Action::Profiles:
-            SoundFX::play(SoundFX::FX::Back);
-            return true;
+            openProfileMenu();
+            return false;
         default: break;
         }
         return false;
@@ -58,13 +58,13 @@ bool LibraryView::updateHome(ir_t& ir, bool aPressed) {
     // User icon click (top right of header) → the profile menu
     if (aPressed && irMode && ir.valid &&
         fabsf(ir.x - 614.0f) < 24.0f && fabsf(ir.y - 26.0f) < 24.0f) {
-        SoundFX::play(SoundFX::FX::Back);
-        return true;
+        openProfileMenu();
+        return false;
     }
     /* without a pointer: Up from the top row of tiles reaches the avatar,
      * A on it goes back to the profiles (to sign out), Down leaves it */
     if (avatarFocus) {
-        if (aPressed) { avatarFocus = false; SoundFX::play(SoundFX::FX::Back); return true; }
+        if (aPressed) { avatarFocus = false; openProfileMenu(); return false; }
         if (Input::isDownPressed() || Input::isBackPressed() || homePage != 0 || irMode) avatarFocus = false;
         return false;
     }
@@ -325,8 +325,8 @@ void LibraryView::renderHome(ir_t& ir) {
             Ui::textCentered(tx + TILE_W / 2, ty + 44, name.c_str(), 18,
                              Ui::mix(p.text, p.accentDark, f));
         }
-        const Ui::Hint l[] = { { "A", avatarFocus ? "Profiles" : "Open" }, { "1", "Search" } };
-        const Ui::Hint r[] = { { "-/+", "Tab" } };
+        const Ui::Hint l[] = { { "A", avatarFocus ? N_("Menu") : N_("Open") }, { "1", N_("Search") } };
+        const Ui::Hint r[] = { { "-/+", N_("Tab") } };
         Ui::footer(l, 2, r, 1);
 
     } else {
@@ -424,4 +424,72 @@ void LibraryView::renderGlobalFavorites(ir_t& ir) {
     const Ui::Hint r[] = { { "-/+", N_("Tab") }, { "B", N_("Back") } };
     const char* center = (posterSel >= 0 && posterSel < n) ? items[posterSel].name.c_str() : nullptr;
     Ui::footer(l, 1, r, 2, center);
+}
+
+/* ---------------------------------------------------------------
+ * The profile menu, A on the avatar: back to the libraries, the profiles,
+ * the settings (signed in still), or WiiFin's own menu
+ * --------------------------------------------------------------- */
+static const char* const PROFILE_MENU[4] = {
+    N_("Back to Jellyfin"), N_("Switch Profile"), N_("Settings"), N_("WiiFin Menu")
+};
+static const int PM_W = 300, PM_BH = 42, PM_STEP = 54;
+static int pmTop() { return 240 - (4 * PM_STEP + 50) / 2 + 50; }
+
+void LibraryView::openProfileMenu() {
+    profileMenu = true;
+    profileMenuSel = 0;
+    for (float& f : profileMenuFocus) f = 0.0f;
+    SoundFX::play(SoundFX::FX::Open);
+    SYS_Report("[WiiFin] profile menu\n");
+}
+
+bool LibraryView::updateProfileMenu(ir_t& ir) {
+    if (Input::isBackPressed()) { profileMenu = false; SoundFX::play(SoundFX::FX::Back); return false; }
+    const int was = profileMenuSel;
+    if (Input::isUpPressed())   profileMenuSel = (profileMenuSel + 3) % 4;
+    if (Input::isDownPressed()) profileMenuSel = (profileMenuSel + 1) % 4;
+    int hover = -1;
+    if (ir.valid)
+        for (int i = 0; i < 4; ++i) {
+            const int by = pmTop() + i * PM_STEP;
+            if (ir.x >= 320 - PM_W / 2 && ir.x <= 320 + PM_W / 2 && ir.y >= by && ir.y <= by + PM_BH) hover = i;
+        }
+    if (hover >= 0) profileMenuSel = hover;
+    if (profileMenuSel != was) SoundFX::play(SoundFX::FX::Move);
+    if (!Input::isAJustPressed() || (ir.valid && hover < 0)) return false;
+    profileMenu = false;
+    switch (profileMenuSel) {
+    case 0: SoundFX::play(SoundFX::FX::Back); return false;
+    case 1: exitTo = Exit::Profiles;   break;
+    case 2: exitTo = Exit::Settings;   break;
+    default: exitTo = Exit::WiiFinMenu; break;
+    }
+    SoundFX::play(profileMenuSel == 2 ? SoundFX::FX::Open : SoundFX::FX::Back);
+    return true;
+}
+
+void LibraryView::renderProfileMenu(ir_t& ir) {
+    const Ui::Palette& p = Ui::pal();
+    Ui::roundRect(Ui::screenLeft(), 0, Ui::screenWidth(), 480, 0, 0x00000090);
+    const int top = pmTop(), H = 4 * PM_STEP + 50 + 20;
+    Ui::card(320 - PM_W / 2 - 24, top - 64, PM_W + 48, H, 18, 0.0f);
+    Ui::avatar(320 - PM_W / 2 + 4, top - 38, 15.0f, userName.c_str(), 0.0f);
+    Ui::text(320 - PM_W / 2 + 28, top - 49, filterDejaVu(userName, 30).c_str(), 18, p.text);
+    for (int i = 0; i < 4; ++i) {
+        profileMenuFocus[i] = Ui::approach(profileMenuFocus[i], i == profileMenuSel ? 1.0f : 0.0f);
+        Ui::button(320 - PM_W / 2, top + i * PM_STEP, PM_W, PM_BH, PROFILE_MENU[i], 18,
+                   profileMenuFocus[i] > 0.01f ? Ui::pulse() * profileMenuFocus[i] : 0.0f);
+    }
+    const Ui::Hint l[] = { { "A", N_("Select") } };
+    const Ui::Hint r[] = { { "B", N_("Back") } };
+    Ui::footer(l, 1, r, 1);
+}
+
+void LibraryView::onSettingsClosed() {
+    /* the home again, rebuilt as the settings left it */
+    avatarFocus = false;
+    browse.invalidate();
+    catalog.invalidate();
+    state = State::LibsReady;
 }

@@ -1,11 +1,13 @@
 # Home Screen: Grid without a pointer: Up from the top row of tiles reaches
-# the profile avatar, A goes back to the profiles (to sign out); there was
-# no way to without a pointer.
+# the profile avatar, A opens its menu, Switch Profile goes back to the
+# profiles (to sign out); there was no way to without a pointer.
 server http://127.0.0.1:18096
 cfg home_layout=0
 6000  A          Connect To Jellyfin
 9000  A          the profile: the grid
 12000 UP         the avatar
-13000 A          the profiles
-16000 END
-expect logorder "[TOUR] t=12" "[WiiFin] back to the profiles"
+13000 A          its menu
+14000 DOWN       Switch Profile
+14500 A          the profiles
+17000 END
+expect logorder "[TOUR] t=12" "[WiiFin] profile menu" "[WiiFin] back to the profiles"

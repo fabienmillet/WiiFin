@@ -1183,6 +1183,7 @@ bool LibraryView::update(ir_t& ir) {
     /* "Play on..." from the server, once no screen is fetching */
     Remote::PlayRequest play;
     if (!loadingState(state) && Remote::takePlay(play) && startRemotePlay(play)) return true;
+    if (profileMenu) return updateProfileMenu(ir);
 
     /* interface sounds, from what this frame's input changed: the screen
      * (opened, or left with B), the page or tab, or the highlight */
@@ -1454,6 +1455,7 @@ bool LibraryView::render(ir_t& ir) {
     case State::SearchReady:            renderSearchResults(ir); break;
     default: break;
     }
+    if (profileMenu) renderProfileMenu(ir);
 
     drawCursor(ir);
     return true;
