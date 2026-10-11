@@ -468,34 +468,24 @@ int  wii_player_muted(void)      { return s_muted; }
 /* -----------------------------------------------------------------------
  * Music (audio-only) path
  * ----------------------------------------------------------------------- */
-static void (*s_music_tick_cb)(int paused, uint32_t btnsDown, uint32_t btnsHeld) = nullptr;
-static void (*s_audio_render_cb)() = nullptr;
+static void (*s_music_tick_cb)(int paused) = nullptr;
 
 static lwp_t        s_bg_thread = LWP_THREAD_NULL;
 static volatile int s_bg_stop   = 0;
 static uint8_t      s_bg_stack[48 * 1024] DEAD_AT_EXIT __attribute__((aligned(32)));
 
-/* With -vo null MPlayer never scans the Wiimote, so this thread does:
- * it feeds MusicPlayerView's tick callback and renders its UI at 60 Hz. */
+/* With -vo null MPlayer never scans the Wiimote: the main thread reads the
+ * controllers and draws; this thread only ticks the music session ~60
+ * times a second (reports, end of a track, the remote control). */
 static void* audioThreadFunc(void*)
 {
-    Input::update();          /* drop what was pressed before the music started */
     while (!s_bg_stop) {
         if (g_app_powerOff || g_app_reset) {
             g_player_stop_reason = PLAYER_STOP_EOF;
             async_quit_request   = 1;
         }
-
-        Input::update();      /* every controller, as Wii Remote buttons */
-        u32 down = Input::rawDown();
-        u32 held = Input::held();
-
-        if (s_music_tick_cb)
-            s_music_tick_cb(g_mplayer_paused, down, held);
-
-        /* GRRLIB_Render() inside the callback waits for vsync (60 Hz pacing) */
-        if (s_audio_render_cb) s_audio_render_cb();
-        else                   usleep(16000);
+        if (s_music_tick_cb) s_music_tick_cb(g_mplayer_paused);
+        usleep(16000);
     }
     return nullptr;
 }
@@ -540,7 +530,6 @@ int wii_player_play_audio(const char* url)
         s_bg_thread = LWP_THREAD_NULL;
     }
     s_music_tick_cb   = nullptr;
-    s_audio_render_cb = nullptr;
 
     SYS_Report("[WiiPlayer] play_audio exited rc=%d reason=%d\n",
                rc, (int)g_player_stop_reason);
@@ -552,13 +541,7 @@ void wii_player_stop(void)
     async_quit_request = 1;
 }
 
-void wii_player_set_music_tick(
-    void (*cb)(int paused, uint32_t btnsDown, uint32_t btnsHeld))
+void wii_player_set_music_tick(void (*cb)(int paused))
 {
     s_music_tick_cb = cb;
-}
-
-void wii_player_set_audio_render_cb(void (*cb)())
-{
-    s_audio_render_cb = cb;
 }

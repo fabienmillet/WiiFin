@@ -128,4 +128,5 @@ Each sound is `name.mp3` or `name.wav` (PCM, 8 or 16-bit, mono or stereo, up to 
 - Direct play only for what the Wii decodes in real time (SD resolutions, see [DIRECT_PLAY.md](../DIRECT_PLAY.md)); the server converts the rest
 - Stereo output only (multi-channel audio is mixed down)
 - Picture subtitles (PGS, VobSub) are burned into the video by the server; text subtitles are drawn by WiiFin
+- While a song plays, the interface sounds and the menu music are silent (the Wii's audio is the player's)
 - Chinese and Korean, titles and the interface alike, need the font in `SD:/apps/WiiFin/fonts/`: the Homebrew Channel package has it; with the WAD, copy that folder from the package (or `data/fonts/cjk/`) there. Without it, WiiFin doesn't offer those languages (English instead); any other `.ttf` / `.otf` there is used too, for what the other fonts lack

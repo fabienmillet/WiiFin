@@ -1,6 +1,7 @@
 # The music goes on while browsing: B while a song plays, back in the
 # album with the song going on (the footer says which); the home, the
-# profile menu has Now Playing first: the player again, the same queue.
+# profile menu has Now Playing first: the page over the same session (no
+# new one: the song never stopped), B leaves it playing again.
 server http://127.0.0.1:18096
 cfg home_layout=0
 6000  A          Connect To Jellyfin
@@ -18,4 +19,6 @@ cfg home_layout=0
 31000 A          Now Playing: the player again
 36000 B          the song goes on again
 39000 END
-expect logorder "[Background] the music goes on" "[Background] playing 1 of 5" "[WiiFin] profile menu" "[WiiFin] now playing: song 1 of 5" "[Background] stopped" "[Background] the music goes on"
+expect logorder "[Music] session: 5 track(s)" "[Music] the music goes on" "[WiiFin] profile menu" "[Music] Now Playing" "[Music] the music goes on"
+expect logcount 1 [Music] session:
+expect nolog [Music] session stopped

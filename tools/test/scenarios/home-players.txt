@@ -26,4 +26,4 @@ positions-reset
 48500 B          stop
 52000 END
 expect logcount 2 [WiiFin] HOME menu
-expect logorder "[WiiFin] HOME menu" "[Background] the music goes on" "[WiiFin] HOME menu"
+expect logorder "[WiiFin] HOME menu" "[Music] the music goes on" "[Music] session stopped" "[WiiFin] HOME menu"

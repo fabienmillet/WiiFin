@@ -5,7 +5,7 @@
 #include "../input/Input.h"
 #include "../core/SoundFX.h"
 #include "../core/Lang.h"
-#include "../core/BackgroundMusic.h"
+#include "../core/MusicSession.h"
 #include <cmath>
 
 using namespace LibDraw;
@@ -434,8 +434,8 @@ void LibraryView::renderGlobalFavorites(ir_t& ir) {
 static const char* const PROFILE_MENU[5] = {
     N_("Now Playing"), N_("Back to Jellyfin"), N_("Switch Profile"), N_("Settings"), N_("WiiFin Menu")
 };
-/* Now Playing, first, while the music goes on while browsing */
-static int pmFirst() { return BackgroundMusic::playing() ? 0 : 1; }
+/* Now Playing, first, while a music session plays */
+static int pmFirst() { return MusicSession::active() ? 0 : 1; }
 static int pmCount() { return 5 - pmFirst(); }
 static const int PM_W = 300, PM_BH = 42, PM_STEP = 54;
 static int pmTop() { return 240 - (pmCount() * PM_STEP + 50) / 2 + 50; }

@@ -17,11 +17,10 @@ struct MusicTrack {
 /* -----------------------------------------------------------------------
  * MusicPlayerView — the "Now Playing" screen and the music session.
  *
- * MPlayer plays one track at a time with -vo null, so GRRLIB stays WiiFin's.
- * While a track plays, WiiPlayer's background thread calls this view ~60
- * times a second: tick() reads the buttons, render() draws the screen.
- * Between tracks that thread is joined and the main thread fetches the
- * next stream, details and cover while the screen stays up.
+ * The session (core/MusicSession.h) plays a queue on a thread of its own,
+ * MPlayer with -vo null track after track, so GRRLIB stays WiiFin's and
+ * the music goes on whatever screen is up.  Its page reads the buttons and
+ * draws on the main thread; leaving it (B) leaves the music playing.
  *
  * The screen: cover (or a coloured placeholder) pulsing with the bass,
  * title / artist / album, a spectrum of
@@ -34,7 +33,8 @@ struct MusicTrack {
  * Usage (App.cpp):
  *   MusicPlayerView mpv(font, client, auth, serverUrl);
  *   mpv.setTracks(tracks, startIdx);
- *   mpv.run();   // blocks until the user leaves
+ *   mpv.run();             // the page, until B: the music goes on
+ *   MusicSession::open();  // the page again (Now Playing)
  * ----------------------------------------------------------------------- */
 class MusicPlayerView {
 public:
@@ -47,11 +47,9 @@ public:
     void setCursorTex(GRRLIB_texImg* tex);
     /* start shuffled, on a random track (2 on an album, a playlist...) */
     void setShuffleStart(bool on) { shuffleStart = on; }
-    /* the queue the music while browsing left: its order, the place in it
-     * and how far into that song */
-    void setQueue(const std::vector<int>& order, int pos, float secs, int repeat);
-
-    /* Runs the session; returns true if the user chose "Wii Menu". */
+    /* Starts the music session (one playing gives way) and shows its page
+     * until B; the music goes on after it (MusicSession).  True if the user
+     * chose Wii Menu or Reset in the HOME menu. */
     bool run();
 
 private:
@@ -62,8 +60,5 @@ private:
     std::vector<MusicTrack> tracks;
     int              startIdx = 0;
     bool             shuffleStart = false;
-    std::vector<int> queueOrder;     /* setQueue: empty, the tracks in order */
-    int              queuePos = 0, queueRepeat = 0;
-    float            queueSecs = 0.0f;
     GRRLIB_texImg*   cursorTex = nullptr;
 };

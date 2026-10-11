@@ -7,7 +7,7 @@
 #include "Utils.h"
 #include "Input.h"
 #include "MusicBGM.h"
-#include "BackgroundMusic.h"
+#include "MusicSession.h"
 #include "SoundFX.h"
 #include "../ui/ConnectView.h"
 #include "../ui/MusicPlayerView.h"
@@ -547,21 +547,9 @@ void App::loop() {
                 tokenRefused = true;
                 break;
             } else if (lv.exitTo == LibraryView::Exit::NowPlaying) {
-                /* the music that went on while browsing, in its player again */
+                /* the music playing while browsing: its page again */
                 lv.exitTo = LibraryView::Exit::Profiles;
-                std::vector<MusicTrack> tracks;
-                std::vector<int> order;
-                int pos = 0, repeat = 0;
-                float secs = 0.0f;
-                BackgroundMusic::state(tracks, order, pos, secs, repeat);
-                if (tracks.empty()) continue;
-                SYS_Report("[WiiFin] now playing: song %d of %d at %.0f s\n", pos + 1, (int)order.size(),
-                           (double)secs);
-                MusicPlayerView mpv(font, jellyfinClient, auth, p.serverUrl);
-                mpv.setCursorTex(cursorPointerTex);
-                mpv.setTracks(tracks, 0);
-                mpv.setQueue(order, pos, secs, repeat);
-                bool wantsExit = mpv.run();
+                bool wantsExit = MusicSession::open();
                 if (g_app_powerOff || g_app_reset) { running = false; return; }
                 SoundFX::play(SoundFX::FX::Back);
                 if (wantsExit) { running = false; return; }
@@ -574,7 +562,7 @@ void App::loop() {
                 lv.onSettingsClosed();
             } else {
                 /* the profile closes: its music with it, the menu music back */
-                BackgroundMusic::stop(true);
+                MusicSession::stop(true);
                 if (lv.exitTo == LibraryView::Exit::WiiFinMenu) {
                     toMainMenu = true;
                     SYS_Report("[WiiFin] back to the menu\n");
@@ -784,7 +772,7 @@ void App::loop() {
     // --- Cleanup ---
     saveSettings();
     Log::close();        // its writer thread must not touch the card past here
-    BackgroundMusic::stop(false);
+    MusicSession::stop(false);
     MusicBGM::pause();   // stop audio thread/ASND callbacks before tearing down GX
     // Blank the VI output before GX teardown to avoid purple/pink artefact frame
     VIDEO_SetBlack(true);

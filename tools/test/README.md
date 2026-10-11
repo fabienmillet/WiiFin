@@ -108,7 +108,7 @@ commands, and what the log must or must not show):
 | `video-playlist` | A playlist of three episodes (made for the run, `playlist`): its list shows them, A on the second plays from it with the others next, 2 plays them shuffled |
 | `lyrics` | Test Album's MP3 and its timed `.lrc`: the lyrics come with the track, the player's last visualizer (Left from the bars) shows them |
 | `photos` | The Photos library (`make_media.sh photos`): A on a photo shows it with its folder's others, Right the next one, A a slideshow |
-| `music-browsing` | B while a song plays: back in the album, the song going on (MP3Player, the footer says which); the profile menu's Now Playing opens the player again on the same queue, B hands it back |
+| `music-browsing` | B while a song plays: back in the album, the song going on (the session's MPlayer, the footer says which); the profile menu's Now Playing opens the page over the same session, the song never stopped |
 | `home-players` | HOME in the music player and in a film opens the HOME menu over them, paused; HOME again closes it and playback goes on |
 | `token-refused` | A profile whose token the server refuses (`cfg profile.0.access_token=...`): opening it shows the sign-in screen with its server and name, not an error |
 | `watched` | Watched / not watched with +: on Counter Film's page (on, then off), then on the first row of Shuffle Show's episode list; its page shows it watched, the zoom button (a GameCube's Z, here a Classic's ZL) unmarks it, and the list follows |

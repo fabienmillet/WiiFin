@@ -148,9 +148,10 @@ extern void (*g_stream_opened_cb)(void);
 /* -----------------------------------------------------------------------
  * Music (audio-only) playback path — blocking.
  *
- * wii_player_play_audio() runs MPlayer with -vo null on the calling thread.
- * A background thread polls the Wiimote, calls the music tick callback and
- * the GRRLIB render callback at ~60 Hz (used by MusicPlayerView).
+ * wii_player_play_audio() runs MPlayer with -vo null on the calling thread
+ * (the music session's).  A background thread calls the music tick callback
+ * at ~60 Hz meanwhile, with no buttons: the screen and the controllers are
+ * the main thread's.
  * ----------------------------------------------------------------------- */
 
 /* Play audio-only URL; returns a PLAYER_STOP_* code. */
@@ -159,13 +160,7 @@ int wii_player_play_audio(const char* url);
 /* Ask the running audio session to stop. */
 void wii_player_stop(void);
 
-/* Register a tick callback for the music overlay (nullptr to clear). */
-void wii_player_set_music_tick(
-    void (*cb)(int paused, uint32_t btnsDown, uint32_t btnsHeld));
-
-/* Register a GRRLIB render callback for audio-only playback.
- * Called ~60 Hz from the background thread; it must call GRRLIB_Render()
- * itself.  Pass nullptr to clear. */
-void wii_player_set_audio_render_cb(void (*cb)());
+/* Register the music session's tick (nullptr to clear): paused or not. */
+void wii_player_set_music_tick(void (*cb)(int paused));
 
 #endif

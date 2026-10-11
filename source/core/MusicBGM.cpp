@@ -1,6 +1,6 @@
 #include "MusicBGM.h"
 #include "SoundFX.h"
-#include "BackgroundMusic.h"
+#include "MusicSession.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
@@ -158,7 +158,7 @@ void MusicBGM::pause() {
 }
 
 void MusicBGM::resume() {
-    if (BackgroundMusic::playing()) return;   /* a song plays instead, through MP3Player too */
+    if (MusicSession::active()) return;   /* the audio is MPlayer's: ASND stays off */
     SYS_Report("[DBG] MusicBGM::resume ENTER asnd=%d running=%d thread=%p self=%p\n",
                (int)s_asndRunning, (int)s_running, (void*)s_thread,
                (void*)(uintptr_t)LWP_GetSelf());
@@ -196,7 +196,7 @@ void MusicBGM::reinitAudio() {
  * MPlayer, and the interface sounds went silent with it until the next
  * video.  ASND is left as it is: on in the menus, off during a video. */
 void MusicBGM::stopMusic() {
-    if (BackgroundMusic::playing()) return;   /* not its song */
+    if (MusicSession::active()) return;   /* nothing of its own plays */
     s_running = false;
     if (s_thread != LWP_THREAD_NULL) {
         LWP_JoinThread(s_thread, nullptr);

@@ -1,16 +1,20 @@
 /*
- * MusicPlayerView.cpp — the music session and its "Now Playing" screen
- * (see MusicPlayerView.h).
+ * MusicPlayerView.cpp — the music session and its "Now Playing" page
+ * (see MusicPlayerView.h, core/MusicSession.h).
  *
  * Threads:
- *   main        run(): per track, fetches the stream URL, the details and
- *               the cover, then blocks in wii_player_play_audio()
- *   background  WiiPlayer's thread while a track plays: tick() (buttons)
- *               and render() (~60 Hz, GRRLIB_Render waits for the vsync)
+ *   session     sessionMain(): per track, the details, the cover and the
+ *               stream from the server, then MPlayer in
+ *               wii_player_play_audio(); from the first track to the last,
+ *               whatever screen is up
+ *   monitor     WiiPlayer's thread while a track plays: tick(), ~60 Hz,
+ *               no buttons (reports, the end of a track, the remote control)
+ *   main        the page (showPage): the buttons and the drawing; or the
+ *               library while the music plays on
  *   jobs        reports to Jellyfin, favourite changes and the autoplay
- *               fetch, so the screen never waits on the network
- * The queue and the screen state belong to the background thread while a
- * track plays and to the main thread between tracks.
+ *               fetch, so nothing waits on the network
+ * The session state is shared: S->lock is held to change or draw it, never
+ * over a request to the server.
  *
  * Controls (any controller, as Wii Remote buttons):
  *   A          the focused / pointed control (play/pause on the seek bar)
@@ -27,7 +31,7 @@
 #include "../jellyfin/RemoteControl.h"
 #include "../core/ExitZone.h"
 #include "../core/MusicBGM.h"
-#include "../core/BackgroundMusic.h"
+#include "../core/MusicSession.h"
 #include "../core/AppInternal.h"
 #include "../core/Lang.h"
 #include "../input/Input.h"
@@ -43,7 +47,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <ogcsys.h>
+#include <malloc.h>
 #include <ogc/lwp.h>
+#include <ogc/mutex.h>
 #include <ogc/lwp_watchdog.h>
 #include <ogc/video.h>
 #include <wiiuse/wpad.h>
@@ -86,7 +92,9 @@ int s_viz = V_BARS;   /* kept for the rest of the session */
 struct Bubble { float x, y, r, v, ph; };   /* x, y 0..1 in the box; r 0: none */
 
 struct Session {
-    JellyfinClient* client = nullptr;
+    mutex_t         lock = LWP_MUTEX_NULL;
+    JellyfinClient* client = nullptr;  /* the session's own copy: the main
+                                        * thread's is the library's */
     std::string     serverUrl;
     JellyfinAuth    auth;
     GRRLIB_texImg*  cursor = nullptr;
@@ -104,12 +112,16 @@ struct Session {
     bool           favorite = false;
     std::vector<LyricLine> lyrics;
     bool           lyricsTimed = false;
-    float          pendingSeek = 0.0f;   /* a file resumed: seek there once it plays */
-    /* HOME: the song paused, then the HOME menu over the player */
-    int            homeStep = 0;         /* 1: the pause asked, the menu next */
-    bool           homeWasPaused = false;
-    u64            homeAt = 0;
-    bool           wantsExit = false;    /* Wii Menu or Reset chosen there */
+    /* the cover's JPEG, made a texture by the main thread (it draws it) */
+    std::string    pendingArt;
+    bool           artReady = false;
+    /* the session and its page */
+    bool           over      = false;    /* the session thread is done */
+    bool           stopNow   = false;    /* MusicSession::stop() asked */
+    bool           menuMusic = false;    /* the menu music was on before */
+    bool           pageOpen  = false;
+    bool           leavePage = false;    /* B */
+    bool           homeWanted = false;   /* HOME: the HOME menu, the song paused */
     GRRLIB_texImg* art      = nullptr;
     u32            artA = 0, artB = 0;          /* placeholder gradient */
 
@@ -155,6 +167,13 @@ struct Session {
     u64   lastFrame  = 0;
 };
 Session* S = nullptr;
+
+/* S->lock for a scope: to change or draw the session (never over a request
+ * to the server) */
+struct Guard {
+    Guard()  { LWP_MutexLock(S->lock); }
+    ~Guard() { LWP_MutexUnlock(S->lock); }
+};
 
 /* ---- Jobs thread: Jellyfin requests ---------------------------------------
  * One per track, joined before the next: it reads the track's ids. */
@@ -961,14 +980,16 @@ void activate(int c)
     }
 }
 
-void tick(int paused, u32 down, u32 held)
+/* The monitor thread (WiiPlayer's), ~60 times a second while a track
+ * plays: no buttons */
+void tick(int paused)
 {
-    (void)held;
     if (!S) return;
+    Guard g;
     Session& s = *S;
     u64 now = nowMs();
 
-    if (g_app_powerOff || g_app_reset) requestTrack(Req::Leave);
+    if (g_app_powerOff || g_app_reset || s.stopNow) requestTrack(Req::Leave);
 
     /* reports, on the jobs thread */
     if (s_streamOpened) { s_streamOpened = false; s.renderOn = true; s_jobStart = true; }
@@ -980,7 +1001,6 @@ void tick(int paused, u32 down, u32 held)
     }
 
     /* time spent paused does not count */
-    if (s.pendingSeek > 0.0f && g_mplayer_duration > 0.0f) { seekTo(s.pendingSeek); s.pendingSeek = 0.0f; }
     if (paused && !s.wasPaused) { s.pausedAt = gettime(); s.wasPaused = true; }
     else if (!paused && s.wasPaused) {
         s.pausedSecs += ticks_to_millisecs(gettime() - s.pausedAt) / 1000.0f;
@@ -1003,9 +1023,8 @@ void tick(int paused, u32 down, u32 held)
     if (s_queueReady) appendQueued();
 
     /* the server's remote control: as the buttons; something else to play
-     * ("Play on..."): leave, the library starts it; tracks for the queue:
-     * fetched by the jobs thread */
-    if (Remote::hasPlay()) requestTrack(Req::Leave);
+     * ("Play on...") is the library's (it ends this session); tracks for
+     * the queue: fetched by the jobs thread */
     if (!s_jobQueue && !s_queueReady && Remote::takeQueue(s_queueReq)) s_jobQueue = true;
     for (Remote::Command rc; Remote::poll(rc); ) {
         switch (rc.cmd) {
@@ -1032,26 +1051,14 @@ void tick(int paused, u32 down, u32 held)
         s.lastInput = now;   /* the screen wakes up, as for a press */
     }
 
-    /* HOME: the song paused (MPlayer pauses on its loop's next turn), then
-     * the HOME menu; closed, the song goes on as it was */
-    if ((down & WPAD_BUTTON_HOME) && !s.homeStep && s.req == Req::None) {
-        s.homeWasPaused = paused != 0;
-        if (!paused) wii_player_pause_toggle();
-        s.homeStep = 1;
-        s.homeAt = now;
-        return;
-    }
-    if (s.homeStep && (paused || s.homeWasPaused || now - s.homeAt > 1500)) {
-        s.homeStep = 0;
-        if (doShowHomeOverlay(Ui::font(), nullptr, s.cursor, false)) {
-            s.wantsExit = true;
-            requestTrack(Req::Leave);
-        } else if (!s.homeWasPaused && g_mplayer_paused) {
-            wii_player_pause_toggle();
-        }
-        s.lastInput = nowMs();
-        return;
-    }
+}
+
+/* The page's buttons (main thread, S->lock held) */
+void buttons(u32 down)
+{
+    Session& s = *S;
+    u64 now = nowMs();
+    if (down & WPAD_BUTTON_HOME) { s.homeWanted = true; s.lastInput = now; return; }
 
     if (!down) return;
     s.lastInput = now;
@@ -1107,18 +1114,23 @@ void tick(int paused, u32 down, u32 held)
     if (down & WPAD_BUTTON_MINUS) requestTrack(Req::Prev);
     if (down & WPAD_BUTTON_1)     activate(C_QUEUE);
     if (down & WPAD_BUTTON_2)     activate(C_SHUFFLE);
-    if (down & WPAD_BUTTON_B) requestTrack(Req::Leave);
+    if (down & WPAD_BUTTON_B) s.leavePage = true;   /* the music goes on (paused: it stops) */
 }
 
-/* ---- Background thread: one frame --------------------------------------- */
 
-void render()
+/* ---- Main thread: one frame of the page (S->lock held) ------------------- */
+
+void frame()
 {
-    if (!S) return;
     Session& s = *S;
-    /* nothing on GX until MPlayer is past its start-up: the still frame
-     * drawn by the main thread stays on screen meanwhile */
-    if (!s.renderOn) { VIDEO_WaitVSync(); return; }
+    /* the cover the session thread fetched, a texture now (drawn here) */
+    if (s.artReady) {
+        if (s.art) { GRRLIB_FreeTexture(s.art); s.art = nullptr; }
+        if (!s.pendingArt.empty())
+            s.art = loadJPEGTexture((const u8*)s.pendingArt.data(), (u32)s.pendingArt.size());
+        s.pendingArt.clear();
+        s.artReady = false;
+    }
 
     u64 now = nowMs();
     float dt = s.lastFrame ? (now - s.lastFrame) / 1000.0f : 0.016f;
@@ -1215,65 +1227,321 @@ void render()
         scrollPanel(arrow);
     }
 
-    drawScreen(true, false);
+    drawScreen(s.renderOn, !s.renderOn);   /* "Loading..." until MPlayer plays */
     if (ir.valid && s.cursor) {
         orient_t o;
         WPAD_Orientation(WPAD_CHAN_0, &o);
         GRRLIB_DrawImg((int)ir.x - 8, (int)ir.y - 4, s.cursor, o.roll, 1, 1, 0xFFFFFFFF);
     }
-    GRRLIB_Render();
 }
 
-/* ---- Main thread: between tracks ----------------------------------------- */
+/* ---- Session thread ------------------------------------------------------- */
 
-void stillFrames(bool loading)
-{
-    for (int i = 0; i < 2; ++i) {   /* both framebuffers */
-        drawScreen(false, loading);
-        GRRLIB_Render();
-    }
-}
-
-/* Details and cover of the track at order position pos. */
+/* Details and cover of the track at order position pos: asked of the
+ * server without the lock, given to the page with it (the cover made a
+ * texture by the main thread) */
 void loadTrack()
 {
     Session& s = *S;
-    s.cur = s.tracks[s.order[s.pos]];
-    s.info = AudioTrackInfo();
-    s.favorite = false;
-    splitName(s.cur, "", s.title, s.artist);
-    s.detail.clear();
-    s.titleSince = nowMs();
-    s.seekBase = 0;
-    if (s.art) { GRRLIB_FreeTexture(s.art); s.art = nullptr; }
-    u32 h = hashOf(s.title);
-    float hue = (float)(h % 360);
-    s.artA = hsv(hue, 0.55f, 0.62f);
-    s.artB = hsv(hue + 40, 0.70f, 0.32f);
-    stillFrames(true);
+    std::string id;
+    {
+        Guard g;
+        s.cur = s.tracks[s.order[s.pos]];
+        id = s.cur.id;
+        s.info = AudioTrackInfo();
+        s.favorite = false;
+        splitName(s.cur, "", s.title, s.artist);
+        s.detail.clear();
+        s.titleSince = nowMs();
+        s.seekBase = 0;
+        u32 h = hashOf(s.title);
+        float hue = (float)(h % 360);
+        s.artA = hsv(hue, 0.55f, 0.62f);
+        s.artB = hsv(hue + 40, 0.70f, 0.32f);
+        s.lyrics.clear();
+        s.lyricsTimed = false;
+        s.pendingArt.clear();
+        s.artReady = true;   /* the last cover goes: the placeholder meanwhile */
+    }
+    AudioTrackInfo info;
+    std::vector<LyricLine> lyrics;
+    std::string bytes;
+    const bool infoOk = s.client->getAudioTrackInfo(s.serverUrl, s.auth, id, info);
+    if (infoOk && info.hasLyrics) s.client->getLyrics(s.serverUrl, s.auth, id, lyrics);
+    const std::string img = info.hasImage ? id : (info.albumHasImage ? info.albumId : "");
+    if (!img.empty()) s.client->getItemImageBytes(s.serverUrl, s.auth, img, 320, 320, bytes);
 
-    if (s.client->getAudioTrackInfo(s.serverUrl, s.auth, s.cur.id, s.info)) {
+    Guard g;
+    s.info = info;
+    if (infoOk) {
         splitName(s.cur, s.info.artists, s.title, s.artist);
         s.favorite = s.info.isFavorite;
         std::string album = LibDraw::filterDejaVu(!s.info.album.empty() ? s.info.album : s.cur.album, 80);
         s.detail = album;
         if (s.info.year > 0) s.detail += (album.empty() ? "" : "  \xc2\xb7  ") + std::to_string(s.info.year);
     }
-    s.lyrics.clear();
-    s.lyricsTimed = false;
-    if (s.info.hasLyrics && s.client->getLyrics(s.serverUrl, s.auth, s.cur.id, s.lyrics)) {
+    if (!lyrics.empty()) {
+        s.lyrics = lyrics;
         for (const LyricLine& l : s.lyrics) if (l.startTicks >= 0) s.lyricsTimed = true;
         SYS_Report("[Music] lyrics: %d line(s)%s\n", (int)s.lyrics.size(), s.lyricsTimed ? ", timed" : "");
     }
-    std::string id = s.info.hasImage ? s.cur.id : (s.info.albumHasImage ? s.info.albumId : "");
-    std::string bytes;
-    if (!id.empty() && s.client->getItemImageBytes(s.serverUrl, s.auth, id, 320, 320, bytes) && !bytes.empty())
-        s.art = loadJPEGTexture((const u8*)bytes.data(), (u32)bytes.size());
+    s.pendingArt = bytes;
+    s.artReady = true;
+    Ui::setNowPlaying(s.artist.empty() ? s.title : s.title + "  \xe2\x80\x94  " + s.artist);
+}
+
+lwp_t s_sessThread = LWP_THREAD_NULL;
+u8*   s_sessStack  = nullptr;
+const u32 SESSION_STACK = 512 * 1024;   /* MPlayer runs on it, as a video's thread */
+
+/* the queue, from its first track to its last: MPlayer per track */
+void* sessionMain(void*)
+{
+    Session& s = *S;
+    JellyfinClient& client = *s.client;
+    int failures = 0;
+    Remote::setPlayerActive(true);
+
+    for (;;) {
+        { Guard g; if (s.stopNow) break; }
+        loadTrack();
+        std::string url, id;
+        { Guard g; id = s.cur.id; }
+        s_sessionId.clear();
+        if (!client.getAudioStreamUrl(s.serverUrl, s.auth, id, 0, url, s_sessionId,
+                                      &s_playMethod, &s_audioIndex)) {
+            SYS_Report("[Music] no stream for this track: %s\n", client.lastError().c_str());
+            Guard g;
+            if (++failures >= 3 || s.pos + 1 >= (int)s.order.size() || s.stopNow) break;
+            s.pos++;
+            continue;
+        }
+
+        {   /* this track's state */
+            Guard g;
+            if (s.stopNow) break;
+            s.req = Req::None;
+            s.jumpTo = -1;
+            s.renderOn = false;
+            s.timing = false;
+            s.wasPaused = false;
+            s.pausedSecs = 0;
+            s.lastFrame = 0;
+            s.autoplayAsked = false;
+            for (int i = 0; i < BARS; ++i) s.viz[i] = s.peak[i] = 0;
+            AudioSpectrum::reset();
+        }
+
+        s_streamOpened = false; s_jobStart = false; s_startDone = false; s_jobProgress = false;
+        s_jobFavorite = 0;
+        s_jobAutoplay = false;
+        s_lastProgress = nowMs();
+        s_jobsStop = false;
+        LWP_CreateThread(&s_jobsThread, jobsMain, nullptr, s_jobsStack, sizeof(s_jobsStack), 30);
+
+        g_stream_opened_cb = onStreamOpened;
+        wii_player_set_music_tick(tick);
+        g_wiifin_known_duration = duration();
+        u64 t0 = nowMs();
+        wii_player_play_audio(url.c_str());
+        wii_player_set_music_tick(nullptr);
+        g_wiifin_known_duration = 0.0f;
+        g_stream_opened_cb = nullptr;
+
+        s_jobsStop = true;
+        LWP_JoinThread(s_jobsThread, nullptr);
+        s_jobsThread = LWP_THREAD_NULL;
+
+        /* what the jobs thread had left to do */
+        if (!s_startDone) client.reportPlaybackStart(s.serverUrl, s.auth, id, id, s_sessionId,
+                                                     s_playMethod.c_str(), s_audioIndex);
+        if (s_jobFavorite) client.setFavorite(s.serverUrl, s.auth, id, s_jobFavorite == 1);
+        client.reportPlaybackStopped(s.serverUrl, s.auth, id, id, s_sessionId,
+                                     (long long)(position() * 10000000.0f));
+        if (!s_sessionId.empty()) client.deleteActiveEncoding(s.serverUrl, s.auth, s_sessionId);
+
+        Req r;
+        bool needMore = false;
+        {
+            Guard g;
+            if (s_autoplayReady) appendAutoplay();
+            if (s_queueReady) appendQueued();
+            /* a track that fails at once, again and again: give up */
+            failures = nowMs() - t0 < 2000 && s.req == Req::None ? failures + 1 : 0;
+            r = s.req;
+            needMore = r != Req::Leave && r != Req::Jump && r != Req::Prev && !(r != Req::Next && s.repeat == 2) &&
+                       s.pos + 1 >= (int)s.order.size() && s.repeat != 1;
+        }
+        if (failures >= 3 || g_app_powerOff || g_app_reset || r == Req::Leave) break;
+        /* the queue ran out: similar tracks follow */
+        if (needMore && s_autoplay.empty())
+            client.getAutoplayTracks(s.serverUrl, s.auth, id, s.info.parentId, AUTOPLAY, s_autoplay);
+
+        Guard g;
+        int n = (int)s.order.size(), next;
+        if (r == Req::Jump) {
+            next = s.jumpTo;
+        } else if (r == Req::Prev) {
+            /* a few seconds in, "previous" starts the track again */
+            next = position() > 3.0f ? s.pos : (s.pos > 0 ? s.pos - 1 : (s.repeat == 1 ? n - 1 : 0));
+        } else if (r != Req::Next && s.repeat == 2) {
+            next = s.pos;                       /* repeat this track */
+        } else if (s.pos + 1 < n) {
+            next = s.pos + 1;
+        } else if (s.repeat == 1) {
+            next = 0;
+        } else {
+            appendAutoplay();
+            if (s.pos + 1 >= (int)s.order.size()) break;
+            next = s.pos + 1;
+        }
+        s.pos = next;
+        if (s.panelSel < s.pos) s.panelSel = s.pos;
+    }
+
+    Remote::setPlayerActive(false);
+    Ui::setNowPlaying("");
+    Guard g;
+    s.over = true;
+    return nullptr;
+}
+
+/* ---- Main thread: the page ---------------------------------------------- */
+
+/* HOME on the page: the song paused for real, then the HOME menu; closed,
+ * the song goes on as it was.  True: Wii Menu or Reset chosen. */
+bool homeMenu()
+{
+    const bool wasPaused = g_mplayer_paused != 0;
+    if (!wasPaused) wii_player_pause_toggle();
+    for (int i = 0; i < 60 && !g_mplayer_paused; ++i) {
+        { Guard g; frame(); }
+        GRRLIB_Render();
+    }
+    const bool leave = doShowHomeOverlay(Ui::font(), nullptr, S->cursor, false);
+    if (!leave && !wasPaused && g_mplayer_paused) wii_player_pause_toggle();
+    Guard g;
+    S->lastInput = nowMs();
+    return leave;
+}
+
+void endSession()
+{
+    if (s_sessThread != LWP_THREAD_NULL) {
+        LWP_JoinThread(s_sessThread, nullptr);
+        s_sessThread = LWP_THREAD_NULL;
+    }
+    if (S->art) GRRLIB_FreeTexture(S->art);
+    delete S->client;
+    LWP_MutexDestroy(S->lock);
+    delete S;
+    S = nullptr;
+}
+
+/* The page, until B (the music goes on; paused, it stops), the end of the
+ * session, or something else to play from the server.  True: Wii Menu or
+ * Reset chosen in its HOME menu. */
+bool showPage()
+{
+    Session& s = *S;
+    {
+        Guard g;
+        s.pageOpen = true;
+        s.leavePage = false;
+        s.homeWanted = false;
+        s.panel = false;
+        s.lastInput = nowMs();
+    }
+    SYS_Report("[Music] Now Playing\n");
+    bool exitWii = false;
+    for (;;) {
+        Input::update();
+        const u32 down = Input::rawDown();
+        if (g_app_powerOff || g_app_reset || Remote::hasPlay()) break;
+        bool over;
+        {
+            Guard g;
+            over = s.over;
+            if (!over) { buttons(down); frame(); }
+        }
+        if (over) break;
+        GRRLIB_Render();
+        bool home, leave;
+        {
+            Guard g;
+            home = s.homeWanted;
+            s.homeWanted = false;
+            leave = s.leavePage;
+        }
+        if (home && homeMenu()) { exitWii = true; break; }
+        if (leave) break;
+    }
+    bool over;
+    {
+        Guard g;
+        s.pageOpen = false;
+        over = s.over;
+    }
+    if (exitWii) {
+        MusicSession::stop(false);
+    } else if (over) {
+        MusicSession::pump();
+    } else if (g_mplayer_paused) {
+        SYS_Report("[Music] left paused: the music stops\n");
+        MusicSession::stop(true);
+    } else {
+        SYS_Report("[Music] the music goes on\n");
+    }
+    return exitWii;
 }
 
 } // namespace
 
 /* ======================================================================== */
+
+namespace MusicSession {
+
+bool active() { return S && !S->over; }
+
+bool open()
+{
+    if (!active()) return false;
+    return showPage();
+}
+
+bool stop(bool restoreAudio)
+{
+    if (!S) return false;
+    {
+        Guard g;
+        S->stopNow = true;
+        requestTrack(Req::Leave);
+    }
+    const bool menu = S->menuMusic;
+    endSession();
+    SYS_Report("[Music] session stopped\n");
+    if (restoreAudio) {
+        if (menu) MusicBGM::resume();
+        else      MusicBGM::reinitAudio();
+    }
+    return menu;
+}
+
+void pump()
+{
+    if (!S || S->pageOpen) return;
+    {
+        Guard g;
+        if (!S->over) return;
+    }
+    const bool menu = S->menuMusic;
+    endSession();
+    SYS_Report("[Music] session over\n");
+    if (menu) MusicBGM::resume();   /* the menu's audio back */
+    else      MusicBGM::reinitAudio();
+}
+
+} // namespace MusicSession
 
 MusicPlayerView::MusicPlayerView(GRRLIB_ttfFont* f, JellyfinClient& c,
                                  const JellyfinAuth& a, const std::string& srv)
@@ -1291,27 +1559,27 @@ void MusicPlayerView::setTracks(const std::vector<MusicTrack>& t, int idx)
     startIdx = (idx >= 0 && idx < (int)t.size()) ? idx : 0;
 }
 
-void MusicPlayerView::setQueue(const std::vector<int>& order, int pos, float secs, int repeat)
-{
-    queueOrder  = order;
-    queuePos    = pos;
-    queueSecs   = secs;
-    queueRepeat = repeat;
-}
-
 bool MusicPlayerView::run()
 {
     if (tracks.empty()) return false;
     (void)font;
+    /* a session playing gives way; the menu music's place kept either way */
+    const bool menuMusic = MusicSession::stop(false) || MusicBGM::isRunning();
+    MusicBGM::pause();   /* ASND off: the audio is MPlayer's */
+
     S = new Session();
+    LWP_MutexInit(&S->lock, false);
     s_jobQueue = false;
     s_queueReady = false;
     s_queued.clear();
+    s_autoplay.clear();
+    s_autoplayReady = false;
     Session& s = *S;
-    s.client = &client;
+    s.client = new JellyfinClient(client);
     s.serverUrl = serverUrl;
     s.auth = auth;
     s.cursor = cursorTex;
+    s.menuMusic = menuMusic;
     s.tracks = tracks;
     for (int i = 0; i < (int)tracks.size(); ++i) s.order.push_back(i);
     s.pos = startIdx;
@@ -1321,150 +1589,17 @@ bool MusicPlayerView::run()
         s.pos = rand() % (int)s.tracks.size();
         setShuffle(true);
     }
-    float resumeAt = 0.0f;
-    if (!queueOrder.empty()) {   /* back from the music while browsing */
-        s.order  = queueOrder;
-        s.pos    = queuePos < (int)queueOrder.size() ? queuePos : 0;
-        s.repeat = queueRepeat;
-        for (int i = 0; i < (int)s.order.size(); ++i) if (s.order[i] != i) s.shuffle = true;
-        s.panelSel = s.pos;
-        resumeAt = queueSecs;
+    s.panelSel = s.pos;
+
+    if (!s_sessStack) s_sessStack = (u8*)memalign(32, SESSION_STACK);
+    if (!s_sessStack || LWP_CreateThread(&s_sessThread, sessionMain, nullptr, s_sessStack,
+                                         SESSION_STACK, 60) < 0) {
+        s_sessThread = LWP_THREAD_NULL;
+        endSession();
+        if (menuMusic) MusicBGM::resume();
+        else           MusicBGM::reinitAudio();
+        return false;
     }
-
-    /* the music while browsing stops here, the menu music's place kept */
-    const bool musicWasRunning = BackgroundMusic::stop(false) || MusicBGM::isRunning();
-    MusicBGM::pause();
-    bool keepPlaying = false;
-    int failures = 0;
-    Remote::setPlayerActive(true);
-    struct RemoteIdle { ~RemoteIdle() { Remote::setPlayerActive(false); } } remoteIdle;
-
-    for (;;) {
-        loadTrack();
-        std::string url;
-        s_sessionId.clear();
-        const long long fromTicks = (long long)(resumeAt * 10000000.0f);
-        if (!client.getAudioStreamUrl(serverUrl, auth, s.cur.id, fromTicks, url, s_sessionId,
-                                      &s_playMethod, &s_audioIndex)) {
-            SYS_Report("[Music] no stream for this track: %s\n", client.lastError().c_str());
-            if (++failures >= 3 || s.pos + 1 >= (int)s.order.size()) break;
-            s.pos++;
-            continue;
-        }
-        /* resumed: a transcode starts there, a file is sought once it plays */
-        if (resumeAt > 0.0f && s_playMethod == "DirectPlay") s.pendingSeek = resumeAt;
-        else                                                 s.seekBase = resumeAt;
-        resumeAt = 0.0f;
-        stillFrames(true);
-
-        /* this track's state */
-        s.req = Req::None;
-        s.jumpTo = -1;
-        s.renderOn = false;
-        s.timing = false;
-        s.wasPaused = false;
-        s.pausedSecs = 0;
-        s.lastFrame = 0;
-        s.autoplayAsked = false;
-        for (int i = 0; i < BARS; ++i) s.viz[i] = s.peak[i] = 0;
-        AudioSpectrum::reset();
-
-        s_streamOpened = false; s_jobStart = false; s_startDone = false; s_jobProgress = false;
-        s_jobFavorite = 0;
-        s_jobAutoplay = false;
-        s_lastProgress = nowMs();
-        s_jobsStop = false;
-        LWP_CreateThread(&s_jobsThread, jobsMain, nullptr, s_jobsStack, sizeof(s_jobsStack), 30);
-
-        g_stream_opened_cb = onStreamOpened;
-        wii_player_set_music_tick(tick);
-        wii_player_set_audio_render_cb(render);
-        g_wiifin_known_duration = duration();
-        u64 t0 = nowMs();
-        wii_player_play_audio(url.c_str());
-        g_wiifin_known_duration = 0.0f;
-        g_stream_opened_cb = nullptr;
-
-        s_jobsStop = true;
-        LWP_JoinThread(s_jobsThread, nullptr);
-        s_jobsThread = LWP_THREAD_NULL;
-
-        /* what the jobs thread had left to do */
-        if (!s_startDone) client.reportPlaybackStart(serverUrl, auth, s.cur.id, s.cur.id, s_sessionId,
-                                                     s_playMethod.c_str(), s_audioIndex);
-        if (s_jobFavorite) client.setFavorite(serverUrl, auth, s.cur.id, s_jobFavorite == 1);
-        client.reportPlaybackStopped(serverUrl, auth, s.cur.id, s.cur.id, s_sessionId,
-                                     (long long)(position() * 10000000.0f));
-        if (!s_sessionId.empty()) client.deleteActiveEncoding(serverUrl, auth, s_sessionId);
-        if (s_autoplayReady) appendAutoplay();
-        if (s_queueReady) appendQueued();
-
-        /* a track that fails at once, again and again: give up */
-        failures = nowMs() - t0 < 2000 && s.req == Req::None ? failures + 1 : 0;
-        if (failures >= 3 || g_app_powerOff || g_app_reset) break;
-
-        Req r = s.req;
-        if (r == Req::Leave) {
-            /* B while it plays: the music goes on while browsing (not when
-             * paused, nor when the server asked for something else) */
-            keepPlaying = !s.wasPaused && !Remote::hasPlay() && !g_app_powerOff && !g_app_reset;
-            resumeAt = position();
-            break;
-        }
-        int n = (int)s.order.size(), next;
-        if (r == Req::Jump) {
-            next = s.jumpTo;
-        } else if (r == Req::Prev) {
-            /* a few seconds in, "previous" starts the track again */
-            next = position() > 3.0f ? s.pos : (s.pos > 0 ? s.pos - 1 : (s.repeat == 1 ? n - 1 : 0));
-        } else if (r != Req::Next && s.repeat == 2) {
-            next = s.pos;                       /* repeat this track */
-        } else if (s.pos + 1 < n) {
-            next = s.pos + 1;
-        } else if (s.repeat == 1) {
-            next = 0;
-        } else {
-            /* the queue ran out: similar tracks follow */
-            stillFrames(true);
-            if (s_autoplay.empty())
-                client.getAutoplayTracks(serverUrl, auth, s.cur.id, s.info.parentId, AUTOPLAY, s_autoplay);
-            appendAutoplay();
-            if (s.pos + 1 >= (int)s.order.size()) break;
-            next = s.pos + 1;
-        }
-        s.pos = next;
-        if (s.panelSel < s.pos) s.panelSel = s.pos;
-    }
-
-    wii_player_set_music_tick(nullptr);
-    wii_player_set_audio_render_cb(nullptr);
-
-    /* back to the library through the usual spinner */
-    GRRLIB_texImg* ring = GRRLIB_LoadTexture(data_ring_png);
-    for (int i = 0; i < 2; ++i) {
-        Ui::background(false);
-        Ui::spinner(ring, 320, 240);
-        GRRLIB_Render();
-    }
-    GRRLIB_FreeTexture(ring);
-
-    /* the queue, for the music that goes on: the session goes now */
-    const std::vector<MusicTrack> queueTracks = s.tracks;
-    const std::vector<int>        queue       = s.order;
-    const int                     queueAt     = s.pos, repeat = s.repeat;
-    const bool                    leaveWii    = s.wantsExit;
-    if (s.art) GRRLIB_FreeTexture(s.art);
-    delete S;
-    S = nullptr;
-    /* the menu music only when it is on; the sound effects either way */
-    if (keepPlaying) {
-        MusicBGM::reinitAudio();
-        BackgroundMusic::start(client, serverUrl, auth, queueTracks, queue, queueAt, resumeAt, repeat,
-                               musicWasRunning);
-    } else if (musicWasRunning) {
-        MusicBGM::resume();
-    } else {
-        MusicBGM::reinitAudio();
-    }
-    return leaveWii;
+    SYS_Report("[Music] session: %d track(s), from track %d\n", (int)s.order.size(), s.pos + 1);
+    return showPage();
 }

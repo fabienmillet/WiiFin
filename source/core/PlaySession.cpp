@@ -2,7 +2,7 @@
 #include "AppInternal.h"
 #include "Input.h"
 #include "MusicBGM.h"
-#include "BackgroundMusic.h"
+#include "MusicSession.h"
 #include "SoundFX.h"
 #include "Log.h"
 #include "Lang.h"
@@ -173,8 +173,8 @@ bool runPlaySession(JellyfinClient& client,
     bool allowDirect = true;
 
     /* ao_gekko needs the DSP: no menu music while a video plays. */
-    /* the music while browsing stops (the menu music's place kept) */
-    bool musicWasRunning = BackgroundMusic::stop(false) || MusicBGM::isRunning();
+    /* the music session stops (the menu music's place kept) */
+    bool musicWasRunning = MusicSession::stop(false) || MusicBGM::isRunning();
     MusicBGM::pause();
 
     PlayerView view(font, cursorTex, ringTex);

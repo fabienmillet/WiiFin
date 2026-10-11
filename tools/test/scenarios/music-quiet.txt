@@ -1,5 +1,7 @@
-# Leaving the music player with the background music off (music_enabled=0):
-# the menu music stays off, the interface sounds come back (a move).
+# Leaving the music player paused (the music stops then; playing, it goes
+# on and the interface stays silent) with the background music off
+# (music_enabled=0): the menu music stays off, the interface sounds come
+# back (a move).
 server http://127.0.0.1:18096
 cfg log_sounds=1
 cfg music_enabled=0
@@ -15,8 +17,12 @@ cfg music_enabled=0
 26800 LEFT       the heart
 27200 A          favourite
 30000 A          not any more
-33000 B          back to the album
+31000 RIGHT
+31400 RIGHT
+31800 RIGHT      play / pause
+32200 A          paused
+33000 B          back to the album: the music stops
 34500 DOWN       a sound in the album
 36000 END
-expect logorder "[TOUR] t=33" "MusicBGM::reinitAudio" "[Sound] move"
+expect logorder "[TOUR] t=33" "[Music] left paused: the music stops" "MusicBGM::reinitAudio" "[Sound] move"
 expect nolog MusicBGM::resume
