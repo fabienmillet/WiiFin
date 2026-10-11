@@ -256,8 +256,7 @@ void LibraryView::renderSearchResults(ir_t& ir) {
                 snprintf(yb, sizeof(yb), " (%d)", searchResults[idx].year);
                 label += yb;
             }
-            label = fitText(font, label, 16, LIST_W - 90);
-            Ui::text(LIST_X + 74, ry + 12, label.c_str(), 16, Ui::mix(p.text, p.accentDark, f));
+            titleText(0, LIST_X + 74, ry + 12, LIST_W - 90, label, 16, Ui::mix(p.text, p.accentDark, f), sel);
         }
     }
 

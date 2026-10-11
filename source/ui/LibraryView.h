@@ -225,9 +225,6 @@ private:
     std::vector<JellyfinSeason>  seasons;
     int seasonSel = 0;
     int seasonTop = 0;
-    /* the selected episode's title scrolling when it is too long */
-    int marqueeIdx = -1;
-    unsigned long long marqueeSince = 0;
     /* the seasons' posters (Posters and List + Posters views): seasonTex[i]
      * for seasons[i], the first SEASON_TEX_MAX; the series' poster for the
      * others, those without one and the Special Features tile */

@@ -483,9 +483,8 @@ void LibraryView::renderItemList(ir_t& ir) {
             Ui::textCentered(textX + bw * 0.5f, ry + 12, badge, 9, p.textOnAccent);
             textX += bw + 8;
         }
-        std::string name = fitText(font, filterDejaVu(it.name, 80), 16,
-                                   LIST_X + LW - 14 - rightW - textX);
-        Ui::text(textX, ry + 9, name.c_str(), 16, Ui::mix(p.text, p.accentDark, f));
+        titleText(0, textX, ry + 9, LIST_X + LW - 14 - rightW - textX, filterDejaVu(it.name, 200), 16,
+                  Ui::mix(p.text, p.accentDark, f), sel);
         if (it.playbackPositionTicks > 0 && it.runtimeTicks > 0)
             Ui::progress(textX, ry + LIST_ROW_H - 9, 60, 3,
                          (float)it.playbackPositionTicks / it.runtimeTicks);
@@ -564,8 +563,7 @@ void LibraryView::renderPosterGrid(ir_t& ir) {
         headerLine(46);
         if (posterSel >= 0 && posterSel < (int)items.size()) {
             const int HDR_X = 140, HDR_W = 360;
-            std::string t = fitText(font, items[posterSel].name, 16, HDR_W);
-            Ui::textCentered(HDR_X + HDR_W / 2, 16, t.c_str(), 16, p.text);
+            titleText(3, HDR_X, 16, HDR_W, filterDejaVu(items[posterSel].name, 200), 16, p.text, true, true);
         }
     }
     drawCount(itemPage, POSTERS_PER_PAGE, (int)items.size(), itemTotal);
@@ -584,8 +582,8 @@ void LibraryView::renderPosterGrid(ir_t& ir) {
                 drawThumb(posterTextures[i], px, py, POSTER_W, th, sel ? Ui::pulse() : 0.0f, -1.0f,
                           items[i].name.c_str());
                 int visW = (int)(POSTER_W * WiiUtils::wsScaleX() + 0.5f);
-                std::string t = fitText(font, filterDejaVu(items[i].name, 40), 13, visW);
-                Ui::text(px + 1, py + th + 6, t.c_str(), 13, sel ? p.text : p.textDim);
+                titleText(1, px + 1, py + th + 6, visW, filterDejaVu(items[i].name, 200), 13,
+                          sel ? p.text : p.textDim, sel);
                 continue;
             }
             /* centred in its cell at its own shape (square collection art) */

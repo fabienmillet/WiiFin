@@ -177,8 +177,8 @@ void LibraryView::renderSpecials(ir_t& ir)
             }
         }
         int rw = Ui::textWidth(right, 14);
-        std::string shown = fitText(font, filterDejaVu(name, 60), 18, LIST_W - 48 - rw);
-        Ui::text(LIST_X + 16, ry + 11, shown.c_str(), 18, Ui::mix(p.text, p.accentDark, f));
+        titleText(0, LIST_X + 16, ry + 11, LIST_W - 48 - rw, filterDejaVu(name, 200), 18,
+                  Ui::mix(p.text, p.accentDark, f), sel);
         Ui::textRight(LIST_X + LIST_W - 16, ry + 14, right, 14, p.textDim);
     }
     Ui::scrollbar(614, LIST_Y + 2, ITEMS_VISIBLE * ROW_H - 6, specialsTop, ITEMS_VISIBLE, n);

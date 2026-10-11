@@ -39,8 +39,7 @@ void LibraryView::drawSuggestionRow(ir_t& ir, int rowY, const std::vector<Jellyf
             drawThumb(texs[i], cx, rowY, SG_CW, SG_CH, focusOf(sel, hov),
                       showProgress ? progressOf(item) : -1.0f, nm.c_str());
             int visW = (int)(SG_CW * WiiUtils::wsScaleX() + 0.5f);
-            std::string title = fitText(font, filterDejaVu(nm, 30), 12, visW);
-            Ui::text(cx + 1, rowY + SG_CH + 4, title.c_str(), 12, sel ? p.text : p.textDim);
+            titleText(1, cx + 1, rowY + SG_CH + 4, visW, filterDejaVu(nm, 200), 12, sel ? p.text : p.textDim, sel);
         }
     }
     int ay = rowY + SG_CH / 2;
@@ -458,8 +457,8 @@ void LibraryView::renderMusicSuggestions(ir_t& ir) {
                             && ir.y >= cardY && ir.y < cardY + AC_CH;
         drawThumb(musicRecentTex[i], cx, cardY, AC_CW, AC_CH, focusOf(sel, hov), -1.0f,
                   musicRecentItems[i].name.c_str());
-        std::string title = fitText(font, filterDejaVu(musicRecentItems[i].name, 30), 12, visW);
-        Ui::text(cx + 1, cardY + AC_CH + 5, title.c_str(), 12, (sel || hov) ? p.text : p.textDim);
+        titleText(1, cx + 1, cardY + AC_CH + 5, visW, filterDejaVu(musicRecentItems[i].name, 200), 12,
+                  (sel || hov) ? p.text : p.textDim, sel);
     };
 
     if (nr == 0) {

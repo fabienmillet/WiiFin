@@ -106,9 +106,8 @@ void LibraryView::renderMusicTracks(ir_t& ir) {
             dw = Ui::textWidth(dur, 15) + 12;
             Ui::textRight(LIST_X + LIST_W - 14, ry + 13, dur, 15, p.textDim);
         }
-        std::string labelStr = fitText(font, filterDejaVu(at.name, 60), 18,
-                                       LIST_X + LIST_W - 16 - dw - tx);
-        Ui::text(tx, ry + 11, labelStr.c_str(), 18, Ui::mix(p.text, p.accentDark, f));
+        titleText(0, tx, ry + 11, LIST_X + LIST_W - 16 - dw - tx, filterDejaVu(at.name, 200), 18,
+                  Ui::mix(p.text, p.accentDark, f), sel);
     }
     Ui::scrollbar(614, LIST_Y + 2, MUSIC_TRACKS_VISIBLE * ROW_H - 6, musicTrackTop,
                   MUSIC_TRACKS_VISIBLE, n);

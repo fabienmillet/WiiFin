@@ -56,6 +56,29 @@ std::string fitText(GRRLIB_ttfFont* f, std::string s, int size, int maxW) {
     return s + "...";
 }
 
+void titleText(int slot, float x, float y, float w, const std::string& s, int size, u32 color,
+               bool scroll, bool center) {
+    static struct { std::string text; u64 since, last; } mq[4];
+    const float tw = Ui::textWidth(s.c_str(), size);
+    if (tw <= w && center) { Ui::textCentered(x + w * 0.5f, y, s.c_str(), size, color); return; }
+    if (tw <= w || !scroll || slot < 0 || slot >= 4) {
+        Ui::text(x, y, fitText(Ui::font(), s, size, (int)w).c_str(), size, color);
+        return;
+    }
+    const u64 now = ticks_to_millisecs(gettime());
+    /* from the start again on another title, or on this one selected anew
+     * (not scrolling the frame before: it was drawn cut, or not at all) */
+    if (mq[slot].text != s || now - mq[slot].last > 100) { mq[slot].text = s; mq[slot].since = now; }
+    mq[slot].last = now;
+    const float GAP = 48.0f, SPEED = 40.0f;   /* px, px a second */
+    const u64 PAUSE = 1500, el = now - mq[slot].since;
+    const float off = el < PAUSE ? 0.0f : fmodf((el - PAUSE) * SPEED / 1000.0f, tw + GAP);
+    Ui::clip(x, y - size * 0.5f, w, size * 2.0f);
+    Ui::text(x - off, y, s.c_str(), size, color);
+    Ui::text(x - off + tw + GAP, y, s.c_str(), size, color);
+    Ui::clipReset();
+}
+
 // Picture tile: shadow, focus halo, cover-cropped image (or a placeholder
 // caption), border and optional progress bar.  w is the logical width; the
 // drawn width follows the widescreen pre-squish like every texture.

@@ -201,12 +201,13 @@ void LibraryView::drawDetailView(ir_t& ir) {
     int y = POSTER_Y;
     {
         /* Japanese in it: drawn with the Japanese font (Text's fallback) */
-        std::string title = fitText(font, filterDejaVu(detail.name, 60), 22,
-                                    INFO_W - 12 - (detail.isFavorite ? 28 : 0));
-        Text::print(INFO_X, y, font, title.c_str(), 22, p.text);
-        if (detail.isFavorite)   /* a favourite: a heart after the title (1) */
-            Text::print(INFO_X + Text::width(font, title.c_str(), 22) + 8, y, font,
-                        "\xe2\x99\xa5", 22, 0xE8455AFF);
+        const std::string title = filterDejaVu(detail.name, 200);
+        const int w = INFO_W - 12 - (detail.isFavorite ? 28 : 0);
+        titleText(2, INFO_X, y, w, title, 22, p.text, true);
+        if (detail.isFavorite) {   /* a favourite: a heart after the title (1) */
+            int tw = (int)Text::width(font, title.c_str(), 22);
+            Text::print(INFO_X + (tw < w ? tw : w) + 8, y, font, "\xe2\x99\xa5", 22, 0xE8455AFF);
+        }
     }
     y += 32;
 

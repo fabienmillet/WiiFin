@@ -13,6 +13,13 @@ std::string filterDejaVu(const std::string& s, int maxCp);
 float focusOf(bool sel, bool hover);
 // Shorten s (UTF-8) with "..." until it fits maxW pixels.
 std::string fitText(GRRLIB_ttfFont* f, std::string s, int size, int maxW);
+// A title in w pixels at x, y: cut with "..." when too long, unless scroll
+// (it is the one selected): then the whole of it scrolls in a loop, after
+// a pause.  slot: one per place on the screen that scrolls (0 the rows of
+// a list, 1 the names under posters, 2 a page's title, 3 a header), each
+// with its own timer.  center: centred in w when it fits.
+void titleText(int slot, float x, float y, float w, const std::string& s, int size, u32 color,
+               bool scroll, bool center = false);
 // Watched fraction of an item, -1 when not started.
 template <typename T>
 float progressOf(const T& it) {
