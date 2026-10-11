@@ -122,6 +122,8 @@ private:
     int   panelSel     = 0;
     int   panelTop     = 0;
     u64   controlsUntil = 0;   /* ms timestamp; controls visible until then */
+    bool  firstPicture  = false; /* the first picture shown: the controls go soon after */
+    u64   holdSince = 0, holdLast = 0;   /* Left / Right held: seeking on */
     float controlsAlpha = 0.0f;
     std::string toastMsg;
     u64   toastUntil   = 0;

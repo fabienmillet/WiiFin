@@ -372,6 +372,13 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
 
     hitTest(ir);
 
+    /* the video's first picture: the controls, up since the loading
+     * started, go a second after it (not 5 s after the start) */
+    if (!firstPicture && !g_wiifin_loading_active && wii_player_time_pos() > 0.0f) {
+        firstPicture = true;
+        if (controlsUntil > nowMs() + 1000) controlsUntil = nowMs() + 1000;
+    }
+
     if (down & WPAD_BUTTON_HOME) return Action::Home;
     if (!busyMsg.empty()) return Action::None;   /* switching streams */
     if (injected != Action::None) { Action a = injected; injected = Action::None; return a; }
@@ -454,8 +461,21 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
     }
     if (down & WPAD_BUTTON_RIGHT) nudgeSeek(+10.0f);
     if (down & WPAD_BUTTON_LEFT)  nudgeSeek(-10.0f);
-    if (down & WPAD_BUTTON_UP)    { wii_player_vol_up();   toast("Volume +", 1000); }
-    if (down & WPAD_BUTTON_DOWN)  { wii_player_vol_down(); toast("Volume -", 1000); }
+    /* Left / Right held: on seeking, 10 s steps, 30 s after 3 s (the seek
+     * is made once let go, as the presses add up) */
+    {
+        const u32 hd = Input::held() & (WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT);
+        const u64 now = nowMs();
+        if (!hd)                               holdSince = 0;
+        else if (down & hd)                    holdSince = holdLast = now;
+        else if (holdSince && now - holdSince > 500 && now - holdLast >= 200) {
+            holdLast = now;
+            const float step = now - holdSince > 3000 ? 30.0f : 10.0f;
+            nudgeSeek(hd & WPAD_BUTTON_RIGHT ? step : -step);
+        }
+    }
+    if (down & WPAD_BUTTON_UP)    { wii_player_vol_up();   toast(tr("Volume +"), 1000); }
+    if (down & WPAD_BUTTON_DOWN)  { wii_player_vol_down(); toast(tr("Volume -"), 1000); }
     if (down & WPAD_BUTTON_PLUS) {
         if (hasNext) act = Action::Next; else toast(tr("No next episode"));
     }
