@@ -440,7 +440,7 @@ void LibraryView::loadDetail() {
     // Fetch metadata and decode thumbnail inside one background pass so the
     // spinner animates throughout (no freeze between network and JPEG decode).
     bool ok = false; std::string fetchErr;
-    bool isEp = detailIsEpisode;
+    bool isEp = detailWideThumb();
     runWithLoading([&]() {
         ok = client.getItemDetail(serverUrl, auth, detailItemId, detail);
         if (!ok) { fetchErr = client.lastError(); return; }

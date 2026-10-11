@@ -169,8 +169,8 @@ void LibraryView::drawDetailView(ir_t& ir) {
 
     // Episode thumbnails are 16:9; movie/show posters are portrait
     // both end before the info card (INFO_X - 14 = 226): 20 + 196 / 20 + 200
-    const int POSTER_W2 = detailIsEpisode ? 196 : 200;
-    const int POSTER_H2 = detailIsEpisode ? 110 : 285;
+    const int POSTER_W2 = detailWideThumb() ? 196 : 200;
+    const int POSTER_H2 = detailWideThumb() ? 110 : 285;
 
     float ws   = WiiUtils::wsScaleX();
     int   visW = (int)(POSTER_W2 * ws + 0.5f);

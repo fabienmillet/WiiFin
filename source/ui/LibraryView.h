@@ -200,6 +200,9 @@ private:
     std::string        detailItemId;         // id of item being loaded/shown
     State              detailReturnState = State::PostersReady; // where B goes from detail
     bool               detailIsEpisode   = false; // true → use 16:9 thumbnail layout
+    /* the page's picture is 16:9: an episode's, or a special feature's (a
+     * trailer, a featurette...: Jellyfin draws them from the video) */
+    bool detailWideThumb() const { return detailIsEpisode || detailReturnState == State::SpecialsReady; }
     std::vector<std::string> detailLines;    // pre-computed word-wrapped overview (built once)
     /* the whole overview, in a panel over the page (- or A on it) */
     static const int DETAIL_OV_LINES = 5, OV_PANEL_SIZE = 15, OV_PANEL_W = 500, OV_PANEL_ROWS = 13;
