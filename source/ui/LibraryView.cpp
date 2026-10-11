@@ -608,6 +608,9 @@ void LibraryView::onPlaybackFinished(const std::string& lastItemId) {
     catalog.invalidate();
     if (state == State::DetailReady || state == State::ResumePrompt) {
         if (!lastItemId.empty()) detailItemId = lastItemId;
+        /* an episode's page again, its picture wide: opened from the home
+         * rows, only the hint said it was one */
+        detailIsEpisodeHint = detailIsEpisode;
         state = State::DetailLoad;
     }
 }
