@@ -19,6 +19,8 @@
 #           "Singles" library, right after "Shows" (the music scenarios)
 #   MUSIC   any other folder of audio files (your own music), as the "Songs"
 #           library, after "Singles" (default: none)
+#   media/photos (make_media.sh photos), when there, is the "Photos"
+#           library, after "Mixed" (the photo scenario)
 #   ONLY=<folder>  that folder alone as the Movies library (e.g. ONLY=sync)
 #   KEEP=<folder>  Jellyfin's configuration and cache kept there: accounts,
 #           tokens and scans survive a restart, and the containers come back
@@ -111,6 +113,7 @@ if [ -n "$MUSIC" ]; then
     VOLS+=(-v "$MUSIC:/music:ro")
 fi
 [ -d "$M/music" ] && VOLS+=(-v "$M/music:/singles:ro")
+[ -d "$M/photos" ] && VOLS+=(-v "$M/photos:/photos:ro")
 RUN=(--rm); JF_USER=()
 if [ -n "$KEEP" ]; then
     VOLS+=(-v "$KEEP/config:/config" -v "$KEEP/cache:/cache")
@@ -182,6 +185,9 @@ if [ -d "$M/music" ]; then
     library Singles singles music Audio $(( ${n:-0} + $(find "$M/music" -type f ! -name '*.jpg' ! -name '*.png' | wc -l) ))
 fi
 [ -n "$MUSIC" ] && library Songs music music Audio 1
+# media/photos (make_media.sh photos), when there: the Photos library (Jellyfin
+# has photos in "home videos and photos" libraries)
+[ -d "$M/photos" ] && library Photos photos homevideos Photo "$(find "$M/photos" -name '*.jpg' | wc -l)"
 # the libraries in the order the scenarios count them (RIGHT on the home
 # tiles), whatever the order they were added in
 J="$J" A="$A" USERID="$USERID" python3 - <<'PYEOF1'
@@ -194,11 +200,11 @@ def call(path, body=None):
     d = urllib.request.urlopen(q).read()
     return json.loads(d) if d else None
 views = {v['Name']: v['Id'] for v in call('/UserViews?userId=' + uid)['Items']}
-order = [views[n] for n in ('Movies', 'Shows', 'Singles', 'Songs', 'Mixed') if n in views]
+order = [views[n] for n in ('Movies', 'Shows', 'Singles', 'Songs', 'Mixed', 'Photos') if n in views]
 conf = call('/Users/' + uid)['Configuration']
 conf['OrderedViews'] = order + [i for i in views.values() if i not in order]
 call('/Users/%s/Configuration' % uid, conf)
-print('libraries:', ', '.join(n for n in ('Movies', 'Shows', 'Singles', 'Songs', 'Mixed') if n in views))
+print('libraries:', ', '.join(n for n in ('Movies', 'Shows', 'Singles', 'Songs', 'Mixed', 'Photos') if n in views))
 PYEOF1
 if [ -n "$MIXED" ]; then
     # a library without a type: nothing simple to count, give it time

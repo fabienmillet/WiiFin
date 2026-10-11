@@ -199,7 +199,10 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
             seasonsCallerState = State::ItemsReady;
             seasons.clear(); seasonSel = 0; seasonTop = 0;
             state = State::SeasonsLoad;
-        } else if (sel.type == "BoxSet" || sel.type == "Folder" || sel.type == "CollectionFolder") {
+        } else if (sel.type == "Photo") {
+            openPhotos(sel.id, State::ItemsReady);
+        } else if (sel.type == "BoxSet" || sel.type == "Folder" || sel.type == "CollectionFolder" ||
+                   sel.type == "PhotoAlbum") {
             // a collection or folder: its own list, B comes back here
             parentLibId      = currentLibId;
             parentLibName    = currentLibName;
@@ -493,7 +496,8 @@ void LibraryView::renderItemList(ir_t& ir) {
         int textX = LIST_X + 14;
         // type badge for mixed lists (series among films, folders...)
         const char* badge = it.type == "Series" ? tr("SERIES") : it.type == "BoxSet" ? tr("COLLECTION")
-                          : (it.type == "Folder" || it.type == "CollectionFolder") ? tr("FOLDER") : nullptr;
+                          : (it.type == "Folder" || it.type == "CollectionFolder" || it.type == "PhotoAlbum") ? tr("FOLDER")
+                          : nullptr;
         if (badge && currentLibType != "tvshows") {
             int bw = Ui::textWidth(badge, 9) + 12;
             Ui::roundRect(textX, ry + 11, bw, 14, 7, Ui::alpha(p.accent, 0.85f));

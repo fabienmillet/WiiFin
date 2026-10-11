@@ -1,0 +1,28 @@
+# A photo library (Photos, the last one): A on a photo shows it on the
+# whole screen with the folder's others (Garden alone; Holiday three, one
+# upright), Right the next one, A a slideshow that goes on by itself.
+server http://127.0.0.1:18096
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12300 RIGHT
+12600 RIGHT
+12900 RIGHT
+13200 RIGHT
+13500 RIGHT      Photos, the last library
+14500 A          Photos
+17500 A          Garden
+20500 B          the list
+21500 DOWN       Holiday
+22000 A          its photos
+25000 DOWN       Harbour
+25500 A
+28500 RIGHT      Tower
+31000 A          slideshow
+38000 A          stop
+39000 B          the list
+41000 END
+expect log [Photos] 1 in the folder, from photo 1
+expect log [Photos] 3 in the folder, from photo 2
+expect logorder "[Photos] slideshow on" "[Photos] slideshow off"
+expect nolog [Text] no glyph

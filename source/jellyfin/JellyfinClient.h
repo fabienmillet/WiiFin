@@ -261,6 +261,10 @@ public:
                            const std::string& itemId,
                            int maxWidth, int maxHeight,
                            std::string& outBytes);
+    /* a photo, whole (no crop), within maxWidth x maxHeight (JPEG) */
+    bool getPhotoBytes(const std::string& serverUrl, const JellyfinAuth& auth,
+                       const std::string& itemId, int maxWidth, int maxHeight,
+                       std::string& outBytes);
 
     // Fetch the best landscape image for activity cards:
     //   Episode → Images/Thumb, fallback series Backdrop, then Primary

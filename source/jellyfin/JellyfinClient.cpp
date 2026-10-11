@@ -1434,6 +1434,15 @@ bool JellyfinClient::getItemImageBytes(const std::string& serverUrl,
     return status == 200;
 }
 
+bool JellyfinClient::getPhotoBytes(const std::string& serverUrl, const JellyfinAuth& auth,
+                                   const std::string& itemId, int maxWidth, int maxHeight,
+                                   std::string& outBytes) {
+    char qs[192];
+    snprintf(qs, sizeof(qs), "/Items/%s/Images/Primary?maxWidth=%d&maxHeight=%d&quality=85&format=Jpg",
+             itemId.c_str(), maxWidth, maxHeight);
+    return httpRequest(serverUrl + qs, "GET", "", "", auth.accessToken, outBytes) == 200;
+}
+
 // ---------------------------------------------------------------------------
 // Fetch best landscape image for activity cards
 //   Episode  → Images/Thumb  → series Images/Backdrop/0 → Primary fallback

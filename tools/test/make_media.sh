@@ -21,6 +21,8 @@
 #                           Fullscreen 4:3 with two
 #   shows/   Shuffle Show   2 seasons x 5 episodes of 20 s (shuffle, auto-next)
 #   mixed/   a movie and a show in a library without a type
+#   photos/  Holiday (three photos, one upright) and Garden: server.sh's
+#            "Photos" library
 #   sync/    Sync Test      white flash + 1 kHz beep every 2 s (A/V offset)
 #   music/   Test Album     5 tagged tracks of 12 s, a cover: MP3 (with timed
 #                           lyrics, an .lrc), FLAC, WAV
@@ -29,7 +31,7 @@
 #   playback/ Counter, Subtitle, Xvid Film and the Z formats (playback.sh), hard links
 #
 # usage: tools/test/make_media.sh [name...]   (files already there are kept)
-#   names: counter grain slow subtitle xvid formats shows mixed sync music playback
+#   names: counter grain slow subtitle xvid formats shows mixed sync music photos playback
 #   (default: all)
 WANT=" $* "
 [[ "$WANT" == *" playback "* ]] && WANT="$WANT counter subtitle xvid formats shows "
@@ -269,6 +271,16 @@ want shows && for s in 1 2; do
             -f lavfi -i "sine=f=$((300 + e * 40)):sample_rate=48000" -t 20 $X264 -c:a aac
     done
 done
+
+# photos: three of a holiday (one upright), a fourth in a folder of its own
+if want photos; then
+    n=0
+    for p in "Holiday/Beach:800x600" "Holiday/Tower:600x800" "Holiday/Harbour:1024x576" "Garden:800x600"; do
+        n=$((n + 1))
+        gen "photos/${p%%:*}.jpg" -f lavfi -i "testsrc2=size=${p##*:},drawtext=text='PHOTO $n':fontsize=72:fontcolor=white:box=1:boxcolor=black:x=(w-tw)/2:y=(h-th)/2" \
+            -frames:v 1 -q:v 3
+    done
+fi
 
 want mixed && gen "mixed/Mixed Clip (2016)/Mixed Clip (2016).mkv" \
     -f lavfi -i "testsrc2=size=640x360:rate=24,drawtext=text='MIXED':fontsize=100:fontcolor=white:box=1:boxcolor=black:x=(w-tw)/2:y=(h-th)/2" \

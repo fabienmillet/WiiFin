@@ -122,6 +122,7 @@ private:
         SpecialsReady,        // show them (LibrarySpecials.cpp)
         ScenesLoad,           // blocking: a film's or an episode's chapters and their pictures
         ScenesReady,          // show them (LibraryScenes.cpp)
+        PhotoReady,           // a photo, the folder's others with Left / Right (LibraryPhotos.cpp)
         Error
     };
     State state = State::LibsInit;
@@ -454,6 +455,17 @@ private:
     void loadScenes();
     bool updateScenes(ir_t& ir, bool aPressed);
     void renderScenes(ir_t& ir);
+    /* the photos of a folder, one at a time (a slideshow with A) */
+    std::vector<JellyfinItem> photos;
+    int            photoSel = 0;
+    GRRLIB_texImg* photoTex = nullptr;
+    bool           slideshow = false;
+    u64            photoShownAt = 0;
+    State          photoBack = State::ItemsReady;
+    void openPhotos(const std::string& id, State back);
+    void showPhoto(int i);
+    bool updatePhoto(ir_t& ir, bool aPressed);
+    void renderPhoto(ir_t& ir);
     void        loadSpecials();
     bool        updateSpecials(ir_t& ir, bool aPressed);
     void        renderSpecials(ir_t& ir);
