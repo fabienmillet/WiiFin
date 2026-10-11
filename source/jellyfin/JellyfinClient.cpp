@@ -1643,6 +1643,12 @@ bool JellyfinClient::getItemDetail(const std::string& serverUrl,
                 out.defaultAudioIndex = vs[i].defaultAudio;
                 out.defaultSubIndex   = vs[i].defaultSub;
             }
+        /* each version's chapters, for its Scenes row */
+        if (vs.size() > 1)
+            for (MediaVersion& v : vs) {
+                if (v.id == itemId) v.chapters = out.chapters;
+                else                getChapters(serverUrl, auth, v.id, v.chapters);
+            }
         if (vs.size() > 1) out.versions = vs;
     }
 

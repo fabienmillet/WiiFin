@@ -1,6 +1,7 @@
 # A film in two versions (ZB: Fullscreen with two audio tracks, the one
 # Jellyfin opens, and Widescreen with one): a Version row above Audio;
 # Right on it switches to Widescreen and its track; Play plays that file.
+# Widescreen alone has chapters: the Scenes row shows its three.
 server http://127.0.0.1:18096
 position ZB 0
 6000  A          Connect To Jellyfin
@@ -26,4 +27,6 @@ position ZB 0
 33000 B          stop
 36000 END
 expect logorder "[Detail] version Fullscreen: 2 audio" "[Detail] version Widescreen: 1 audio" "[Play] version Widescreen"
+expect logre "\[Detail\] version Fullscreen: .*, 0 chapters"
+expect logre "\[Detail\] version Widescreen: .*, 3 chapters"
 expect streams 1

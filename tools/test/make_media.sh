@@ -236,9 +236,22 @@ fi
 # two versions of a film: the files "<folder> - <label>" of one folder
 ZB="ZB Two Versions (2019)"
 if want formats; then
-    gen "movies/$ZB/$ZB - Widescreen.mkv" \
+    # Widescreen has three chapters, Fullscreen none (the Scenes row
+    # follows the version); made again when an older one has none
+    W="movies/$ZB/$ZB - Widescreen.mkv"
+    if [ -f "$M/$W" ] && [ -z "$(ffprobe -v error -show_chapters -of csv=p=0 "$M/$W")" ]; then
+        rm -f "$M/$W" "$M/playback/${W#movies/}"
+    fi
+    META=$(mktemp --suffix=.txt)
+    { echo ';FFMETADATA1'
+      for i in 0 1 2; do
+          printf '[CHAPTER]\nTIMEBASE=1/1000\nSTART=%d\nEND=%d\ntitle=Part %d\n' $((i * 10000)) $((i * 10000 + 10000)) $((i + 1))
+      done; } > "$META"
+    gen "$W" \
         -f lavfi -i "testsrc2=size=640x360:rate=24,drawtext=text='WIDESCREEN %{n}':fontsize=40:fontcolor=white:box=1:boxcolor=black:x=20:y=20" \
-        -f lavfi -i "sine=f=400:sample_rate=48000" -t 30 $X264 -c:a aac -metadata:s:a:0 language=eng
+        -f lavfi -i "sine=f=400:sample_rate=48000" -i "$META" -t 30 -map 0 -map 1 -map_metadata 2 -map_chapters 2 \
+        $X264 -c:a aac -metadata:s:a:0 language=eng
+    rm -f "$META"
     gen "movies/$ZB/$ZB - Fullscreen.mkv" \
         -f lavfi -i "testsrc2=size=480x360:rate=24,drawtext=text='FULLSCREEN %{n}':fontsize=36:fontcolor=white:box=1:boxcolor=black:x=20:y=20" \
         -f lavfi -i "sine=f=400:sample_rate=48000" -f lavfi -i "sine=f=700:sample_rate=48000" -t 30 \

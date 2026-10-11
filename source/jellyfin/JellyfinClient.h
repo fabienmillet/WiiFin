@@ -58,6 +58,13 @@ struct MediaStream {
     bool        isText       = false;  // subtitles: text (SRT, ASS...), drawn by WiiFin
 };
 
+/* A chapter of a film or an episode (the Scenes) */
+struct JellyfinChapter {
+    long long   startTicks = 0;
+    std::string name;
+    bool        hasImage   = false;   /* a picture Jellyfin took of it */
+};
+
 /* One file of a title that has several (MediaSources): widescreen and
  * fullscreen cuts, 1080p and 720p... each with its own tracks */
 struct MediaVersion {
@@ -65,13 +72,7 @@ struct MediaVersion {
     std::string name;          // "Widescreen", "1080p"... (the file's label)
     std::vector<MediaStream> audio, subs;
     int defaultAudio = -1, defaultSub = -1;   // the stream indexes the server picks
-};
-
-/* A chapter of a film or an episode (the Scenes) */
-struct JellyfinChapter {
-    long long   startTicks = 0;
-    std::string name;
-    bool        hasImage   = false;   /* a picture Jellyfin took of it */
+    std::vector<JellyfinChapter> chapters;    // its own (a version is an item of its own)
 };
 
 struct JellyfinItemDetail {
@@ -96,7 +97,7 @@ struct JellyfinItemDetail {
      * (its subtitle mode and languages, the file's default and forced
      * flags): stream indexes, -1 none */
     int defaultAudioIndex = -1, defaultSubIndex = -1;
-    std::vector<JellyfinChapter> chapters;   /* of the default file */
+    std::vector<JellyfinChapter> chapters;   /* of the version shown (the default file first) */
 };
 
 struct JellyfinAudioItem {

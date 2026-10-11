@@ -485,9 +485,11 @@ void LibraryView::selectVersion(int v) {
     detailVersionSel = v;
     detail.audioStreams    = detail.versions[v].audio;
     detail.subtitleStreams = detail.versions[v].subs;
+    detail.chapters        = detail.versions[v].chapters;
     selectDefaultTracks(detail.versions[v].defaultAudio, detail.versions[v].defaultSub);
-    SYS_Report("[Detail] version %s: %d audio, %d subtitles\n", detail.versions[v].name.c_str(),
-               (int)detail.audioStreams.size(), (int)detail.subtitleStreams.size());
+    SYS_Report("[Detail] version %s: %d audio, %d subtitles, %d chapters\n", detail.versions[v].name.c_str(),
+               (int)detail.audioStreams.size(), (int)detail.subtitleStreams.size(),
+               (int)detail.chapters.size());
 }
 
 void LibraryView::selectDefaultTracks(int audioIndex, int subIndex) {
