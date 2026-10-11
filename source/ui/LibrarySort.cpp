@@ -17,7 +17,8 @@ static const char* const SHOWS[] = { N_("All"), N_("Not watched"), N_("Watched")
 bool LibraryView::sortable() const
 {
     if (inItemsDrilldown || inBoxSetDrilldown) return false;
-    if (!posterMode) return true;
+    if (currentLibType == "music") return musicTab == 0;   /* the albums (2 shuffles the others) */
+    if (currentLibType != "movies" && currentLibType != "tvshows") return false;
     return currentLibType == "movies" ? movieTab == 0 : tvTab == 0;
 }
 
@@ -36,7 +37,7 @@ std::string LibraryView::sortQuery() const
     if (listSort.show == 3) q += "&IsFavorite=true";
     /* the filters apply to the titles themselves, not to the library's
      * folders: a recursive search for that type (none matched otherwise) */
-    if (!q.empty())
+    if (!q.empty() && currentLibType != "music")   /* musicFilter() names the albums */
         q += currentLibType == "movies" ? "&Recursive=true&IncludeItemTypes=Movie"
                                         : "&Recursive=true&IncludeItemTypes=Series";
     return q;

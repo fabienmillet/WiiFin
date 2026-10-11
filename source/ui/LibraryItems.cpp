@@ -604,9 +604,10 @@ void LibraryView::renderPosterGrid(ir_t& ir) {
     snprintf(pageStr, sizeof(pageStr), tr("Page %d / %d"), itemPage + 1, totalPages);
     const Ui::Hint r[] = { { "", pageStr } };
     const char* center = (posterSel >= 0 && posterSel < n) ? items[posterSel].name.c_str() : nullptr;
-    if (currentLibType == "music") {   /* 2 shuffles; -/+ the tabs */
-        const Ui::Hint lm[] = { { "B", "Back" }, { "2", "Shuffle" } };
-        const Ui::Hint rm[] = { { "-/+", "Tab" }, { "", pageStr } };
+    if (currentLibType == "music") {   /* 2 sorts the albums, shuffles the rest; -/+ the tabs */
+        const Ui::Hint lm[] = { { "B", N_("Back") },
+                                { "2", sortable() ? (sum.empty() ? N_("Sort") : sum.c_str()) : N_("Shuffle") } };
+        const Ui::Hint rm[] = { { "-/+", N_("Tab") }, { "", pageStr } };
         Ui::footer(lm, 2, inItemsDrilldown ? r : rm, inItemsDrilldown ? (totalPages > 1 ? 1 : 0) : (totalPages > 1 ? 2 : 1), center);
         if (sortPanel) renderSortPanel();
         return;

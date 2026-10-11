@@ -810,7 +810,7 @@ void LibraryView::loadItems() {
     runWithLoading([&]() {
         if (currentLibType == "music") {
             /* the tab's own query, a page of it (Posters view) */
-            const std::string f = musicFilter();
+            const std::string f = musicFilter() + (sortable() ? sortQuery() : "");
             char page[96];
             snprintf(page, sizeof(page), "%s&StartIndex=%d&Limit=%d",
                      f.find("&SortBy=") == std::string::npos ? "&SortBy=SortName&SortOrder=Ascending" : "",

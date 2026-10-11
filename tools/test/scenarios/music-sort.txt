@@ -1,0 +1,19 @@
+# 2 on a music library's Albums tab opens the sort, as in the films: by
+# year, newest first; Test Album, the only album, still listed (the query
+# keeps to the albums).  In an album, 2 still shuffles its tracks.
+server http://127.0.0.1:18096
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12400 RIGHT      Singles
+13000 A          Albums
+16000 2          sort & filter
+17000 RIGHT      by year
+18000 A          apply
+21000 A          Test Album
+24000 2          its tracks, shuffled
+30000 B
+33000 END
+expect log [Library] sort Year, genre -1, show All, descending
+expect log [Library] 1 titles, sorted / filtered
+expect log [Shuffle] 5 track(s)
