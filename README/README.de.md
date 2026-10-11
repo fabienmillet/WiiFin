@@ -36,191 +36,48 @@ Er durchsucht und spielt deine Filme, Serien und Musik direkt auf der Konsole ab
 
 ---
 
+## 📦 Installation
+
+Lade die Dateien aus dem [neuesten Release](https://github.com/fabienmillet/WiiFin/releases) herunter:
+
+- **Homebrew Channel**: entpacke `WiiFin-hbc.zip` ins Hauptverzeichnis deiner SD-Karte
+- **Kanal im Wii-Menü**: installiere `WiiFin.wad` mit einem WAD-Manager (Wii und vWii); für Chinesisch oder Koreanisch kopiere auch `apps/WiiFin/fonts/` aus dem Zip auf die SD-Karte
+- **Dolphin**: öffne `WiiFin.dol`
+
+Melde dich dann mit Benutzername und Passwort oder per Quick Connect an deinem Jellyfin-Server an.
+
+## ✨ Highlights
+
+- **Filme, Serien und Musik** aus deinem Jellyfin: Direktwiedergabe dessen, was die Wii dekodiert, den Rest wandelt der Server um
+- Ein Startbildschirm aus **Reihen** oder als **Raster**, Reiter, Sortieren und filtern, Suche, A-Z
+- Ein **Player** mit den Vorschaubildern des Servers, Szenen und Kapiteln, Intro / Abspann überspringen, nächste Episode, Audio- und Untertitelspuren, Fortsetzen
+- **Musik**: ein „Wird gespielt“-Bildschirm mit Visualisierungen und synchronem Liedtext; sie läuft beim Stöbern weiter
+- **Fotos** mit Diashow, und Video-Playlists
+- **Profile**: mehrere Konten und Server, eine PIN, wenn du willst, jedes mit eigenem Design
+- **Fernsteuerung** über das Jellyfin-Dashboard und die Apps: Abspielen auf… Nintendo Wii
+- Die **zehn Sprachen der Wii**; Wiimote, Classic Controller, GameCube-Controller oder Wii U GamePad, keine Sensorleiste nötig
+
+Alles, was er kann, die Steuerung, die Einstellungen und eigene Klänge: das **[Benutzerhandbuch](../docs/USER_GUIDE.md)** (auf Englisch).
+
 ## ⚠️ Projektstatus
 
 > 🚧 **Experimentell**: funktionsfähig, aber noch in aktiver Entwicklung. Auf echter Hardware kann es noch hakeln.
 
-### ✅ Was funktioniert
-
-**Verbinden**
-- Anmeldung mit Benutzername und Passwort oder per **Quick Connect** (auf einem anderen Gerät bestätigt)
-- **Serversuche** im lokalen Netz oder Eingabe der Adresse (HTTP oder **HTTPS**, selbstsignierte Zertifikate werden akzeptiert)
-- **Gespeicherte Profile**: mehrere Konten und Server, nur ein Zugriffstoken wird behalten (kein Passwort); jedes mit eigenem Aussehen (Design, Hintergründe, Startbildschirm, Mediatheksansicht) und eigener Anmeldung: sofort, mit einer **vierstelligen PIN** oder jedes Mal mit dem Passwort (oder Quick Connect), ohne dass etwas auf der Wii gespeichert bleibt
-- Ein neues Profil fragt, wie es sich anmeldet, dann nach seinem Startbildschirm und seiner Mediatheksansicht, anhand kleiner Vorschaubilder von jedem
-- Das **Profilmenü** (der Avatar oben rechts): zurück zu den Mediatheken, Profil wechseln, Einstellungen ohne Abmelden, das Menü von WiiFin
-
-**Durchsuchen**
-- Ein Startbildschirm aus **Reihen** (Weiterschauen, Als Nächstes, Neu hinzugefügt, Bestbewertet, Favoriten, Genres) oder ein **Raster** der Mediatheken
-- Film-, Serien- und Musikmediatheken als Poster oder Listen (mit dem Cover des gewählten Titels), ihre **Reiter** in jeder Ansicht (−/+ oder der Zeiger auf einem); **A-Z**-Sprünge mit links / rechts
-- Ein Titel, der zu lang für seinen Platz ist, **läuft durch**, wenn er ausgewählt ist
-- **Sortieren und filtern** einer Film- oder Serienmediathek oder der Alben einer Musikmediathek (Taste 2): nach Name, Jahr, Bewertung oder Hinzufügedatum, auf- oder absteigend; ein Genre; alle, nicht gesehen, gesehen oder Favoriten
-- **Suche** (Taste 1 auf dem Startbildschirm)
-- **Detailseite**: Inhalt (ganz mit −, wenn die Seite ihn kürzt), Altersfreigabe, Genres, Besetzung, Audio- und Untertitelspuren (zu Beginn die, die der Server für dich wählt: dein Untertitelmodus und deine Sprachen, die Standard- und erzwungenen Spuren der Datei), mehrere **Versionen** eines Films, **Favoriten** (Taste 1, auch bei einer Serie), **gesehen / nicht gesehen** (+, auch in der Episodenliste)
-- **Extras**: Trailer, Featurettes, Hinter den Kulissen… eines Films (Taste 2 auf seiner Seite) oder einer Serie (nach ihren Staffeln)
-- **Szenen**: die Kapitel eines Films oder einer Episode (die Reihe „Szenen“ auf seiner Seite), mit Jellyfins Bild zu jedem: Wiedergabe ab einem davon
-- **Serien**: Staffeln (als Poster oder als Liste mit dem Cover der Staffel) und Episoden, **Zufallswiedergabe** (Taste 2), nächste / vorherige Episode über Staffelgrenzen hinweg
-- **Video-Playlists**: nacheinander abgespielt ab dem gewählten Video oder in zufälliger Reihenfolge (Taste 2)
-- **Fotos**: die Bilder einer Fotomediathek im Vollbild, mit links / rechts durch den Ordner, eine **Diashow** mit A
-- **Japanische, chinesische und koreanische** Titel und Untertitel: Japanisch ist eingebaut, Chinesisch und Koreanisch kommen aus der Schrift in `apps/WiiFin/fonts/` (im Paket für den Homebrew Channel)
-
-**Video**
-- Abgespielt von der integrierten MPlayer-CE-Engine: **Direktwiedergabe** dessen, was die Wii in Echtzeit dekodiert (SD-DivX/Xvid, MPEG-1/2, H.264 bis 480p, VP8; AVI, MKV, MP4, MPEG-TS/PS; Spulen in der Datei selbst), Umwandlung durch den Server für den Rest, und zurück zur Umwandlung, wenn eine Datei nicht flüssig läuft (siehe [DIRECT_PLAY.md](../DIRECT_PLAY.md))
-- **Player**: Fortschrittsleiste mit den Vorschaubildern des Servers (Jellyfin 10.9+), links / rechts gedrückt halten zum Weiterspulen, |◀ ▶| von Kapitel zu Kapitel, Lautstärke, Audio- und Untertitelspuren (Textuntertitel zeichnet WiiFin selbst, das Video kann also unverändert laufen), Zoom (einpassen / füllen)
-- Schaltflächen **Intro / Rückblick / Abspann überspringen** aus den Mediensegmenten des Servers (Jellyfin 10.10+ mit einem Plugin wie Intro Skipper), und **Nächste Episode** während des Abspanns
-- **Fortsetzen**, wo du aufgehört hast; Fortschritt, Pausen und Wiedergabeart (direkt oder umgewandelt) werden an den Server gemeldet, jede Konsole als eigenes Gerät
-- Eine langsame Verbindung senkt die Qualität von selbst; ein hängendes Bild wird auf andere Weise neu versucht, mit einer Meldung, die sagt, was passiert
-
-**Musik**
-- Mediatheken mit Reitern wie bei Jellyfin: **Alben, Vorschläge, Künstler, Playlists, Titel** (eine Mediathek aus losen Dateien öffnet sich bei ihren Titeln)
-- Ein **Wird gespielt**-Bildschirm mit Cover, dem Klang live in fünf Visualisierungen (Balken, Ring, Blasen, Welle, Blöcke: zweimal nach oben, dann A), einer Warteschlange, Zufall, Wiederholen, Favoriten und ähnlichen Titeln, wenn die Warteschlange zu Ende ist
-- **Zufallswiedergabe** (Taste 2): ein Album, eine Playlist oder Titel aus der ganzen Mediathek
-- **Liedtext** (Jellyfin 10.9+: eine `.lrc` neben dem Titel oder eingebettet): die letzte Visualisierung des Players, die gesungene Zeile leuchtet auf, sobald sie kommt, im Vollbild, wenn die Bedienelemente ausgeblendet sind, zum Mitsingen
-- Die Musik **läuft beim Stöbern weiter**: B, während ein Titel läuft; die Fußzeilen zeigen, was läuft, und **Wird gespielt** im Profilmenü öffnet den Player wieder (ein Video beendet die Musik)
-
-**Fernsteuerung** über das Jellyfin-Dashboard oder die Apps
-- **Abspielen auf… Nintendo Wii** (Filme, Episoden, Musik; „Als Nächstes abspielen“ und „Zur Warteschlange hinzufügen“ für Musik)
-- Wiedergabe / Pause, Stopp, Spulen, nächster / vorheriger, Lautstärke und Stummschaltung (der Regler im Dashboard folgt), Audio- und Untertitelspuren
-- **Nachrichten** aus dem Dashboard erscheinen über jedem Bildschirm
-
-**Außerdem**
-- Die Oberfläche in den **zehn Sprachen der Wii**: Englisch, Französisch, Deutsch, Spanisch, Italienisch, Niederländisch, Japanisch, Koreanisch, vereinfachtes und traditionelles Chinesisch, standardmäßig die der Wii (Französisch geprüft, die anderen warten auf Muttersprachler: siehe [lang/README.md](../lang/README.md))
-- **Wiimote**-Zeiger, **Classic Controller**, **Wii U GamePad** (Virtual-Console-Injects) und **GameCube-Controller**: alles geht mit dem Steuerkreuz, keine Sensorleiste nötig (siehe [Steuerung](#-steuerung))
-- **Oberflächenklänge** und **Hintergrundmusik**, beide durch eigene Dateien ersetzbar (siehe [Eigene Klänge](#-eigene-klänge))
-- Bildschirmtastatur; Kalibrierung des Bildbereichs für Fernseher, die das Bild beschneiden; das Licht des Laufwerksschachts kann aus bleiben
-- Erhältlich als fertige `.dol`, installierbare `.wad` (Wii / vWii) und als Paket für den Homebrew Channel
-
-### 🎮 Steuerung
-
-Der Zeiger ist optional: jeder Bildschirm lässt sich mit dem Steuerkreuz bedienen.
-
-| Wiimote | Classic Controller / Wii U GamePad | GameCube-Controller | Aktion |
-|---|---|---|---|
-| A / B | A / B | A / B | Auswählen / Zurück |
-| Steuerkreuz | Steuerkreuz oder linker Stick | Steuerkreuz oder Stick | Bewegen (gedrückt halten zum Wiederholen); links / rechts: A-Z in Listen, −10 / +10 s im Player (gehalten: weiterspulen) |
-| − / + | − / + oder L / R | L / R | Reiter, Seiten, vorherige / nächste Episode oder Titel; + : gesehen / nicht gesehen (ein Film, eine Episode); − : der ganze Inhalt (eine Detailseite) |
-| 1 | Y | Y | Suche (Start), Favorit (ein Film, eine Serie), Audiospur (Player), Warteschlange (Musik) |
-| 2 | X | X | Sortieren und filtern (Listen, Musikalben), Extras (ein Film), Zufall (Serien, Musik), Untertitel (Player) |
-| HOME | HOME | START | HOME-Menü |
-| Zeiger | ZL / ZR | Z | Video-Zoom (einpassen / füllen); in den Menüs das, was + allein tut: gesehen / nicht gesehen, die Browse-Seite, Enter der Tastatur |
-
-Die Hinweise auf dem Bildschirm zeigen die Tasten des zuletzt benutzten Controllers (GameCube: A grün, B rot, L / R, Z, START).
-
-### ⚙️ Einstellungen
-
-Die Einstellungen öffnen sich auf ihren Bereichen: **Anzeigeeinstellungen** (aus dem Menü eines Profils die dieses Profils; aus dem Menü von WiiFin das Aussehen beim Start), die **Anmeldeeinstellungen** eines Profils und die **Systemeinstellungen**.
-
-| Einstellung | |
-|---|---|
-| SSL Verification | Das HTTPS-Zertifikat des Servers prüfen (aus für selbstsignierte) |
-| Background Music / Interface Sounds | Musik und Klänge der Menüs |
-| Video Quality | Die Bitrate der Umwandlung, von Low (1,5 Mb/s) bis Max (5 Mb/s, für einen LAN-Adapter); WiiFin misst auch die Verbindung und bleibt darunter |
-| Direct Play | Dateien, die die Wii dekodieren kann, unverändert abspielen, ohne Umwandlung durch den Server |
-| Smooth Motion | Bilder bei Bildwechseln überblenden, damit 24-fps-Filme auf 60-Hz-Fernsehern gleichmäßig laufen |
-| Theme / Home Screen / Library View | Hell, Dunkel, Flix, Luhu (Schwarz, Silber und Grün) oder Sushi (Dunkelgrau und Orange); Reihen oder Raster; Poster, Liste oder Liste mit Cover (Anzeigeeinstellungen, pro Profil) |
-| Disc Slot Light | Das Licht, das während der Wiedergabe mit dem Klang pulsiert, oder aus |
-| Screen Area | Die Oberfläche verkleinern, wenn der Fernseher die Ränder abschneidet |
-| Backgrounds | Sanfte Verläufe oder einfarbige Flächen für Fernseher, die darin Streifen zeigen |
-| Clock | 24 oder 12 Stunden (AM/PM, das Datum als Monat/Tag); 12 Stunden standardmäßig auf einer US-Wii |
-| Sprache | Die der Wii oder eine hier gewählte |
-| Anmeldung | Sofort, eine vierstellige PIN oder jedes Mal das Passwort (Anmeldeeinstellungen, pro Profil) |
-
-### 🔊 Eigene Klänge
-
-Lege deine eigenen Klänge in `SD:/apps/WiiFin/sounds/` (neben `wiifin.cfg`): eine Datei dort ersetzt den eingebauten Klang gleichen Namens, die übrigen bleiben. Sie werden beim Start von WiiFin gelesen.
-
-| Datei | Gespielt, wenn |
-|---|---|
-| `move` | sich die Auswahl bewegt (Listen, Reihen, Raster, Einstellungen) |
-| `open` | sich eine Serie, ein Film, eine Staffel oder eine Mediathek öffnet |
-| `back` | B zurückgeht |
-| `page` | eine Seite oder ein Reiter wechselt (− / +) |
-| `play` | ein Video oder ein Titel startet |
-| `start` | ein Knopf im Hauptmenü gedrückt oder eine Einstellung geändert wird |
-| `select` | der Zeiger auf einen Knopf des Hauptmenüs fährt |
-| `press_key` / `backspace` | eine Taste der Bildschirmtastatur |
-| `loading` | ein Ladebildschirm andauert (in Schleife) |
-| `menu_enter` / `menu_exit` | sich das HOME-Menü öffnet / schließt |
-| `bgm` | Hintergrundmusik (nur MP3, bis 16 MB, in Schleife) |
-
-Jeder Klang ist `name.mp3` oder `name.wav` (PCM, 8 oder 16 Bit, mono oder stereo, bis 48 kHz), höchstens 2 MB und 10 s (längere werden abgeschnitten). Eine Datei, die WiiFin nicht lesen kann, wird ignoriert, und das Log sagt warum. Einstellungen > Interface Sounds schaltet alle Klänge aus; Background Music die Musik.
-
-### ⚠️ Bekannte Einschränkungen
-
-- Direktwiedergabe nur für das, was die Wii in Echtzeit dekodiert (SD-Auflösungen, siehe [DIRECT_PLAY.md](../DIRECT_PLAY.md)); den Rest wandelt der Server um
-- Nur Stereo-Ausgabe (Mehrkanalton wird heruntergemischt)
-- Bilduntertitel (PGS, VobSub) brennt der Server ins Video ein; Textuntertitel zeichnet WiiFin
-- Chinesisch und Koreanisch, bei Titeln wie in der Oberfläche, brauchen die Schrift in `SD:/apps/WiiFin/fonts/`: das Paket für den Homebrew Channel enthält sie; mit der WAD kopiere diesen Ordner aus dem Paket (oder `data/fonts/cjk/`) dorthin. Ohne sie bietet WiiFin diese Sprachen nicht an (stattdessen Englisch); jede andere `.ttf` / `.otf` dort wird auch genutzt, für das, was den anderen fehlt
-
----
-
-## 🔧 Kompilieren
-
-### Voraussetzungen
-
-- [devkitPro](https://devkitpro.org) mit `devkitPPC`, `libogc` und den `wii-dev`-Portlibs
-- Grafik: `GRRLIB`, `libpngu`, `freetype`, `libjpeg`
-- mbedTLS (in `libs/` enthalten, von `setup.sh` kompiliert)
-- MPlayer CE als `libmplayer.a`, für die Wiedergabe: vorkompiliert in `libs/mplayer-ce-build`, aus den Quellen neu gebaut mit `tools/mplayer/build.sh` (siehe [MPLAYER_CE_BUILD.md](../MPLAYER_CE_BUILD.md)). Ohne ihn kompiliert WiiFin trotzdem, kann aber nichts abspielen.
-
-### Bauen
-
-Auf einem frischen Rechner installiert `./setup.sh` devkitPro und die Portlibs, baut GRRLIB und mbedTLS und kompiliert dann WiiFin (Arch-basierte Distributionen oder jeder Rechner mit `dkp-pacman`).
-
-```bash
-./build.sh          # WiiFin.dol
-./build.sh wad      # WiiFin.wad, der installierbare Kanal (braucht libWiiPy, von setup.sh installiert)
-```
-
-`make wad` legt `WiiFin.dol` in `tools/wad/template.wad` (Banner, NAND-Loader, Ticket und TMD des Titels `WIFN`) und signiert es: siehe `tools/make_wad.py`.
-
-### Starten
-
-Auf **echter Wii-Hardware**: entpacke `WiiFin-hbc.zip` ins Hauptverzeichnis der SD-Karte (es enthält `apps/WiiFin/`), um WiiFin aus dem Homebrew Channel zu starten, oder installiere `WiiFin.wad` mit einem WAD-Manager (geht auch auf der vWii). WiiFin legt seine Einstellungen, Profile und sein Log (`wiifin.log`) in `SD:/apps/WiiFin/` ab.
-
-Im **Dolphin-Emulator**:
-
-```bash
-dolphin-emu -e WiiFin.dol
-```
-
-Zum Testen mit einem lokalen Jellyfin in Docker, mit geskripteten Tastendrücken und Bildaufnahmen, siehe [tools/test](../tools/test/README.md).
-
----
-
-## 📁 Projektstruktur
-
-```
-WiiFin/
-├── source/
-│   ├── core/        # App, Einstellungen, Wiedergabesitzungen, Klänge und Musik, Text, Log
-│   ├── input/       # Wiimote, Classic Controller und GameCube-Controller
-│   ├── jellyfin/    # Jellyfin-API-Client (HTTPS über mbedTLS), Fernsteuerung (WebSocket)
-│   ├── player/      # MPlayer-CE-Anbindung, Videoausgabe, Player-Oberfläche, Untertitel, Vorschaubilder
-│   └── ui/          # Die Bildschirme: Verbindung, Profile, Start, Mediatheken, Details, Musik, Einstellungen
-├── data/            # Schriften, Klänge, Bilder
-├── libs/            # mbedTLS, das vorkompilierte MPlayer CE
-├── tools/           # WAD-Packer, Linker-Skript, Bau von MPlayer CE (mplayer/)
-│   └── test/        # Testumgebung: Jellyfin in Docker, geskriptete Läufe in Dolphin
-├── apps/WiiFin/     # Metadaten für den Homebrew Channel
-├── DIRECT_PLAY.md   # Was die Wii unverändert abspielt
-└── Makefile
-```
-
----
+- Direktwiedergabe nur für SD-Videos (siehe [DIRECT_PLAY.md](../DIRECT_PLAY.md)); Stereoton
+- Bilduntertitel (PGS, VobSub) brennt der Server ins Video ein
+- Mehr unter den [bekannten Einschränkungen](../docs/USER_GUIDE.md#%EF%B8%8F-known-limitations)
 
 ## 🤝 Mitwirken
 
-WiiFin freut sich über Pull Requests, Fehlerberichte und Vorschläge.
+Pull Requests, Fehlerberichte und Ideen sind willkommen:
 
-* 📘 Lies die [Richtlinien zum Mitwirken](../CONTRIBUTING.md)
-* 🐛 Nutze die [Vorlage für Fehlerberichte](../.github/ISSUE_TEMPLATE/bug_report.yml)
-* 💡 Eine Idee? Nutze die [Vorlage für Funktionswünsche](../.github/ISSUE_TEMPLATE/feature_request.yml)
+* 📘 Die [Richtlinien zum Mitwirken](../CONTRIBUTING.md) und wie man [WiiFin kompiliert](../docs/BUILDING.md)
+* 🌍 WiiFin in deine Sprache [übersetzen](../lang/README.md)
+* 🐛 Ein [Fehlerbericht](../.github/ISSUE_TEMPLATE/bug_report.yml) (mit `apps/WiiFin/wiifin.log` von der SD-Karte) oder ein 💡 [Funktionswunsch](../.github/ISSUE_TEMPLATE/feature_request.yml)
 
 <a href="https://discord.gg/p9DXfEmUYu">
   <img src="https://img.shields.io/badge/Join%20us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"/>
 </a>
-
----
 
 ## 📜 Lizenz
 

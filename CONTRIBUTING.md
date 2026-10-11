@@ -4,7 +4,7 @@ Thank you for your interest in the project!
 **WiiFin** is an experimental Jellyfin client for the Nintendo Wii.  
 Any help is welcome — but please note that the project is still under active development and some features may be incomplete or unstable on real hardware.
 
-What WiiFin does today is listed in the [README](README.md#-what-works).
+What WiiFin does today is listed in the [user guide](docs/USER_GUIDE.md#-what-wiifin-does).
 
 ---
 
