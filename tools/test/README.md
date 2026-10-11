@@ -93,7 +93,7 @@ commands, and what the log must or must not show):
 | `favorite-home` | The home rows follow a favourite: Counter Film marked on its page (from Continue Watching), back on the rows it is in My Favorites; unmarked, gone again (no reconnecting) |
 | `versions` | ZB, a film in two versions (Fullscreen with two audio tracks, Widescreen with one): a Version row above Audio, Right switches to Widescreen and its track, Play plays that file |
 | `music-after-video` | A music track after a film resumed mid-way (MPlayer run with `-ss 3.0`): the track starts at 0:00, MPlayer's options no longer carry over from one run to the next |
-| `grid-profiles` | Home Screen: Grid without a pointer: Up from the top row of tiles reaches the profile avatar, A goes back to the profiles (to sign out) |
+| `grid-profiles` | Home Screen: Grid without a pointer: Up from the top row of tiles reaches the profile avatar, A opens its menu, Switch Profile goes back to the profiles (to sign out) |
 | `long-titles` | A long episode title (`title` renames it on the server): the selected row of the episode list scrolls it in a loop, the panel of the whole synopsis gives it up to three lines |
 | `music-shuffle` | Shuffle in music (2): Test Album opened, its tracks shuffled; the Songs tab, songs the server drew |
 | `sort-order` | The sort's Order row: Movies by name, Descending; the summary beside 2 says so |
@@ -106,7 +106,7 @@ commands, and what the log must or must not show):
 | `segments` | Media segments (`server.sh`'s port 18081 gives every item an intro and credits): Skip intro jumps to the intro's end, then Next episode during the credits |
 | `sounds` | The interface sounds (each one logged with `log_sounds=1`): moving, opening, going back, pages, playback; a `move.wav` and a `bgm.mp3` in `sounds/` on the SD card replace the built-in ones |
 | `sounds-off` | Settings > Interface Sounds off: not a sound in the menus |
-| `settings` | Every setting changed once from the Settings screen: the `[Settings]` line logged on leaving shows each one changed; Background Music off stops the music at once and the interface sounds go on without it; Interface Sounds off, then not a sound |
+| `settings` | Every setting changed once from the Settings of WiiFin's menu (System Settings, then View Settings): the `[Settings]` line logged on leaving shows each one changed; Background Music off stops the music at once and the interface sounds go on without it; Interface Sounds off, then not a sound |
 | `home-sounds` | The HOME menu with the background music off: its sounds play, and the menus' sounds still do once it is closed |
 | `music-quiet` | Leaving the music player with the background music off: the menu music stays off, the interface sounds come back |
 | `screens` | Not in CI. Every screen with the D-pad alone; each one must draw the pointer when there is one. With `DUMP=1`, no screen may flash. |
@@ -115,7 +115,7 @@ commands, and what the log must or must not show):
 | `music-wav` | Not in CI, needs a WAV at that place of the list. Jellyfin transcodes it and the session says so. |
 | `letters` | Not in CI, needs `MUSIC=<folder>`. Left/Right jump between the letters of a long list. |
 | `pal` | Not in CI, run with `PAL=1` (a European Wii in PAL 50 Hz, 576i) and `XFB=1 FRAMES="5 11"` (the picture as the console sends it): the menus fill the screen. |
-| `solid` | Not in CI, a look with `FRAMES`. Settings > Backgrounds: Solid, the third settings page and the home screen without gradients. |
+| `solid` | Not in CI, a look with `FRAMES`. View Settings > Backgrounds: Solid, the row and the home screen without gradients. |
 | `bgm-pace` | Not in CI. Browsing with the background music on; the test build logs the frame pacing (`[FRAMES]`, every 5 s): compare with `music_enabled=0`. Dolphin underrates MP3 decoding, so only a real Wii tells for sure. |
 
 A PAL console: `PAL=1` for `playback.sh`, `DOLPHIN_ARGS="-C Dolphin.Core.FallbackRegion=2 -C SYSCONF.IPL.E60=False"` for `tour.sh`.

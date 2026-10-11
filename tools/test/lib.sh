@@ -13,6 +13,9 @@ dolphin_setup() {
     { printf '[Core]\nSIDevice0 = 0\nWiimoteContinuousScanning = False\n'
       printf '[Analytics]\nEnabled = False\nPermissionAsked = True\n'
       printf '[General]\nUseDiscordPresence = False\n'
+      # stopping (SIGTERM) without the "stop the emulation?" question nobody
+      # sees: Dolphin presses POWER at once, and WiiFin turns itself off
+      printf '[Interface]\nConfirmStop = False\n'
       [ "$SOUND" = 1 ] || printf '[DSP]\nBackend = No Audio Output\n'
       [ -t 0 ] || cat; } > "$1/Config/Dolphin.ini"
 }

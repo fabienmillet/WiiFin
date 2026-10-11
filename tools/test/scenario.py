@@ -203,8 +203,12 @@ def set_positions(sc, url, sess):
 def check(sc, log_path):
     log = open(log_path, errors='replace').read().split('\n')
     fails = []
-    if not any(re.match(r'\[TOUR\] t=\d+ press 0$', l) for l in log):
+    end = next((i for i, l in enumerate(log) if re.match(r'\[TOUR\] t=\d+ press 0$', l)), None)
+    if end is None:
         fails.append('the scenario did not reach its END')
+    else:   # what follows is WiiFin turning itself off (Dolphin's POWER),
+            # then what the server answered the remote commands (remote.txt)
+        log = log[:end + 1] + [l for l in log[end + 1:] if l.startswith('remote:')]
     starts = [i for i, l in enumerate(log) if l.startswith('[WiiPlayer] play:')]
     advance = 5.0
     for e in sc['expect']:
