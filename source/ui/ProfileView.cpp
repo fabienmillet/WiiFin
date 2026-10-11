@@ -23,6 +23,27 @@ ProfileResult ProfileView::update(ir_t& ir) {
     int totalRows = (int)profiles.size() + 1; /* profiles + "Add New" row */
     const int rowBefore = focusedRow;
 
+    /* the delete question over the list: the list behind it stays put (the
+     * pointer moving over another row closed it); A on Delete or anywhere
+     * without a pointer deletes, on Cancel or B it doesn't */
+    if (confirmDelete) {
+        const bool onDelete = ir.valid && ir.x >= 170 && ir.x <= 310 && ir.y >= 248 && ir.y <= 286;
+        const bool onCancel = ir.valid && ir.x >= 330 && ir.x <= 470 && ir.y >= 248 && ir.y <= 286;
+        if (Input::isBackPressed() || (Input::isAJustPressed() && onCancel)) {
+            SoundFX::play(SoundFX::FX::Back);
+            confirmDelete = false;
+            return ProfileResult::None;
+        }
+        if (Input::isAJustPressed() && (onDelete || !ir.valid)) {
+            SoundFX::play(SoundFX::FX::Open);
+            confirmDelete = false;
+            selectedIdx = focusedRow;
+            return ProfileResult::DeleteOne;
+        }
+        if (Input::isLPressed()) { confirmDelete = false; SoundFX::play(SoundFX::FX::Back); }
+        return ProfileResult::None;
+    }
+
     /* D-pad navigation */
     if (Input::isUpPressed()) {
         focusedRow = (focusedRow - 1 + totalRows) % totalRows;
