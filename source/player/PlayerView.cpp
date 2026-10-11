@@ -650,7 +650,9 @@ void PlayerView::render(const ir_t& ir)
         /* Transport buttons */
         const bool hasNext = ctx.episodeIdx + 1 < (int)ctx.episodes.size();
         const bool hasPrev = !ctx.episodes.empty() && ctx.episodeIdx > 0;
-        const bool enabled[BTN_COUNT] = { hasPrev, true, true, true, hasNext };
+        /* |< and >| go from chapter to chapter first */
+        const bool chapters = ctx.chapters.size() >= 2;
+        const bool enabled[BTN_COUNT] = { hasPrev || chapters, true, true, true, hasNext || chapters };
         for (int i = 0; i < BTN_COUNT; ++i) {
             float x = BTN_X0 + i * (BTN_W + BTN_GAP);
             float f = (hoverButton == i && enabled[i]) ? Ui::pulse() : 0.0f;
