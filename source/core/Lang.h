@@ -10,6 +10,8 @@
  * coming from the server. */
 #pragma once
 
+#include <string>
+
 #define N_(s) s
 
 const char* tr(const char* en);
@@ -37,5 +39,8 @@ int         next(int i);
 /* wiifin.cfg's language=: "wii" or a code */
 const char* choiceKey();
 void        chooseKey(const char* key);
+
+/* a running time: "1h 3min", "45min"; "" under a minute */
+std::string runTime(int minutes);
 
 } // namespace Lang

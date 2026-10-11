@@ -4,6 +4,7 @@
 #include "Lang.h"
 #include <ogc/conf.h>
 #include <string.h>
+#include <stdio.h>
 
 extern "C" {
 struct LangMo { const char* code; const unsigned char* data; unsigned size; };
@@ -124,3 +125,12 @@ void chooseKey(const char* key) {
 }
 
 } // namespace Lang
+
+std::string Lang::runTime(int minutes)
+{
+    char buf[48] = "";
+    /* TRANSLATORS: a running time, hours and minutes (no zero before the minutes) */
+    if (minutes >= 60)    snprintf(buf, sizeof(buf), tr("%dh %dmin"), minutes / 60, minutes % 60);
+    else if (minutes > 0) snprintf(buf, sizeof(buf), tr("%dmin"), minutes);
+    return buf;
+}

@@ -233,11 +233,9 @@ void LibraryView::drawDetailView(ir_t& ir) {
             snprintf(chips[nChips++], sizeof(chips[0]), "%d", detail.year);
         if (detail.runtimeTicks > 0) {
             int secs = (int)(detail.runtimeTicks / 10000000LL);
-            int h = secs / 3600, m = (secs % 3600) / 60;
-            /* TRANSLATORS: a running time: hours and minutes, minutes, seconds */
-            if (h > 0)        snprintf(chips[nChips++], sizeof(chips[0]), tr("%dh %02dmin"), h, m);
-            else if (m > 0)   snprintf(chips[nChips++], sizeof(chips[0]), tr("%dmin"), m);
-            else              snprintf(chips[nChips++], sizeof(chips[0]), tr("%ds"), secs);   /* a trailer, a clip */
+            /* TRANSLATORS: a running time in seconds (a trailer, a clip) */
+            if (secs >= 60) snprintf(chips[nChips++], sizeof(chips[0]), "%s", Lang::runTime(secs / 60).c_str());
+            else            snprintf(chips[nChips++], sizeof(chips[0]), tr("%ds"), secs);
         }
         if (!detail.officialRating.empty())
             snprintf(chips[nChips++], sizeof(chips[0]), "%s", detail.officialRating.c_str());

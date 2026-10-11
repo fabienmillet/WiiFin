@@ -762,14 +762,11 @@ void BrowseHome::drawInfoPanel(float k)
     } else {
         int mins = (int)(it.runtimeTicks / 600000000LL);
         if (it.year > 0 && mins > 0) {
-            snprintf(meta, sizeof(meta), "%d   \xc2\xb7   ", it.year);
-            size_t l = strlen(meta);
-            /* TRANSLATORS: a running time, hours and minutes */
-            snprintf(meta + l, sizeof(meta) - l, tr("%dh %02dmin"), mins / 60, mins % 60);
+            snprintf(meta, sizeof(meta), "%d   \xc2\xb7   %s", it.year, Lang::runTime(mins).c_str());
         } else if (it.year > 0)
             snprintf(meta, sizeof(meta), "%d", it.year);
         else if (mins > 0)
-            snprintf(meta, sizeof(meta), tr("%dh %02dmin"), mins / 60, mins % 60);
+            snprintf(meta, sizeof(meta), "%s", Lang::runTime(mins).c_str());
     }
     if (it.playbackPositionTicks > 0 && it.runtimeTicks > 0) {
         int left = (int)((it.runtimeTicks - it.playbackPositionTicks) / 600000000LL);

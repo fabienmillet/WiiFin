@@ -525,7 +525,7 @@ void LibraryView::renderItemList(ir_t& ir) {
         else if (selItem.type == "Series" && selItem.childCount > 1)
             snprintf(meta, sizeof(meta), tr("%d seasons"), selItem.childCount);
         else if (mins > 0)
-            snprintf(meta, sizeof(meta), tr("%dh %02dmin"), mins / 60, mins % 60);
+            snprintf(meta, sizeof(meta), "%s", Lang::runTime(mins).c_str());
         if (selItem.year > 0) {
             size_t l = strlen(meta);
             snprintf(meta + l, sizeof(meta) - l, "%s%d", l ? "  \xc2\xb7  " : "", selItem.year);
