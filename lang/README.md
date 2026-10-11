@@ -9,6 +9,13 @@ issue or on the Discord).
 WiiFin shows the Wii's own language (Wii Settings) when there is a file
 for it, English otherwise; **System Settings > Language** picks another.
 
+Every language of the Wii has a file: `de` `es` `fr` `it` `ja` `ko` `nl`
+`zh_CN` `zh_TW` (English is the source).  French is reviewed; the others
+were drafted for 1.0 and wait for a native speaker's review: fixes are
+welcome, even a few lines.  Chinese and Korean are drawn with the font of
+`apps/WiiFin/fonts/` (in the release's zip): with the WAD alone, copy that
+folder to the SD card.
+
 ## Starting a language
 
 ```sh
@@ -40,4 +47,5 @@ where it is stored and translated by the code that draws it (see
 tools/lang_update.sh         # refreshes wiifin.pot and every .po
 ```
 
-The build compiles each `.po` into the DOL (`tools/lang_table.sh`).
+The build compiles each `.po` into the DOL (`tools/lang_table.sh`), and
+`tools/lang_check.py` checks every character has a font to be drawn with.

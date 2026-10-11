@@ -1,0 +1,1927 @@
+# Italian translations for WiiFin package.
+# Copyright (C) 2026 THE WiiFin'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the WiiFin package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: WiiFin\n"
+"Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
+"POT-Creation-Date: 2026-10-11 02:59+0200\n"
+"PO-Revision-Date: 2026-10-11 02:59+0200\n"
+"Last-Translator: WiiFin\n"
+"Language-Team: Italian\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: source/core/App.cpp:87
+msgid "Retry"
+msgstr "Riprova"
+
+#: source/core/App.cpp:88 source/core/App.cpp:457
+#: source/player/PlayerView.cpp:579 source/ui/ConnectView.cpp:595
+#: source/ui/ConnectView.cpp:666 source/ui/ConnectView.cpp:727
+#: source/ui/LibraryDetail.cpp:422 source/ui/LibraryHome.cpp:382
+#: source/ui/LibraryHome.cpp:424 source/ui/LibraryHome.cpp:485
+#: source/ui/LibraryItems.cpp:543 source/ui/LibraryItems.cpp:610
+#: source/ui/LibraryItems.cpp:616 source/ui/LibraryMusic.cpp:114
+#: source/ui/LibraryScenes.cpp:113 source/ui/LibrarySearch.cpp:194
+#: source/ui/LibrarySearch.cpp:264 source/ui/LibraryShows.cpp:170
+#: source/ui/LibraryShows.cpp:215 source/ui/LibrarySpecials.cpp:185
+#: source/ui/LibrarySuggestions.cpp:329 source/ui/LibrarySuggestions.cpp:356
+#: source/ui/LibrarySuggestions.cpp:375 source/ui/LibrarySuggestions.cpp:424
+#: source/ui/LibraryView.cpp:1439 source/ui/MusicPlayerView.cpp:803
+#: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:166
+#: source/ui/SettingsView.cpp:98 source/ui/SettingsView.cpp:450
+msgid "Back"
+msgstr "Indietro"
+
+#: source/core/App.cpp:91 source/core/AppProfiles.cpp:210
+msgid "OK"
+msgstr "OK"
+
+#: source/core/App.cpp:404
+msgid "Does the whole picture fit your TV?"
+msgstr "L'immagine si vede tutta sulla TV?"
+
+#: source/core/App.cpp:405
+msgid "Older TVs (CRT) often cut the edges of the picture."
+msgstr "Le vecchie TV (CRT) spesso tagliano i bordi dell'immagine."
+
+#. TRANSLATORS: one sentence on two lines, the second one naming the menu
+#: source/core/App.cpp:407
+msgid "You can shrink it to fit now, or later in"
+msgstr "Puoi ridurla ora, o più tardi in"
+
+#: source/core/App.cpp:408
+msgid "Settings > Screen Area."
+msgstr "Impostazioni > Area dello schermo."
+
+#: source/core/App.cpp:409
+msgid "Adjust"
+msgstr "Regola"
+
+#: source/core/App.cpp:410 source/core/App.cpp:412
+msgid "Not now"
+msgstr "Non ora"
+
+#: source/core/App.cpp:411 source/core/App.cpp:729
+#: source/core/AppProfiles.cpp:162 source/ui/ConnectView.cpp:594
+#: source/ui/ConnectView.cpp:665 source/ui/ConnectView.cpp:726
+#: source/ui/LibraryDetail.cpp:166 source/ui/LibraryHome.cpp:484
+#: source/ui/LibraryShows.cpp:170 source/ui/LibrarySuggestions.cpp:356
+#: source/ui/MusicPlayerView.cpp:802
+msgid "Select"
+msgstr "Scegli"
+
+#: source/core/App.cpp:428
+msgid "Connect To Jellyfin"
+msgstr "Connettiti a Jellyfin"
+
+#: source/core/App.cpp:429 source/ui/LibraryHome.cpp:434
+#: source/ui/SettingsView.cpp:86 source/ui/SettingsView.cpp:335
+msgid "Settings"
+msgstr "Impostazioni"
+
+#: source/core/App.cpp:430
+msgid "Exit"
+msgstr "Esci"
+
+#: source/core/App.cpp:454
+msgid "Connecting to the network..."
+msgstr "Connessione alla rete..."
+
+#: source/core/App.cpp:456
+msgid "This is taking long: the Wii's network may need a restart."
+msgstr "Ci vuole molto: forse la rete della Wii va riavviata."
+
+#: source/core/App.cpp:462
+msgid "No network connection"
+msgstr "Nessuna connessione di rete"
+
+#: source/core/App.cpp:463
+msgid "Check the Wii's Internet settings, then try again."
+msgstr "Controlla le impostazioni Internet della Wii e riprova."
+
+#: source/core/App.cpp:730 source/ui/LibraryHome.cpp:328
+msgid "Menu"
+msgstr "Menu"
+
+#: source/core/AppProfiles.cpp:50
+msgid "Enter the passcode"
+msgstr "Inserisci il codice"
+
+#: source/core/AppProfiles.cpp:50
+msgid "This profile is locked"
+msgstr "Questo profilo è bloccato"
+
+#: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:97
+#: source/ui/SettingsView.cpp:449
+msgid "Choose"
+msgstr "Scegli"
+
+#: source/core/AppProfiles.cpp:171 source/core/HomeMenu.cpp:221
+msgid "No"
+msgstr "No"
+
+#: source/core/AppProfiles.cpp:171 source/core/HomeMenu.cpp:221
+msgid "Yes"
+msgstr "Sì"
+
+#: source/core/AppProfiles.cpp:173
+msgid "Sign in automatically on this Wii?"
+msgstr "Accedere automaticamente su questa Wii?"
+
+#: source/core/AppProfiles.cpp:174
+msgid "Anyone who opens WiiFin can then open this profile"
+msgstr "Chiunque apra WiiFin potrà aprire questo profilo"
+
+#: source/core/AppProfiles.cpp:177
+msgid "Protect this profile with a passcode?"
+msgstr "Proteggere questo profilo con un codice?"
+
+#: source/core/AppProfiles.cpp:178
+msgid "Four digits, asked each time it opens"
+msgstr "Quattro cifre, chieste a ogni apertura"
+
+#: source/core/AppProfiles.cpp:181 source/core/AppProfiles.cpp:194
+#: source/ui/SettingsView.cpp:154 source/ui/SettingsView.cpp:258
+msgid "Choose a passcode"
+msgstr "Scegli un codice"
+
+#: source/core/AppProfiles.cpp:181 source/ui/SettingsView.cpp:154
+msgid "Four digits, asked when this profile opens"
+msgstr "Quattro cifre, chieste all'apertura del profilo"
+
+#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:255
+msgid "Enter it again"
+msgstr "Inseriscilo di nuovo"
+
+#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:258
+msgid "The two didn't match: once more"
+msgstr "Non coincidono: di nuovo"
+
+#: source/core/AppProfiles.cpp:211
+msgid "The password each time, then"
+msgstr "Allora la password ogni volta"
+
+#: source/core/AppProfiles.cpp:212
+msgid "Or Quick Connect: this profile keeps no sign-in on the Wii"
+msgstr "O Connessione rapida: il profilo non salva l'accesso sulla Wii"
+
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:393
+msgid "Grid"
+msgstr "Griglia"
+
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:393
+msgid "Rows"
+msgstr "Righe"
+
+#: source/core/AppProfiles.cpp:220 source/core/AppProfiles.cpp:226
+msgid "Settings can change it later"
+msgstr "Modificabile poi in Impostazioni"
+
+#: source/core/AppProfiles.cpp:220
+msgid "Which home screen?"
+msgstr "Quale schermata iniziale?"
+
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:396
+msgid "List"
+msgstr "Elenco"
+
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:396
+msgid "List + Posters"
+msgstr "Elenco + Locandine"
+
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:396
+msgid "Posters"
+msgstr "Locandine"
+
+#: source/core/AppProfiles.cpp:226
+msgid "Which library view?"
+msgstr "Quale vista delle librerie?"
+
+#: source/core/HomeMenu.cpp:171
+msgid "HOME Menu"
+msgstr "Menu HOME"
+
+#: source/core/HomeMenu.cpp:173 source/core/HomeMenu.cpp:181
+#: source/ui/LibraryDetail.cpp:453 source/ui/MusicPlayerView.cpp:799
+msgid "Close"
+msgstr "Chiudi"
+
+#: source/core/HomeMenu.cpp:180 source/ui/LibraryDetail.cpp:166
+msgid "Confirm"
+msgstr "Conferma"
+
+#: source/core/HomeMenu.cpp:192 source/ui/SettingsView.cpp:219
+msgid "Reset"
+msgstr "Resetta"
+
+#: source/core/HomeMenu.cpp:192
+msgid "Wii Menu"
+msgstr "Menu Wii"
+
+#: source/core/HomeMenu.cpp:207
+msgid "Return to the Wii Menu?"
+msgstr "Tornare al Menu Wii?"
+
+#: source/core/HomeMenu.cpp:208
+msgid "Reset the application?"
+msgstr "Resettare l'applicazione?"
+
+#: source/core/HomeMenu.cpp:210
+msgid "(Anything not saved will be lost.)"
+msgstr "(I dati non salvati andranno persi.)"
+
+#. TRANSLATORS: season and episode numbers, then the episode's name
+#: source/core/PlaySession.cpp:128
+#, c-format
+msgid "S%d E%d - %s"
+msgstr "S%d E%d - %s"
+
+#: source/core/PlaySession.cpp:201
+msgid "Loading subtitles..."
+msgstr "Caricamento sottotitoli..."
+
+#: source/core/PlaySession.cpp:216 source/core/PlaySession.cpp:246
+#: source/core/PlaySession.cpp:705 source/player/PlayerView.cpp:562
+#: source/ui/LibraryView.cpp:1403 source/ui/MusicPlayerView.cpp:783
+msgid "Loading..."
+msgstr "Caricamento..."
+
+#: source/core/PlaySession.cpp:362 source/core/PlaySession.cpp:521
+#: source/core/PlaySession.cpp:532 source/core/PlaySession.cpp:567
+#: source/core/PlaySession.cpp:601 source/core/PlaySession.cpp:792
+msgid "Stopping..."
+msgstr "Arresto..."
+
+#: source/core/PlaySession.cpp:425
+msgid "Slow connection: lowering quality..."
+msgstr "Connessione lenta: riduco la qualità..."
+
+#: source/core/PlaySession.cpp:451
+msgid "Reconnecting..."
+msgstr "Riconnessione..."
+
+#: source/core/PlaySession.cpp:451
+msgid "The picture is stuck: trying again..."
+msgstr "Immagine bloccata: nuovo tentativo..."
+
+#: source/core/PlaySession.cpp:499
+msgid "Too heavy for the Wii: transcoding..."
+msgstr "Troppo pesante per la Wii: transcodifica..."
+
+#: source/core/PlaySession.cpp:525
+msgid "Play next / Add to queue: music only"
+msgstr "Riproduci dopo / Aggiungi alla coda: solo musica"
+
+#: source/core/PlaySession.cpp:537 source/core/PlaySession.cpp:568
+msgid "Loading next episode..."
+msgstr "Caricamento episodio successivo..."
+
+#: source/core/PlaySession.cpp:538 source/player/PlayerView.cpp:448
+#: source/player/PlayerView.cpp:480 source/ui/LibraryHome.cpp:378
+msgid "No next episode"
+msgstr "Nessun episodio successivo"
+
+#: source/core/PlaySession.cpp:541 source/core/PlaySession.cpp:569
+msgid "Loading previous episode..."
+msgstr "Caricamento episodio precedente..."
+
+#: source/core/PlaySession.cpp:542 source/player/PlayerView.cpp:441
+#: source/player/PlayerView.cpp:483
+msgid "No previous episode"
+msgstr "Nessun episodio precedente"
+
+#: source/core/PlaySession.cpp:544 source/player/PlayerView.cpp:477
+#: source/ui/MusicPlayerView.cpp:956
+msgid "Volume +"
+msgstr "Volume +"
+
+#: source/core/PlaySession.cpp:545 source/player/PlayerView.cpp:478
+#: source/ui/MusicPlayerView.cpp:957
+msgid "Volume -"
+msgstr "Volume -"
+
+#: source/core/PlaySession.cpp:548
+#, c-format
+msgid "Volume %d"
+msgstr "Volume %d"
+
+#: source/core/PlaySession.cpp:553 source/core/PlaySession.cpp:557
+#: source/ui/MusicPlayerView.cpp:959 source/ui/MusicPlayerView.cpp:963
+msgid "Sound off"
+msgstr "Audio disattivato"
+
+#: source/core/PlaySession.cpp:554 source/core/PlaySession.cpp:557
+#: source/ui/MusicPlayerView.cpp:960 source/ui/MusicPlayerView.cpp:963
+msgid "Sound on"
+msgstr "Audio attivato"
+
+#: source/core/PlaySession.cpp:570
+msgid "Switching audio track..."
+msgstr "Cambio traccia audio..."
+
+#: source/core/PlaySession.cpp:580
+msgid "Switching subtitles..."
+msgstr "Cambio sottotitoli..."
+
+#: source/core/PlaySession.cpp:594
+msgid "Seeking..."
+msgstr "Spostamento..."
+
+#: source/core/PlaySession.cpp:664
+msgid "The video comes in, but the Wii can't show it: the picture stays stuck."
+msgstr "Il video arriva, ma la Wii non riesce a mostrarlo: l'immagine resta bloccata."
+
+#: source/core/PlaySession.cpp:678
+#, c-format
+msgid "The server could not start this video (HTTP %d)."
+msgstr "Il server non è riuscito ad avviare questo video (HTTP %d)."
+
+#: source/core/PlaySession.cpp:681
+msgid "The video stream could not be opened."
+msgstr "Impossibile aprire il flusso video."
+
+#: source/core/PlaySession.cpp:684
+msgid "The connection to the server keeps dropping."
+msgstr "La connessione al server continua a cadere."
+
+#: source/core/PlaySession.cpp:721
+#, c-format
+msgid "The server did not answer: %s"
+msgstr "Il server non ha risposto: %s"
+
+#: source/core/PlaySession.cpp:736
+msgid "Loading episode..."
+msgstr "Caricamento episodio..."
+
+#: source/core/PlaySession.cpp:802
+#, c-format
+msgid "Server says: %s"
+msgstr "Il server dice: %s"
+
+#: source/core/PlaySession.cpp:805
+msgid "Details are in wiifin.log on the SD card."
+msgstr "Dettagli in wiifin.log sulla scheda SD."
+
+#: source/core/PlaySession.cpp:808 source/core/PlaySession.cpp:811
+msgid "Can't play this video"
+msgstr "Impossibile riprodurre questo video"
+
+#: source/core/PlaySession.cpp:809
+msgid "Check the server's FFmpeg log (Dashboard > Logs)."
+msgstr "Controlla il log FFmpeg del server (Pannello di controllo > Log)."
+
+#: source/jellyfin/JellyfinClient.cpp:109
+msgid "No IP address from the router (DHCP)"
+msgstr "Nessun indirizzo IP dal router (DHCP)"
+
+#: source/jellyfin/JellyfinClient.cpp:162
+msgid "UDP socket failed"
+msgstr "Errore del socket UDP"
+
+#: source/jellyfin/JellyfinClient.cpp:355
+msgid "Unsupported URL scheme"
+msgstr "Schema URL non supportato"
+
+#: source/jellyfin/JellyfinClient.cpp:707
+msgid "TLS: DRBG seed failed"
+msgstr "TLS: inizializzazione DRBG non riuscita"
+
+#: source/jellyfin/JellyfinClient.cpp:724
+msgid "TLS: ssl_config_defaults failed"
+msgstr "TLS: errore in ssl_config_defaults"
+
+#: source/jellyfin/JellyfinClient.cpp:749
+msgid "DNS: unexpected address length"
+msgstr "DNS: lunghezza indirizzo inattesa"
+
+#: source/jellyfin/JellyfinClient.cpp:772
+msgid "Server not reachable (connection timed out)"
+msgstr "Server non raggiungibile (tempo scaduto)"
+
+#: source/jellyfin/JellyfinClient.cpp:796
+msgid "TLS handshake failed (network error)"
+msgstr "Handshake TLS non riuscito (errore di rete)"
+
+#: source/jellyfin/JellyfinClient.cpp:906
+msgid "Failed to send request"
+msgstr "Invio della richiesta non riuscito"
+
+#: source/jellyfin/JellyfinClient.cpp:987
+msgid "No response from server (check server URL / port)"
+msgstr "Nessuna risposta dal server (controlla URL / porta)"
+
+#: source/jellyfin/JellyfinClient.cpp:988
+msgid "Invalid HTTP response (server may require HTTPS)"
+msgstr "Risposta HTTP non valida (il server potrebbe richiedere HTTPS)"
+
+#: source/jellyfin/JellyfinClient.cpp:1063
+msgid "Request headers too large"
+msgstr "Intestazioni della richiesta troppo grandi"
+
+#: source/jellyfin/JellyfinClient.cpp:1106
+msgid "Connection lost"
+msgstr "Connessione persa"
+
+#: source/jellyfin/JellyfinClient.cpp:1136
+#, c-format
+msgid "Auth failed (HTTP %d)"
+msgstr "Autenticazione non riuscita (HTTP %d)"
+
+#: source/jellyfin/JellyfinClient.cpp:1145
+msgid "No token in response"
+msgstr "Nessun token nella risposta"
+
+#: source/jellyfin/JellyfinClient.cpp:1156
+#, c-format
+msgid "QuickConnect initiate failed (HTTP %d)"
+msgstr "Avvio della Connessione rapida non riuscito (HTTP %d)"
+
+#: source/jellyfin/JellyfinClient.cpp:1164
+msgid "No code in QC response"
+msgstr "Nessun codice nella risposta di Connessione rapida"
+
+#: source/jellyfin/JellyfinClient.cpp:1190
+#, c-format
+msgid "QC auth failed (HTTP %d)"
+msgstr "Connessione rapida non riuscita (HTTP %d)"
+
+#: source/jellyfin/JellyfinClient.cpp:1198
+msgid "No token in QC auth response"
+msgstr "Nessun token nella risposta di Connessione rapida"
+
+#: source/jellyfin/JellyfinClient.cpp:2385
+msgid "High"
+msgstr "Alta"
+
+#. TRANSLATORS: video quality levels (Settings)
+#: source/jellyfin/JellyfinClient.cpp:2385
+msgid "Low"
+msgstr "Bassa"
+
+#: source/jellyfin/JellyfinClient.cpp:2385
+msgid "Max"
+msgstr "Max"
+
+#: source/jellyfin/JellyfinClient.cpp:2385
+msgid "Normal"
+msgstr "Normale"
+
+#: source/jellyfin/JellyfinClient.cpp:2802
+msgid "No TranscodingUrl in PlaybackInfo response"
+msgstr "Nessun TranscodingUrl nella risposta PlaybackInfo"
+
+#: source/jellyfin/JellyfinClient.cpp:3197 source/ui/LibrarySpecials.cpp:80
+msgid "No special features"
+msgstr "Nessun contenuto speciale"
+
+#: source/jellyfin/JellyfinClient.cpp:3454
+msgid "No PlaySessionId in AudioPlaybackInfo response"
+msgstr "Nessun PlaySessionId nella risposta AudioPlaybackInfo"
+
+#: source/player/PlayerView.cpp:57
+#, c-format
+msgid "Track %d"
+msgstr "Traccia %d"
+
+#: source/player/PlayerView.cpp:118
+msgid "Skip recap"
+msgstr "Salta riassunto"
+
+#: source/player/PlayerView.cpp:119
+msgid "Skip preview"
+msgstr "Salta anteprima"
+
+#: source/player/PlayerView.cpp:120
+msgid "Skip ad"
+msgstr "Salta pubblicità"
+
+#: source/player/PlayerView.cpp:122
+msgid "Next episode"
+msgstr "Episodio successivo"
+
+#: source/player/PlayerView.cpp:122
+msgid "Skip credits"
+msgstr "Salta titoli di coda"
+
+#: source/player/PlayerView.cpp:123
+msgid "Skip intro"
+msgstr "Salta intro"
+
+#: source/player/PlayerView.cpp:279 source/ui/LibraryDetail.cpp:410
+msgid "Off"
+msgstr "Nessuno"
+
+#: source/player/PlayerView.cpp:334
+msgid "Zoom: fill the screen"
+msgstr "Zoom: schermo intero"
+
+#: source/player/PlayerView.cpp:334
+msgid "Zoom: whole picture"
+msgstr "Zoom: immagine intera"
+
+#: source/player/PlayerView.cpp:488
+msgid "No other audio track"
+msgstr "Nessun'altra traccia audio"
+
+#: source/player/PlayerView.cpp:492
+msgid "No subtitles available"
+msgstr "Nessun sottotitolo disponibile"
+
+#: source/player/PlayerView.cpp:560
+#, c-format
+msgid "Buffering... %d%%"
+msgstr "Buffering... %d%%"
+
+#: source/player/PlayerView.cpp:561
+msgid "Buffering..."
+msgstr "Buffering..."
+
+#: source/player/PlayerView.cpp:578
+msgid "Zoom"
+msgstr "Zoom"
+
+#: source/player/PlayerView.cpp:579 source/ui/LibraryDetail.cpp:401
+msgid "Audio"
+msgstr "Audio"
+
+#: source/player/PlayerView.cpp:579 source/player/PlayerView.cpp:713
+#: source/ui/LibraryDetail.cpp:401
+msgid "Subtitles"
+msgstr "Sottotitoli"
+
+#: source/player/PlayerView.cpp:713
+msgid "Audio track"
+msgstr "Traccia audio"
+
+#: source/player/PlayerView.cpp:728
+msgid "✓ Current"
+msgstr "✓ Attuale"
+
+#: source/ui/BrowseHome.cpp:44
+msgid "browse"
+msgstr "sfoglia"
+
+#: source/ui/BrowseHome.cpp:44
+msgid "home"
+msgstr "home"
+
+#. TRANSLATORS: the pills at the top right of the home screen, in lower case
+#: source/ui/BrowseHome.cpp:44
+msgid "search"
+msgstr "cerca"
+
+#: source/ui/BrowseHome.cpp:206
+msgid "Continue Watching"
+msgstr "Continua a guardare"
+
+#: source/ui/BrowseHome.cpp:208
+msgid "Next Up"
+msgstr "Prossimi"
+
+#. TRANSLATORS: a row of the home screen; %s is the name of a library
+#: source/ui/BrowseHome.cpp:219
+#, c-format
+msgid "New in %s"
+msgstr "Novità in %s"
+
+#. TRANSLATORS: a row of the home screen; %s is the name of a library
+#: source/ui/BrowseHome.cpp:227
+#, c-format
+msgid "Top Rated %s"
+msgstr "I più votati in %s"
+
+#: source/ui/BrowseHome.cpp:235 source/ui/BrowseHome.cpp:241
+msgid "My Favorites"
+msgstr "I miei preferiti"
+
+#: source/ui/BrowseHome.cpp:239
+msgid "Favorite Albums"
+msgstr "Album preferiti"
+
+#: source/ui/BrowseHome.cpp:254 source/ui/LibraryDraw.cpp:183
+msgid "Libraries"
+msgstr "Librerie"
+
+#. TRANSLATORS: a row of the browse page; %s is the name of a library
+#: source/ui/BrowseHome.cpp:288
+#, c-format
+msgid "All %s"
+msgstr "Tutto: %s"
+
+#: source/ui/BrowseHome.cpp:732
+msgid "Movie library  ·  open it with A"
+msgstr "Libreria di film  ·  aprila con A"
+
+#: source/ui/BrowseHome.cpp:733
+msgid "TV library  ·  open it with A"
+msgstr "Libreria di serie TV  ·  aprila con A"
+
+#: source/ui/BrowseHome.cpp:734
+msgid "Music library  ·  open it with A"
+msgstr "Libreria musicale  ·  aprila con A"
+
+#: source/ui/BrowseHome.cpp:735
+msgid "Collection library  ·  open it with A"
+msgstr "Libreria di collezioni  ·  aprila con A"
+
+#: source/ui/BrowseHome.cpp:736
+msgid "Media library  ·  open it with A"
+msgstr "Libreria multimediale  ·  aprila con A"
+
+#: source/ui/BrowseHome.cpp:739 source/ui/BrowseHome.cpp:755
+#, c-format
+msgid "%d episode"
+msgstr "%d episodio"
+
+#: source/ui/BrowseHome.cpp:739 source/ui/BrowseHome.cpp:755
+#, c-format
+msgid "%d episodes"
+msgstr "%d episodi"
+
+#: source/ui/BrowseHome.cpp:742
+#, c-format
+msgid "%d season"
+msgstr "%d stagione"
+
+#: source/ui/BrowseHome.cpp:742 source/ui/LibraryItems.cpp:516
+#, c-format
+msgid "%d seasons"
+msgstr "%d stagioni"
+
+#. TRANSLATORS: season and episode numbers, then the episode's title
+#: source/ui/BrowseHome.cpp:761
+#, c-format
+msgid "S%d E%d  ·  %s"
+msgstr "S%d E%d  ·  %s"
+
+#. TRANSLATORS: a running time, hours and minutes
+#. TRANSLATORS: a running time: hours and minutes, minutes, seconds
+#: source/ui/BrowseHome.cpp:768 source/ui/BrowseHome.cpp:772
+#: source/ui/LibraryDetail.cpp:238 source/ui/LibraryItems.cpp:518
+#, c-format
+msgid "%dh %02dmin"
+msgstr "%d h %02d min"
+
+#: source/ui/BrowseHome.cpp:780
+#, c-format
+msgid "%d min left"
+msgstr "%d min rimanenti"
+
+#: source/ui/BrowseHome.cpp:858
+msgid "Nothing to show yet"
+msgstr "Ancora niente da mostrare"
+
+#: source/ui/BrowseHome.cpp:859
+msgid "Use \"browse\" to open your libraries."
+msgstr "Usa «sfoglia» per aprire le tue librerie."
+
+#: source/ui/BrowseHome.cpp:889
+msgid "Browse"
+msgstr "Sfoglia"
+
+#: source/ui/BrowseHome.cpp:889 source/ui/BrowseHome.cpp:890
+#: source/ui/LibraryHome.cpp:328 source/ui/LibraryHome.cpp:381
+#: source/ui/LibraryItems.cpp:543 source/ui/LibrarySearch.cpp:263
+#: source/ui/LibrarySpecials.cpp:185 source/ui/LibrarySuggestions.cpp:424
+#: source/ui/ProfileView.cpp:165 source/ui/SettingsView.cpp:97
+msgid "Open"
+msgstr "Apri"
+
+#: source/ui/BrowseHome.cpp:889 source/ui/BrowseHome.cpp:890
+#: source/ui/LibraryHome.cpp:328 source/ui/LibrarySearch.cpp:15
+#: source/ui/LibrarySearch.cpp:169 source/ui/LibrarySearch.cpp:195
+msgid "Search"
+msgstr "Cerca"
+
+#: source/ui/BrowseHome.cpp:890
+msgid "Home"
+msgstr "Home"
+
+#: source/ui/ConnectView.cpp:111
+msgid "Signing in"
+msgstr "Accesso in corso"
+
+#: source/ui/ConnectView.cpp:134
+msgid "Cancelled."
+msgstr "Annullato."
+
+#: source/ui/ConnectView.cpp:317
+msgid "Set the Server URL in the Credentials tab first."
+msgstr "Prima inserisci l'URL del server nella scheda Credenziali."
+
+#: source/ui/ConnectView.cpp:327
+msgid "Contacting the server"
+msgstr "Contatto con il server"
+
+#: source/ui/ConnectView.cpp:337
+msgid "Enter code on another device:"
+msgstr "Inserisci il codice su un altro dispositivo:"
+
+#: source/ui/ConnectView.cpp:354
+msgid "Waiting for approval"
+msgstr "In attesa di approvazione"
+
+#: source/ui/ConnectView.cpp:404
+msgid "Failed to start scan thread."
+msgstr "Impossibile avviare la ricerca."
+
+#: source/ui/ConnectView.cpp:419
+msgid "No servers found on the local network."
+msgstr "Nessun server trovato sulla rete locale."
+
+#: source/ui/ConnectView.cpp:460
+msgid "Server URL set. Enter your credentials."
+msgstr "URL del server impostato. Inserisci le tue credenziali."
+
+#: source/ui/ConnectView.cpp:476 source/ui/ConnectView.cpp:591
+#: source/ui/SettingsView.cpp:220
+msgid "Done"
+msgstr "Fatto"
+
+#: source/ui/ConnectView.cpp:476 source/ui/ConnectView.cpp:591
+msgid "Next"
+msgstr "Avanti"
+
+#: source/ui/ConnectView.cpp:517
+msgid "Connect to Jellyfin"
+msgstr "Connessione a Jellyfin"
+
+#: source/ui/ConnectView.cpp:523
+msgid "Credentials"
+msgstr "Credenziali"
+
+#: source/ui/ConnectView.cpp:523
+msgid "Discover"
+msgstr "Rileva"
+
+#: source/ui/ConnectView.cpp:523
+msgid "Quick Connect"
+msgstr "Connessione rapida"
+
+#: source/ui/ConnectView.cpp:541 source/ui/ConnectView.cpp:544
+msgid "Connecting to the network"
+msgstr "Connessione alla rete"
+
+#: source/ui/ConnectView.cpp:577 source/ui/ConnectView.cpp:610
+msgid "Server URL"
+msgstr "URL del server"
+
+#: source/ui/ConnectView.cpp:579 source/ui/ConnectView.cpp:610
+msgid "Username"
+msgstr "Nome utente"
+
+#: source/ui/ConnectView.cpp:581 source/ui/ConnectView.cpp:610
+#: source/ui/SettingsView.cpp:428
+msgid "Password"
+msgstr "Password"
+
+#: source/ui/ConnectView.cpp:585
+msgid "Connect"
+msgstr "Connetti"
+
+#: source/ui/ConnectView.cpp:590 source/ui/LibrarySearch.cpp:194
+#: source/ui/ProfileView.cpp:157 source/ui/ProfileView.cpp:162
+#: source/ui/ProfileView.cpp:165
+msgid "Delete"
+msgstr "Cancella"
+
+#: source/ui/ConnectView.cpp:590 source/ui/LibrarySearch.cpp:194
+#: source/ui/PinPad.cpp:102
+msgid "Type"
+msgstr "Scrivi"
+
+#: source/ui/ConnectView.cpp:591 source/ui/LibrarySearch.cpp:195
+msgid "Shift"
+msgstr "Maiusc"
+
+#: source/ui/ConnectView.cpp:594 source/ui/SettingsView.cpp:219
+msgid "Move"
+msgstr "Sposta"
+
+#: source/ui/ConnectView.cpp:595 source/ui/ConnectView.cpp:666
+#: source/ui/ConnectView.cpp:727
+msgid "Tabs"
+msgstr "Schede"
+
+#: source/ui/ConnectView.cpp:630
+msgid "Quick Connect lets you sign in by approving"
+msgstr "Connessione rapida ti fa accedere approvando"
+
+#: source/ui/ConnectView.cpp:631
+msgid "a code in the Jellyfin web interface."
+msgstr "un codice nell'interfaccia web di Jellyfin."
+
+#: source/ui/ConnectView.cpp:635
+msgid "Go to Credentials tab and enter the Server URL first."
+msgstr "Prima inserisci l'URL del server nella scheda Credenziali."
+
+#: source/ui/ConnectView.cpp:638
+#, c-format
+msgid "Server: %s"
+msgstr "Server: %s"
+
+#: source/ui/ConnectView.cpp:645
+msgid "Start Quick Connect"
+msgstr "Ottieni un codice"
+
+#: source/ui/ConnectView.cpp:650
+msgid "Enter this code on your Jellyfin server:"
+msgstr "Inserisci questo codice sul tuo server Jellyfin:"
+
+#: source/ui/ConnectView.cpp:655
+msgid "Waiting for approval..."
+msgstr "In attesa di approvazione..."
+
+#: source/ui/ConnectView.cpp:659
+msgid "Approved! Signing in..."
+msgstr "Approvato! Accesso in corso..."
+
+#: source/ui/ConnectView.cpp:662
+msgid "Error. Press A to retry."
+msgstr "Errore. Premi A per riprovare."
+
+#: source/ui/ConnectView.cpp:666 source/ui/LibraryDetail.cpp:166
+#: source/ui/ProfileView.cpp:158 source/ui/ProfileView.cpp:162
+msgid "Cancel"
+msgstr "Annulla"
+
+#: source/ui/ConnectView.cpp:685
+msgid "Find Jellyfin servers on your local network."
+msgstr "Trova i server Jellyfin sulla tua rete locale."
+
+#: source/ui/ConnectView.cpp:686
+msgid "The Wii must be on the same network as the server."
+msgstr "La Wii deve essere sulla stessa rete del server."
+
+#: source/ui/ConnectView.cpp:691
+msgid "Scan for Servers"
+msgstr "Cerca server"
+
+#: source/ui/ConnectView.cpp:696
+msgid "Scanning..."
+msgstr "Ricerca..."
+
+#: source/ui/ConnectView.cpp:702
+msgid "No servers found."
+msgstr "Nessun server trovato."
+
+#: source/ui/ConnectView.cpp:703
+msgid "Check your network and server settings, then try again."
+msgstr "Controlla la rete e il server, poi riprova."
+
+#: source/ui/ConnectView.cpp:707
+msgid "Scan Again"
+msgstr "Cerca di nuovo"
+
+#: source/ui/ConnectView.cpp:710
+msgid "Found — select a server:"
+msgstr "Trovati — scegli un server:"
+
+#: source/ui/Keyboard.cpp:145
+msgid "⇧ Shift"
+msgstr "⇧ Maiusc"
+
+#. TRANSLATORS: keys of the on-screen keyboard; keep the arrow in front
+#: source/ui/Keyboard.cpp:145
+msgid "⇪ Caps"
+msgstr "⇪ Bloc"
+
+#: source/ui/Keyboard.cpp:147
+msgid "Space"
+msgstr "Spazio"
+
+#: source/ui/Keyboard.cpp:148
+msgid "← Delete"
+msgstr "← Cancella"
+
+#: source/ui/LibraryDetail.cpp:144
+msgid "Resume playback?"
+msgstr "Riprendere la riproduzione?"
+
+#. TRANSLATORS: under "Resume playback?": where it stopped, h:mm:ss or m:ss
+#: source/ui/LibraryDetail.cpp:150
+#, c-format
+msgid "at %d:%02d:%02d"
+msgstr "da %d:%02d:%02d"
+
+#: source/ui/LibraryDetail.cpp:151
+#, c-format
+msgid "at %d:%02d"
+msgstr "da %d:%02d"
+
+#: source/ui/LibraryDetail.cpp:156
+msgid "Continue"
+msgstr "Riprendi"
+
+#: source/ui/LibraryDetail.cpp:156
+msgid "From Start"
+msgstr "Dall'inizio"
+
+#: source/ui/LibraryDetail.cpp:211 source/ui/LibraryDetail.cpp:422
+#: source/ui/LibraryMusic.cpp:114 source/ui/LibraryScenes.cpp:113
+#: source/ui/MusicPlayerView.cpp:798
+msgid "Play"
+msgstr "Riproduci"
+
+#: source/ui/LibraryDetail.cpp:239
+#, c-format
+msgid "%dmin"
+msgstr "%d min"
+
+#: source/ui/LibraryDetail.cpp:240
+#, c-format
+msgid "%ds"
+msgstr "%d s"
+
+#: source/ui/LibraryDetail.cpp:246 source/ui/LibraryDetail.cpp:424
+#: source/ui/LibraryShows.cpp:216 source/ui/LibrarySort.cpp:15
+msgid "Watched"
+msgstr "Visto"
+
+#. TRANSLATORS: hours and minutes into the video, then how much of it is watched
+#: source/ui/LibraryDetail.cpp:266
+#, c-format
+msgid "Resume at %dh%02d (%d%%)"
+msgstr "Riprendi da %dh%02d (%d%%)"
+
+#: source/ui/LibraryDetail.cpp:267
+#, c-format
+msgid "Resume at %dmin (%d%%)"
+msgstr "Riprendi da %d min (%d%%)"
+
+#: source/ui/LibraryDetail.cpp:296
+msgid "Read more"
+msgstr "Leggi tutto"
+
+#: source/ui/LibraryDetail.cpp:306
+msgid "Cast & crew"
+msgstr "Cast e troupe"
+
+#: source/ui/LibraryDetail.cpp:320
+msgid "(director)"
+msgstr "(regia)"
+
+#: source/ui/LibraryDetail.cpp:385
+#, c-format
+msgid "%d chapters"
+msgstr "%d capitoli"
+
+#: source/ui/LibraryDetail.cpp:387 source/ui/LibraryDetail.cpp:422
+#: source/ui/LibraryScenes.cpp:79 source/ui/LibrarySpecials.cpp:25
+msgid "Scenes"
+msgstr "Scene"
+
+#: source/ui/LibraryDetail.cpp:401
+msgid "Version"
+msgstr "Versione"
+
+#: source/ui/LibraryDetail.cpp:423 source/ui/LibraryShows.cpp:119
+#: source/ui/LibraryShows.cpp:171
+msgid "Favorite"
+msgstr "Preferito"
+
+#: source/ui/LibraryDetail.cpp:423 source/ui/LibraryShows.cpp:171
+msgid "Unfavorite"
+msgstr "Togli preferito"
+
+#: source/ui/LibraryDetail.cpp:424 source/ui/LibraryShows.cpp:216
+msgid "Unwatched"
+msgstr "Non visto"
+
+#: source/ui/LibraryDetail.cpp:425 source/ui/LibrarySpecials.cpp:43
+msgid "Extras"
+msgstr "Extra"
+
+#: source/ui/LibraryDetail.cpp:426 source/ui/SettingsView.cpp:449
+msgid "Change"
+msgstr "Cambia"
+
+#: source/ui/LibraryDetail.cpp:426
+msgid "Focus"
+msgstr "Riga"
+
+#: source/ui/LibraryDetail.cpp:453
+msgid "Scroll"
+msgstr "Scorri"
+
+#: source/ui/LibraryDraw.cpp:180
+msgid "Collections"
+msgstr "Collezioni"
+
+#: source/ui/LibraryDraw.cpp:180 source/ui/LibraryDraw.cpp:183
+#: source/ui/LibrarySort.cpp:15
+msgid "Favorites"
+msgstr "Preferiti"
+
+#: source/ui/LibraryDraw.cpp:180
+msgid "Movies"
+msgstr "Film"
+
+#: source/ui/LibraryDraw.cpp:180 source/ui/LibraryDraw.cpp:181
+#: source/ui/LibraryDraw.cpp:182
+msgid "Suggestions"
+msgstr "Suggerimenti"
+
+#: source/ui/LibraryDraw.cpp:181
+msgid "Coming Up"
+msgstr "In arrivo"
+
+#: source/ui/LibraryDraw.cpp:181
+msgid "Series"
+msgstr "Serie"
+
+#: source/ui/LibraryDraw.cpp:182
+msgid "Albums"
+msgstr "Album"
+
+#: source/ui/LibraryDraw.cpp:182
+msgid "Artists"
+msgstr "Artisti"
+
+#: source/ui/LibraryDraw.cpp:182
+msgid "Playlists"
+msgstr "Playlist"
+
+#: source/ui/LibraryDraw.cpp:182
+msgid "Songs"
+msgstr "Brani"
+
+#: source/ui/LibraryDraw.cpp:183
+msgid "Activity"
+msgstr "Attività"
+
+#: source/ui/LibraryHome.cpp:329 source/ui/LibraryHome.cpp:382
+#: source/ui/LibraryHome.cpp:424 source/ui/LibraryItems.cpp:548
+#: source/ui/LibraryItems.cpp:618 source/ui/LibrarySuggestions.cpp:330
+#: source/ui/LibrarySuggestions.cpp:357 source/ui/LibrarySuggestions.cpp:376
+#: source/ui/LibrarySuggestions.cpp:425
+msgid "Tab"
+msgstr "Scheda"
+
+#: source/ui/LibraryHome.cpp:360 source/ui/LibrarySuggestions.cpp:315
+#: source/ui/LibrarySuggestions.cpp:342
+msgid "IN PROGRESS"
+msgstr "IN CORSO"
+
+#: source/ui/LibraryHome.cpp:367
+msgid "Nothing in progress"
+msgstr "Niente in corso"
+
+#: source/ui/LibraryHome.cpp:371
+msgid "NEXT UP"
+msgstr "PROSSIMI"
+
+#: source/ui/LibraryHome.cpp:381
+msgid "Row"
+msgstr "Riga"
+
+#: source/ui/LibraryHome.cpp:396
+msgid "No favorites"
+msgstr "Nessun preferito"
+
+#: source/ui/LibraryHome.cpp:423 source/ui/LibrarySuggestions.cpp:329
+#: source/ui/LibrarySuggestions.cpp:375
+msgid "Detail"
+msgstr "Dettagli"
+
+#: source/ui/LibraryHome.cpp:434
+msgid "Back to Jellyfin"
+msgstr "Torna a Jellyfin"
+
+#: source/ui/LibraryHome.cpp:434
+msgid "Switch Profile"
+msgstr "Cambia profilo"
+
+#: source/ui/LibraryHome.cpp:434
+msgid "WiiFin Menu"
+msgstr "Menu WiiFin"
+
+#: source/ui/LibraryItems.cpp:458
+msgid "This library is empty"
+msgstr "Questa libreria è vuota"
+
+#: source/ui/LibraryItems.cpp:485
+msgid "COLLECTION"
+msgstr "COLLEZIONE"
+
+#: source/ui/LibraryItems.cpp:485 source/ui/LibrarySearch.cpp:234
+#: source/ui/LibraryView.cpp:106
+msgid "SERIES"
+msgstr "SERIE"
+
+#: source/ui/LibraryItems.cpp:486
+msgid "FOLDER"
+msgstr "CARTELLA"
+
+#: source/ui/LibraryItems.cpp:514
+msgid "1 season"
+msgstr "1 stagione"
+
+#: source/ui/LibraryItems.cpp:544 source/ui/LibraryItems.cpp:617
+#: source/ui/LibraryMusic.cpp:114 source/ui/LibraryShows.cpp:170
+#: source/ui/LibraryShows.cpp:215 source/ui/MusicPlayerView.cpp:798
+msgid "Shuffle"
+msgstr "Casuale"
+
+#: source/ui/LibraryItems.cpp:544 source/ui/LibraryItems.cpp:610
+#: source/ui/LibraryItems.cpp:617
+msgid "Sort"
+msgstr "Ordina"
+
+#: source/ui/LibraryItems.cpp:548 source/ui/LibraryItems.cpp:554
+msgid "A-Z"
+msgstr "A-Z"
+
+#: source/ui/LibraryItems.cpp:551 source/ui/LibraryItems.cpp:554
+#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:449
+msgid "Page"
+msgstr "Pagina"
+
+#: source/ui/LibraryItems.cpp:612
+#, c-format
+msgid "Page %d / %d"
+msgstr "Pagina %d / %d"
+
+#. TRANSLATORS: a chapter without a name, its number
+#: source/ui/LibraryScenes.cpp:100
+#, c-format
+msgid "Chapter %d"
+msgstr "Capitolo %d"
+
+#: source/ui/LibrarySearch.cpp:180
+msgid "Type a title, an actor..."
+msgstr "Un titolo, un attore..."
+
+#: source/ui/LibrarySearch.cpp:209
+#, c-format
+msgid "Results: %s"
+msgstr "Risultati: %s"
+
+#: source/ui/LibrarySearch.cpp:215
+msgid "No results."
+msgstr "Nessun risultato."
+
+#. TRANSLATORS: type badges of the search results, 54 pixels wide: keep them short
+#: source/ui/LibrarySearch.cpp:233
+msgid "MOVIE"
+msgstr "FILM"
+
+#: source/ui/LibrarySearch.cpp:235
+msgid "EP"
+msgstr "EP"
+
+#: source/ui/LibrarySearch.cpp:236
+msgid "ALBUM"
+msgstr "ALBUM"
+
+#: source/ui/LibrarySearch.cpp:237
+msgid "TRACK"
+msgstr "BRANO"
+
+#: source/ui/LibrarySearch.cpp:238
+msgid "ARTIST"
+msgstr "ARTIS."
+
+#: source/ui/LibrarySearch.cpp:239
+msgid "COLLEC"
+msgstr "COLLEZ"
+
+#: source/ui/LibrarySearch.cpp:240
+msgid "LIST"
+msgstr "LISTA"
+
+#. TRANSLATORS: season and episode numbers before the episode's title
+#: source/ui/LibrarySearch.cpp:250
+#, c-format
+msgid "S%02dE%02d - "
+msgstr "S%02dE%02d -"
+
+#: source/ui/LibrarySearch.cpp:263
+msgid "New search"
+msgstr "Nuova ricerca"
+
+#. TRANSLATORS: E = episode, its number in the season
+#: source/ui/LibraryShows.cpp:200
+#, c-format
+msgid "E%02d"
+msgstr "E%02d"
+
+#: source/ui/LibraryShows.cpp:215 source/ui/LibrarySpecials.cpp:185
+msgid "Details"
+msgstr "Dettagli"
+
+#: source/ui/LibrarySort.cpp:14
+msgid "Date added"
+msgstr "Data di aggiunta"
+
+#: source/ui/LibrarySort.cpp:14
+msgid "Name"
+msgstr "Nome"
+
+#: source/ui/LibrarySort.cpp:14
+msgid "Rating"
+msgstr "Valutazione"
+
+#: source/ui/LibrarySort.cpp:14
+msgid "Year"
+msgstr "Anno"
+
+#: source/ui/LibrarySort.cpp:15
+msgid "All"
+msgstr "Tutto"
+
+#: source/ui/LibrarySort.cpp:15
+msgid "Not watched"
+msgstr "Non visti"
+
+#: source/ui/LibrarySort.cpp:52 source/ui/LibrarySort.cpp:117
+msgid "Ascending"
+msgstr "Crescente"
+
+#: source/ui/LibrarySort.cpp:52 source/ui/LibrarySort.cpp:117
+msgid "Descending"
+msgstr "Decrescente"
+
+#: source/ui/LibrarySort.cpp:112
+msgid "Sort & filter"
+msgstr "Ordina e filtra"
+
+#: source/ui/LibrarySort.cpp:114
+msgid "Genre"
+msgstr "Genere"
+
+#: source/ui/LibrarySort.cpp:114
+msgid "Order"
+msgstr "Ordine"
+
+#: source/ui/LibrarySort.cpp:114
+msgid "Show"
+msgstr "Mostra"
+
+#: source/ui/LibrarySort.cpp:114
+msgid "Sort by"
+msgstr "Ordina per"
+
+#: source/ui/LibrarySort.cpp:119
+msgid "Every genre"
+msgstr "Tutti i generi"
+
+#. TRANSLATORS: A and B are the Wii Remote's buttons
+#: source/ui/LibrarySort.cpp:131
+msgid "A  apply      B  cancel"
+msgstr "A  applica      B  annulla"
+
+#: source/ui/LibrarySpecials.cpp:20
+msgid "Trailer"
+msgstr "Trailer"
+
+#: source/ui/LibrarySpecials.cpp:20
+msgid "Trailers"
+msgstr "Trailer"
+
+#: source/ui/LibrarySpecials.cpp:21
+msgid "Featurette"
+msgstr "Featurette"
+
+#: source/ui/LibrarySpecials.cpp:21
+msgid "Featurettes"
+msgstr "Featurette"
+
+#: source/ui/LibrarySpecials.cpp:22
+msgid "Behind the Scenes"
+msgstr "Dietro le quinte"
+
+#: source/ui/LibrarySpecials.cpp:23
+msgid "Deleted Scene"
+msgstr "Scena eliminata"
+
+#: source/ui/LibrarySpecials.cpp:23
+msgid "Deleted Scenes"
+msgstr "Scene eliminate"
+
+#: source/ui/LibrarySpecials.cpp:24
+msgid "Interview"
+msgstr "Intervista"
+
+#: source/ui/LibrarySpecials.cpp:24
+msgid "Interviews"
+msgstr "Interviste"
+
+#: source/ui/LibrarySpecials.cpp:25
+msgid "Scene"
+msgstr "Scena"
+
+#: source/ui/LibrarySpecials.cpp:26
+msgid "Short"
+msgstr "Cortometraggio"
+
+#: source/ui/LibrarySpecials.cpp:26
+msgid "Shorts"
+msgstr "Cortometraggi"
+
+#: source/ui/LibrarySpecials.cpp:27
+msgid "Clip"
+msgstr "Clip"
+
+#: source/ui/LibrarySpecials.cpp:27
+msgid "Clips"
+msgstr "Clip"
+
+#: source/ui/LibrarySpecials.cpp:28
+msgid "Sample"
+msgstr "Estratto"
+
+#: source/ui/LibrarySpecials.cpp:28
+msgid "Samples"
+msgstr "Estratti"
+
+#: source/ui/LibrarySpecials.cpp:29
+msgid "Theme Video"
+msgstr "Video tematico"
+
+#: source/ui/LibrarySpecials.cpp:29
+msgid "Theme Videos"
+msgstr "Video tematici"
+
+#: source/ui/LibrarySpecials.cpp:39
+msgid "Extra"
+msgstr "Extra"
+
+#: source/ui/LibrarySpecials.cpp:142 source/ui/LibraryView.cpp:930
+msgid "Special Features"
+msgstr "Contenuti speciali"
+
+#: source/ui/LibrarySpecials.cpp:165
+msgid "1 video"
+msgstr "1 video"
+
+#: source/ui/LibrarySpecials.cpp:166
+#, c-format
+msgid "%d videos"
+msgstr "%d video"
+
+#: source/ui/LibrarySpecials.cpp:173
+#, c-format
+msgid "%d min"
+msgstr "%d min"
+
+#: source/ui/LibrarySuggestions.cpp:320
+msgid "No movie in progress"
+msgstr "Nessun film in corso"
+
+#: source/ui/LibrarySuggestions.cpp:322 source/ui/LibrarySuggestions.cpp:400
+msgid "RECENTLY ADDED"
+msgstr "ULTIMI AGGIUNTI"
+
+#: source/ui/LibrarySuggestions.cpp:327
+msgid "No recent movies"
+msgstr "Nessun film recente"
+
+#: source/ui/LibrarySuggestions.cpp:347
+msgid "No episode in progress"
+msgstr "Nessun episodio in corso"
+
+#: source/ui/LibrarySuggestions.cpp:349
+msgid "RECENT SERIES"
+msgstr "SERIE RECENTI"
+
+#: source/ui/LibrarySuggestions.cpp:354
+msgid "No recent series"
+msgstr "Nessuna serie recente"
+
+#: source/ui/LibrarySuggestions.cpp:368
+msgid "No content."
+msgstr "Nessun contenuto."
+
+#: source/ui/LibrarySuggestions.cpp:369
+msgid "Make sure metadata download is enabled."
+msgstr "Verifica che il download dei metadati sia attivo."
+
+#: source/ui/LibrarySuggestions.cpp:371
+msgid "COMING UP"
+msgstr "IN ARRIVO"
+
+#: source/ui/LibrarySuggestions.cpp:415
+msgid "No recent albums"
+msgstr "Nessun album recente"
+
+#: source/ui/LibraryView.cpp:105
+msgid "MOVIES"
+msgstr "FILM"
+
+#: source/ui/LibraryView.cpp:107
+msgid "MUSIC"
+msgstr "MUSICA"
+
+#: source/ui/LibraryView.cpp:108
+msgid "BOOKS"
+msgstr "LIBRI"
+
+#: source/ui/LibraryView.cpp:109
+msgid "PLAYLISTS"
+msgstr "PLAYLIST"
+
+#: source/ui/LibraryView.cpp:110
+msgid "COLLECTIONS"
+msgstr "COLLEZIONI"
+
+#: source/ui/LibraryView.cpp:111
+msgid "LIVE TV"
+msgstr "TV IN DIRETTA"
+
+#: source/ui/LibraryView.cpp:112
+msgid "HOME VIDEOS"
+msgstr "VIDEO PERSONALI"
+
+#: source/ui/LibraryView.cpp:113
+msgid "PHOTOS"
+msgstr "FOTO"
+
+#: source/ui/LibraryView.cpp:114
+msgid "MUSIC VIDEOS"
+msgstr "VIDEOCLIP"
+
+#: source/ui/LibraryView.cpp:115
+msgid "TRAILERS"
+msgstr "TRAILER"
+
+#: source/ui/LibraryView.cpp:116
+msgid "MIXED"
+msgstr "MISTA"
+
+#: source/ui/LibraryView.cpp:128
+msgid "MEDIA"
+msgstr "MEDIA"
+
+#: source/ui/LibraryView.cpp:566
+msgid "No library found"
+msgstr "Nessuna libreria trovata"
+
+#: source/ui/LibraryView.cpp:706
+msgid "Collections unavailable"
+msgstr "Collezioni non disponibili"
+
+#: source/ui/LibraryView.cpp:720 source/ui/LibraryView.cpp:733
+msgid "Favorites unavailable"
+msgstr "Preferiti non disponibili"
+
+#: source/ui/LibraryView.cpp:1435
+msgid "Error"
+msgstr "Errore"
+
+#. TRANSLATORS: the music player's visualizers, named when one is picked
+#: source/ui/MusicPlayerView.cpp:79
+msgid "Bars"
+msgstr "Barre"
+
+#: source/ui/MusicPlayerView.cpp:79
+msgid "Blocks"
+msgstr "Blocchi"
+
+#: source/ui/MusicPlayerView.cpp:79
+msgid "Bubbles"
+msgstr "Bolle"
+
+#: source/ui/MusicPlayerView.cpp:79
+msgid "Ring"
+msgstr "Anello"
+
+#: source/ui/MusicPlayerView.cpp:79
+msgid "Wave"
+msgstr "Onda"
+
+#: source/ui/MusicPlayerView.cpp:252
+msgid "Added to the queue"
+msgstr "Aggiunto alla coda"
+
+#: source/ui/MusicPlayerView.cpp:252
+msgid "Playing next"
+msgstr "Sarà il prossimo"
+
+#: source/ui/MusicPlayerView.cpp:684 source/ui/MusicPlayerView.cpp:803
+msgid "Up Next"
+msgstr "A seguire"
+
+#: source/ui/MusicPlayerView.cpp:686 source/ui/MusicPlayerView.cpp:883
+msgid "Shuffle off"
+msgstr "Casuale disattivato"
+
+#: source/ui/MusicPlayerView.cpp:686 source/ui/MusicPlayerView.cpp:883
+msgid "Shuffle on"
+msgstr "Casuale attivato"
+
+#: source/ui/MusicPlayerView.cpp:687 source/ui/MusicPlayerView.cpp:890
+msgid "Repeat all"
+msgstr "Ripeti tutto"
+
+#: source/ui/MusicPlayerView.cpp:687 source/ui/MusicPlayerView.cpp:890
+msgid "Repeat off"
+msgstr "Nessuna ripetizione"
+
+#: source/ui/MusicPlayerView.cpp:687
+msgid "Repeat one"
+msgstr "Ripeti brano"
+
+#: source/ui/MusicPlayerView.cpp:749
+msgid "NOW PLAYING"
+msgstr "IN RIPRODUZIONE"
+
+#: source/ui/MusicPlayerView.cpp:753
+#, c-format
+msgid "%d of %d"
+msgstr "%d di %d"
+
+#. TRANSLATORS: the track's place in the queue; Shuffle: shuffle is on
+#: source/ui/MusicPlayerView.cpp:753
+#, c-format
+msgid "%d of %d  ·  Shuffle"
+msgstr "%d di %d  ·  Casuale"
+
+#. TRANSLATORS: the track after this one: its title (and its artist)
+#: source/ui/MusicPlayerView.cpp:792
+#, c-format
+msgid "Next:  %s"
+msgstr "Prossimo:  %s"
+
+#: source/ui/MusicPlayerView.cpp:793
+#, c-format
+msgid "Next:  %s  —  %s"
+msgstr "Prossimo:  %s  —  %s"
+
+#: source/ui/MusicPlayerView.cpp:802
+msgid "Track"
+msgstr "Brano"
+
+#: source/ui/MusicPlayerView.cpp:802
+msgid "Visualizer"
+msgstr "Visualizzatore"
+
+#: source/ui/MusicPlayerView.cpp:879
+msgid "Added to favorites"
+msgstr "Aggiunto ai preferiti"
+
+#: source/ui/MusicPlayerView.cpp:879
+msgid "Removed from favorites"
+msgstr "Rimosso dai preferiti"
+
+#: source/ui/MusicPlayerView.cpp:890
+msgid "Repeat this track"
+msgstr "Ripeti questo brano"
+
+#: source/ui/MusicPlayerView.cpp:958
+msgid "Volume"
+msgstr "Volume"
+
+#: source/ui/PinPad.cpp:103
+msgid "Erase"
+msgstr "Cancella"
+
+#: source/ui/ProfileView.cpp:115
+msgid "Add a Profile"
+msgstr "Aggiungi un profilo"
+
+#: source/ui/ProfileView.cpp:115
+msgid "Who's watching?"
+msgstr "Chi sta guardando?"
+
+#: source/ui/ProfileView.cpp:134
+msgid "Add New Profile"
+msgstr "Nuovo profilo"
+
+#: source/ui/ProfileView.cpp:155
+msgid "Delete this profile?"
+msgstr "Eliminare questo profilo?"
+
+#: source/ui/ProfileView.cpp:156
+msgid "Its saved sign-in will be forgotten."
+msgstr "L'accesso salvato verrà dimenticato."
+
+#: source/ui/SettingsView.cpp:22
+msgid "Sign-In Settings"
+msgstr "Impostazioni di accesso"
+
+#: source/ui/SettingsView.cpp:22
+msgid "System Settings"
+msgstr "Impostazioni di sistema"
+
+#: source/ui/SettingsView.cpp:22
+msgid "View Settings"
+msgstr "Impostazioni aspetto"
+
+#: source/ui/SettingsView.cpp:94
+msgid "Made with ❤ for Jellyfin"
+msgstr "Fatto con ❤ per Jellyfin"
+
+#: source/ui/SettingsView.cpp:211 source/ui/SettingsView.cpp:413
+msgid "Screen Area"
+msgstr "Area dello schermo"
+
+#: source/ui/SettingsView.cpp:212
+msgid "Move each arrow until its tip sits right in"
+msgstr "Sposta ogni freccia finché la punta non tocca"
+
+#: source/ui/SettingsView.cpp:213
+msgid "the corner of your TV screen."
+msgstr "l'angolo dello schermo della TV."
+
+#: source/ui/SettingsView.cpp:215
+#, c-format
+msgid "Left %d   ·   Top %d   ·   Right %d   ·   Bottom %d"
+msgstr "Sinistra %d   ·   Alto %d   ·   Destra %d   ·   Basso %d"
+
+#: source/ui/SettingsView.cpp:219
+msgid "Switch"
+msgstr "Cambia"
+
+#: source/ui/SettingsView.cpp:338
+msgid "SSL Verification"
+msgstr "Verifica SSL"
+
+#: source/ui/SettingsView.cpp:339
+msgid "Validate the server HTTPS certificate (disable for self-signed certs)"
+msgstr "Verifica il certificato HTTPS (disattivala se autofirmato)"
+
+#: source/ui/SettingsView.cpp:340 source/ui/SettingsView.cpp:342
+#: source/ui/SettingsView.cpp:346 source/ui/SettingsView.cpp:374
+#: source/ui/SettingsView.cpp:378 source/ui/SettingsView.cpp:408
+msgid "OFF"
+msgstr "NO"
+
+#: source/ui/SettingsView.cpp:340 source/ui/SettingsView.cpp:342
+#: source/ui/SettingsView.cpp:346 source/ui/SettingsView.cpp:378
+#: source/ui/SettingsView.cpp:408
+msgid "ON"
+msgstr "SÌ"
+
+#: source/ui/SettingsView.cpp:341
+msgid "Background Music"
+msgstr "Musica di sottofondo"
+
+#: source/ui/SettingsView.cpp:341
+msgid "Play background music in menus"
+msgstr "Musica nei menu"
+
+#: source/ui/SettingsView.cpp:343
+msgid "Interface Sounds"
+msgstr "Suoni dell'interfaccia"
+
+#: source/ui/SettingsView.cpp:344
+msgid "Sounds in the menus; your own in sounds/ on the SD card"
+msgstr "Suoni nei menu; i tuoi in sounds/ sulla scheda SD"
+
+#: source/ui/SettingsView.cpp:345
+msgid "The menus stay silent"
+msgstr "I menu restano silenziosi"
+
+#: source/ui/SettingsView.cpp:356
+#, c-format
+msgid "%.1f Mb/s; your connection (%.1f Mb/s measured) holds videos to %.1f"
+msgstr "%.1f Mb/s; la tua connessione (%.1f Mb/s misurati) limita a %.1f"
+
+#: source/ui/SettingsView.cpp:361
+#, c-format
+msgid "%.1f Mb/s: sharpest, for a wired adapter. Lower it if videos stutter"
+msgstr "%.1f Mb/s: la più nitida, per adattatore cablato. Abbassala se scatta"
+
+#: source/ui/SettingsView.cpp:365
+#, c-format
+msgid "Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering"
+msgstr "Bitrate video: %.1f Mb/s. Abbassalo se la riproduzione si ferma"
+
+#: source/ui/SettingsView.cpp:367
+msgid "Video Quality"
+msgstr "Qualità video"
+
+#: source/ui/SettingsView.cpp:371
+msgid "Direct Play"
+msgstr "Riproduzione diretta"
+
+#: source/ui/SettingsView.cpp:372
+msgid "Files the Wii can decode play as they are (SD DivX, DVD...): no server work"
+msgstr "Così com'è se la Wii lo legge (DivX, DVD...): server a riposo"
+
+#: source/ui/SettingsView.cpp:373
+msgid "Every video is converted by the server"
+msgstr "Il server converte ogni video"
+
+#: source/ui/SettingsView.cpp:374
+msgid "Auto"
+msgstr "Auto"
+
+#: source/ui/SettingsView.cpp:375
+msgid "Smooth Motion"
+msgstr "Movimento fluido"
+
+#: source/ui/SettingsView.cpp:376
+msgid "Blends frames on picture changes: films move evenly on 60 Hz TVs"
+msgstr "Fonde i fotogrammi: film fluidi sulle TV a 60 Hz"
+
+#: source/ui/SettingsView.cpp:377
+msgid "Each frame shown as is (24 fps films judder slightly on 60 Hz)"
+msgstr "Ogni fotogramma così com'è (i film a 24 fps scattano un po' a 60 Hz)"
+
+#: source/ui/SettingsView.cpp:381
+msgid "Light, like the Wii Menu"
+msgstr "Chiaro, come il Menu Wii"
+
+#: source/ui/SettingsView.cpp:382
+msgid "Dark, for movie nights"
+msgstr "Scuro, per le serate film"
+
+#: source/ui/SettingsView.cpp:383
+msgid "Red and charcoal, browse in rows like the old video channels"
+msgstr "Rosso e antracite, a righe come i vecchi canali video"
+
+#: source/ui/SettingsView.cpp:387
+msgid "Theme"
+msgstr "Tema"
+
+#: source/ui/SettingsView.cpp:391
+msgid "Home Screen"
+msgstr "Schermata iniziale"
+
+#: source/ui/SettingsView.cpp:391
+msgid "Rows of posters to browse, like the old video channels"
+msgstr "Righe di locandine, come i vecchi canali video"
+
+#: source/ui/SettingsView.cpp:392
+msgid "A grid of your libraries"
+msgstr "Una griglia delle tue librerie"
+
+#: source/ui/SettingsView.cpp:398
+msgid "Browse libraries with their artwork"
+msgstr "Le librerie con le loro locandine"
+
+#: source/ui/SettingsView.cpp:399
+msgid "Libraries as text lists: quickest to browse big ones"
+msgstr "Elenchi di testo: il più rapido per librerie grandi"
+
+#: source/ui/SettingsView.cpp:400
+msgid "Text lists, with the cover of the selected title"
+msgstr "Elenchi, con la copertina del titolo scelto"
+
+#: source/ui/SettingsView.cpp:403
+msgid "Library View"
+msgstr "Vista librerie"
+
+#: source/ui/SettingsView.cpp:405
+msgid "Disc Slot Light"
+msgstr "Luce della fessura"
+
+#: source/ui/SettingsView.cpp:406
+msgid "Pulses with the sound, as bright as the Wii Settings say"
+msgstr "Pulsa col suono, luminosa come dicono le Impostazioni Wii"
+
+#: source/ui/SettingsView.cpp:407
+msgid "Stays dark during playback"
+msgstr "Resta spenta durante la riproduzione"
+
+#: source/ui/SettingsView.cpp:413
+msgid "Shrink the interface if your TV crops the edges (overscan)"
+msgstr "Riduce l'interfaccia se la TV taglia i bordi (overscan)"
+
+#: source/ui/SettingsView.cpp:414
+msgid "Adjusted"
+msgstr "Regolata"
+
+#: source/ui/SettingsView.cpp:414
+msgid "Full"
+msgstr "Intera"
+
+#: source/ui/SettingsView.cpp:416
+msgid "Backgrounds"
+msgstr "Sfondi"
+
+#: source/ui/SettingsView.cpp:417
+msgid "Solid colours: no bands on TVs that show them in gradients"
+msgstr "Tinta unita: niente bande sulle TV che le mostrano nelle sfumature"
+
+#: source/ui/SettingsView.cpp:418
+msgid "Soft gradients, like the Wii Menu"
+msgstr "Sfumature morbide, come il Menu Wii"
+
+#: source/ui/SettingsView.cpp:419
+msgid "Gradient"
+msgstr "Sfumato"
+
+#: source/ui/SettingsView.cpp:419
+msgid "Solid"
+msgstr "Uniforme"
+
+#: source/ui/SettingsView.cpp:420
+msgid "Clock"
+msgstr "Orologio"
+
+#: source/ui/SettingsView.cpp:421
+msgid "13:30, the date as day/month"
+msgstr "13:30, la data come giorno/mese"
+
+#: source/ui/SettingsView.cpp:421
+msgid "1:30 PM, the date as month/day"
+msgstr "1:30 PM, la data come mese/giorno"
+
+#: source/ui/SettingsView.cpp:422
+msgid "12-hour"
+msgstr "12 ore"
+
+#: source/ui/SettingsView.cpp:422
+msgid "24-hour"
+msgstr "24 ore"
+
+#: source/ui/SettingsView.cpp:424
+msgid "Language"
+msgstr "Lingua"
+
+#: source/ui/SettingsView.cpp:425
+msgid "Chosen here, whatever the Wii's language"
+msgstr "Scelta qui, qualunque sia quella della Wii"
+
+#: source/ui/SettingsView.cpp:425
+msgid "The Wii's language, as set in the Wii Settings"
+msgstr "Quella della Wii, come nelle Impostazioni Wii"
+
+#: source/ui/SettingsView.cpp:428
+msgid "Automatic"
+msgstr "Automatico"
+
+#: source/ui/SettingsView.cpp:428
+msgid "Passcode"
+msgstr "Codice"
+
+#: source/ui/SettingsView.cpp:430
+msgid "Opens at once on this Wii"
+msgstr "Si apre subito su questa Wii"
+
+#: source/ui/SettingsView.cpp:431
+msgid "Asks the profile's four-digit passcode first"
+msgstr "Chiede prima il codice a quattro cifre del profilo"
+
+#: source/ui/SettingsView.cpp:432
+msgid "Asks the password (or Quick Connect) each time"
+msgstr "Chiede la password (o Connessione rapida) ogni volta"
+
+#: source/ui/SettingsView.cpp:435
+msgid "Sign-In"
+msgstr "Accesso"
+
+#: source/ui/Ui.cpp:72
+msgid "Dark"
+msgstr "Scuro"
+
+#: source/ui/Ui.cpp:73
+msgid "Flix"
+msgstr "Flix"
+
+#: source/ui/Ui.cpp:74
+msgid "Light"
+msgstr "Chiaro"
+
+#: source/ui/Ui.cpp:568
+msgid "Mon"
+msgstr "Lun"
+
+#. TRANSLATORS: days of the week, abbreviated (the date under the clock)
+#: source/ui/Ui.cpp:568
+msgid "Sun"
+msgstr "Dom"
+
+#: source/ui/Ui.cpp:568
+msgid "Tue"
+msgstr "Mar"
+
+#: source/ui/Ui.cpp:568
+msgid "Wed"
+msgstr "Mer"
+
+#: source/ui/Ui.cpp:569
+msgid "Fri"
+msgstr "Ven"
+
+#: source/ui/Ui.cpp:569
+msgid "Sat"
+msgstr "Sab"
+
+#: source/ui/Ui.cpp:569
+msgid "Thu"
+msgstr "Gio"
+
+#. TRANSLATORS: after the time on the 12-hour clock, keep it short
+#: source/ui/Ui.cpp:575
+msgid "AM"
+msgstr "AM"
+
+#: source/ui/Ui.cpp:575
+msgid "PM"
+msgstr "PM"
+
+#. TRANSLATORS: heading of a message sent from the server's dashboard without one
+#: source/ui/Ui.cpp:870
+msgid "Message"
+msgstr "Messaggio"

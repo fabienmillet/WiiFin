@@ -1,0 +1,1926 @@
+# Chinese translations for WiiFin package.
+# Copyright (C) 2026 THE WiiFin'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the WiiFin package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: WiiFin\n"
+"Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
+"POT-Creation-Date: 2026-10-11 02:59+0200\n"
+"PO-Revision-Date: 2026-10-11 02:59+0200\n"
+"Last-Translator: WiiFin\n"
+"Language-Team: Chinese (Traditional)\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: source/core/App.cpp:87
+msgid "Retry"
+msgstr "重試"
+
+#: source/core/App.cpp:88 source/core/App.cpp:457
+#: source/player/PlayerView.cpp:579 source/ui/ConnectView.cpp:595
+#: source/ui/ConnectView.cpp:666 source/ui/ConnectView.cpp:727
+#: source/ui/LibraryDetail.cpp:422 source/ui/LibraryHome.cpp:382
+#: source/ui/LibraryHome.cpp:424 source/ui/LibraryHome.cpp:485
+#: source/ui/LibraryItems.cpp:543 source/ui/LibraryItems.cpp:610
+#: source/ui/LibraryItems.cpp:616 source/ui/LibraryMusic.cpp:114
+#: source/ui/LibraryScenes.cpp:113 source/ui/LibrarySearch.cpp:194
+#: source/ui/LibrarySearch.cpp:264 source/ui/LibraryShows.cpp:170
+#: source/ui/LibraryShows.cpp:215 source/ui/LibrarySpecials.cpp:185
+#: source/ui/LibrarySuggestions.cpp:329 source/ui/LibrarySuggestions.cpp:356
+#: source/ui/LibrarySuggestions.cpp:375 source/ui/LibrarySuggestions.cpp:424
+#: source/ui/LibraryView.cpp:1439 source/ui/MusicPlayerView.cpp:803
+#: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:166
+#: source/ui/SettingsView.cpp:98 source/ui/SettingsView.cpp:450
+msgid "Back"
+msgstr "返回"
+
+#: source/core/App.cpp:91 source/core/AppProfiles.cpp:210
+msgid "OK"
+msgstr "確定"
+
+#: source/core/App.cpp:404
+msgid "Does the whole picture fit your TV?"
+msgstr "電視能顯示完整畫面嗎？"
+
+#: source/core/App.cpp:405
+msgid "Older TVs (CRT) often cut the edges of the picture."
+msgstr "舊式電視（CRT）常會裁掉畫面邊緣。"
+
+#. TRANSLATORS: one sentence on two lines, the second one naming the menu
+#: source/core/App.cpp:407
+msgid "You can shrink it to fit now, or later in"
+msgstr "可以現在縮小畫面，也可以稍後在"
+
+#: source/core/App.cpp:408
+msgid "Settings > Screen Area."
+msgstr "設定 > 顯示區域 中調整。"
+
+#: source/core/App.cpp:409
+msgid "Adjust"
+msgstr "調整"
+
+#: source/core/App.cpp:410 source/core/App.cpp:412
+msgid "Not now"
+msgstr "以後再說"
+
+#: source/core/App.cpp:411 source/core/App.cpp:729
+#: source/core/AppProfiles.cpp:162 source/ui/ConnectView.cpp:594
+#: source/ui/ConnectView.cpp:665 source/ui/ConnectView.cpp:726
+#: source/ui/LibraryDetail.cpp:166 source/ui/LibraryHome.cpp:484
+#: source/ui/LibraryShows.cpp:170 source/ui/LibrarySuggestions.cpp:356
+#: source/ui/MusicPlayerView.cpp:802
+msgid "Select"
+msgstr "選擇"
+
+#: source/core/App.cpp:428
+msgid "Connect To Jellyfin"
+msgstr "連線到 Jellyfin"
+
+#: source/core/App.cpp:429 source/ui/LibraryHome.cpp:434
+#: source/ui/SettingsView.cpp:86 source/ui/SettingsView.cpp:335
+msgid "Settings"
+msgstr "設定"
+
+#: source/core/App.cpp:430
+msgid "Exit"
+msgstr "離開"
+
+#: source/core/App.cpp:454
+msgid "Connecting to the network..."
+msgstr "正在連線網路..."
+
+#: source/core/App.cpp:456
+msgid "This is taking long: the Wii's network may need a restart."
+msgstr "耗時較長：Wii的網路可能需要重新啟動。"
+
+#: source/core/App.cpp:462
+msgid "No network connection"
+msgstr "無網路連線"
+
+#: source/core/App.cpp:463
+msgid "Check the Wii's Internet settings, then try again."
+msgstr "請檢查Wii的網際網路設定，然後重試。"
+
+#: source/core/App.cpp:730 source/ui/LibraryHome.cpp:328
+msgid "Menu"
+msgstr "選單"
+
+#: source/core/AppProfiles.cpp:50
+msgid "Enter the passcode"
+msgstr "輸入PIN碼"
+
+#: source/core/AppProfiles.cpp:50
+msgid "This profile is locked"
+msgstr "此使用者已鎖定"
+
+#: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:97
+#: source/ui/SettingsView.cpp:449
+msgid "Choose"
+msgstr "選擇"
+
+#: source/core/AppProfiles.cpp:171 source/core/HomeMenu.cpp:221
+msgid "No"
+msgstr "否"
+
+#: source/core/AppProfiles.cpp:171 source/core/HomeMenu.cpp:221
+msgid "Yes"
+msgstr "是"
+
+#: source/core/AppProfiles.cpp:173
+msgid "Sign in automatically on this Wii?"
+msgstr "在這台Wii上自動登入？"
+
+#: source/core/AppProfiles.cpp:174
+msgid "Anyone who opens WiiFin can then open this profile"
+msgstr "之後任何開啟 WiiFin 的人都能進入此使用者"
+
+#: source/core/AppProfiles.cpp:177
+msgid "Protect this profile with a passcode?"
+msgstr "用PIN碼保護此使用者？"
+
+#: source/core/AppProfiles.cpp:178
+msgid "Four digits, asked each time it opens"
+msgstr "4位數字，每次開啟時詢問"
+
+#: source/core/AppProfiles.cpp:181 source/core/AppProfiles.cpp:194
+#: source/ui/SettingsView.cpp:154 source/ui/SettingsView.cpp:258
+msgid "Choose a passcode"
+msgstr "設定PIN碼"
+
+#: source/core/AppProfiles.cpp:181 source/ui/SettingsView.cpp:154
+msgid "Four digits, asked when this profile opens"
+msgstr "4位數字，開啟此使用者時詢問"
+
+#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:255
+msgid "Enter it again"
+msgstr "再輸入一次"
+
+#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:258
+msgid "The two didn't match: once more"
+msgstr "兩次不一致：請再試一次"
+
+#: source/core/AppProfiles.cpp:211
+msgid "The password each time, then"
+msgstr "那就每次輸入密碼"
+
+#: source/core/AppProfiles.cpp:212
+msgid "Or Quick Connect: this profile keeps no sign-in on the Wii"
+msgstr "或用快速連線：此使用者不在Wii上保存登入資訊"
+
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:393
+msgid "Grid"
+msgstr "網格"
+
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:393
+msgid "Rows"
+msgstr "橫列"
+
+#: source/core/AppProfiles.cpp:220 source/core/AppProfiles.cpp:226
+msgid "Settings can change it later"
+msgstr "稍後可在設定中變更"
+
+#: source/core/AppProfiles.cpp:220
+msgid "Which home screen?"
+msgstr "哪種主畫面？"
+
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:396
+msgid "List"
+msgstr "清單"
+
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:396
+msgid "List + Posters"
+msgstr "清單 + 海報"
+
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:396
+msgid "Posters"
+msgstr "海報"
+
+#: source/core/AppProfiles.cpp:226
+msgid "Which library view?"
+msgstr "哪種媒體庫檢視？"
+
+#: source/core/HomeMenu.cpp:171
+msgid "HOME Menu"
+msgstr "HOME選單"
+
+#: source/core/HomeMenu.cpp:173 source/core/HomeMenu.cpp:181
+#: source/ui/LibraryDetail.cpp:453 source/ui/MusicPlayerView.cpp:799
+msgid "Close"
+msgstr "關閉"
+
+#: source/core/HomeMenu.cpp:180 source/ui/LibraryDetail.cpp:166
+msgid "Confirm"
+msgstr "確認"
+
+#: source/core/HomeMenu.cpp:192 source/ui/SettingsView.cpp:219
+msgid "Reset"
+msgstr "重設"
+
+#: source/core/HomeMenu.cpp:192
+msgid "Wii Menu"
+msgstr "Wii選單"
+
+#: source/core/HomeMenu.cpp:207
+msgid "Return to the Wii Menu?"
+msgstr "返回Wii選單？"
+
+#: source/core/HomeMenu.cpp:208
+msgid "Reset the application?"
+msgstr "重設此應用程式？"
+
+#: source/core/HomeMenu.cpp:210
+msgid "(Anything not saved will be lost.)"
+msgstr "（未儲存的內容將會遺失。）"
+
+#. TRANSLATORS: season and episode numbers, then the episode's name
+#: source/core/PlaySession.cpp:128
+#, c-format
+msgid "S%d E%d - %s"
+msgstr "S%d E%d - %s"
+
+#: source/core/PlaySession.cpp:201
+msgid "Loading subtitles..."
+msgstr "字幕載入中..."
+
+#: source/core/PlaySession.cpp:216 source/core/PlaySession.cpp:246
+#: source/core/PlaySession.cpp:705 source/player/PlayerView.cpp:562
+#: source/ui/LibraryView.cpp:1403 source/ui/MusicPlayerView.cpp:783
+msgid "Loading..."
+msgstr "載入中..."
+
+#: source/core/PlaySession.cpp:362 source/core/PlaySession.cpp:521
+#: source/core/PlaySession.cpp:532 source/core/PlaySession.cpp:567
+#: source/core/PlaySession.cpp:601 source/core/PlaySession.cpp:792
+msgid "Stopping..."
+msgstr "正在停止..."
+
+#: source/core/PlaySession.cpp:425
+msgid "Slow connection: lowering quality..."
+msgstr "網路較慢：正在降低畫質..."
+
+#: source/core/PlaySession.cpp:451
+msgid "Reconnecting..."
+msgstr "正在重新連線..."
+
+#: source/core/PlaySession.cpp:451
+msgid "The picture is stuck: trying again..."
+msgstr "畫面卡住了：正在重試..."
+
+#: source/core/PlaySession.cpp:499
+msgid "Too heavy for the Wii: transcoding..."
+msgstr "超出Wii效能：正在轉碼..."
+
+#: source/core/PlaySession.cpp:525
+msgid "Play next / Add to queue: music only"
+msgstr "接著播放 / 加入佇列：僅限音樂"
+
+#: source/core/PlaySession.cpp:537 source/core/PlaySession.cpp:568
+msgid "Loading next episode..."
+msgstr "正在載入下一集..."
+
+#: source/core/PlaySession.cpp:538 source/player/PlayerView.cpp:448
+#: source/player/PlayerView.cpp:480 source/ui/LibraryHome.cpp:378
+msgid "No next episode"
+msgstr "沒有下一集"
+
+#: source/core/PlaySession.cpp:541 source/core/PlaySession.cpp:569
+msgid "Loading previous episode..."
+msgstr "正在載入上一集..."
+
+#: source/core/PlaySession.cpp:542 source/player/PlayerView.cpp:441
+#: source/player/PlayerView.cpp:483
+msgid "No previous episode"
+msgstr "沒有上一集"
+
+#: source/core/PlaySession.cpp:544 source/player/PlayerView.cpp:477
+#: source/ui/MusicPlayerView.cpp:956
+msgid "Volume +"
+msgstr "音量 +"
+
+#: source/core/PlaySession.cpp:545 source/player/PlayerView.cpp:478
+#: source/ui/MusicPlayerView.cpp:957
+msgid "Volume -"
+msgstr "音量 -"
+
+#: source/core/PlaySession.cpp:548
+#, c-format
+msgid "Volume %d"
+msgstr "音量 %d"
+
+#: source/core/PlaySession.cpp:553 source/core/PlaySession.cpp:557
+#: source/ui/MusicPlayerView.cpp:959 source/ui/MusicPlayerView.cpp:963
+msgid "Sound off"
+msgstr "靜音"
+
+#: source/core/PlaySession.cpp:554 source/core/PlaySession.cpp:557
+#: source/ui/MusicPlayerView.cpp:960 source/ui/MusicPlayerView.cpp:963
+msgid "Sound on"
+msgstr "取消靜音"
+
+#: source/core/PlaySession.cpp:570
+msgid "Switching audio track..."
+msgstr "正在切換音軌..."
+
+#: source/core/PlaySession.cpp:580
+msgid "Switching subtitles..."
+msgstr "正在切換字幕..."
+
+#: source/core/PlaySession.cpp:594
+msgid "Seeking..."
+msgstr "正在跳轉..."
+
+#: source/core/PlaySession.cpp:664
+msgid "The video comes in, but the Wii can't show it: the picture stays stuck."
+msgstr "已收到影片資料，但Wii無法顯示：畫面一直卡住。"
+
+#: source/core/PlaySession.cpp:678
+#, c-format
+msgid "The server could not start this video (HTTP %d)."
+msgstr "伺服器無法開始播放此影片（HTTP %d）。"
+
+#: source/core/PlaySession.cpp:681
+msgid "The video stream could not be opened."
+msgstr "無法開啟影片串流。"
+
+#: source/core/PlaySession.cpp:684
+msgid "The connection to the server keeps dropping."
+msgstr "與伺服器的連線不斷中斷。"
+
+#: source/core/PlaySession.cpp:721
+#, c-format
+msgid "The server did not answer: %s"
+msgstr "伺服器沒有回應：%s"
+
+#: source/core/PlaySession.cpp:736
+msgid "Loading episode..."
+msgstr "正在載入影集..."
+
+#: source/core/PlaySession.cpp:802
+#, c-format
+msgid "Server says: %s"
+msgstr "伺服器訊息：%s"
+
+#: source/core/PlaySession.cpp:805
+msgid "Details are in wiifin.log on the SD card."
+msgstr "詳情請見SD卡上的 wiifin.log。"
+
+#: source/core/PlaySession.cpp:808 source/core/PlaySession.cpp:811
+msgid "Can't play this video"
+msgstr "無法播放此影片"
+
+#: source/core/PlaySession.cpp:809
+msgid "Check the server's FFmpeg log (Dashboard > Logs)."
+msgstr "請查看伺服器的 FFmpeg 日誌（控制台 > 日誌）。"
+
+#: source/jellyfin/JellyfinClient.cpp:109
+msgid "No IP address from the router (DHCP)"
+msgstr "未從路由器取得IP位址（DHCP）"
+
+#: source/jellyfin/JellyfinClient.cpp:162
+msgid "UDP socket failed"
+msgstr "UDP socket 失敗"
+
+#: source/jellyfin/JellyfinClient.cpp:355
+msgid "Unsupported URL scheme"
+msgstr "不支援的URL協定"
+
+#: source/jellyfin/JellyfinClient.cpp:707
+msgid "TLS: DRBG seed failed"
+msgstr "TLS：DRBG 種子初始化失敗"
+
+#: source/jellyfin/JellyfinClient.cpp:724
+msgid "TLS: ssl_config_defaults failed"
+msgstr "TLS：ssl_config_defaults 失敗"
+
+#: source/jellyfin/JellyfinClient.cpp:749
+msgid "DNS: unexpected address length"
+msgstr "DNS：位址長度異常"
+
+#: source/jellyfin/JellyfinClient.cpp:772
+msgid "Server not reachable (connection timed out)"
+msgstr "無法連上伺服器（連線逾時）"
+
+#: source/jellyfin/JellyfinClient.cpp:796
+msgid "TLS handshake failed (network error)"
+msgstr "TLS 交握失敗（網路錯誤）"
+
+#: source/jellyfin/JellyfinClient.cpp:906
+msgid "Failed to send request"
+msgstr "傳送請求失敗"
+
+#: source/jellyfin/JellyfinClient.cpp:987
+msgid "No response from server (check server URL / port)"
+msgstr "伺服器沒有回應（請檢查伺服器URL / 連接埠）"
+
+#: source/jellyfin/JellyfinClient.cpp:988
+msgid "Invalid HTTP response (server may require HTTPS)"
+msgstr "無效的HTTP回應（伺服器可能要求HTTPS）"
+
+#: source/jellyfin/JellyfinClient.cpp:1063
+msgid "Request headers too large"
+msgstr "請求標頭過大"
+
+#: source/jellyfin/JellyfinClient.cpp:1106
+msgid "Connection lost"
+msgstr "連線已中斷"
+
+#: source/jellyfin/JellyfinClient.cpp:1136
+#, c-format
+msgid "Auth failed (HTTP %d)"
+msgstr "驗證失敗（HTTP %d）"
+
+#: source/jellyfin/JellyfinClient.cpp:1145
+msgid "No token in response"
+msgstr "回應中沒有權杖"
+
+#: source/jellyfin/JellyfinClient.cpp:1156
+#, c-format
+msgid "QuickConnect initiate failed (HTTP %d)"
+msgstr "快速連線啟動失敗（HTTP %d）"
+
+#: source/jellyfin/JellyfinClient.cpp:1164
+msgid "No code in QC response"
+msgstr "快速連線回應中沒有代碼"
+
+#: source/jellyfin/JellyfinClient.cpp:1190
+#, c-format
+msgid "QC auth failed (HTTP %d)"
+msgstr "快速連線驗證失敗（HTTP %d）"
+
+#: source/jellyfin/JellyfinClient.cpp:1198
+msgid "No token in QC auth response"
+msgstr "快速連線驗證回應中沒有權杖"
+
+#: source/jellyfin/JellyfinClient.cpp:2385
+msgid "High"
+msgstr "高"
+
+#. TRANSLATORS: video quality levels (Settings)
+#: source/jellyfin/JellyfinClient.cpp:2385
+msgid "Low"
+msgstr "低"
+
+#: source/jellyfin/JellyfinClient.cpp:2385
+msgid "Max"
+msgstr "最高"
+
+#: source/jellyfin/JellyfinClient.cpp:2385
+msgid "Normal"
+msgstr "標準"
+
+#: source/jellyfin/JellyfinClient.cpp:2802
+msgid "No TranscodingUrl in PlaybackInfo response"
+msgstr "PlaybackInfo 回應中沒有 TranscodingUrl"
+
+#: source/jellyfin/JellyfinClient.cpp:3197 source/ui/LibrarySpecials.cpp:80
+msgid "No special features"
+msgstr "沒有特別花絮"
+
+#: source/jellyfin/JellyfinClient.cpp:3454
+msgid "No PlaySessionId in AudioPlaybackInfo response"
+msgstr "AudioPlaybackInfo 回應中沒有 PlaySessionId"
+
+#: source/player/PlayerView.cpp:57
+#, c-format
+msgid "Track %d"
+msgstr "音軌 %d"
+
+#: source/player/PlayerView.cpp:118
+msgid "Skip recap"
+msgstr "跳過前情提要"
+
+#: source/player/PlayerView.cpp:119
+msgid "Skip preview"
+msgstr "跳過預告"
+
+#: source/player/PlayerView.cpp:120
+msgid "Skip ad"
+msgstr "跳過廣告"
+
+#: source/player/PlayerView.cpp:122
+msgid "Next episode"
+msgstr "下一集"
+
+#: source/player/PlayerView.cpp:122
+msgid "Skip credits"
+msgstr "跳過片尾"
+
+#: source/player/PlayerView.cpp:123
+msgid "Skip intro"
+msgstr "跳過片頭"
+
+#: source/player/PlayerView.cpp:279 source/ui/LibraryDetail.cpp:410
+msgid "Off"
+msgstr "關閉"
+
+#: source/player/PlayerView.cpp:334
+msgid "Zoom: fill the screen"
+msgstr "縮放：填滿畫面"
+
+#: source/player/PlayerView.cpp:334
+msgid "Zoom: whole picture"
+msgstr "縮放：完整畫面"
+
+#: source/player/PlayerView.cpp:488
+msgid "No other audio track"
+msgstr "沒有其他音軌"
+
+#: source/player/PlayerView.cpp:492
+msgid "No subtitles available"
+msgstr "沒有可用的字幕"
+
+#: source/player/PlayerView.cpp:560
+#, c-format
+msgid "Buffering... %d%%"
+msgstr "緩衝中... %d%%"
+
+#: source/player/PlayerView.cpp:561
+msgid "Buffering..."
+msgstr "緩衝中..."
+
+#: source/player/PlayerView.cpp:578
+msgid "Zoom"
+msgstr "縮放"
+
+#: source/player/PlayerView.cpp:579 source/ui/LibraryDetail.cpp:401
+msgid "Audio"
+msgstr "音訊"
+
+#: source/player/PlayerView.cpp:579 source/player/PlayerView.cpp:713
+#: source/ui/LibraryDetail.cpp:401
+msgid "Subtitles"
+msgstr "字幕"
+
+#: source/player/PlayerView.cpp:713
+msgid "Audio track"
+msgstr "音軌"
+
+#: source/player/PlayerView.cpp:728
+msgid "✓ Current"
+msgstr "✓ 目前"
+
+#: source/ui/BrowseHome.cpp:44
+msgid "browse"
+msgstr "瀏覽"
+
+#: source/ui/BrowseHome.cpp:44
+msgid "home"
+msgstr "首頁"
+
+#. TRANSLATORS: the pills at the top right of the home screen, in lower case
+#: source/ui/BrowseHome.cpp:44
+msgid "search"
+msgstr "搜尋"
+
+#: source/ui/BrowseHome.cpp:206
+msgid "Continue Watching"
+msgstr "繼續觀看"
+
+#: source/ui/BrowseHome.cpp:208
+msgid "Next Up"
+msgstr "接下來"
+
+#. TRANSLATORS: a row of the home screen; %s is the name of a library
+#: source/ui/BrowseHome.cpp:219
+#, c-format
+msgid "New in %s"
+msgstr "最新 %s"
+
+#. TRANSLATORS: a row of the home screen; %s is the name of a library
+#: source/ui/BrowseHome.cpp:227
+#, c-format
+msgid "Top Rated %s"
+msgstr "高評分 %s"
+
+#: source/ui/BrowseHome.cpp:235 source/ui/BrowseHome.cpp:241
+msgid "My Favorites"
+msgstr "我的最愛"
+
+#: source/ui/BrowseHome.cpp:239
+msgid "Favorite Albums"
+msgstr "最愛的專輯"
+
+#: source/ui/BrowseHome.cpp:254 source/ui/LibraryDraw.cpp:183
+msgid "Libraries"
+msgstr "媒體庫"
+
+#. TRANSLATORS: a row of the browse page; %s is the name of a library
+#: source/ui/BrowseHome.cpp:288
+#, c-format
+msgid "All %s"
+msgstr "全部 %s"
+
+#: source/ui/BrowseHome.cpp:732
+msgid "Movie library  ·  open it with A"
+msgstr "電影媒體庫  ·  按A開啟"
+
+#: source/ui/BrowseHome.cpp:733
+msgid "TV library  ·  open it with A"
+msgstr "影集媒體庫  ·  按A開啟"
+
+#: source/ui/BrowseHome.cpp:734
+msgid "Music library  ·  open it with A"
+msgstr "音樂媒體庫  ·  按A開啟"
+
+#: source/ui/BrowseHome.cpp:735
+msgid "Collection library  ·  open it with A"
+msgstr "合集媒體庫  ·  按A開啟"
+
+#: source/ui/BrowseHome.cpp:736
+msgid "Media library  ·  open it with A"
+msgstr "媒體庫  ·  按A開啟"
+
+#: source/ui/BrowseHome.cpp:739 source/ui/BrowseHome.cpp:755
+#, c-format
+msgid "%d episode"
+msgstr "%d集"
+
+#: source/ui/BrowseHome.cpp:739 source/ui/BrowseHome.cpp:755
+#, c-format
+msgid "%d episodes"
+msgstr "%d集"
+
+#: source/ui/BrowseHome.cpp:742
+#, c-format
+msgid "%d season"
+msgstr "%d季"
+
+#: source/ui/BrowseHome.cpp:742 source/ui/LibraryItems.cpp:516
+#, c-format
+msgid "%d seasons"
+msgstr "%d季"
+
+#. TRANSLATORS: season and episode numbers, then the episode's title
+#: source/ui/BrowseHome.cpp:761
+#, c-format
+msgid "S%d E%d  ·  %s"
+msgstr "S%d E%d  ·  %s"
+
+#. TRANSLATORS: a running time, hours and minutes
+#. TRANSLATORS: a running time: hours and minutes, minutes, seconds
+#: source/ui/BrowseHome.cpp:768 source/ui/BrowseHome.cpp:772
+#: source/ui/LibraryDetail.cpp:238 source/ui/LibraryItems.cpp:518
+#, c-format
+msgid "%dh %02dmin"
+msgstr "%d小時%02d分"
+
+#: source/ui/BrowseHome.cpp:780
+#, c-format
+msgid "%d min left"
+msgstr "剩餘%d分鐘"
+
+#: source/ui/BrowseHome.cpp:858
+msgid "Nothing to show yet"
+msgstr "尚無內容"
+
+#: source/ui/BrowseHome.cpp:859
+msgid "Use \"browse\" to open your libraries."
+msgstr "使用 \"瀏覽\" 開啟媒體庫。"
+
+#: source/ui/BrowseHome.cpp:889
+msgid "Browse"
+msgstr "瀏覽"
+
+#: source/ui/BrowseHome.cpp:889 source/ui/BrowseHome.cpp:890
+#: source/ui/LibraryHome.cpp:328 source/ui/LibraryHome.cpp:381
+#: source/ui/LibraryItems.cpp:543 source/ui/LibrarySearch.cpp:263
+#: source/ui/LibrarySpecials.cpp:185 source/ui/LibrarySuggestions.cpp:424
+#: source/ui/ProfileView.cpp:165 source/ui/SettingsView.cpp:97
+msgid "Open"
+msgstr "開啟"
+
+#: source/ui/BrowseHome.cpp:889 source/ui/BrowseHome.cpp:890
+#: source/ui/LibraryHome.cpp:328 source/ui/LibrarySearch.cpp:15
+#: source/ui/LibrarySearch.cpp:169 source/ui/LibrarySearch.cpp:195
+msgid "Search"
+msgstr "搜尋"
+
+#: source/ui/BrowseHome.cpp:890
+msgid "Home"
+msgstr "首頁"
+
+#: source/ui/ConnectView.cpp:111
+msgid "Signing in"
+msgstr "正在登入"
+
+#: source/ui/ConnectView.cpp:134
+msgid "Cancelled."
+msgstr "已取消。"
+
+#: source/ui/ConnectView.cpp:317
+msgid "Set the Server URL in the Credentials tab first."
+msgstr "請先在「登入資訊」分頁設定伺服器URL。"
+
+#: source/ui/ConnectView.cpp:327
+msgid "Contacting the server"
+msgstr "正在連線伺服器"
+
+#: source/ui/ConnectView.cpp:337
+msgid "Enter code on another device:"
+msgstr "在另一台裝置上輸入代碼："
+
+#: source/ui/ConnectView.cpp:354
+msgid "Waiting for approval"
+msgstr "等待核准"
+
+#: source/ui/ConnectView.cpp:404
+msgid "Failed to start scan thread."
+msgstr "無法啟動掃描。"
+
+#: source/ui/ConnectView.cpp:419
+msgid "No servers found on the local network."
+msgstr "區域網路中找不到伺服器。"
+
+#: source/ui/ConnectView.cpp:460
+msgid "Server URL set. Enter your credentials."
+msgstr "伺服器URL已設定。請輸入登入資訊。"
+
+#: source/ui/ConnectView.cpp:476 source/ui/ConnectView.cpp:591
+#: source/ui/SettingsView.cpp:220
+msgid "Done"
+msgstr "完成"
+
+#: source/ui/ConnectView.cpp:476 source/ui/ConnectView.cpp:591
+msgid "Next"
+msgstr "下一步"
+
+#: source/ui/ConnectView.cpp:517
+msgid "Connect to Jellyfin"
+msgstr "連線到 Jellyfin"
+
+#: source/ui/ConnectView.cpp:523
+msgid "Credentials"
+msgstr "登入資訊"
+
+#: source/ui/ConnectView.cpp:523
+msgid "Discover"
+msgstr "探索"
+
+#: source/ui/ConnectView.cpp:523
+msgid "Quick Connect"
+msgstr "快速連線"
+
+#: source/ui/ConnectView.cpp:541 source/ui/ConnectView.cpp:544
+msgid "Connecting to the network"
+msgstr "正在連線網路"
+
+#: source/ui/ConnectView.cpp:577 source/ui/ConnectView.cpp:610
+msgid "Server URL"
+msgstr "伺服器URL"
+
+#: source/ui/ConnectView.cpp:579 source/ui/ConnectView.cpp:610
+msgid "Username"
+msgstr "使用者名稱"
+
+#: source/ui/ConnectView.cpp:581 source/ui/ConnectView.cpp:610
+#: source/ui/SettingsView.cpp:428
+msgid "Password"
+msgstr "密碼"
+
+#: source/ui/ConnectView.cpp:585
+msgid "Connect"
+msgstr "登入"
+
+#: source/ui/ConnectView.cpp:590 source/ui/LibrarySearch.cpp:194
+#: source/ui/ProfileView.cpp:157 source/ui/ProfileView.cpp:162
+#: source/ui/ProfileView.cpp:165
+msgid "Delete"
+msgstr "刪除"
+
+#: source/ui/ConnectView.cpp:590 source/ui/LibrarySearch.cpp:194
+#: source/ui/PinPad.cpp:102
+msgid "Type"
+msgstr "輸入"
+
+#: source/ui/ConnectView.cpp:591 source/ui/LibrarySearch.cpp:195
+msgid "Shift"
+msgstr "Shift"
+
+#: source/ui/ConnectView.cpp:594 source/ui/SettingsView.cpp:219
+msgid "Move"
+msgstr "移動"
+
+#: source/ui/ConnectView.cpp:595 source/ui/ConnectView.cpp:666
+#: source/ui/ConnectView.cpp:727
+msgid "Tabs"
+msgstr "分頁"
+
+#: source/ui/ConnectView.cpp:630
+msgid "Quick Connect lets you sign in by approving"
+msgstr "快速連線：只需在 Jellyfin 網頁介面中"
+
+#: source/ui/ConnectView.cpp:631
+msgid "a code in the Jellyfin web interface."
+msgstr "核准一組代碼即可登入。"
+
+#: source/ui/ConnectView.cpp:635
+msgid "Go to Credentials tab and enter the Server URL first."
+msgstr "請先到「登入資訊」分頁輸入伺服器URL。"
+
+#: source/ui/ConnectView.cpp:638
+#, c-format
+msgid "Server: %s"
+msgstr "伺服器：%s"
+
+#: source/ui/ConnectView.cpp:645
+msgid "Start Quick Connect"
+msgstr "取得代碼"
+
+#: source/ui/ConnectView.cpp:650
+msgid "Enter this code on your Jellyfin server:"
+msgstr "請在 Jellyfin 伺服器上輸入此代碼："
+
+#: source/ui/ConnectView.cpp:655
+msgid "Waiting for approval..."
+msgstr "等待核准..."
+
+#: source/ui/ConnectView.cpp:659
+msgid "Approved! Signing in..."
+msgstr "已核准！正在登入..."
+
+#: source/ui/ConnectView.cpp:662
+msgid "Error. Press A to retry."
+msgstr "發生錯誤。按A重試。"
+
+#: source/ui/ConnectView.cpp:666 source/ui/LibraryDetail.cpp:166
+#: source/ui/ProfileView.cpp:158 source/ui/ProfileView.cpp:162
+msgid "Cancel"
+msgstr "取消"
+
+#: source/ui/ConnectView.cpp:685
+msgid "Find Jellyfin servers on your local network."
+msgstr "尋找區域網路中的 Jellyfin 伺服器。"
+
+#: source/ui/ConnectView.cpp:686
+msgid "The Wii must be on the same network as the server."
+msgstr "Wii必須與伺服器位於同一網路。"
+
+#: source/ui/ConnectView.cpp:691
+msgid "Scan for Servers"
+msgstr "掃描伺服器"
+
+#: source/ui/ConnectView.cpp:696
+msgid "Scanning..."
+msgstr "正在掃描..."
+
+#: source/ui/ConnectView.cpp:702
+msgid "No servers found."
+msgstr "找不到伺服器。"
+
+#: source/ui/ConnectView.cpp:703
+msgid "Check your network and server settings, then try again."
+msgstr "請檢查網路與伺服器設定，然後重試。"
+
+#: source/ui/ConnectView.cpp:707
+msgid "Scan Again"
+msgstr "重新掃描"
+
+#: source/ui/ConnectView.cpp:710
+msgid "Found — select a server:"
+msgstr "已找到 — 請選擇伺服器："
+
+#: source/ui/Keyboard.cpp:145
+msgid "⇧ Shift"
+msgstr "⇧ Shift"
+
+#. TRANSLATORS: keys of the on-screen keyboard; keep the arrow in front
+#: source/ui/Keyboard.cpp:145
+msgid "⇪ Caps"
+msgstr "⇪ 大寫"
+
+#: source/ui/Keyboard.cpp:147
+msgid "Space"
+msgstr "空白"
+
+#: source/ui/Keyboard.cpp:148
+msgid "← Delete"
+msgstr "← 刪除"
+
+#: source/ui/LibraryDetail.cpp:144
+msgid "Resume playback?"
+msgstr "繼續播放？"
+
+#. TRANSLATORS: under "Resume playback?": where it stopped, h:mm:ss or m:ss
+#: source/ui/LibraryDetail.cpp:150
+#, c-format
+msgid "at %d:%02d:%02d"
+msgstr "從 %d:%02d:%02d 開始"
+
+#: source/ui/LibraryDetail.cpp:151
+#, c-format
+msgid "at %d:%02d"
+msgstr "從 %d:%02d 開始"
+
+#: source/ui/LibraryDetail.cpp:156
+msgid "Continue"
+msgstr "繼續"
+
+#: source/ui/LibraryDetail.cpp:156
+msgid "From Start"
+msgstr "從頭開始"
+
+#: source/ui/LibraryDetail.cpp:211 source/ui/LibraryDetail.cpp:422
+#: source/ui/LibraryMusic.cpp:114 source/ui/LibraryScenes.cpp:113
+#: source/ui/MusicPlayerView.cpp:798
+msgid "Play"
+msgstr "播放"
+
+#: source/ui/LibraryDetail.cpp:239
+#, c-format
+msgid "%dmin"
+msgstr "%d分鐘"
+
+#: source/ui/LibraryDetail.cpp:240
+#, c-format
+msgid "%ds"
+msgstr "%d秒"
+
+#: source/ui/LibraryDetail.cpp:246 source/ui/LibraryDetail.cpp:424
+#: source/ui/LibraryShows.cpp:216 source/ui/LibrarySort.cpp:15
+msgid "Watched"
+msgstr "已觀看"
+
+#. TRANSLATORS: hours and minutes into the video, then how much of it is watched
+#: source/ui/LibraryDetail.cpp:266
+#, c-format
+msgid "Resume at %dh%02d (%d%%)"
+msgstr "從 %d:%02d 繼續（%d%%）"
+
+#: source/ui/LibraryDetail.cpp:267
+#, c-format
+msgid "Resume at %dmin (%d%%)"
+msgstr "從 %d 分鐘處繼續（%d%%）"
+
+#: source/ui/LibraryDetail.cpp:296
+msgid "Read more"
+msgstr "展開全文"
+
+#: source/ui/LibraryDetail.cpp:306
+msgid "Cast & crew"
+msgstr "演員與劇組"
+
+#: source/ui/LibraryDetail.cpp:320
+msgid "(director)"
+msgstr "（導演）"
+
+#: source/ui/LibraryDetail.cpp:385
+#, c-format
+msgid "%d chapters"
+msgstr "%d個章節"
+
+#: source/ui/LibraryDetail.cpp:387 source/ui/LibraryDetail.cpp:422
+#: source/ui/LibraryScenes.cpp:79 source/ui/LibrarySpecials.cpp:25
+msgid "Scenes"
+msgstr "場景"
+
+#: source/ui/LibraryDetail.cpp:401
+msgid "Version"
+msgstr "版本"
+
+#: source/ui/LibraryDetail.cpp:423 source/ui/LibraryShows.cpp:119
+#: source/ui/LibraryShows.cpp:171
+msgid "Favorite"
+msgstr "最愛"
+
+#: source/ui/LibraryDetail.cpp:423 source/ui/LibraryShows.cpp:171
+msgid "Unfavorite"
+msgstr "移除最愛"
+
+#: source/ui/LibraryDetail.cpp:424 source/ui/LibraryShows.cpp:216
+msgid "Unwatched"
+msgstr "未觀看"
+
+#: source/ui/LibraryDetail.cpp:425 source/ui/LibrarySpecials.cpp:43
+msgid "Extras"
+msgstr "花絮"
+
+#: source/ui/LibraryDetail.cpp:426 source/ui/SettingsView.cpp:449
+msgid "Change"
+msgstr "變更"
+
+#: source/ui/LibraryDetail.cpp:426
+msgid "Focus"
+msgstr "切換列"
+
+#: source/ui/LibraryDetail.cpp:453
+msgid "Scroll"
+msgstr "捲動"
+
+#: source/ui/LibraryDraw.cpp:180
+msgid "Collections"
+msgstr "合集"
+
+#: source/ui/LibraryDraw.cpp:180 source/ui/LibraryDraw.cpp:183
+#: source/ui/LibrarySort.cpp:15
+msgid "Favorites"
+msgstr "我的最愛"
+
+#: source/ui/LibraryDraw.cpp:180
+msgid "Movies"
+msgstr "電影"
+
+#: source/ui/LibraryDraw.cpp:180 source/ui/LibraryDraw.cpp:181
+#: source/ui/LibraryDraw.cpp:182
+msgid "Suggestions"
+msgstr "推薦"
+
+#: source/ui/LibraryDraw.cpp:181
+msgid "Coming Up"
+msgstr "即將播出"
+
+#: source/ui/LibraryDraw.cpp:181
+msgid "Series"
+msgstr "影集"
+
+#: source/ui/LibraryDraw.cpp:182
+msgid "Albums"
+msgstr "專輯"
+
+#: source/ui/LibraryDraw.cpp:182
+msgid "Artists"
+msgstr "演出者"
+
+#: source/ui/LibraryDraw.cpp:182
+msgid "Playlists"
+msgstr "播放清單"
+
+#: source/ui/LibraryDraw.cpp:182
+msgid "Songs"
+msgstr "歌曲"
+
+#: source/ui/LibraryDraw.cpp:183
+msgid "Activity"
+msgstr "動態"
+
+#: source/ui/LibraryHome.cpp:329 source/ui/LibraryHome.cpp:382
+#: source/ui/LibraryHome.cpp:424 source/ui/LibraryItems.cpp:548
+#: source/ui/LibraryItems.cpp:618 source/ui/LibrarySuggestions.cpp:330
+#: source/ui/LibrarySuggestions.cpp:357 source/ui/LibrarySuggestions.cpp:376
+#: source/ui/LibrarySuggestions.cpp:425
+msgid "Tab"
+msgstr "分頁"
+
+#: source/ui/LibraryHome.cpp:360 source/ui/LibrarySuggestions.cpp:315
+#: source/ui/LibrarySuggestions.cpp:342
+msgid "IN PROGRESS"
+msgstr "觀看中"
+
+#: source/ui/LibraryHome.cpp:367
+msgid "Nothing in progress"
+msgstr "沒有觀看中的內容"
+
+#: source/ui/LibraryHome.cpp:371
+msgid "NEXT UP"
+msgstr "接下來"
+
+#: source/ui/LibraryHome.cpp:381
+msgid "Row"
+msgstr "列"
+
+#: source/ui/LibraryHome.cpp:396
+msgid "No favorites"
+msgstr "尚無最愛"
+
+#: source/ui/LibraryHome.cpp:423 source/ui/LibrarySuggestions.cpp:329
+#: source/ui/LibrarySuggestions.cpp:375
+msgid "Detail"
+msgstr "詳情"
+
+#: source/ui/LibraryHome.cpp:434
+msgid "Back to Jellyfin"
+msgstr "返回 Jellyfin"
+
+#: source/ui/LibraryHome.cpp:434
+msgid "Switch Profile"
+msgstr "切換使用者"
+
+#: source/ui/LibraryHome.cpp:434
+msgid "WiiFin Menu"
+msgstr "WiiFin 選單"
+
+#: source/ui/LibraryItems.cpp:458
+msgid "This library is empty"
+msgstr "此媒體庫是空的"
+
+#: source/ui/LibraryItems.cpp:485
+msgid "COLLECTION"
+msgstr "合集"
+
+#: source/ui/LibraryItems.cpp:485 source/ui/LibrarySearch.cpp:234
+#: source/ui/LibraryView.cpp:106
+msgid "SERIES"
+msgstr "影集"
+
+#: source/ui/LibraryItems.cpp:486
+msgid "FOLDER"
+msgstr "資料夾"
+
+#: source/ui/LibraryItems.cpp:514
+msgid "1 season"
+msgstr "1季"
+
+#: source/ui/LibraryItems.cpp:544 source/ui/LibraryItems.cpp:617
+#: source/ui/LibraryMusic.cpp:114 source/ui/LibraryShows.cpp:170
+#: source/ui/LibraryShows.cpp:215 source/ui/MusicPlayerView.cpp:798
+msgid "Shuffle"
+msgstr "隨機播放"
+
+#: source/ui/LibraryItems.cpp:544 source/ui/LibraryItems.cpp:610
+#: source/ui/LibraryItems.cpp:617
+msgid "Sort"
+msgstr "排序"
+
+#: source/ui/LibraryItems.cpp:548 source/ui/LibraryItems.cpp:554
+msgid "A-Z"
+msgstr "A-Z"
+
+#: source/ui/LibraryItems.cpp:551 source/ui/LibraryItems.cpp:554
+#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:449
+msgid "Page"
+msgstr "翻頁"
+
+#: source/ui/LibraryItems.cpp:612
+#, c-format
+msgid "Page %d / %d"
+msgstr "%d / %d 頁"
+
+#. TRANSLATORS: a chapter without a name, its number
+#: source/ui/LibraryScenes.cpp:100
+#, c-format
+msgid "Chapter %d"
+msgstr "第%d章"
+
+#: source/ui/LibrarySearch.cpp:180
+msgid "Type a title, an actor..."
+msgstr "輸入片名、演員..."
+
+#: source/ui/LibrarySearch.cpp:209
+#, c-format
+msgid "Results: %s"
+msgstr "搜尋結果：%s"
+
+#: source/ui/LibrarySearch.cpp:215
+msgid "No results."
+msgstr "沒有結果。"
+
+#. TRANSLATORS: type badges of the search results, 54 pixels wide: keep them short
+#: source/ui/LibrarySearch.cpp:233
+msgid "MOVIE"
+msgstr "電影"
+
+#: source/ui/LibrarySearch.cpp:235
+msgid "EP"
+msgstr "單集"
+
+#: source/ui/LibrarySearch.cpp:236
+msgid "ALBUM"
+msgstr "專輯"
+
+#: source/ui/LibrarySearch.cpp:237
+msgid "TRACK"
+msgstr "歌曲"
+
+#: source/ui/LibrarySearch.cpp:238
+msgid "ARTIST"
+msgstr "演出者"
+
+#: source/ui/LibrarySearch.cpp:239
+msgid "COLLEC"
+msgstr "合集"
+
+#: source/ui/LibrarySearch.cpp:240
+msgid "LIST"
+msgstr "清單"
+
+#. TRANSLATORS: season and episode numbers before the episode's title
+#: source/ui/LibrarySearch.cpp:250
+#, c-format
+msgid "S%02dE%02d - "
+msgstr "S%02dE%02d - "
+
+#: source/ui/LibrarySearch.cpp:263
+msgid "New search"
+msgstr "重新搜尋"
+
+#. TRANSLATORS: E = episode, its number in the season
+#: source/ui/LibraryShows.cpp:200
+#, c-format
+msgid "E%02d"
+msgstr "E%02d"
+
+#: source/ui/LibraryShows.cpp:215 source/ui/LibrarySpecials.cpp:185
+msgid "Details"
+msgstr "詳情"
+
+#: source/ui/LibrarySort.cpp:14
+msgid "Date added"
+msgstr "加入日期"
+
+#: source/ui/LibrarySort.cpp:14
+msgid "Name"
+msgstr "名稱"
+
+#: source/ui/LibrarySort.cpp:14
+msgid "Rating"
+msgstr "評分"
+
+#: source/ui/LibrarySort.cpp:14
+msgid "Year"
+msgstr "年份"
+
+#: source/ui/LibrarySort.cpp:15
+msgid "All"
+msgstr "全部"
+
+#: source/ui/LibrarySort.cpp:15
+msgid "Not watched"
+msgstr "未觀看"
+
+#: source/ui/LibrarySort.cpp:52 source/ui/LibrarySort.cpp:117
+msgid "Ascending"
+msgstr "遞增"
+
+#: source/ui/LibrarySort.cpp:52 source/ui/LibrarySort.cpp:117
+msgid "Descending"
+msgstr "遞減"
+
+#: source/ui/LibrarySort.cpp:112
+msgid "Sort & filter"
+msgstr "排序與篩選"
+
+#: source/ui/LibrarySort.cpp:114
+msgid "Genre"
+msgstr "類型"
+
+#: source/ui/LibrarySort.cpp:114
+msgid "Order"
+msgstr "順序"
+
+#: source/ui/LibrarySort.cpp:114
+msgid "Show"
+msgstr "顯示"
+
+#: source/ui/LibrarySort.cpp:114
+msgid "Sort by"
+msgstr "排序方式"
+
+#: source/ui/LibrarySort.cpp:119
+msgid "Every genre"
+msgstr "所有類型"
+
+#. TRANSLATORS: A and B are the Wii Remote's buttons
+#: source/ui/LibrarySort.cpp:131
+msgid "A  apply      B  cancel"
+msgstr "A  套用      B  取消"
+
+#: source/ui/LibrarySpecials.cpp:20
+msgid "Trailer"
+msgstr "預告片"
+
+#: source/ui/LibrarySpecials.cpp:20
+msgid "Trailers"
+msgstr "預告片"
+
+#: source/ui/LibrarySpecials.cpp:21
+msgid "Featurette"
+msgstr "特輯"
+
+#: source/ui/LibrarySpecials.cpp:21
+msgid "Featurettes"
+msgstr "特輯"
+
+#: source/ui/LibrarySpecials.cpp:22
+msgid "Behind the Scenes"
+msgstr "幕後花絮"
+
+#: source/ui/LibrarySpecials.cpp:23
+msgid "Deleted Scene"
+msgstr "刪減片段"
+
+#: source/ui/LibrarySpecials.cpp:23
+msgid "Deleted Scenes"
+msgstr "刪減片段"
+
+#: source/ui/LibrarySpecials.cpp:24
+msgid "Interview"
+msgstr "訪談"
+
+#: source/ui/LibrarySpecials.cpp:24
+msgid "Interviews"
+msgstr "訪談"
+
+#: source/ui/LibrarySpecials.cpp:25
+msgid "Scene"
+msgstr "場景"
+
+#: source/ui/LibrarySpecials.cpp:26
+msgid "Short"
+msgstr "短片"
+
+#: source/ui/LibrarySpecials.cpp:26
+msgid "Shorts"
+msgstr "短片"
+
+#: source/ui/LibrarySpecials.cpp:27
+msgid "Clip"
+msgstr "片段"
+
+#: source/ui/LibrarySpecials.cpp:27
+msgid "Clips"
+msgstr "片段"
+
+#: source/ui/LibrarySpecials.cpp:28
+msgid "Sample"
+msgstr "樣片"
+
+#: source/ui/LibrarySpecials.cpp:28
+msgid "Samples"
+msgstr "樣片"
+
+#: source/ui/LibrarySpecials.cpp:29
+msgid "Theme Video"
+msgstr "主題影片"
+
+#: source/ui/LibrarySpecials.cpp:29
+msgid "Theme Videos"
+msgstr "主題影片"
+
+#: source/ui/LibrarySpecials.cpp:39
+msgid "Extra"
+msgstr "花絮"
+
+#: source/ui/LibrarySpecials.cpp:142 source/ui/LibraryView.cpp:930
+msgid "Special Features"
+msgstr "特別花絮"
+
+#: source/ui/LibrarySpecials.cpp:165
+msgid "1 video"
+msgstr "1部影片"
+
+#: source/ui/LibrarySpecials.cpp:166
+#, c-format
+msgid "%d videos"
+msgstr "%d部影片"
+
+#: source/ui/LibrarySpecials.cpp:173
+#, c-format
+msgid "%d min"
+msgstr "%d分鐘"
+
+#: source/ui/LibrarySuggestions.cpp:320
+msgid "No movie in progress"
+msgstr "沒有觀看中的電影"
+
+#: source/ui/LibrarySuggestions.cpp:322 source/ui/LibrarySuggestions.cpp:400
+msgid "RECENTLY ADDED"
+msgstr "最近新增"
+
+#: source/ui/LibrarySuggestions.cpp:327
+msgid "No recent movies"
+msgstr "沒有新電影"
+
+#: source/ui/LibrarySuggestions.cpp:347
+msgid "No episode in progress"
+msgstr "沒有觀看中的影集"
+
+#: source/ui/LibrarySuggestions.cpp:349
+msgid "RECENT SERIES"
+msgstr "最近影集"
+
+#: source/ui/LibrarySuggestions.cpp:354
+msgid "No recent series"
+msgstr "沒有新影集"
+
+#: source/ui/LibrarySuggestions.cpp:368
+msgid "No content."
+msgstr "沒有內容。"
+
+#: source/ui/LibrarySuggestions.cpp:369
+msgid "Make sure metadata download is enabled."
+msgstr "請確認已啟用中繼資料下載。"
+
+#: source/ui/LibrarySuggestions.cpp:371
+msgid "COMING UP"
+msgstr "即將播出"
+
+#: source/ui/LibrarySuggestions.cpp:415
+msgid "No recent albums"
+msgstr "沒有新專輯"
+
+#: source/ui/LibraryView.cpp:105
+msgid "MOVIES"
+msgstr "電影"
+
+#: source/ui/LibraryView.cpp:107
+msgid "MUSIC"
+msgstr "音樂"
+
+#: source/ui/LibraryView.cpp:108
+msgid "BOOKS"
+msgstr "書籍"
+
+#: source/ui/LibraryView.cpp:109
+msgid "PLAYLISTS"
+msgstr "播放清單"
+
+#: source/ui/LibraryView.cpp:110
+msgid "COLLECTIONS"
+msgstr "合集"
+
+#: source/ui/LibraryView.cpp:111
+msgid "LIVE TV"
+msgstr "電視直播"
+
+#: source/ui/LibraryView.cpp:112
+msgid "HOME VIDEOS"
+msgstr "家庭影片"
+
+#: source/ui/LibraryView.cpp:113
+msgid "PHOTOS"
+msgstr "相片"
+
+#: source/ui/LibraryView.cpp:114
+msgid "MUSIC VIDEOS"
+msgstr "音樂影片"
+
+#: source/ui/LibraryView.cpp:115
+msgid "TRAILERS"
+msgstr "預告片"
+
+#: source/ui/LibraryView.cpp:116
+msgid "MIXED"
+msgstr "混合內容"
+
+#: source/ui/LibraryView.cpp:128
+msgid "MEDIA"
+msgstr "媒體"
+
+#: source/ui/LibraryView.cpp:566
+msgid "No library found"
+msgstr "找不到媒體庫"
+
+#: source/ui/LibraryView.cpp:706
+msgid "Collections unavailable"
+msgstr "無法使用合集"
+
+#: source/ui/LibraryView.cpp:720 source/ui/LibraryView.cpp:733
+msgid "Favorites unavailable"
+msgstr "無法使用我的最愛"
+
+#: source/ui/LibraryView.cpp:1435
+msgid "Error"
+msgstr "錯誤"
+
+#. TRANSLATORS: the music player's visualizers, named when one is picked
+#: source/ui/MusicPlayerView.cpp:79
+msgid "Bars"
+msgstr "長條"
+
+#: source/ui/MusicPlayerView.cpp:79
+msgid "Blocks"
+msgstr "方塊"
+
+#: source/ui/MusicPlayerView.cpp:79
+msgid "Bubbles"
+msgstr "泡泡"
+
+#: source/ui/MusicPlayerView.cpp:79
+msgid "Ring"
+msgstr "圓環"
+
+#: source/ui/MusicPlayerView.cpp:79
+msgid "Wave"
+msgstr "波浪"
+
+#: source/ui/MusicPlayerView.cpp:252
+msgid "Added to the queue"
+msgstr "已加入佇列"
+
+#: source/ui/MusicPlayerView.cpp:252
+msgid "Playing next"
+msgstr "將接著播放"
+
+#: source/ui/MusicPlayerView.cpp:684 source/ui/MusicPlayerView.cpp:803
+msgid "Up Next"
+msgstr "接下來"
+
+#: source/ui/MusicPlayerView.cpp:686 source/ui/MusicPlayerView.cpp:883
+msgid "Shuffle off"
+msgstr "隨機播放：關"
+
+#: source/ui/MusicPlayerView.cpp:686 source/ui/MusicPlayerView.cpp:883
+msgid "Shuffle on"
+msgstr "隨機播放：開"
+
+#: source/ui/MusicPlayerView.cpp:687 source/ui/MusicPlayerView.cpp:890
+msgid "Repeat all"
+msgstr "全部重複"
+
+#: source/ui/MusicPlayerView.cpp:687 source/ui/MusicPlayerView.cpp:890
+msgid "Repeat off"
+msgstr "不重複"
+
+#: source/ui/MusicPlayerView.cpp:687
+msgid "Repeat one"
+msgstr "單曲重複"
+
+#: source/ui/MusicPlayerView.cpp:749
+msgid "NOW PLAYING"
+msgstr "正在播放"
+
+#: source/ui/MusicPlayerView.cpp:753
+#, c-format
+msgid "%d of %d"
+msgstr "%d / %d"
+
+#. TRANSLATORS: the track's place in the queue; Shuffle: shuffle is on
+#: source/ui/MusicPlayerView.cpp:753
+#, c-format
+msgid "%d of %d  ·  Shuffle"
+msgstr "%d / %d  ·  隨機"
+
+#. TRANSLATORS: the track after this one: its title (and its artist)
+#: source/ui/MusicPlayerView.cpp:792
+#, c-format
+msgid "Next:  %s"
+msgstr "下一首：%s"
+
+#: source/ui/MusicPlayerView.cpp:793
+#, c-format
+msgid "Next:  %s  —  %s"
+msgstr "下一首：%s  —  %s"
+
+#: source/ui/MusicPlayerView.cpp:802
+msgid "Track"
+msgstr "曲目"
+
+#: source/ui/MusicPlayerView.cpp:802
+msgid "Visualizer"
+msgstr "視覺效果"
+
+#: source/ui/MusicPlayerView.cpp:879
+msgid "Added to favorites"
+msgstr "已加入我的最愛"
+
+#: source/ui/MusicPlayerView.cpp:879
+msgid "Removed from favorites"
+msgstr "已從我的最愛移除"
+
+#: source/ui/MusicPlayerView.cpp:890
+msgid "Repeat this track"
+msgstr "單曲重複"
+
+#: source/ui/MusicPlayerView.cpp:958
+msgid "Volume"
+msgstr "音量"
+
+#: source/ui/PinPad.cpp:103
+msgid "Erase"
+msgstr "清除"
+
+#: source/ui/ProfileView.cpp:115
+msgid "Add a Profile"
+msgstr "新增使用者"
+
+#: source/ui/ProfileView.cpp:115
+msgid "Who's watching?"
+msgstr "誰在觀看？"
+
+#: source/ui/ProfileView.cpp:134
+msgid "Add New Profile"
+msgstr "新增使用者"
+
+#: source/ui/ProfileView.cpp:155
+msgid "Delete this profile?"
+msgstr "刪除此使用者？"
+
+#: source/ui/ProfileView.cpp:156
+msgid "Its saved sign-in will be forgotten."
+msgstr "已儲存的登入資訊將被清除。"
+
+#: source/ui/SettingsView.cpp:22
+msgid "Sign-In Settings"
+msgstr "登入設定"
+
+#: source/ui/SettingsView.cpp:22
+msgid "System Settings"
+msgstr "系統設定"
+
+#: source/ui/SettingsView.cpp:22
+msgid "View Settings"
+msgstr "顯示設定"
+
+#: source/ui/SettingsView.cpp:94
+msgid "Made with ❤ for Jellyfin"
+msgstr "用 ❤ 為 Jellyfin 打造"
+
+#: source/ui/SettingsView.cpp:211 source/ui/SettingsView.cpp:413
+msgid "Screen Area"
+msgstr "顯示區域"
+
+#: source/ui/SettingsView.cpp:212
+msgid "Move each arrow until its tip sits right in"
+msgstr "移動每個箭頭，直到箭頭尖端剛好位於"
+
+#: source/ui/SettingsView.cpp:213
+msgid "the corner of your TV screen."
+msgstr "電視畫面的角落。"
+
+#: source/ui/SettingsView.cpp:215
+#, c-format
+msgid "Left %d   ·   Top %d   ·   Right %d   ·   Bottom %d"
+msgstr "左 %d   ·   上 %d   ·   右 %d   ·   下 %d"
+
+#: source/ui/SettingsView.cpp:219
+msgid "Switch"
+msgstr "切換"
+
+#: source/ui/SettingsView.cpp:338
+msgid "SSL Verification"
+msgstr "SSL 驗證"
+
+#: source/ui/SettingsView.cpp:339
+msgid "Validate the server HTTPS certificate (disable for self-signed certs)"
+msgstr "驗證伺服器的HTTPS憑證（自簽憑證請關閉）"
+
+#: source/ui/SettingsView.cpp:340 source/ui/SettingsView.cpp:342
+#: source/ui/SettingsView.cpp:346 source/ui/SettingsView.cpp:374
+#: source/ui/SettingsView.cpp:378 source/ui/SettingsView.cpp:408
+msgid "OFF"
+msgstr "關"
+
+#: source/ui/SettingsView.cpp:340 source/ui/SettingsView.cpp:342
+#: source/ui/SettingsView.cpp:346 source/ui/SettingsView.cpp:378
+#: source/ui/SettingsView.cpp:408
+msgid "ON"
+msgstr "開"
+
+#: source/ui/SettingsView.cpp:341
+msgid "Background Music"
+msgstr "背景音樂"
+
+#: source/ui/SettingsView.cpp:341
+msgid "Play background music in menus"
+msgstr "在選單中播放背景音樂"
+
+#: source/ui/SettingsView.cpp:343
+msgid "Interface Sounds"
+msgstr "介面音效"
+
+#: source/ui/SettingsView.cpp:344
+msgid "Sounds in the menus; your own in sounds/ on the SD card"
+msgstr "選單音效；自訂音效放在SD卡的 sounds/ 中"
+
+#: source/ui/SettingsView.cpp:345
+msgid "The menus stay silent"
+msgstr "選單保持靜音"
+
+#: source/ui/SettingsView.cpp:356
+#, c-format
+msgid "%.1f Mb/s; your connection (%.1f Mb/s measured) holds videos to %.1f"
+msgstr "%.1f Mb/s；目前網路（實測 %.1f Mb/s）將影片限制在 %.1f"
+
+#: source/ui/SettingsView.cpp:361
+#, c-format
+msgid "%.1f Mb/s: sharpest, for a wired adapter. Lower it if videos stutter"
+msgstr "%.1f Mb/s：最清晰，適合有線網卡。影片卡頓請調低"
+
+#: source/ui/SettingsView.cpp:365
+#, c-format
+msgid "Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering"
+msgstr "影片位元率：%.1f Mb/s。頻繁緩衝請調低"
+
+#: source/ui/SettingsView.cpp:367
+msgid "Video Quality"
+msgstr "影片畫質"
+
+#: source/ui/SettingsView.cpp:371
+msgid "Direct Play"
+msgstr "直接播放"
+
+#: source/ui/SettingsView.cpp:372
+msgid "Files the Wii can decode play as they are (SD DivX, DVD...): no server work"
+msgstr "Wii能解碼的檔案直接播放（SD DivX、DVD...）：伺服器無需處理"
+
+#: source/ui/SettingsView.cpp:373
+msgid "Every video is converted by the server"
+msgstr "所有影片均由伺服器轉碼"
+
+#: source/ui/SettingsView.cpp:374
+msgid "Auto"
+msgstr "自動"
+
+#: source/ui/SettingsView.cpp:375
+msgid "Smooth Motion"
+msgstr "動態平滑"
+
+#: source/ui/SettingsView.cpp:376
+msgid "Blends frames on picture changes: films move evenly on 60 Hz TVs"
+msgstr "畫面變化時混合影格：電影在60 Hz電視上更流暢"
+
+#: source/ui/SettingsView.cpp:377
+msgid "Each frame shown as is (24 fps films judder slightly on 60 Hz)"
+msgstr "逐格原樣顯示（24 fps電影在60 Hz下略有抖動）"
+
+#: source/ui/SettingsView.cpp:381
+msgid "Light, like the Wii Menu"
+msgstr "淺色，如Wii選單"
+
+#: source/ui/SettingsView.cpp:382
+msgid "Dark, for movie nights"
+msgstr "深色，適合電影之夜"
+
+#: source/ui/SettingsView.cpp:383
+msgid "Red and charcoal, browse in rows like the old video channels"
+msgstr "紅與炭黑，像舊影片頻道一樣按列瀏覽"
+
+#: source/ui/SettingsView.cpp:387
+msgid "Theme"
+msgstr "主題"
+
+#: source/ui/SettingsView.cpp:391
+msgid "Home Screen"
+msgstr "主畫面"
+
+#: source/ui/SettingsView.cpp:391
+msgid "Rows of posters to browse, like the old video channels"
+msgstr "成排瀏覽海報，像舊影片頻道一樣"
+
+#: source/ui/SettingsView.cpp:392
+msgid "A grid of your libraries"
+msgstr "以網格顯示媒體庫"
+
+#: source/ui/SettingsView.cpp:398
+msgid "Browse libraries with their artwork"
+msgstr "附封面瀏覽媒體庫"
+
+#: source/ui/SettingsView.cpp:399
+msgid "Libraries as text lists: quickest to browse big ones"
+msgstr "以文字清單顯示：瀏覽大型媒體庫最快"
+
+#: source/ui/SettingsView.cpp:400
+msgid "Text lists, with the cover of the selected title"
+msgstr "文字清單，並顯示所選項目的封面"
+
+#: source/ui/SettingsView.cpp:403
+msgid "Library View"
+msgstr "媒體庫檢視"
+
+#: source/ui/SettingsView.cpp:405
+msgid "Disc Slot Light"
+msgstr "光碟槽指示燈"
+
+#: source/ui/SettingsView.cpp:406
+msgid "Pulses with the sound, as bright as the Wii Settings say"
+msgstr "隨聲音閃爍，亮度依照Wii設定"
+
+#: source/ui/SettingsView.cpp:407
+msgid "Stays dark during playback"
+msgstr "播放時保持熄滅"
+
+#: source/ui/SettingsView.cpp:413
+msgid "Shrink the interface if your TV crops the edges (overscan)"
+msgstr "若電視裁掉畫面邊緣，可縮小介面（overscan）"
+
+#: source/ui/SettingsView.cpp:414
+msgid "Adjusted"
+msgstr "已調整"
+
+#: source/ui/SettingsView.cpp:414
+msgid "Full"
+msgstr "完整"
+
+#: source/ui/SettingsView.cpp:416
+msgid "Backgrounds"
+msgstr "背景"
+
+#: source/ui/SettingsView.cpp:417
+msgid "Solid colours: no bands on TVs that show them in gradients"
+msgstr "純色：避免電視在漸層中出現色帶"
+
+#: source/ui/SettingsView.cpp:418
+msgid "Soft gradients, like the Wii Menu"
+msgstr "柔和漸層，如Wii選單"
+
+#: source/ui/SettingsView.cpp:419
+msgid "Gradient"
+msgstr "漸層"
+
+#: source/ui/SettingsView.cpp:419
+msgid "Solid"
+msgstr "純色"
+
+#: source/ui/SettingsView.cpp:420
+msgid "Clock"
+msgstr "時鐘"
+
+#: source/ui/SettingsView.cpp:421
+msgid "13:30, the date as day/month"
+msgstr "13:30，日期為 日/月"
+
+#: source/ui/SettingsView.cpp:421
+msgid "1:30 PM, the date as month/day"
+msgstr "1:30 下午，日期為 月/日"
+
+#: source/ui/SettingsView.cpp:422
+msgid "12-hour"
+msgstr "12小時制"
+
+#: source/ui/SettingsView.cpp:422
+msgid "24-hour"
+msgstr "24小時制"
+
+#: source/ui/SettingsView.cpp:424
+msgid "Language"
+msgstr "語言"
+
+#: source/ui/SettingsView.cpp:425
+msgid "Chosen here, whatever the Wii's language"
+msgstr "在此選擇，不受Wii語言影響"
+
+#: source/ui/SettingsView.cpp:425
+msgid "The Wii's language, as set in the Wii Settings"
+msgstr "依照Wii設定中的語言"
+
+#: source/ui/SettingsView.cpp:428
+msgid "Automatic"
+msgstr "自動"
+
+#: source/ui/SettingsView.cpp:428
+msgid "Passcode"
+msgstr "PIN碼"
+
+#: source/ui/SettingsView.cpp:430
+msgid "Opens at once on this Wii"
+msgstr "在這台Wii上直接開啟"
+
+#: source/ui/SettingsView.cpp:431
+msgid "Asks the profile's four-digit passcode first"
+msgstr "先詢問此使用者的4位數PIN碼"
+
+#: source/ui/SettingsView.cpp:432
+msgid "Asks the password (or Quick Connect) each time"
+msgstr "每次詢問密碼（或快速連線）"
+
+#: source/ui/SettingsView.cpp:435
+msgid "Sign-In"
+msgstr "登入"
+
+#: source/ui/Ui.cpp:72
+msgid "Dark"
+msgstr "深色"
+
+#: source/ui/Ui.cpp:73
+msgid "Flix"
+msgstr "Flix"
+
+#: source/ui/Ui.cpp:74
+msgid "Light"
+msgstr "淺色"
+
+#: source/ui/Ui.cpp:568
+msgid "Mon"
+msgstr "週一"
+
+#. TRANSLATORS: days of the week, abbreviated (the date under the clock)
+#: source/ui/Ui.cpp:568
+msgid "Sun"
+msgstr "週日"
+
+#: source/ui/Ui.cpp:568
+msgid "Tue"
+msgstr "週二"
+
+#: source/ui/Ui.cpp:568
+msgid "Wed"
+msgstr "週三"
+
+#: source/ui/Ui.cpp:569
+msgid "Fri"
+msgstr "週五"
+
+#: source/ui/Ui.cpp:569
+msgid "Sat"
+msgstr "週六"
+
+#: source/ui/Ui.cpp:569
+msgid "Thu"
+msgstr "週四"
+
+#. TRANSLATORS: after the time on the 12-hour clock, keep it short
+#: source/ui/Ui.cpp:575
+msgid "AM"
+msgstr "上午"
+
+#: source/ui/Ui.cpp:575
+msgid "PM"
+msgstr "下午"
+
+#. TRANSLATORS: heading of a message sent from the server's dashboard without one
+#: source/ui/Ui.cpp:870
+msgid "Message"
+msgstr "訊息"
