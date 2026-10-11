@@ -639,6 +639,17 @@ void footer(const Hint* left, int nLeft, const Hint* right, int nRight, const ch
     }
 }
 
+static struct { float x[8], w[8], y, h; int n; u64 at; } s_tabBar;
+
+int tabAt(float x, float y)
+{
+    if (ticks_to_millisecs(gettime()) - s_tabBar.at > 100) return -1;
+    if (y < s_tabBar.y || y >= s_tabBar.y + s_tabBar.h) return -1;
+    for (int i = 0; i < s_tabBar.n; ++i)
+        if (x >= s_tabBar.x[i] && x < s_tabBar.x[i] + s_tabBar.w[i]) return i;
+    return -1;
+}
+
 float tabs(float cx, float y, const char* const* names, int n, int sel, int size)
 {
     const Palette& p = pal();
@@ -659,8 +670,10 @@ float tabs(float cx, float y, const char* const* names, int n, int sel, int size
         } else {
             textCentered(x + w[i] * 0.5f, y + (h - size) * 0.5f - 1, tr(names[i]), size, p.textDim);
         }
+        s_tabBar.x[i] = x; s_tabBar.w[i] = w[i];
         x += w[i];
     }
+    s_tabBar.y = y; s_tabBar.h = h; s_tabBar.n = n; s_tabBar.at = ticks_to_millisecs(gettime());
     return x0;
 }
 

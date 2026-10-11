@@ -340,6 +340,9 @@ private:
     bool startVideoShuffle();
     /* the music library's query for its tab (or an artist's albums) */
     std::string musicFilter() const;
+    /* a film or series library's list (List views): its tab's titles */
+    std::string listFilter() const;
+    bool tabbedList() const;   /* that list shows the library's tabs */
     /* A on an album, a playlist, an artist or a song, in the list or the
      * grid (idx: its place there); true when a track starts */
     bool openMusicItem(const JellyfinItem& sel, int idx);
@@ -462,6 +465,8 @@ private:
     bool updateItemList(ir_t& ir, bool aPressed);
     void renderItemList(ir_t& ir);
     State pageLoadState() const;   // the load of the current tab's page
+    /* A tab of the bar on the screen (home or library), as -/+ reach it */
+    void goToTab(int t);
     bool updatePosterGrid(ir_t& ir, bool aPressed);
     void renderPosterGrid(ir_t& ir);
     // LibraryShows.cpp

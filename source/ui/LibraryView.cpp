@@ -776,8 +776,8 @@ void LibraryView::loadMovieSuggestions() {
 void LibraryView::loadItems() {
     if (!posterMode) {
         // Text list: the whole library, fetched as it scrolls (ListFeed)
-        std::string filter = currentLibType == "music"
-                           ? musicFilter() : "ParentId=" + currentLibId + (sortable() ? sortQuery() : "");
+        std::string filter = (currentLibType == "music" ? musicFilter() : listFilter()) +
+                             (sortable() ? sortQuery() : "");
         bool ok = false; std::string err;
         runWithLoading([&]() { ok = feed.open(filter, err); });
         if (!ok) { errMsg = err; state = State::Error; return; }
@@ -839,6 +839,21 @@ void LibraryView::loadItems() {
     musicOpening = false;
     globFavMode = false; itemSel = 0; viewTop = 0; posterSel = 0;
     state = posterMode ? State::PostersLoad : State::ItemsReady;
+}
+
+bool LibraryView::tabbedList() const {
+    return (currentLibType == "movies" || currentLibType == "tvshows") && !inItemsDrilldown && !inBoxSetDrilldown;
+}
+
+/* Collections and Favorites as lists too: the grid's queries */
+std::string LibraryView::listFilter() const {
+    if (currentLibType == "movies" && tabbedList()) {
+        if (movieTab == 1) return "IncludeItemTypes=BoxSet&Recursive=true&SortBy=SortName&SortOrder=Ascending";
+        if (movieTab == 2)
+            return "ParentId=" + movieLibId + "&IncludeItemTypes=Movie&Filters=IsFavorite&Recursive=true"
+                   "&SortBy=SortName&SortOrder=Ascending";
+    }
+    return "ParentId=" + currentLibId;
 }
 
 /* the tabs, as Jellyfin's: albums, album artists (their own route: /Items
@@ -1177,7 +1192,12 @@ bool LibraryView::update(ir_t& ir) {
     const bool     pressed  = Input::rawDown() || Input::isUpPressed() || Input::isDownPressed() ||
                               Input::isLeftPressed() || Input::isRightPressed() ||
                               (ir.valid && (fabsf(ir.x - irLastX) > 3.0f || fabsf(ir.y - irLastY) > 3.0f));
-    bool done = updateState(ir);
+    /* A with the pointer on a tab: that tab (and nothing else: not the
+     * title still selected under it) */
+    bool done = false;
+    const int tab = ir.valid && Input::isAJustPressed() && !loadingState(state) ? Ui::tabAt(ir.x, ir.y) : -1;
+    if (tab >= 0) goToTab(tab);
+    else          done = updateState(ir);
     if (pressed) {
         const bool paged = pageKey() != page0, moved = focusKey() != focus0;
         if (done) {

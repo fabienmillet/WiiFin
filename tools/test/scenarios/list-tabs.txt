@@ -1,0 +1,16 @@
+# Library View: List, a film library: its tabs as in the grid, -/+ to go
+# through them, Collections and Favorites as lists too; the pointer on a
+# tab and A goes straight to it.
+server http://127.0.0.1:18096
+cfg library_view=1
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 A          Movies, as a list with its tabs
+15000 PLUS       Collections
+18000 PLUS       Favorites
+21000 POINTER@250,20
+22000 A          the tab under the pointer: Collections
+24000 NOPOINTER
+25000 MINUS      Movies
+28000 END
+expect logorder "[Library] tab Collections" "[Library] tab Favorites" "[Library] tab Collections" "[Library] tab Movies"

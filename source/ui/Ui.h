@@ -140,6 +140,9 @@ void footer(const Hint* left, int nLeft, const Hint* right = nullptr, int nRight
 
 /* Segmented pill of tabs centred on cx; returns the x of its left edge. */
 float tabs(float cx, float y, const char* const* names, int n, int sel, int size = 14);
+/* The tab under (x, y) on the bar tabs() drew last (in the last 100 ms:
+ * still on the screen), -1 none */
+int tabAt(float x, float y);
 /* Round up/down arrow button (page arrows, scrolling lists).  Disabled
  * buttons are faded; hovering grows the button and lights its ring. */
 void arrowButton(float cx, float cy, bool up, bool enabled, bool hover);

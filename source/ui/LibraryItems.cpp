@@ -132,6 +132,10 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
             state = musicTab == 1 ? State::MusicSuggestionsLoad : State::ItemsInit;
             return false;
         }
+    } else if (tabbedList()) {   /* -/+: the library's tabs, as in the grid */
+        const int n = currentLibType == "movies" ? 4 : 3, cur = currentLibType == "movies" ? movieTab : tvTab;
+        if (Input::isLPressed()) { goToTab((cur + n - 1) % n); return false; }
+        if (Input::isRPressed()) { goToTab((cur + 1) % n); return false; }
     } else {
         if (Input::isLPressed()) { itemSel -= LIST_ROWS; viewTop -= LIST_ROWS; irMode = false; clampScroll(); }
         if (Input::isRPressed()) { itemSel += LIST_ROWS; viewTop += LIST_ROWS; irMode = false; clampScroll(); }
@@ -225,6 +229,43 @@ LibraryView::State LibraryView::pageLoadState() const {
     return State::ItemsInit;
 }
 
+void LibraryView::goToTab(int t) {
+    if (state == State::LibsReady || state == State::GlobalFavoritesReady) {
+        /* home: Libraries, Activity, Favorites */
+        const int cur = state == State::GlobalFavoritesReady ? 2 : homePage;
+        if (t == cur) return;
+        irMode = true;
+        if (t == 2) { itemPage = 0; state = State::GlobalFavoritesLoad; return; }
+        if (state == State::GlobalFavoritesReady) { freePosters(); globFavMode = false; state = State::LibsReady; }
+        homePage = t;
+        return;
+    }
+    if (inItemsDrilldown || inBoxSetDrilldown) return;
+    const int cur = currentLibType == "movies" ? movieTab : currentLibType == "tvshows" ? tvTab
+                  : currentLibType == "music" ? musicTab : -1;
+    if (cur < 0 || t == cur) return;
+    freePosters(); freeMovieSuggestions(); freeTVSuggestions(); freeTVUpcoming(); freeMusicSuggestions();
+    itemPage = 0;
+    SYS_Report("[Library] tab %s\n", (currentLibType == "movies" ? kMovieTabs : currentLibType == "tvshows"
+                                       ? kTvTabs : kMusicTabs)[t]);
+    if (currentLibType == "movies") {
+        movieTab = t;
+        if      (t == 0) { currentLibId = movieLibId; state = State::ItemsInit; }
+        else if (t == 1) state = posterMode ? State::CollectionsLoad : State::ItemsInit;
+        else if (t == 2) state = posterMode ? State::FavoritesLoad : State::ItemsInit;
+        else             state = State::MovieSuggestionsLoad;
+    } else if (currentLibType == "tvshows") {
+        tvTab = t;
+        if      (t == 0) { currentLibId = tvLibId; state = State::ItemsInit; }
+        else if (t == 1) state = State::TVSuggestionsLoad;
+        else             state = State::TVUpcomingLoad;
+    } else {
+        musicTab = t;
+        currentLibId = musicLibId;
+        state = t == 1 ? State::MusicSuggestionsLoad : State::ItemsInit;
+    }
+}
+
 bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
     int n = (int)items.size();
     if (sortPanel) { updateSortPanel(); return false; }
@@ -283,49 +324,11 @@ bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
         }
         return false;
     }
-    // Movies tab switching with -/+ (replaces page-nav for movies)
-    if (currentLibType == "movies" && !inBoxSetDrilldown) {
-        if (Input::isLPressed()) {
-            freePosters();
-            movieTab = (movieTab + 3) % 4;
-            itemPage = 0;
-            if      (movieTab == 0) { currentLibId = movieLibId; state = State::ItemsInit; }
-            else if (movieTab == 1) state = State::CollectionsLoad;
-            else if (movieTab == 2) state = State::FavoritesLoad;
-            else                   state = State::MovieSuggestionsLoad;
-            return false;
-        }
-        if (Input::isRPressed()) {
-            freePosters();
-            movieTab = (movieTab + 1) % 4;
-            itemPage = 0;
-            if      (movieTab == 0) { currentLibId = movieLibId; state = State::ItemsInit; }
-            else if (movieTab == 1) state = State::CollectionsLoad;
-            else if (movieTab == 2) state = State::FavoritesLoad;
-            else                   state = State::MovieSuggestionsLoad;
-            return false;
-        }
-    }
-    // TV shows tab switching with -/+
-    if (currentLibType == "tvshows") {
-        if (Input::isLPressed()) {
-            freePosters();
-            tvTab = (tvTab + 2) % 3;
-            itemPage = 0;
-            if      (tvTab == 0) { currentLibId = tvLibId; state = State::ItemsInit; }
-            else if (tvTab == 1) state = State::TVSuggestionsLoad;
-            else                 state = State::TVUpcomingLoad;
-            return false;
-        }
-        if (Input::isRPressed()) {
-            freePosters();
-            tvTab = (tvTab + 1) % 3;
-            itemPage = 0;
-            if      (tvTab == 0) { currentLibId = tvLibId; state = State::ItemsInit; }
-            else if (tvTab == 1) state = State::TVSuggestionsLoad;
-            else                 state = State::TVUpcomingLoad;
-            return false;
-        }
+    // -/+: the tabs of a film or series library (not pages)
+    if ((currentLibType == "movies" && !inBoxSetDrilldown) || currentLibType == "tvshows") {
+        const int n = currentLibType == "movies" ? 4 : 3, cur = currentLibType == "movies" ? movieTab : tvTab;
+        if (Input::isLPressed()) { goToTab((cur + n - 1) % n); return false; }
+        if (Input::isRPressed()) { goToTab((cur + 1) % n); return false; }
     }
     if (Input::isLeftPressed()  && posterSel % POSTER_COLS > 0)               { posterSel--; irMode = false; }
     if (Input::isRightPressed() && posterSel % POSTER_COLS < POSTER_COLS-1
@@ -438,7 +441,11 @@ void LibraryView::renderItemList(ir_t& ir) {
         Ui::tabs(320, 10, kMusicTabs, 5, musicTab, 14);
         headerLine(46);
     } else {
-        drawBreadcrumb(currentLibName, 20, 420);
+        if (tabbedList())
+            drawLibHeader(currentLibName, currentLibType == "movies" ? kMovieTabs : kTvTabs,
+                          currentLibType == "movies" ? 4 : 3, currentLibType == "movies" ? movieTab : tvTab);
+        else
+            drawBreadcrumb(currentLibName, 20, 420);
         char pos[48];
         if (n > 0 && haveSel)
             snprintf(pos, sizeof(pos), "%c   \xc2\xb7   %d / %d", ListFeed::letterOf(selItem), itemSel + 1, n);
@@ -536,9 +543,10 @@ void LibraryView::renderItemList(ir_t& ir) {
     const Ui::Hint l[] = { { "A", N_("Open") }, { "B", N_("Back") },
                            { "2", shuffles ? N_("Shuffle") : sum.empty() ? N_("Sort") : sum.c_str() } };
     const int nl = sortable() || shuffles ? 3 : 2;
-    if (currentLibType == "music" && !inItemsDrilldown) {
-        const Ui::Hint r[] = { { "LR", "A-Z" }, { "-/+", "Tab" } };
-        Ui::footer(l, nl, r, 2);
+    if ((currentLibType == "music" && !inItemsDrilldown) || tabbedList()) {
+        const bool az = !(sortable() && listSort.sort != 0);   /* A-Z: by name only */
+        const Ui::Hint r[] = { { "LR", N_("A-Z") }, { "-/+", N_("Tab") } };
+        Ui::footer(l, nl, az ? r : r + 1, az ? 2 : 1);
     } else if (sortable() && listSort.sort != 0) {
         const Ui::Hint r[] = { { "-/+", N_("Page") } };
         Ui::footer(l, nl, r, 1);

@@ -55,26 +55,8 @@ bool LibraryView::updateMovieSuggestions(ir_t& ir, bool aPressed) {
         return false;
     }
     // Tab switch with -/+
-    if (Input::isLPressed()) {
-        freeMovieSuggestions();
-        movieTab = (movieTab + 3) % 4;
-        itemPage = 0;
-        if      (movieTab == 0) { currentLibId = movieLibId; state = State::ItemsInit; }
-        else if (movieTab == 1) state = State::CollectionsLoad;
-        else if (movieTab == 2) state = State::FavoritesLoad;
-        return false;
-    }
-    if (Input::isRPressed()) {
-        freeMovieSuggestions();
-        movieTab = (movieTab + 1) % 4;
-        itemPage = 0;
-        if      (movieTab == 0) { currentLibId = movieLibId; state = State::ItemsInit; }
-        else if (movieTab == 1) state = State::CollectionsLoad;
-        else if (movieTab == 2) state = State::FavoritesLoad;
-        // movieTab == 3 → reload suggestions (already freed above)
-        else state = State::MovieSuggestionsLoad;
-        return false;
-    }
+    if (Input::isLPressed()) { goToTab((movieTab + 3) % 4); return false; }
+    if (Input::isRPressed()) { goToTab((movieTab + 1) % 4); return false; }
     {
         int nc = (int)movieContItems.size();
         int nr = (int)movieRecentItems.size();
@@ -145,23 +127,8 @@ bool LibraryView::updateTVSuggestions(ir_t& ir, bool aPressed) {
         return false;
     }
     // Tab switch with -/+
-    if (Input::isLPressed()) {
-        freeTVSuggestions();
-        tvTab = (tvTab + 2) % 3;
-        itemPage = 0;
-        if      (tvTab == 0) { currentLibId = tvLibId; state = State::ItemsInit; }
-        else                  state = State::TVUpcomingLoad;
-        return false;
-    }
-    if (Input::isRPressed()) {
-        freeTVSuggestions();
-        tvTab = (tvTab + 1) % 3;
-        itemPage = 0;
-        if      (tvTab == 0) { currentLibId = tvLibId; state = State::ItemsInit; }
-        else if (tvTab == 1) state = State::TVSuggestionsLoad;
-        else                  state = State::TVUpcomingLoad;
-        return false;
-    }
+    if (Input::isLPressed()) { goToTab((tvTab + 2) % 3); return false; }
+    if (Input::isRPressed()) { goToTab((tvTab + 1) % 3); return false; }
     {
         int nc = (int)tvContItems.size();
         int nr = (int)tvRecentItems.size();
@@ -240,25 +207,8 @@ bool LibraryView::updateTVUpcoming(ir_t& ir, bool aPressed) {
         return false;
     }
     // Tab switch with -/+
-    if (Input::isLPressed()) {
-        freeTVUpcoming();
-        tvTab = (tvTab + 2) % 3;
-        itemPage = 0;
-        if      (tvTab == 0) { currentLibId = tvLibId; state = State::ItemsInit; }
-        else if (tvTab == 1) state = State::TVSuggestionsLoad;
-        else                  state = State::TVUpcomingLoad;
-        return false;
-    }
-    if (Input::isRPressed()) {
-        freeTVUpcoming();
-        tvTab = (tvTab + 1) % 3;
-        itemPage = 0;
-        if      (tvTab == 0) { currentLibId = tvLibId; state = State::ItemsInit; }
-        else if (tvTab == 1) state = State::TVSuggestionsLoad;
-        // tvTab == 2 → reload upcoming
-        else                  state = State::TVUpcomingLoad;
-        return false;
-    }
+    if (Input::isLPressed()) { goToTab((tvTab + 2) % 3); return false; }
+    if (Input::isRPressed()) { goToTab((tvTab + 1) % 3); return false; }
     {
         int nu = (int)tvUpcomingItems.size();
         if (Input::isLeftPressed() && tvUpcomingSel > 0) {
