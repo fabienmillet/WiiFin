@@ -56,7 +56,7 @@ void* download(void*)
         int n = wiifin_http_read(h, buf, sizeof(buf));
         if (n <= 0) break;
         for (int i = 0; i < n; ++i) s_ring[(s_head + i) % RING] = (u8)buf[i];
-        s_head += n;
+        s_head = s_head + n;
     }
     wiifin_http_close(h);
     s_dlDone = true;
@@ -72,7 +72,7 @@ s32 readSong(void*, void* out, s32 len)
         if (avail > 0) {
             u32 n = avail < (u32)len ? avail : (u32)len;
             for (u32 i = 0; i < n; ++i) ((u8*)out)[i] = s_ring[(s_tail + i) % RING];
-            s_tail += n;
+            s_tail = s_tail + n;
             return (s32)n;
         }
         if (s_dlDone || s_stop) return 0;
@@ -113,8 +113,10 @@ void* runQueue(void*)
         const long long fromTicks = (long long)(from * 10000000.0f);
         bool ok = c.getAudioStreamUrl(s_server, s_auth, t.id, fromTicks, s_url, session, &method, &index, true);
         if (ok) {
-            s_head = s_tail = 0;
-            s_dlDone = s_dlStop = false;
+            s_head = 0;
+            s_tail = 0;
+            s_dlDone = false;
+            s_dlStop = false;
             async_quit_request = 0;
             LWP_CreateThread(&s_dl, download, nullptr, s_dlStack, sizeof(s_dlStack), 55);
             /* a little ahead before the sound starts */
