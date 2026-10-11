@@ -7,8 +7,13 @@ name: Build
 #
 # By hand (Actions > Build > Run workflow), a version can be stamped into
 # the build, and with "release" ticked a GitHub release v<version> is
-# published with the three files once every check passes (a pre-release
-# when the version has a dash: 1.0.0-rc1).
+# published with the three files (a pre-release when the version has a
+# dash: 1.0.0-rc1).
+#
+# Tested once: Dolphin and the scenarios run on a push to any branch but
+# main, on a pull request from a fork, and every Monday.  A pull request
+# from this repository was tested by its branch's push; main only gets
+# what develop passed, so its push and a release only build.
 #
 # The devkitPro and Jellyfin images are pinned (the build job's container,
 # tools/test/server.sh), so a new release cannot break the build or the
@@ -40,6 +45,8 @@ concurrency:
 
 jobs:
   build:
+    # a pull request from this repository: its branch's push ran all this
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     # devkitPPC, libogc and the portlibs come with the image: setup.sh then
     # finds them installed and never calls devkitPro's package server.
@@ -126,6 +133,7 @@ jobs:
 
   smoke:
     needs: build
+    if: github.event_name == 'schedule' || (github.event_name == 'push' && github.ref != 'refs/heads/main') || github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -155,6 +163,7 @@ jobs:
   # about 20 minutes instead of an hour
   playback:
     needs: build
+    if: github.event_name == 'schedule' || (github.event_name == 'push' && github.ref != 'refs/heads/main') || github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -213,7 +222,8 @@ jobs:
           retention-days: 7
 
   release:
-    if: inputs.release
+    # the tests skipped (main: what develop passed), or passed
+    if: ${{ !cancelled() && inputs.release && needs.build.result == 'success' && needs.smoke.result != 'failure' && needs.playback.result != 'failure' }}
     needs: [build, smoke, playback]
     runs-on: ubuntu-latest
     permissions:
