@@ -1,0 +1,20 @@
+# The music player's visualizers: Up twice from the controls reaches the
+# visualizer, each A the next one (Ring, Bubbles, Wave, Blocks).
+server http://127.0.0.1:18096
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 RIGHT
+12400 RIGHT      Singles
+13000 A
+16000 A          Test Album
+19000 A          a track
+25000 UP
+25500 UP         the visualizer
+26500 A          Ring
+28000 A          Bubbles
+29500 A          Wave
+31000 A          Blocks
+33000 B
+36000 END
+expect logorder "[Music] visualizer Ring" "[Music] visualizer Bubbles" "[Music] visualizer Wave" "[Music] visualizer Blocks"
+expect log [WiiPlayer] play_audio:

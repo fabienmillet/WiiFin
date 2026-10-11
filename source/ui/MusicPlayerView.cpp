@@ -14,8 +14,9 @@
  *
  * Controls (any controller, as Wii Remote buttons):
  *   A          the focused / pointed control (play/pause on the seek bar)
- *   Left/Right move along the controls, or seek -10/+10 s on the seek bar
- *   Up/Down    seek bar / controls
+ *   Left/Right move along the controls, seek -10/+10 s on the seek bar, or
+ *              change the visualizer above it
+ *   Up/Down    visualizer / seek bar / controls
  *   - / +      previous / next track
  *   1          Up Next panel          2   shuffle
  *   B / HOME   back to the library
@@ -58,11 +59,27 @@ const int  BUBBLES    = 40;
 
 u64 nowMs() { return ticks_to_millisecs(gettime()); }
 
+/* 0..1, for the bubbles (rand() is the main thread's) */
+float rnd()
+{
+    static u32 seed = 12345;
+    seed = seed * 1664525u + 1013904223u;
+    return (seed >> 8) / 16777216.0f;
+}
+
 /* ---- Session ------------------------------------------------------------ */
 
 enum class Req { None, Next, Prev, Jump, Ended, Leave };
 
 enum Ctl { C_FAV, C_SHUFFLE, C_PREV, C_PLAY, C_NEXT, C_REPEAT, C_QUEUE, C_COUNT };
+
+/* the visualizers, all drawn from the same bands */
+enum Viz { V_BARS, V_RING, V_BUBBLES, V_WAVE, V_BLOCKS, V_COUNT };
+/* TRANSLATORS: the music player's visualizers, named when one is picked */
+const char* const VIZ_NAME[V_COUNT] = { N_("Bars"), N_("Ring"), N_("Bubbles"), N_("Wave"), N_("Blocks") };
+int s_viz = V_BARS;   /* kept for the rest of the session */
+
+struct Bubble { float x, y, r, v, ph; };   /* x, y 0..1 in the box; r 0: none */
 
 struct Session {
     JellyfinClient* client = nullptr;
@@ -117,6 +134,9 @@ struct Session {
     float viz[BARS] = {}, peak[BARS] = {};
     u64   peakAt[BARS] = {};
     float bassAvg = 0.0f, beat = 0.0f;
+    bool  focusViz = false, hoverViz = false;
+    float spin = 0.0f;                 /* seconds, for what moves on its own */
+    Bubble bubbles[BUBBLES] = {};
     u64   titleSince = 0;
     std::string toastMsg;
     u64   toastUntil = 0;
@@ -435,6 +455,8 @@ void glyphPlayPause(float cx, float cy, bool playing, u32 c)
 const float ART_X = 48, ART_Y = 66, ART = 216;
 const float COL_X = 290, COL_W = 302;
 const float VIZ_BASE = 262, VIZ_H = 104;
+/* the visualizer's box, for its focus ring and the pointer */
+const float VIZ_TOP = VIZ_BASE - VIZ_H - 10, VIZ_BOT = VIZ_BASE + 18;
 const float BAR_X = 48, BAR_W = 544, BAR_Y = 304;
 const float CTL_Y = 372;
 const float CTL_X[C_COUNT] = { 70, 184, 248, 320, 392, 456, 570 };   /* 18 px or more between two */
@@ -478,6 +500,119 @@ void drawSpectrum(float x, float base, float w, float h, float a, bool reflect)
         if (reflect)
             Ui::roundRect(bx, base + 3, bw, bh * 0.32f, bw * 0.4f, Ui::alpha(bottom, a * 0.22f),
                           Ui::alpha(bottom, 0.0f));
+    }
+}
+
+/* plain triangles for the visualizers: cheap, many per frame */
+void quad(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, u32 c)
+{
+    Ui::triangle(x0, y0, x1, y1, x2, y2, c);
+    Ui::triangle(x0, y0, x2, y2, x3, y3, c);
+}
+
+void rect(float x, float y, float w, float h, u32 c) { quad(x, y, x + w, y, x + w, y + h, x, y + h, c); }
+
+/* rays around a disc that swells with the beat; the bass at the top, both
+ * halves alike.  disc: false around the cover, which hides it */
+void drawRing(float cx, float cy, float r0, float len, float a, bool disc)
+{
+    Session& s = *S;
+    const Ui::Palette& p = Ui::pal();
+    const int N = 2 * BARS;
+    float r = r0 * (1 + fminf(s.beat, 0.3f) * 0.25f), step = 2 * (float)M_PI / N, hw = step * 0.3f;
+    u32 lo = Ui::mix(p.accent, 0x000000FF, 0.15f), hi = Ui::mix(p.accent, 0xFFFFFFFF, 0.5f);
+    if (disc) {
+        Ui::circle(cx, cy, r - 3, Ui::alpha(p.accent, a * (0.25f + fminf(s.beat, 0.3f) * 1.5f)));
+        Ui::roundBorder(cx - r + 3, cy - r + 3, 2 * r - 6, 2 * r - 6, r - 3, 2.0f, Ui::alpha(hi, a * 0.8f));
+    }
+    for (int k = 0; k < N; ++k) {
+        int i = k < BARS ? k : N - 1 - k;
+        float ang = s.spin * 0.12f + (k + 0.5f) * step - (float)M_PI / 2;
+        float c0 = cosf(ang - hw), s0 = sinf(ang - hw), c1 = cosf(ang + hw), s1 = sinf(ang + hw);
+        float r1 = r + 3 + s.viz[i] * len, rp = r + 6 + s.peak[i] * len;
+        quad(cx + c0 * r, cy + s0 * r, cx + c1 * r, cy + s1 * r,
+             cx + c1 * r1, cy + s1 * r1, cx + c0 * r1, cy + s0 * r1, Ui::alpha(Ui::mix(lo, hi, s.viz[i]), a));
+        quad(cx + c0 * rp, cy + s0 * rp, cx + c1 * rp, cy + s1 * rp,
+             cx + c1 * (rp + 2.5f), cy + s1 * (rp + 2.5f), cx + c0 * (rp + 2.5f), cy + s0 * (rp + 2.5f),
+             Ui::alpha(hi, a * 0.9f));
+    }
+}
+
+/* bubbles rising from where the music is loud (render() moves them) */
+void drawBubbles(float x, float base, float w, float h, float a)
+{
+    Session& s = *S;
+    const Ui::Palette& p = Ui::pal();
+    float k = fmaxf(h / VIZ_H, 0.7f);
+    u32 c = Ui::mix(p.accent, 0xFFFFFFFF, 0.2f);
+    Ui::roundRect(x, base - 1.5f, w, 3, 1.5f, Ui::alpha(p.accent, a * 0.4f));
+    for (const Bubble& b : s.bubbles) {
+        if (b.r <= 0) continue;
+        float fade = b.y < 0.8f ? 1.0f : (1 - b.y) / 0.2f;
+        float r = b.r * k * (0.7f + 0.3f * b.y);
+        float bx = x + r + b.x * (w - 2 * r) + sinf(b.y * 8 + b.ph) * 3 * k;
+        float by = base - 3 - r - b.y * (h - 3 - 2 * r);
+        Ui::circle(bx, by, r, Ui::alpha(c, a * 0.7f * fade));
+        if (r > 4) Ui::circle(bx - r * 0.35f, by - r * 0.35f, r * 0.3f, Ui::alpha(0xFFFFFFFF, a * 0.8f * fade));
+    }
+}
+
+/* a ribbon mirrored about its middle line: the bass in the centre, the
+ * treble at the ends, rippling a little */
+void drawWave(float x, float base, float w, float h, float a)
+{
+    Session& s = *S;
+    const Ui::Palette& p = Ui::pal();
+    const int N = 2 * BARS - 1;
+    float cy = base - h / 2, dx = w / (N - 1), amp[N];
+    for (int j = 0; j < N; ++j) {
+        int i = j < BARS ? BARS - 1 - j : j - BARS + 1;
+        float env = sinf((float)M_PI * (j + 1) / (N + 1));
+        amp[j] = 1.5f + s.viz[i] * env * (h / 2 - 3) * (0.85f + 0.15f * sinf(s.spin * 5 + j * 0.5f));
+    }
+    u32 fill = Ui::alpha(p.accent, a * 0.25f), core = Ui::alpha(Ui::mix(p.accent, 0xFFFFFFFF, 0.3f), a * 0.4f);
+    u32 edge = Ui::alpha(Ui::mix(p.accent, 0xFFFFFFFF, 0.35f + fminf(s.beat, 0.3f)), a);
+    for (int j = 0; j + 1 < N; ++j) {
+        float x0 = x + j * dx, x1 = x0 + dx, a0 = amp[j], a1 = amp[j + 1];
+        quad(x0, cy - a0, x1, cy - a1, x1, cy + a1, x0, cy + a0, fill);
+        quad(x0, cy - a0 * 0.4f, x1, cy - a1 * 0.4f, x1, cy + a1 * 0.4f, x0, cy + a0 * 0.4f, core);
+        quad(x0, cy - a0 - 1.2f, x1, cy - a1 - 1.2f, x1, cy - a1 + 1.2f, x0, cy - a0 + 1.2f, edge);
+        quad(x0, cy + a0 - 1.2f, x1, cy + a1 - 1.2f, x1, cy + a1 + 1.2f, x0, cy + a0 + 1.2f, edge);
+    }
+}
+
+/* a level meter: blocks that stack up, a cap at the peak that falls */
+void drawBlocks(float x, float base, float w, float h, float a)
+{
+    Session& s = *S;
+    const Ui::Palette& p = Ui::pal();
+    const int COLS = BARS / 2, ROWS = 8;
+    const float gap = 3, bw = (w - gap * (COLS - 1)) / COLS, pitch = (h - 6) / ROWS;
+    u32 lo = Ui::mix(p.accent, 0x000000FF, 0.2f), hi = Ui::mix(p.accent, 0xFFFFFFFF, 0.5f);
+    u32 off = Ui::alpha(p.cardBorder, a * 0.3f);
+    for (int c = 0; c < COLS; ++c) {
+        float v = fmaxf(s.viz[2 * c], s.viz[2 * c + 1]), pk = fmaxf(s.peak[2 * c], s.peak[2 * c + 1]);
+        int lit = (int)(v * ROWS + 0.5f);
+        float bx = x + c * (bw + gap);
+        for (int r = 0; r < ROWS; ++r) {
+            u32 col = off;
+            if (r < lit) col = Ui::alpha(r == ROWS - 1 ? Ui::mix(hi, p.danger, 0.6f)
+                                                       : Ui::mix(lo, hi, (float)r / (ROWS - 1)), a);
+            rect(bx, base - (r + 1) * pitch + 2.5f, bw, pitch - 2.5f, col);
+        }
+        rect(bx, base - fmaxf(pk * ROWS, (float)lit) * pitch - 1.5f, bw, 3, Ui::alpha(hi, a));
+    }
+}
+
+/* the visualizer picked, in a box w x h standing on base */
+void drawViz(float x, float base, float w, float h, float a, bool reflect)
+{
+    switch (s_viz) {
+    case V_RING:    drawRing(x + w / 2, base - h / 2 + 8, h * 0.26f, h * 0.3f, a, true); break;
+    case V_BUBBLES: drawBubbles(x, base, w, h, a); break;
+    case V_WAVE:    drawWave(x, base, w, h, a); break;
+    case V_BLOCKS:  drawBlocks(x, base, w, h, a); break;
+    default:        drawSpectrum(x, base, w, h, a, reflect); break;
     }
 }
 
@@ -626,10 +761,20 @@ void drawScreen(bool live, bool loading)
             Ui::text(COL_X, ART_Y + 60, LibDraw::fitText(Ui::font(), s.detail, 14, (int)COL_W).c_str(), 14,
                      Ui::alpha(p.textDim, a));
         if (s.favorite) glyphHeart(COL_X + COL_W - 8, ART_Y + 70, 0.75f, Ui::alpha(0xE8475EFF, a));
-        drawSpectrum(COL_X, VIZ_BASE, COL_W, VIZ_H, a, true);
+        drawViz(COL_X, VIZ_BASE, COL_W, VIZ_H, a, true);
 
         if (idleE < 0.5f) {
-            drawSeekBar(pos, dur, live && !s.pointer && s.focusBar && !s.panel);
+            /* the visualizer focused: A or Left/Right picks another; dots tell which */
+            bool vizF = live && !s.panel && (s.pointer ? s.hoverViz : s.focusViz);
+            if (vizF) {
+                Ui::roundBorder(COL_X - 8, VIZ_TOP, COL_W + 16, VIZ_BOT - VIZ_TOP, 12, 2.0f, p.accent);
+                float dw = V_COUNT * 10 + 8, dx = COL_X + COL_W / 2 - dw / 2;
+                Ui::roundRect(dx, VIZ_BOT - 6, dw, 12, 6, p.accent, p.accentDark);
+                for (int i = 0; i < V_COUNT; ++i)
+                    Ui::circle(dx + 9 + i * 10, VIZ_BOT, i == s_viz ? 3.0f : 2.0f,
+                               Ui::alpha(p.textOnAccent, i == s_viz ? 1.0f : 0.5f));
+            }
+            drawSeekBar(pos, dur, live && !s.pointer && s.focusBar && !s.focusViz && !s.panel);
             for (int i = 0; i < C_COUNT; ++i) {
                 bool f = live && !s.panel && (s.pointer ? s.hover == i : (!s.focusBar && s.focus == i));
                 drawControl(i, f, live ? playing : true);
@@ -654,8 +799,8 @@ void drawScreen(bool live, bool loading)
                 const Ui::Hint r[] = { { "B", N_("Close") } };
                 Ui::footer(l, 2, r, 1);
             } else {
-                const Ui::Hint l[] = { { "A", "Select" }, { "-/+", "Track" } };
-                const Ui::Hint r[] = { { "1", "Up Next" }, { "B", "Back" } };
+                const Ui::Hint l[] = { { "A", vizF ? N_("Visualizer") : N_("Select") }, { "-/+", N_("Track") } };
+                const Ui::Hint r[] = { { "1", N_("Up Next") }, { "B", N_("Back") } };
                 Ui::footer(l, 2, r, 2);
             }
         }
@@ -664,13 +809,14 @@ void drawScreen(bool live, bool loading)
     /* ---- idle layout: the cover alone, centred ---- */
     if (idleE > 0.01f) {
         float a = idleE;
-        float sz = 236 * (1 + fminf(s.beat, 0.3f) * 0.10f);
-        drawCover(320 - sz / 2, 172 - sz / 2 - 40 + 30 * (1 - a), sz, a);
+        float sz = 236 * (1 + fminf(s.beat, 0.3f) * 0.10f), cy = 172 - 40 + 30 * (1 - a);
+        if (s_viz == V_RING) drawRing(320, cy, 122, 36, a * 0.7f, false);   /* around the cover */
+        drawCover(320 - sz / 2, cy - sz / 2, sz, a);
         Ui::textCentered(320, 318, LibDraw::fitText(Ui::font(), s.title, 24, 560).c_str(), 24, Ui::alpha(p.text, a));
         if (!s.artist.empty())
             Ui::textCentered(320, 350, LibDraw::fitText(Ui::font(), s.artist, 17, 560).c_str(), 17,
                              Ui::alpha(p.accent, a));
-        drawSpectrum(Ui::screenLeft() + 20, 470, Ui::screenWidth() - 40, 60, a * 0.6f, false);
+        if (s_viz != V_RING) drawViz(Ui::screenLeft() + 20, 470, Ui::screenWidth() - 40, 60, a * 0.6f, false);
         float frac = dur > 0 ? pos / dur : 0;
         Ui::roundRect(220, 384, 200, 3, 1.5f, Ui::alpha(p.cardBorder, 0.5f * a));
         Ui::roundRect(220, 384, 200 * fminf(frac, 1.0f), 3, 1.5f, Ui::alpha(p.accent, a));
@@ -691,6 +837,13 @@ void toast(const char* msg)
 {
     S->toastMsg = msg;
     S->toastUntil = nowMs() + 1600;
+}
+
+void nextViz(int d)
+{
+    s_viz = (s_viz + d + V_COUNT) % V_COUNT;
+    SYS_Report("[Music] visualizer %s\n", VIZ_NAME[s_viz]);
+    toast(VIZ_NAME[s_viz]);
 }
 
 /* ---- Background thread: buttons ----------------------------------------- */
@@ -841,14 +994,23 @@ void tick(int paused, u32 down, u32 held)
 
     if (down & (WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT)) {
         int d = (down & WPAD_BUTTON_RIGHT) ? 1 : -1;
-        if (s.focusBar) seekTo(position() + 10.0f * d);
-        else            s.focus = (s.focus + d + C_COUNT) % C_COUNT;
+        if (s.focusViz)      nextViz(d);
+        else if (s.focusBar) seekTo(position() + 10.0f * d);
+        else                 s.focus = (s.focus + d + C_COUNT) % C_COUNT;
+    }
+    if (down & WPAD_BUTTON_UP) { s.focusViz = s.focusBar; s.focusBar = true; }
+    if (down & WPAD_BUTTON_DOWN) {
+        if (s.focusViz) s.focusViz = false;
+        else            s.focusBar = false;
     }
     if (down & WPAD_BUTTON_A) {
         if (s.pointer) {
             if (s.hoverBar)       seekTo(s.hoverFrac * duration());
             else if (s.hover >= 0) activate(s.hover);
+            else if (s.hoverViz)  nextViz(1);
             else                  wii_player_pause_toggle();
+        } else if (s.focusViz) {
+            nextViz(1);
         } else if (s.focusBar) {
             wii_player_pause_toggle();
         } else {
@@ -892,6 +1054,27 @@ void render()
     float kick = bass - s.bassAvg - 0.06f;
     s.beat = kick > s.beat ? kick : s.beat * 0.88f;
 
+    /* bubbles: born where a band is loud (on a beat: anywhere), rise, fade */
+    s.spin += dt;
+    for (Bubble& b : s.bubbles)
+        if (b.r > 0 && (b.y += dt * b.v) >= 1.0f) b.r = 0;
+    if (sound) {
+        for (int i = 0; i < BARS + 2; ++i) {
+            bool onBeat = i >= BARS;
+            float v = onBeat ? fminf(s.beat, 0.3f) * 3 : s.viz[i];
+            if (rnd() >= (onBeat ? v * 0.25f : v * v * 0.03f)) continue;
+            for (Bubble& b : s.bubbles) {
+                if (b.r > 0) continue;
+                b.x  = onBeat ? rnd() : (i + rnd()) / BARS;
+                b.y  = 0;
+                b.r  = 2.5f + v * 6.5f;
+                b.v  = 0.3f + 0.4f * v + 0.2f * rnd();
+                b.ph = rnd() * 6.28f;
+                break;
+            }
+        }
+    }
+
     /* pointer, hover, idle */
     ir_t ir;
     Input::readIR(ir);
@@ -907,7 +1090,7 @@ void render()
     s.idleK = Ui::approach(s.idleK, idle ? 1.0f : 0.0f, idle ? 0.02f : 0.18f);
     s.panelK = Ui::approach(s.panelK, s.panel ? 1.0f : 0.0f, 0.22f);
 
-    s.hover = -1; s.hoverBar = false; s.hoverRow = -1;
+    s.hover = -1; s.hoverBar = false; s.hoverRow = -1; s.hoverViz = false;
     int arrow = 0;
     if (ir.valid && s.idleK < 0.3f) {
         if (s.panel) {
@@ -935,6 +1118,7 @@ void render()
                 s.hoverBar = true;
                 s.hoverFrac = fminf(fmaxf((ir.x - BAR_X) / BAR_W, 0.0f), 1.0f);
             }
+            s.hoverViz = ir.x >= COL_X - 8 && ir.x <= COL_X + COL_W + 8 && ir.y >= VIZ_TOP && ir.y <= VIZ_BOT;
         }
     }
 
