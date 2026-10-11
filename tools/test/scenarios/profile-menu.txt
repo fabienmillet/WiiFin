@@ -1,0 +1,68 @@
+# The profile menu (A on the avatar): Settings while signed in, with the
+# profile's own sections; View Settings: Home Screen to rows, for this
+# profile; Sign-In Settings: a passcode, typed twice; WiiFin Menu goes
+# past the profiles.  Opening the profile again asks the passcode: a
+# wrong one, then 1234.
+server http://127.0.0.1:18096
+cfg home_layout=0
+6000  A          Connect To Jellyfin
+9000  A          the profile: the grid
+12000 UP         the avatar
+13000 A          its menu
+14000 DOWN
+14400 DOWN       Settings
+15000 A          the sections of a profile
+16000 A          View Settings
+17000 DOWN
+17400 DOWN       Home Screen
+18000 A          rows
+19000 B          the sections
+19500 DOWN
+19800 DOWN       Sign-In Settings
+20200 A
+21000 A          Sign-In: a passcode
+22000 A          1
+22500 RIGHT
+22800 A          2
+23300 RIGHT
+23600 A          3
+24100 DOWN
+24400 LEFT
+24700 LEFT
+25000 A          4
+26000 A          again: 1
+26500 RIGHT
+26800 A          2
+27300 RIGHT
+27600 A          3
+28100 DOWN
+28400 LEFT
+28700 LEFT
+29000 A          4
+30000 B          the sections
+31000 B          the home, in rows now
+33000 UP         the header
+33500 RIGHT      the profile button
+34000 A          its menu
+35000 DOWN
+35300 DOWN
+35600 DOWN       WiiFin Menu
+36200 A
+38000 A          Connect To Jellyfin
+40000 A          the profile: its passcode
+41000 A
+41300 A
+41600 A
+41900 A          1111: wrong
+43000 A          1
+43500 RIGHT
+43800 A          2
+44300 RIGHT
+44600 A          3
+45100 DOWN
+45400 LEFT
+45700 LEFT
+46000 A          4: the home
+49000 END
+expect logorder "[WiiFin] profile menu" "[Settings] sign-in 1" "[WiiFin] back to the menu" "[WiiFin] passcode wrong" "[WiiFin] passcode right"
+expect logre "\[Settings\] .*, home rows,"

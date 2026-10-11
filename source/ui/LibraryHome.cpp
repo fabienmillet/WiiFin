@@ -357,7 +357,7 @@ void LibraryView::renderHome(ir_t& ir) {
         };
 
         // Continue Watching row
-        sectionLabel(ACT_X0, 56, "IN PROGRESS", nc > 0);
+        sectionLabel(ACT_X0, 56, tr("IN PROGRESS"), nc > 0);
         if (nc > 0) {
             for (int i = 0; i < nc; i++)
                 drawActCard(i, ACT_ROW0_Y, continueItems[i], cwTextures[i],
@@ -368,7 +368,7 @@ void LibraryView::renderHome(ir_t& ir) {
         }
 
         // Next Up row
-        sectionLabel(ACT_X0, 213, "NEXT UP", nu > 0);
+        sectionLabel(ACT_X0, 213, tr("NEXT UP"), nu > 0);
         if (nu > 0) {
             for (int i = 0; i < nu; i++)
                 drawActCard(i, ACT_ROW1_Y, nextUpItems[i], nextUpTextures[i],

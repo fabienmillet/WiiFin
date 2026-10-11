@@ -5,12 +5,21 @@
 #include "../core/SoundFX.h"
 #include "../core/MusicBGM.h"
 #include "../core/Text.h"
+#include "../core/Lang.h"
 #include "../input/Input.h"
+#include "../core/SavedProfile.h"
 #include "../version.h"
 #include <stdio.h>
 #include <ogc/lwp_watchdog.h>
 
-static const int NUM_SETTINGS = 13; // extensible
+/* The rows, by what they set (drawRow and activate take these) */
+enum Row { R_SSL, R_MUSIC, R_SOUNDS, R_QUALITY, R_DIRECT, R_SMOOTH, R_THEME, R_HOME, R_VIEW,
+           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN };
+
+/* the sections: a profile's own look (WiiFin's menu: the start-up one,
+ * theme and backgrounds only), what every profile shares, how a profile
+ * signs in */
+static const char* const SECTIONS[3] = { N_("View Settings"), N_("System Settings"), N_("Sign-In Settings") };
 
 /* Row layout (also used for pointer hit-testing).  Settings come in pages
  * of PER_PAGE rows, turned with arrows on the screen edges like the Wii
@@ -18,7 +27,8 @@ static const int NUM_SETTINGS = 13; // extensible
 static const int ROW_X = 64, ROW_W = 512, ROW_H = 54;
 static const int ROW_Y0 = 72, ROW_STEP = 64;
 static const int PER_PAGE = 4;
-static const int PAGES = (NUM_SETTINGS + PER_PAGE - 1) / PER_PAGE;
+/* the sections' buttons */
+static const int SB_W = 320, SB_H = 52, SB_Y0 = 110, SB_STEP = 72;
 /* page arrows sit on the screen edges (wider in 16:9) */
 #define ARROW_L_CX (Ui::screenLeft() + 30.0f)
 #define ARROW_R_CX (Ui::screenRight() - 30.0f)
@@ -31,16 +41,75 @@ static bool overArrow(const ir_t& ir, float cx)
            ir.y >= ARROW_CY - ARROW_HIT && ir.y < ARROW_CY + ARROW_HIT;
 }
 
-SettingsView::SettingsView(GRRLIB_texImg* btn, GRRLIB_ttfFont* f, JellyfinClient& c, bool& music)
-    : btnTex(btn), font(f), client(c), musicEnabled(music) {}
+SettingsView::SettingsView(GRRLIB_texImg* btn, GRRLIB_ttfFont* f, JellyfinClient& c, bool& music,
+                           SavedProfile* prof)
+    : btnTex(btn), font(f), client(c), musicEnabled(music), profile(prof) {}
 
-void SettingsView::drawRow(int i, const char* label, const char* desc,
+int SettingsView::sectionCount() const { return profile ? 3 : 2; }
+int SettingsView::pages() const { return ((int)rows.size() + PER_PAGE - 1) / PER_PAGE; }
+
+void SettingsView::openSection(int s) {
+    section = s;
+    selectedIndex = 0;
+    pageAnim = 0.0f;
+    for (float& f : focusAnim) f = 0.0f;
+    if (s == 0) rows = profile ? std::vector<int>{ R_THEME, R_BACKGROUNDS, R_HOME, R_VIEW }
+                               : std::vector<int>{ R_THEME, R_BACKGROUNDS };
+    else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE, R_AREA,
+                              R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT };
+    else rows = { R_SIGNIN };
+}
+
+bool SettingsView::updateMenu(ir_t& ir) {
+    if (Input::isBackPressed()) { SoundFX::play(SoundFX::FX::Back); return true; }
+    const int n = sectionCount(), was = menuSel;
+    if (Input::isUpPressed())   menuSel = (menuSel + n - 1) % n;
+    if (Input::isDownPressed()) menuSel = (menuSel + 1) % n;
+    int hover = -1;
+    if (ir.valid)
+        for (int i = 0; i < n; ++i) {
+            int by = SB_Y0 + i * SB_STEP;
+            if (ir.x >= 320 - SB_W / 2 && ir.x <= 320 + SB_W / 2 && ir.y >= by && ir.y <= by + SB_H) hover = i;
+        }
+    if (hover >= 0) menuSel = hover;
+    if (menuSel != was) SoundFX::play(SoundFX::FX::Move);
+    if (Input::isAJustPressed() && (!ir.valid || hover >= 0)) {
+        SoundFX::play(SoundFX::FX::Open);
+        openSection(menuSel);
+    }
+    return false;
+}
+
+void SettingsView::renderMenu(ir_t& ir) {
+    const Ui::Palette& p = Ui::pal();
+    Ui::background();
+    Ui::header(tr("Settings"));
+    for (int i = 0; i < sectionCount(); ++i) {
+        menuFocus[i] = Ui::approach(menuFocus[i], i == menuSel ? 1.0f : 0.0f);
+        float grow = 6.0f * menuFocus[i];
+        Ui::button(320 - SB_W / 2 - grow, SB_Y0 + i * SB_STEP - grow * 0.25f, SB_W + grow * 2, SB_H + grow * 0.5f,
+                   SECTIONS[i], 20, menuFocus[i]);
+    }
+    const char* version = "WiiFin v" WIIFIN_VERSION;
+    std::string credits = std::string(tr("Made with \xe2\x9d\xa4 for Jellyfin")) + "  \xe2\x80\xa2  github.com/fabienmillet/WiiFin";
+    Ui::textCentered(320, 348, version, 15, p.accentDark);
+    Ui::textCentered(320, 370, credits.c_str(), 12, p.textDim);
+    static const Ui::Hint left[]  = { { "UD", N_("Choose") }, { "A", N_("Open") } };
+    static const Ui::Hint right[] = { { "B", N_("Back") } };
+    Ui::bottomBar(left, 2, right, 1);
+}
+
+void SettingsView::drawRow(int id, const char* label, const char* desc,
                            const char* valStr, u32 pillCol) {
     const Ui::Palette& p = Ui::pal();
+    int i = -1;   /* its place in the open section */
+    for (int k = 0; k < (int)rows.size(); ++k) if (rows[k] == id) i = k;
+    if (i < 0) return;
     float x = ROW_X + (i / PER_PAGE - pageAnim) * Ui::screenWidth();   /* pages slide sideways */
     float y = ROW_Y0 + (i % PER_PAGE) * ROW_STEP;
     if (x < Ui::screenLeft() - ROW_W - 20 || x > Ui::screenRight() + 20) return;
     Ui::card(x, y, ROW_W, ROW_H, 14, focusAnim[i]);
+    label = tr(label); desc = tr(desc); valStr = tr(valStr);
     Ui::text(x + 18, y + 8,  label, 18, p.text);
     Ui::text(x + 18, y + 31, desc,  12, p.textDim);
 
@@ -75,6 +144,20 @@ void SettingsView::activate(int index) {
         case 10: calibrating = true; calCorner = 0; break;
         case 11: Ui::setSolidColors(!Ui::solidColors()); break;
         case 12: Ui::setClock12h(!Ui::clock12h()); break;
+        case 13:   /* the Wii's, then each language in turn */
+            Lang::choose(Lang::next(Lang::choice()));
+            break;
+        case R_SIGNIN:   /* at once, a passcode (typed twice first), the password */
+            if (!profile) break;
+            if (profile->signIn == SavedProfile::Auto) {
+                pinStep = 1;
+                pin.start(N_("Choose a passcode"), N_("Four digits, asked when this profile opens"));
+            } else {
+                profile->signIn = profile->signIn == SavedProfile::Passcode ? SavedProfile::Password
+                                                                             : SavedProfile::Auto;
+                SYS_Report("[Settings] sign-in %d\n", profile->signIn);
+            }
+            break;
     }
 }
 
@@ -125,16 +208,16 @@ void SettingsView::renderCalibration()
     Ui::background(false);
 
     Ui::card(110, 150, 420, 150, 18, 0.0f);
-    Ui::textCentered(320, 166, "Screen Area", 22, p.text);
-    Ui::textCentered(320, 200, "Move each arrow until its tip sits right in", 15, p.textDim);
-    Ui::textCentered(320, 220, "the corner of your TV screen.", 15, p.textDim);
+    Ui::textCentered(320, 166, tr("Screen Area"), 22, p.text);
+    Ui::textCentered(320, 200, tr("Move each arrow until its tip sits right in"), 15, p.textDim);
+    Ui::textCentered(320, 220, tr("the corner of your TV screen."), 15, p.textDim);
     char vals[96];
-    snprintf(vals, sizeof(vals), "Left %d   \xc2\xb7   Top %d   \xc2\xb7   Right %d   \xc2\xb7   Bottom %d", l, t, r, b);
+    snprintf(vals, sizeof(vals), tr("Left %d   \xc2\xb7   Top %d   \xc2\xb7   Right %d   \xc2\xb7   Bottom %d"), l, t, r, b);
     Ui::textCentered(320, 258, vals, 14, p.accentDark);
 
     /* bar first: the brackets must stay visible on top of it */
-    static const Ui::Hint left[]  = { { "UD", "Move" }, { "A", "Switch" }, { "-", "Reset" } };
-    static const Ui::Hint right[] = { { "B", "Done" } };
+    static const Ui::Hint left[]  = { { "UD", N_("Move") }, { "A", N_("Switch") }, { "-", N_("Reset") } };
+    static const Ui::Hint right[] = { { "B", N_("Done") } };
     Ui::bottomBar(left, 3, right, 1);
 
     /* Corner brackets on the very edges of the picture: the whole picture
@@ -162,11 +245,35 @@ bool SettingsView::update(ir_t& ir) {
     bool aPressed = Input::isAJustPressed();
 
     if (calibrating) { updateCalibration(); return false; }
+    if (pinStep) {
+        const int r = pin.update(ir);
+        if (r < 0) { pinStep = 0; return false; }
+        if (r == 0) return false;
+        if (pinStep == 1) {
+            pinFirst = pin.code();
+            pinStep = 2;
+            pin.start(N_("Enter it again"));
+        } else if (pin.code() != pinFirst) {
+            pinStep = 1;
+            pin.start(N_("Choose a passcode"), N_("The two didn't match: once more"));
+            pin.reject();
+        } else {
+            profile->passSalt = PinPad::newSalt();
+            profile->passHash = PinPad::hash(profile->passSalt, pin.code());
+            profile->signIn   = SavedProfile::Passcode;
+            pinStep = 0;
+            SoundFX::play(SoundFX::FX::Start);
+            SYS_Report("[Settings] sign-in %d\n", profile->signIn);
+        }
+        return false;
+    }
+    if (section < 0) return updateMenu(ir);
 
     if (ir.valid) irMode = true;
     else          irMode = false;   /* no pointer on the screen: the D-pad drives, A acts on the highlighted item */
 
-    if (Input::isBackPressed()) { SoundFX::play(SoundFX::FX::Back); return true; }
+    if (Input::isBackPressed()) { SoundFX::play(SoundFX::FX::Back); section = -1; return false; }
+    const int NUM_SETTINGS = (int)rows.size(), PAGES = pages();
 
     const int page = selectedIndex / PER_PAGE;
     const int selBefore = selectedIndex;
@@ -186,9 +293,12 @@ bool SettingsView::update(ir_t& ir) {
     if (Input::isLPressed())     { turn(page - 1); irMode = false; }
     if (Input::isRPressed())     { turn(page + 1); irMode = false; }
 
+    /* the pointer picks among the rows of the page shown now: of the one
+     * before, the row under it took the page back (-/+ did nothing) */
+    const int shown = selectedIndex / PER_PAGE;
     int hovered = -1;
     if (ir.valid) {
-        for (int i = page * PER_PAGE; i < NUM_SETTINGS && i < (page + 1) * PER_PAGE; i++) {
+        for (int i = shown * PER_PAGE; i < NUM_SETTINGS && i < (shown + 1) * PER_PAGE; i++) {
             int ry = ROW_Y0 + (i % PER_PAGE) * ROW_STEP;
             if (ir.x >= ROW_X && ir.x <= ROW_X + ROW_W && ir.y >= ry && ir.y <= ry + ROW_H)
                 hovered = i;
@@ -199,8 +309,8 @@ bool SettingsView::update(ir_t& ir) {
     if (aPressed) {
         if (overArrow(ir, ARROW_L_CX))      turn(page - 1);
         else if (overArrow(ir, ARROW_R_CX)) turn(page + 1);
-        else if (ir.valid) { if (hovered >= 0) { activate(hovered); activated = true; } }
-        else if (!irMode) { activate(selectedIndex); activated = true; }
+        else if (ir.valid) { if (hovered >= 0) { activate(rows[hovered]); activated = true; } }
+        else if (!irMode) { activate(rows[selectedIndex]); activated = true; }
     }
     /* turning Interface Sounds on plays this one: what they sound like */
     if (activated)                                    SoundFX::play(SoundFX::FX::Start);
@@ -211,7 +321,10 @@ bool SettingsView::update(ir_t& ir) {
 
 void SettingsView::render(ir_t& ir) {
     if (calibrating) { renderCalibration(); return; }
+    if (pinStep) { Ui::background(); pin.render(ir); return; }
+    if (section < 0) { renderMenu(ir); return; }
     const Ui::Palette& p = Ui::pal();
+    const int NUM_SETTINGS = (int)rows.size(), PAGES = pages();
     for (int i = 0; i < NUM_SETTINGS; ++i)
         focusAnim[i] = Ui::approach(focusAnim[i], i == selectedIndex ? 1.0f : 0.0f);
 
@@ -219,18 +332,18 @@ void SettingsView::render(ir_t& ir) {
     pageAnim = Ui::approach(pageAnim, (float)page, 0.25f);
 
     Ui::background();
-    Ui::header("Settings");
+    Ui::header(tr("Settings"), tr(SECTIONS[section]));
 
 
-    drawRow(0, "SSL Verification",
-            "Validate the server HTTPS certificate (disable for self-signed certs)",
-            client.sslVerify ? "ON" : "OFF", client.sslVerify ? p.ok : 0x8A9099FF);
-    drawRow(1, "Background Music", "Play background music in menus",
-            musicEnabled ? "ON" : "OFF", musicEnabled ? p.ok : 0x8A9099FF);
-    drawRow(2, "Interface Sounds",
-            SoundFX::enabled() ? "Sounds in the menus; your own in sounds/ on the SD card"
-                               : "The menus stay silent",
-            SoundFX::enabled() ? "ON" : "OFF", SoundFX::enabled() ? p.ok : 0x8A9099FF);
+    drawRow(0, N_("SSL Verification"),
+            N_("Validate the server HTTPS certificate (disable for self-signed certs)"),
+            client.sslVerify ? N_("ON") : N_("OFF"), client.sslVerify ? p.ok : 0x8A9099FF);
+    drawRow(1, N_("Background Music"), N_("Play background music in menus"),
+            musicEnabled ? N_("ON") : N_("OFF"), musicEnabled ? p.ok : 0x8A9099FF);
+    drawRow(2, N_("Interface Sounds"),
+            SoundFX::enabled() ? N_("Sounds in the menus; your own in sounds/ on the SD card")
+                               : N_("The menus stay silent"),
+            SoundFX::enabled() ? N_("ON") : N_("OFF"), SoundFX::enabled() ? p.ok : 0x8A9099FF);
     {
         static const u32 qualityCol[JellyfinClient::VIDEO_QUALITY_COUNT] =
             { 0xD98A2EFF, 0x34A8DDFF, 0x3DAF5AFF, 0x9A5BD6FF };
@@ -240,73 +353,87 @@ void SettingsView::render(ir_t& ir) {
         const int q = client.videoQuality;
         if (client.measuredKbps() > 0 && client.linkQuality() < q)
             snprintf(desc, sizeof(desc),
-                     "%.1f Mb/s; your connection (%.1f Mb/s measured) holds videos to %.1f",
+                     tr("%.1f Mb/s; your connection (%.1f Mb/s measured) holds videos to %.1f"),
                      JellyfinClient::qualityBitrate(q) / 1000000.0, client.measuredKbps() / 1000.0,
                      client.videoBitrate() / 1000000.0);
         else if (q == JellyfinClient::VIDEO_QUALITY_COUNT - 1)
             snprintf(desc, sizeof(desc),
-                     "%.1f Mb/s: sharpest, for a wired adapter. Lower it if videos stutter",
+                     tr("%.1f Mb/s: sharpest, for a wired adapter. Lower it if videos stutter"),
                      JellyfinClient::qualityBitrate(q) / 1000000.0);
         else
             snprintf(desc, sizeof(desc),
-                     "Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering",
+                     tr("Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering"),
                      JellyfinClient::qualityBitrate(q) / 1000000.0);
-        drawRow(3, "Video Quality", desc,
+        drawRow(3, N_("Video Quality"), desc,
                 JellyfinClient::videoQualityName(client.videoQuality),
                 qualityCol[client.videoQuality]);
     }
-    drawRow(4, "Direct Play",
-            client.directPlay ? "Files the Wii can decode play as they are (SD DivX, DVD...): no server work"
-                              : "Every video is converted by the server",
-            client.directPlay ? "Auto" : "OFF", client.directPlay ? p.ok : 0x8A9099FF);
-    drawRow(5, "Smooth Motion",
-            g_wiifin_smooth_motion ? "Blends frames on picture changes: films move evenly on 60 Hz TVs"
-                                   : "Each frame shown as is (24 fps films judder slightly on 60 Hz)",
-            g_wiifin_smooth_motion ? "ON" : "OFF", g_wiifin_smooth_motion ? p.ok : 0x8A9099FF);
+    drawRow(4, N_("Direct Play"),
+            client.directPlay ? N_("Files the Wii can decode play as they are (SD DivX, DVD...): no server work")
+                              : N_("Every video is converted by the server"),
+            client.directPlay ? N_("Auto") : N_("OFF"), client.directPlay ? p.ok : 0x8A9099FF);
+    drawRow(5, N_("Smooth Motion"),
+            g_wiifin_smooth_motion ? N_("Blends frames on picture changes: films move evenly on 60 Hz TVs")
+                                   : N_("Each frame shown as is (24 fps films judder slightly on 60 Hz)"),
+            g_wiifin_smooth_motion ? N_("ON") : N_("OFF"), g_wiifin_smooth_motion ? p.ok : 0x8A9099FF);
     {
         static const char* themeDesc[Ui::THEME_COUNT] = {
-            "Light, like the Wii Menu",
-            "Dark, for movie nights",
-            "Red and charcoal, browse in rows like the old video channels",
+            N_("Light, like the Wii Menu"),
+            N_("Dark, for movie nights"),
+            N_("Red and charcoal, browse in rows like the old video channels"),
         };
         static const u32 themeCol[Ui::THEME_COUNT] = { 0x34A8DDFF, 0x45546BFF, 0xD81F26FF };
         int t = (int)Ui::theme();
-        drawRow(6, "Theme", themeDesc[t], Ui::themeName(Ui::theme()), themeCol[t]);
+        drawRow(6, N_("Theme"), themeDesc[t], Ui::themeName(Ui::theme()), themeCol[t]);
     }
     {
         bool rows = Ui::homeLayout() == Ui::HomeLayout::Rows;
-        drawRow(7, "Home Screen", rows ? "Rows of posters to browse, like the old video channels"
-                                       : "A grid of your libraries",
-                rows ? "Rows" : "Grid", rows ? p.accent : 0x8A9099FF);
+        drawRow(7, N_("Home Screen"), rows ? N_("Rows of posters to browse, like the old video channels")
+                                       : N_("A grid of your libraries"),
+                rows ? N_("Rows") : N_("Grid"), rows ? p.accent : 0x8A9099FF);
     }
     {
-        static const char* name[Ui::LIBRARY_STYLE_COUNT] = { "Posters", "List", "List + Posters" };
+        static const char* name[Ui::LIBRARY_STYLE_COUNT] = { N_("Posters"), N_("List"), N_("List + Posters") };
         static const char* desc[Ui::LIBRARY_STYLE_COUNT] = {
-            "Browse libraries with their artwork",
-            "Libraries as text lists: quickest to browse big ones",
-            "Text lists, with the cover of the selected title",
+            N_("Browse libraries with their artwork"),
+            N_("Libraries as text lists: quickest to browse big ones"),
+            N_("Text lists, with the cover of the selected title"),
         };
         int v = (int)Ui::libraryStyle();
-        drawRow(8, "Library View", desc[v], name[v], v == 0 ? 0x8A9099FF : p.accent);
+        drawRow(8, N_("Library View"), desc[v], name[v], v == 0 ? 0x8A9099FF : p.accent);
     }
-    drawRow(9, "Disc Slot Light",
-            g_wiifin_disc_light ? "Pulses with the sound, as bright as the Wii Settings say"
-                                : "Stays dark during playback",
-            g_wiifin_disc_light ? "ON" : "OFF", g_wiifin_disc_light ? p.ok : 0x8A9099FF);
+    drawRow(9, N_("Disc Slot Light"),
+            g_wiifin_disc_light ? N_("Pulses with the sound, as bright as the Wii Settings say")
+                                : N_("Stays dark during playback"),
+            g_wiifin_disc_light ? N_("ON") : N_("OFF"), g_wiifin_disc_light ? p.ok : 0x8A9099FF);
     {
         int l, t, r, b;
         Ui::safeArea(l, t, r, b);
         bool full = !(l | t | r | b);
-        drawRow(10, "Screen Area", "Shrink the interface if your TV crops the edges (overscan)",
-                full ? "Full" : "Adjusted", full ? 0x8A9099FF : p.accent);
+        drawRow(10, N_("Screen Area"), N_("Shrink the interface if your TV crops the edges (overscan)"),
+                full ? N_("Full") : N_("Adjusted"), full ? 0x8A9099FF : p.accent);
     }
-    drawRow(11, "Backgrounds",
-            Ui::solidColors() ? "Solid colours: no bands on TVs that show them in gradients"
-                              : "Soft gradients, like the Wii Menu",
-            Ui::solidColors() ? "Solid" : "Gradient", Ui::solidColors() ? p.accent : 0x8A9099FF);
-    drawRow(12, "Clock",
-            Ui::clock12h() ? "1:30 PM, the date as month/day" : "13:30, the date as day/month",
-            Ui::clock12h() ? "12-hour" : "24-hour", p.accent);
+    drawRow(11, N_("Backgrounds"),
+            Ui::solidColors() ? N_("Solid colours: no bands on TVs that show them in gradients")
+                              : N_("Soft gradients, like the Wii Menu"),
+            Ui::solidColors() ? N_("Solid") : N_("Gradient"), Ui::solidColors() ? p.accent : 0x8A9099FF);
+    drawRow(12, N_("Clock"),
+            Ui::clock12h() ? N_("1:30 PM, the date as month/day") : N_("13:30, the date as day/month"),
+            Ui::clock12h() ? N_("12-hour") : N_("24-hour"), p.accent);
+    /* each language by its own name */
+    drawRow(13, N_("Language"),
+            Lang::choice() < 0 ? N_("The Wii's language, as set in the Wii Settings") : N_("Chosen here, whatever the Wii's language"),
+            Lang::name(Lang::current()), Lang::choice() < 0 ? 0x8A9099FF : p.accent);
+    if (profile) {
+        static const char* const how[3]  = { N_("Automatic"), N_("Passcode"), N_("Password") };
+        static const char* const desc[3] = {
+            N_("Opens at once on this Wii"),
+            N_("Asks the profile's four-digit passcode first"),
+            N_("Asks the password (or Quick Connect) each time"),
+        };
+        const int m = profile->signIn >= 0 && profile->signIn < 3 ? profile->signIn : 0;
+        drawRow(R_SIGNIN, N_("Sign-In"), desc[m], how[m], m == 0 ? 0x8A9099FF : p.accent);
+    }
 
     /* page arrows on the screen edges + page dots */
     if (PAGES > 1) {
@@ -319,13 +446,7 @@ void SettingsView::render(ir_t& ir) {
                        i == page ? p.accent : Ui::alpha(p.cardBorder, 0.9f));
     }
 
-    // Credits
-    const char* version = "WiiFin v" WIIFIN_VERSION;
-    const char* credits = "Made with \xe2\x9d\xa4 for Jellyfin  \xe2\x80\xa2  github.com/fabienmillet/WiiFin";
-    Ui::textCentered(320, 348, version, 15, p.accentDark);
-    Ui::textCentered(320, 370, credits, 12, p.textDim);
-
-    static const Ui::Hint left[]  = { { "UD", "Choose" }, { "A", "Change" }, { "-/+", "Page" } };
-    static const Ui::Hint right[] = { { "B", "Back" } };
+    static const Ui::Hint left[]  = { { "UD", N_("Choose") }, { "A", N_("Change") }, { "-/+", N_("Page") } };
+    static const Ui::Hint right[] = { { "B", N_("Back") } };
     Ui::bottomBar(left, PAGES > 1 ? 3 : 2, right, 1);
 }

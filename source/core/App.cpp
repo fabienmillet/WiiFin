@@ -475,7 +475,14 @@ void App::loop() {
     bool toMainMenu = false;
 
     /* ---- Helper: launch LibraryView for a saved profile ---- */
-    auto runLibraryWithProfile = [&](const SavedProfile& p) {
+    auto runLibraryWithProfile = [&](SavedProfile& p) {
+        /* its own look while it is open; WiiFin's again after (and a
+         * profile signing in with its password keeps no token) */
+        applyView(viewOf(p));
+        struct Leave {
+            App& app; SavedProfile& p;
+            ~Leave() { app.applyView(app.startView); if (p.signIn == SavedProfile::Password) p.accessToken.clear(); }
+        } leave{ *this, p };
         JellyfinAuth auth;
         auth.userId      = p.userId;
         auth.accessToken = p.accessToken;
@@ -532,6 +539,12 @@ void App::loop() {
                 if (wantsExit || g_app_powerOff || g_app_reset) { running = false; return; }
                 saveSettings();   /* the zoom may have changed during playback */
                 lv.onPlaybackFinished(lastItemId);
+            } else if (lv.exitTo == LibraryView::Exit::Settings) {
+                /* Settings from the profile menu: signed in still */
+                lv.exitTo = LibraryView::Exit::Profiles;
+                runSettings(&p);
+                if (!running) return;
+                lv.onSettingsClosed();
             } else {
                 if (lv.exitTo == LibraryView::Exit::WiiFinMenu) {
                     toMainMenu = true;
@@ -545,8 +558,9 @@ void App::loop() {
     };
 
     /* ---- Helper: open ConnectView, on success add/update profile + library ---- */
-    auto runConnect = [&]() {
+    auto runConnect = [&](const SavedProfile* again = nullptr) {
         ConnectView cv(btnTex, cursorPointerTex, font, jellyfinClient);
+        if (again) cv.setFields(again->serverUrl, again->username);   /* its password, each time */
         ConnectResult res = ConnectResult::None;
         while (res == ConnectResult::None && running) {
             Input::update();
@@ -567,17 +581,26 @@ void App::loop() {
             /* Update existing profile if same userId (token refresh/re-auth), otherwise append.
              * Only deduplicate when both sides have a known userId — if userId is empty
              * (should never happen) always append to avoid silently overwriting profiles. */
-            bool found = false;
+            int found = -1;
             if (!p.userId.empty()) {
-                for (auto& existing : profiles) {
+                for (int i = 0; i < (int)profiles.size(); ++i) {
+                    SavedProfile& existing = profiles[i];
                     if (!existing.userId.empty() && existing.userId == p.userId) {
-                        existing = p; found = true; break;
+                        /* the same account signed in again: its own settings stay */
+                        existing.serverUrl = p.serverUrl; existing.username = p.username;
+                        existing.serverName = p.serverName; existing.accessToken = p.accessToken;
+                        found = i; break;
                     }
                 }
             }
-            if (!found) profiles.push_back(p);
+            if (found < 0) {
+                profiles.push_back(p);
+                found = (int)profiles.size() - 1;
+                runOnboarding(profiles[found]);   /* sign-in, home screen, library view */
+                if (g_app_powerOff || g_app_reset) { running = false; return; }
+            }
             saveSettings();
-            runLibraryWithProfile(p);
+            runLibraryWithProfile(profiles[found]);
         }
     };
 
@@ -614,7 +637,19 @@ void App::loop() {
                 continue;
             }
             if (res == ProfileResult::Selected) {
-                runLibraryWithProfile(profiles[pv.selectedIdx]);
+                SavedProfile& sp = profiles[pv.selectedIdx];
+                if (testOnboarding) {   /* tests: asked as a new profile */
+                    testOnboarding = false;
+                    runOnboarding(sp);
+                    saveSettings();
+                }
+                if (sp.signIn == SavedProfile::Passcode && !askPasscode(sp)) continue;
+                if (sp.signIn == SavedProfile::Password) {
+                    runConnect(&sp);   /* signs it in, then opens it */
+                } else {
+                    runLibraryWithProfile(sp);
+                }
+                if (toMainMenu) { toMainMenu = false; return; }
                 continue; /* re-show picker on return */
             }
         }
@@ -667,27 +702,9 @@ void App::loop() {
                     runProfilePicker();
                     break;
                 }
-                case 1: {
-                    // Launch Settings view
-                    SettingsView sv(btnTex, font, jellyfinClient, musicEnabled);
-                    while (true) {
-                        Input::update();
-                        Input::readIR(ir);
-                        if (g_app_powerOff || g_app_reset) { running = false; break; }
-                        if (Input::isHomePressed() && showHomeOverlay()) { running = false; break; }
-                        if (sv.update(ir)) break;
-                        sv.render(ir);
-                        if (ir.valid && cursorPointerTex) {
-                            orient_t orient; WPAD_Orientation(WPAD_CHAN_0, &orient);
-                            GRRLIB_DrawImg((int)ir.x - 20, (int)ir.y - 4, cursorPointerTex, orient.roll, 1, 1, 0xFFFFFFFF);
-                        }
-                        GRRLIB_Render();
-                    }
-                    saveSettings();
-                    logSettings();
-                    MusicBGM::setEnabled(musicEnabled);
+                case 1:
+                    runSettings(nullptr);   /* WiiFin's own look, and the system */
                     break;
-                }
                 case 2: running = false; break;
             }
         }

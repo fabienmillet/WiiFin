@@ -1,0 +1,22 @@
+# A new profile's questions (test_onboarding: the profile opened is asked
+# as a new one): sign in automatically, no; a passcode, no: the password
+# each time; the home screen, Grid; the library view, List.
+server http://127.0.0.1:18096
+cfg test_onboarding=1
+6000  A          Connect To Jellyfin
+9000  A          the profile: its questions
+11000 RIGHT      sign in automatically? No
+11500 A
+13000 RIGHT      a passcode? No
+13500 A
+15000 A          the password each time: OK
+17000 RIGHT      home screen: Grid
+17500 A
+19000 RIGHT      library view: List (from List + Posters? the one before)
+19300 LEFT
+19600 LEFT       Posters
+19900 RIGHT      List
+20500 A
+24000 END
+expect log [WiiFin] new profile: its questions
+expect log [WiiFin] new profile: sign-in 2, home 0, view 1

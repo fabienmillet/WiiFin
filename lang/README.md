@@ -7,7 +7,7 @@ translations, and send the file back (a pull request, or attached to an
 issue or on the Discord).
 
 WiiFin shows the Wii's own language (Wii Settings) when there is a file
-for it, English otherwise; **Settings > Language** picks another.
+for it, English otherwise; **System Settings > Language** picks another.
 
 ## Starting a language
 

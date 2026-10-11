@@ -63,27 +63,36 @@ position "Shuffle Show S01E01" 0
 88000 B          back to the home rows (B does not leave them)
 89500 UP         the header
 90000 RIGHT      the profile button
-90500 A          profiles
-92000 B          main menu
-93500 DOWN
-94500 A          Settings
-96000 POINTER    settings
-97000 NOPOINTER
-98000 RIGHT      next page
-99000 POINTER    settings, page 2
-100000 NOPOINTER
-101000 PLUS      next page, with +
-102000 POINTER   settings, page 3
-103000 NOPOINTER
-104000 B
-105500 UP
-106500 A         profiles
-108000 DOWN      Add New Profile
-109000 A
-111000 POINTER   connect screen
-112000 NOPOINTER
-113000 B
-115000 END
+90500 A          the profile menu
+91000 POINTER    profile menu
+91800 NOPOINTER
+92500 DOWN       Switch Profile
+93000 A          profiles
+94500 B          main menu
+95500 DOWN
+96500 A          Settings: its sections
+97500 POINTER    settings sections
+98300 NOPOINTER
+99000 DOWN       System Settings
+99500 A
+100500 POINTER   settings
+101300 NOPOINTER
+102000 RIGHT     next page
+103000 POINTER   settings, page 2
+103800 NOPOINTER
+104500 PLUS      next page, with +
+105500 POINTER   settings, page 3
+106300 NOPOINTER
+107000 B         the sections
+108000 B         main menu
+109500 UP
+110500 A         profiles
+112000 DOWN      Add New Profile
+113000 A
+115000 POINTER   connect screen
+116000 NOPOINTER
+117000 B
+119000 END
 # the rows home and the settings have their sounds too
 expect logre '^\[Sound\] move$'
 expect logre '^\[Sound\] open$'

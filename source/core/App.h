@@ -34,6 +34,19 @@ private:
     ir_t ir;
     JellyfinClient jellyfinClient;
     bool musicEnabled = true;
+    /* WiiFin's own look (the menus, and a profile without its own) */
+    ViewPrefs startView;
+    ViewPrefs currentView() const;                 /* what Ui shows now */
+    void applyView(const ViewPrefs& v);
+    ViewPrefs viewOf(const SavedProfile& p) const; /* its own, or startView's */
+    void keepView(SavedProfile& p);                /* Ui's look, into p */
+    /* Settings, from WiiFin's menu (profile null) or a profile's menu */
+    void runSettings(SavedProfile* profile);
+    /* a new profile's questions: sign-in, home screen, library view */
+    void runOnboarding(SavedProfile& p);
+    /* the passcode of a profile asked; false: B (or power) */
+    bool askPasscode(const SavedProfile& p);
     bool screenAreaAsked = false;      // first-launch offer to fit the TV made
+    bool testOnboarding  = false;      // tests: the first profile opened is asked as a new one
     void offerScreenCalibration(ir_t& ir);
 };

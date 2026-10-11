@@ -312,14 +312,14 @@ void LibraryView::renderMovieSuggestions(ir_t& ir) {
     int nc = (int)movieContItems.size();
     int nr = (int)movieRecentItems.size();
 
-    sectionLabel(SG_X0, 50, "IN PROGRESS", nc > 0);
+    sectionLabel(SG_X0, 50, tr("IN PROGRESS"), nc > 0);
     if (nc > 0)
         drawSuggestionRow(ir, SG_ROW0_Y, movieContItems, movieContTex, movieSuggestContOff,
                               movieSuggestContSel, movieSuggestRow == 0, false, true);
     else
         Ui::text(SG_X0 + 20, SG_ROW0_Y + 60, tr("No movie in progress"), 14, p.textDim);
 
-    sectionLabel(SG_X0, 252, "RECENTLY ADDED", nr > 0);
+    sectionLabel(SG_X0, 252, tr("RECENTLY ADDED"), nr > 0);
     if (nr > 0)
         drawSuggestionRow(ir, SG_ROW1_Y, movieRecentItems, movieRecentTex, movieSuggestRecOff,
                               movieSuggestRecSel, movieSuggestRow == 1, false, true);
@@ -339,14 +339,14 @@ void LibraryView::renderTVSuggestions(ir_t& ir) {
     int nc = (int)tvContItems.size();
     int nr = (int)tvRecentItems.size();
 
-    sectionLabel(SG_X0, 50, "IN PROGRESS", nc > 0);
+    sectionLabel(SG_X0, 50, tr("IN PROGRESS"), nc > 0);
     if (nc > 0)
         drawSuggestionRow(ir, SG_ROW0_Y, tvContItems, tvContTex, tvSuggestContOff,
                               tvSuggestContSel, tvSuggestRow == 0, true, true);
     else
         Ui::text(SG_X0 + 20, SG_ROW0_Y + 60, tr("No episode in progress"), 14, p.textDim);
 
-    sectionLabel(SG_X0, 252, "RECENT SERIES", nr > 0);
+    sectionLabel(SG_X0, 252, tr("RECENT SERIES"), nr > 0);
     if (nr > 0)
         drawSuggestionRow(ir, SG_ROW1_Y, tvRecentItems, tvRecentTex, tvSuggestRecOff,
                               tvSuggestRecSel, tvSuggestRow == 1, true, true);
@@ -368,7 +368,7 @@ void LibraryView::renderTVUpcoming(ir_t& ir) {
         Ui::textCentered(320, 182, tr("No content."), 20, p.text);
         Ui::textCentered(320, 214, tr("Make sure metadata download is enabled."), 13, p.textDim);
     } else {
-        sectionLabel(SG_X0, 55, "COMING UP", true);
+        sectionLabel(SG_X0, 55, tr("COMING UP"), true);
         drawSuggestionRow(ir, 80, tvUpcomingItems, tvUpcomingTex, tvUpcomingOff,
                               tvUpcomingSel, true, true, false);
     }
@@ -397,7 +397,7 @@ void LibraryView::renderMusicSuggestions(ir_t& ir) {
     const int ROW1_Y  = ROW0_Y + AC_RSTRIDE;
 
     int nr = (int)musicRecentItems.size();
-    sectionLabel(GRID_X, HDR_Y, "RECENTLY ADDED", nr > 0);
+    sectionLabel(GRID_X, HDR_Y, tr("RECENTLY ADDED"), nr > 0);
 
     auto drawAlbumCard = [&](int col, int cardY, int i) {
         int  cx  = GRID_X + col * (AC_CW + AC_GAP);
