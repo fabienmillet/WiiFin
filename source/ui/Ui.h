@@ -18,9 +18,11 @@
 namespace Ui {
 
 /* Light: Wii Menu.  Dark: Wii at night.  Flix: charcoal and red, with the
- * row-of-carousels home screen of the old Wii video channels. */
-enum class Theme { Light = 0, Dark = 1, Flix = 2 };
-static const int THEME_COUNT = 3;
+ * row-of-carousels home screen of the old Wii video channels.  Luhu: black,
+ * silver and green; Sushi: dark grey and orange (two more of those
+ * channels' colours). */
+enum class Theme { Light = 0, Dark = 1, Flix = 2, Luhu = 3, Sushi = 4 };
+static const int THEME_COUNT = 5;
 
 struct Palette {
     u32 bgTop, bgBottom, stripe;          /* screen background               */

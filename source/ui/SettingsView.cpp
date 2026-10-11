@@ -397,8 +397,10 @@ void SettingsView::render(ir_t& ir) {
             N_("Light, like the Wii Menu"),
             N_("Dark, for movie nights"),
             N_("Red and charcoal, browse in rows like the old video channels"),
+            N_("Black, silver and green"),
+            N_("Dark grey and orange"),
         };
-        static const u32 themeCol[Ui::THEME_COUNT] = { 0x34A8DDFF, 0x45546BFF, 0xD81F26FF };
+        static const u32 themeCol[Ui::THEME_COUNT] = { 0x34A8DDFF, 0x45546BFF, 0xD81F26FF, 0x7DC242FF, 0xF47521FF };
         int t = (int)Ui::theme();
         drawRow(6, N_("Theme"), themeDesc[t], Ui::themeName(Ui::theme()), themeCol[t]);
     }

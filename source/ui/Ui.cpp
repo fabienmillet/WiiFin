@@ -54,6 +54,30 @@ static const Palette FLIX = {
     /* dim */                            0x000000B8,
 };
 
+static const Palette LUHU = {
+    /* bgTop, bgBottom, stripe */        0x161616FF, 0x000000FF, 0xFFFFFF05,
+    /* cardTop, cardBottom, cardBorder */0x55595EFF, 0x34373BFF, 0xA9AEB4FF,
+    /* text, textDim, textOnAccent */    0xF2F3F4FF, 0xA4A9AFFF, 0x0E1A06FF,
+    /* accent, accentDark, glow */       0x7DC242FF, 0xA4DD6FFF, 0x7DC24270,
+    /* shadow */                         0x00000090,
+    /* barTop, barBottom, barBorder */   0x4A4E53FF, 0x26282BFF, 0x8E9399FF,
+    /* field, fieldBorder */             0x101010FF, 0x6E7379FF,
+    /* danger, ok */                     0xF0605AFF, 0x7DC242FF,
+    /* dim */                            0x000000C0,
+};
+
+static const Palette SUSHI = {
+    /* bgTop, bgBottom, stripe */        0x2E2E2EFF, 0x1A1A1AFF, 0xFFFFFF05,
+    /* cardTop, cardBottom, cardBorder */0x424242FF, 0x333333FF, 0x5C5C5CFF,
+    /* text, textDim, textOnAccent */    0xF4F4F4FF, 0xABABABFF, 0xFFFFFFFF,
+    /* accent, accentDark, glow */       0xF47521FF, 0xFF9C57FF, 0xF4752170,
+    /* shadow */                         0x00000080,
+    /* barTop, barBottom, barBorder */   0x3A3A3AFF, 0x242424FF, 0x585858FF,
+    /* field, fieldBorder */             0x1E1E1EFF, 0x585858FF,
+    /* danger, ok */                     0xF0605AFF, 0x4CC46AFF,
+    /* dim */                            0x000000B8,
+};
+
 static Theme           s_theme = Theme::Dark;
 static HomeLayout      s_layout = HomeLayout::Rows;
 void       setHomeLayout(HomeLayout l) { s_layout = l; }
@@ -71,6 +95,8 @@ const char* themeName(Theme t)
     switch (t) {
     case Theme::Dark: return N_("Dark");
     case Theme::Flix: return N_("Flix");
+    case Theme::Luhu: return N_("Luhu");
+    case Theme::Sushi: return N_("Sushi");
     default:          return N_("Light");
     }
 }
@@ -79,6 +105,8 @@ static const Palette& themePal()
     switch (s_theme) {
     case Theme::Dark: return DARK;
     case Theme::Flix: return FLIX;
+    case Theme::Luhu: return LUHU;
+    case Theme::Sushi: return SUSHI;
     default:          return LIGHT;
     }
 }
@@ -819,7 +847,9 @@ void spinner(GRRLIB_texImg* ring, float cx, float cy)
     if (!ring) return;
     float angle = (float)(ticks_to_millisecs(gettime()) % 1500) * (360.0f / 1500.0f);
     GRRLIB_SetMidHandle(ring, true);
-    GRRLIB_DrawImg(cx, cy, ring, angle, 1.0f, 1.0f, theme() == Theme::Light ? 0x34BEEDFF : (theme() == Theme::Flix ? 0xE52A30FF : 0xFFFFFFFF));
+    const u32 tint = theme() == Theme::Light ? 0x34BEEDFF : theme() == Theme::Flix ? 0xE52A30FF
+                   : theme() == Theme::Dark ? 0xFFFFFFFF : pal().accent;
+    GRRLIB_DrawImg(cx, cy, ring, angle, 1.0f, 1.0f, tint);
     GRRLIB_SetMidHandle(ring, false);
 }
 
