@@ -1,3 +1,29 @@
+diff --git a/mplayer/input/input.c b/mplayer/input/input.c
+index a416ca12af595d65a94b92df2815078e70c06952..16158d18d00b64d998300514c586bc281a987292 100644
+--- a/mplayer/input/input.c
++++ b/mplayer/input/input.c
+@@ -1884,12 +1884,21 @@ mp_input_check_interrupt(int time) {
+   case MP_CMD_PLAY_ALT_SRC_STEP:
+     // The cmd will be executed when we are back in the main loop
+     return 1;
++#ifdef DISABLE_MAIN
++  }
++  /* WiiFin: a pause or a seek sent while a read waits for the cache stays
++   * queued for the main loop.  A pause ended the read as the end of the
++   * file (a film stopped after a seek), the others were dropped. */
++  usec_sleep(time * 1000);
++  return 0;
++#else
+   case MP_CMD_PAUSE:
+ 	  // remove the cmd from the queue
+ 	  cmd = mp_input_get_cmd(time,0,0);
+ 	  mp_cmd_free(cmd);
+     return 1;
+   }
++#endif
+   // remove the cmd from the queue
+   cmd = mp_input_get_cmd(time,0,0);
+   mp_cmd_free(cmd);
 diff --git a/mplayer/libao2/ao_gekko.c b/mplayer/libao2/ao_gekko.c
 index 44083e5b4c38627cb54b4cd2462dc47132b7601c..2190742d31e44e650c1b61e1b6ec35fcecef4155 100644
 --- a/mplayer/libao2/ao_gekko.c

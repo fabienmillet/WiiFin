@@ -329,10 +329,10 @@ bool runPlaySession(JellyfinClient& client,
          * few bytes arrive, which stutters endlessly on a link slower than
          * the stream.  Pause it before the cache is empty and hold it until
          * a real margin is buffered.
-         * Any command reaching this MPlayer build while it is blocked on an
-         * empty cache aborts the stream, so "pause" is only sent while some
-         * data is left (REBUF_SAFE..REBUF_LOW), and since it is a toggle,
-         * every step acts on the observed g_mplayer_paused. */
+         * A command reaching MPlayer while it waits on an empty cache only
+         * lands once data came (wiifin.patch, input.c), so "pause" is sent
+         * while some data is left (REBUF_SAFE..REBUF_LOW), and since it is a
+         * toggle, every step acts on the observed g_mplayer_paused. */
         enum class Rebuf { Idle, PauseSent, Waiting, ResumeSent };
         const float REBUF_TARGET = 25.0f;   /* % of the 8 MB cache ≈ 10 s      */
         const float REBUF_LOW    = 3.0f;    /* ≈ 1 s of video ahead: pause now */

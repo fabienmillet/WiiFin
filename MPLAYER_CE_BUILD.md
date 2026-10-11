@@ -31,6 +31,7 @@ It needs Docker, git and Python 3. The build takes about a minute. The **MPlayer
   - It does not load fonts, and does not pause on a low cache (WiiFin rebuffers itself).
   - It reads `-cache-min` on every call; MPlayer CE kept the first call's value. This one is not in the libraries in the repository.
 - **`mp_msg.c`**: MPlayer's messages go to `SYS_Report`, which is WiiFin's log.
+- **`input/input.c`**: a pause or a seek sent while a read waits for the cache stays queued until the read ends. MPlayer CE took a pause there for the end of the file (a film stopped after a seek) and dropped the other commands. The libraries in the repository have this `input.o`, compiled by `build.sh`.
 - **`stream/stream.c`**: registers WiiFin's HTTP and HTTPS streams (`stream_info_http_wii`, `stream_info_https_wii`, in `source/player/stream_wiifin.cpp`).
 - **`stream/cache2.c`**: the cache thread runs at priority 80; WiiFin's `pacePrefetch` adjusts it while playing. The prefill waits without polling input.
 - **`libao2/ao_gekko.c`**: 4 audio buffers instead of 32, so little sound is queued ahead of the picture.
