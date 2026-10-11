@@ -1,0 +1,11 @@
+# A saved profile whose token the server no longer takes (its device
+# removed, signed in again elsewhere): opening it asks its password again,
+# the sign-in screen with its server and name, instead of an error.
+server http://127.0.0.1:18096
+cfg profile.0.access_token=0123456789abcdef0123456789abcdef
+6000  A          Connect To Jellyfin
+9000  A          the profile: refused
+13000 END
+expect logre "\[Library\] the server refused the profile.s token"
+expect log [WiiFin] the profile signs in again
+expect nolog getLibraries failed

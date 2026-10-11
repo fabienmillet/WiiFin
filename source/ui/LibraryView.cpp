@@ -604,6 +604,12 @@ void LibraryView::loadLibraries() {
         ok = client.getLibraries(serverUrl, auth, libraries);
         if (!ok) err = client.lastError();
     });
+    if (!ok && client.tokenRefused) {   /* back to the sign-in, for this profile */
+        SYS_Report("[Library] the server refused the profile's token\n");
+        exitTo = Exit::SignIn;
+        signInAgain = true;
+        return;
+    }
     if (!ok)             { errMsg = err;                state = State::Error; return; }
     if (libraries.empty()) { errMsg = N_("No library found"); state = State::Error; return; }
     loadContinueWatching();
@@ -1230,6 +1236,7 @@ bool LibraryView::startRemotePlay(const Remote::PlayRequest& r) {
 }
 
 bool LibraryView::update(ir_t& ir) {
+    if (signInAgain) { signInAgain = false; return true; }   /* exitTo says SignIn */
     /* "Play on..." from the server, once no screen is fetching */
     Remote::PlayRequest play;
     if (!loadingState(state) && Remote::takePlay(play) && startRemotePlay(play)) return true;

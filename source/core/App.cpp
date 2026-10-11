@@ -475,6 +475,7 @@ void App::loop() {
 
     /* the profile menu's WiiFin Menu: past the profiles, to this menu */
     bool toMainMenu = false;
+    bool tokenRefused = false;   /* a profile's token refused: its password again */
 
     /* ---- Helper: launch LibraryView for a saved profile ---- */
     auto runLibraryWithProfile = [&](SavedProfile& p) {
@@ -541,6 +542,10 @@ void App::loop() {
                 if (wantsExit || g_app_powerOff || g_app_reset) { running = false; return; }
                 saveSettings();   /* the zoom may have changed during playback */
                 lv.onPlaybackFinished(lastItemId);
+            } else if (lv.exitTo == LibraryView::Exit::SignIn) {
+                lv.exitTo = LibraryView::Exit::Profiles;
+                tokenRefused = true;
+                break;
             } else if (lv.exitTo == LibraryView::Exit::NowPlaying) {
                 /* the music that went on while browsing, in its player again */
                 lv.exitTo = LibraryView::Exit::Profiles;
@@ -672,6 +677,11 @@ void App::loop() {
                     runConnect(&sp);   /* signs it in, then opens it */
                 } else {
                     runLibraryWithProfile(sp);
+                    if (tokenRefused) {   /* no longer valid: its password, then opened */
+                        tokenRefused = false;
+                        SYS_Report("[WiiFin] the profile signs in again\n");
+                        runConnect(&sp);
+                    }
                 }
                 if (toMainMenu) { toMainMenu = false; return; }
                 continue; /* re-show picker on return */

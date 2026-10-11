@@ -35,8 +35,10 @@ public:
 
     /* Why update() returned true with nothing to play: B on the libraries
      * or the profile menu's choice */
-    enum class Exit { Profiles, Settings, WiiFinMenu, NowPlaying };
+    /* SignIn: the server refused the profile's token, its password again */
+    enum class Exit { Profiles, Settings, WiiFinMenu, NowPlaying, SignIn };
     Exit exitTo = Exit::Profiles;
+    bool signInAgain = false;   /* loadLibraries: the token refused, leave for the sign-in */
     /* back from the Settings the profile menu opened: the home again, as
      * the settings left it (theme, home screen, library view) */
     void onSettingsClosed();

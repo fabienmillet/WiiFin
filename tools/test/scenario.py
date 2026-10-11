@@ -13,7 +13,8 @@
 
 A scenario file holds, one per line (# starts a comment):
     server <url>            the saved profile's server (default: Jellyfin direct)
-    cfg <key>=<value>       more wiifin.cfg settings
+    cfg <key>=<value>       more wiifin.cfg settings (profile.0.access_token=...:
+                            the profile's token, one the server refuses)
     position <name> <s>     saved position of the item whose name or file
                             starts with <name> (quotes around spaces)
     positions-reset         every other film and episode back to the start
@@ -132,6 +133,11 @@ def session(path):
 
 def write_sd(sc, sd, sess):
     token, user = session(sess)
+    # cfg profile.0.access_token=...: a token of the scenario's (one the server refuses)
+    for c in sc['cfg']:
+        if c.startswith('profile.0.access_token='):
+            token = c.split('=', 1)[1]
+    sc['cfg'] = [c for c in sc['cfg'] if not c.startswith('profile.0.access_token=')]
     d = os.path.join(sd, 'apps', 'WiiFin')
     os.makedirs(d, exist_ok=True)
     # device_id: the tests' own, apart from a Dolphin of the user's on the same server

@@ -633,6 +633,10 @@ public:
     static const std::string& deviceId();
 
     bool sslVerify = true;   // true = verify certificate (set false to allow self-signed)
+    /* the last getLibraries was answered 401: the profile's token is no
+     * longer valid (its device removed on the server, signed in again from
+     * elsewhere with the same device...) */
+    bool tokenRefused = false;
 
     // Video transcode quality: 0 = Low, 1 = Normal, 2 = High (see videoBitrate()).
     int videoQuality = 1;

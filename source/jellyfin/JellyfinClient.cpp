@@ -1303,6 +1303,7 @@ bool JellyfinClient::getLibraries(const std::string& serverUrl,
     std::string url  = serverUrl + "/Users/" + auth.userId + "/Views";
     std::string resp;
     int status = httpRequest(url, "GET", "", "", auth.accessToken, resp);
+    tokenRefused = status == 401;
     if (status != 200) {
         if (status >= 0) errMsg = "getLibraries failed (HTTP " + std::to_string(status) + ")";
         return false;
