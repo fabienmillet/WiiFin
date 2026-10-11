@@ -27,6 +27,7 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <gccore.h>
+#include <ogc/wiilaunch.h>
 #include <sys/iosupport.h>
 
 #include <unistd.h>
@@ -769,7 +770,18 @@ void App::loop() {
     ConnectView::shutdownUsbKeyboard();
     WPAD_Shutdown();
     if (g_app_powerOff)        SYS_ResetSystem(SYS_POWEROFF,    0, 0);
-    else if (g_restartApp) exit(0);  // HBC catches exit(0) and reloads the app
+    else if (g_restartApp) {
+        /* the HOME menu's Reset: the channel (WAD) launched again by the
+         * system, which exit() didn't do (it went to the Wii Menu); from
+         * the Homebrew Channel, back to it */
+        u64 tid = 0;
+        if (ES_GetTitleID(&tid) >= 0 && tid == 0x000100015749464EULL) {   /* 00010001-WIFN */
+            SYS_Report("[WiiFin] reset: the channel again\n");
+            WII_Initialize();
+            WII_LaunchTitle(tid);
+        }
+        exit(0);
+    }
     else {
         /* Restore the NAND-loader stub bytes at their installed VA (0x80804000)
          * before returning to the System Menu.  The stub was zeroed at startup
