@@ -46,6 +46,21 @@ volatile bool g_restartApp = false;
 static void onPower() { g_app_powerOff = true; }
 static void onReset(u32, void*) { g_app_reset = true; }
 
+/* The power button turns the Wii off even when WiiFin is stuck: a request
+ * that never returns (the loading spinner waits for it), a thread that
+ * won't stop on the way out.  The way out normally takes a moment (the
+ * position sent to the server...); 5 s after the button, this does it. */
+static u8 s_powerWatchStack[8192] ATTRIBUTE_ALIGN(32);
+static void* powerWatch(void*)
+{
+    while (!g_app_powerOff) usleep(100 * 1000);
+    SYS_Report("[WiiFin] power button\n");
+    for (int i = 0; i < 50; i++) usleep(100 * 1000);
+    SYS_Report("[WiiFin] still on 5 s after the power button: off now\n");
+    SYS_ResetSystem(SYS_POWEROFF, 0, 0);
+    return nullptr;
+}
+
 /* Full-screen error card: title, two lines of explanation.  With retry, A
  * retries (returns true) and B goes back; without, A or B closes it. */
 bool showErrorScreen(const char* title, const std::string& line1,
@@ -114,6 +129,10 @@ static const int B_SPACING = 74;
 void App::init(const char* argv0) {
     SYS_SetPowerCallback(onPower);
     SYS_SetResetCallback(onReset);
+    {   /* above the main thread: it runs even if that one spins */
+        lwp_t t;
+        LWP_CreateThread(&t, powerWatch, nullptr, s_powerWatchStack, sizeof(s_powerWatchStack), 100);
+    }
 
     SYS_Report("[WiiFin] init start\n");
 
