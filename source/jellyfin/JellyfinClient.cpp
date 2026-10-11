@@ -1,6 +1,7 @@
 #include "JellyfinClient.h"
 #include <algorithm>
 #include "../core/ExitZone.h"
+#include "../core/Lang.h"
 #include "../core/Log.h"
 #include "../core/NetConnect.h"
 #include "../player/WiiPlayer.h"   /* the volume, for the reports */
@@ -105,7 +106,7 @@ void JellyfinClient::bringUpNetwork() {
         usleep(1000 * 1000);
     }
     char buf[96];
-    if (ret >= 0) snprintf(buf, sizeof(buf), "No IP address from the router (DHCP)");
+    if (ret >= 0) snprintf(buf, sizeof(buf), "%s", N_("No IP address from the router (DHCP)"));
     else          snprintf(buf, sizeof(buf), "Network start-up failed (error %d)", (int)ret);
     errMsg = buf;
 }
@@ -158,7 +159,7 @@ bool JellyfinClient::discoverServers(std::vector<DiscoveredServer>& out) {
 
     s32 sock = net_socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0) {
-        errMsg = "UDP socket failed";
+        errMsg = N_("UDP socket failed");
         SYS_Report("[Discover] socket: %d\n", (int)sock);
         return false;
     }
@@ -351,7 +352,7 @@ bool JellyfinClient::parseUrl(const std::string& rawUrl,
         // Reject any other scheme (ftp://, etc.) — only truly scheme-less URLs
         // (no "://" present) are accepted here for auto-detection.
         if (u.find("://") != std::string::npos) {
-            errMsg = "Unsupported URL scheme";
+            errMsg = N_("Unsupported URL scheme");
             return false;
         }
         // No scheme — auto-detect via exact port number (not substring match).
@@ -703,7 +704,7 @@ bool tlsSharedInit(bool verify, std::string& err) {
                                   (const unsigned char*)pers, strlen(pers)) != 0) {
             mbedtls_ctr_drbg_free(&s_tls.drbg);
             mbedtls_entropy_free(&s_tls.entropy);
-            err = "TLS: DRBG seed failed";
+            err = N_("TLS: DRBG seed failed");
             return false;
         }
         s_tls.seeded = true;
@@ -720,7 +721,7 @@ bool tlsSharedInit(bool verify, std::string& err) {
                                         MBEDTLS_SSL_TRANSPORT_STREAM,
                                         MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
             mbedtls_ssl_config_free(&s_tls.conf);
-            err = "TLS: ssl_config_defaults failed";
+            err = N_("TLS: ssl_config_defaults failed");
             return false;
         }
         if (verify) {
@@ -745,7 +746,7 @@ bool resolve(const std::string& host, int port, struct sockaddr_in& addr, std::s
     if (inet_aton(host.c_str(), &addr.sin_addr) != 0) return true;
     struct hostent* he = net_gethostbyname(host.c_str());
     if (!he) { err = "DNS failed: " + host; return false; }
-    if (he->h_length > (int)sizeof(addr.sin_addr)) { err = "DNS: unexpected address length"; return false; }
+    if (he->h_length > (int)sizeof(addr.sin_addr)) { err = N_("DNS: unexpected address length"); return false; }
     memcpy(&addr.sin_addr, he->h_addr, he->h_length);
     return true;
 }
@@ -768,7 +769,7 @@ bool openConn(bool tls, const struct sockaddr_in& addr, const std::string& host,
      * the address is wrong, and the user should hear about it */
     int cr = connectWithTimeout(sock, const_cast<struct sockaddr_in*>(&addr), 8);
     if (cr < 0) {
-        err = cr == -ETIMEDOUT ? "Server not reachable (connection timed out)"
+        err = cr == -ETIMEDOUT ? N_("Server not reachable (connection timed out)")
                                : "connect() failed (" + std::to_string(cr) + ")";
         net_close(sock);
         return false;
@@ -792,7 +793,7 @@ bool openConn(bool tls, const struct sockaddr_in& addr, const std::string& host,
             if (ret == MBEDTLS_ERR_NET_SEND_FAILED || ret == MBEDTLS_ERR_NET_RECV_FAILED) {
                 SYS_Report("[TLS] transient handshake err -0x%04X\n", (unsigned)(-ret));
                 transient = true;
-                err = "TLS handshake failed (network error)";
+                err = N_("TLS handshake failed (network error)");
             } else {
                 uint32_t vflags = mbedtls_ssl_get_verify_result(&s_conn.ssl);
                 char ebuf[80];
@@ -902,7 +903,7 @@ ExResult exchange(const char* req, int reqLen, const std::string& body, bool reu
     if (!connWrite((const unsigned char*)req, reqLen) ||
         (!body.empty() && !connWrite((const unsigned char*)body.data(), (int)body.size()))) {
         if (reused) return ExResult::Stale;
-        err = "Failed to send request";
+        err = N_("Failed to send request");
         return ExResult::Failed;
     }
 
@@ -983,8 +984,8 @@ ExResult exchange(const char* req, int reqLen, const std::string& body, bool reu
     if (!complete) keepAlive = false;
 
     if (status == 0) {
-        err = rawLen == 0 ? "No response from server (check server URL / port)"
-                          : "Invalid HTTP response (server may require HTTPS)";
+        err = rawLen == 0 ? N_("No response from server (check server URL / port)")
+                          : N_("Invalid HTTP response (server may require HTTPS)");
         return ExResult::Failed;
     }
     if (bodyStart >= 0)
@@ -1059,7 +1060,7 @@ int JellyfinClient::request(bool tls, const std::string& host, int port,
         ctHdr.c_str(),
         body.size()
     );
-    if (reqLen >= (int)sizeof(req)) return fail("Request headers too large");
+    if (reqLen >= (int)sizeof(req)) return fail(N_("Request headers too large"));
 
     /* Retry loop: a reused connection the server already closed is replaced
      * by a fresh one; transient IOS send/recv failures during the handshake
@@ -1102,7 +1103,7 @@ int JellyfinClient::request(bool tls, const std::string& host, int port,
                        path.substr(0, path.find('?')).c_str(), status);
         return status;
     }
-    return fail("Connection lost");
+    return fail(N_("Connection lost"));
 }
 
 // Escape a value for safe embedding inside a JSON string literal.
@@ -1130,15 +1131,18 @@ bool JellyfinClient::authenticate(const std::string& serverUrl,
     std::string resp;
     int status = httpRequest(url, "POST", "application/json", body, "", resp);
     if (status != 200) {
-        if (status >= 0)
-            errMsg = "Auth failed (HTTP " + std::to_string(status) + ")";
+        if (status >= 0) {
+            char buf[128];
+            snprintf(buf, sizeof(buf), tr("Auth failed (HTTP %d)"), status);
+            errMsg = buf;
+        }
         // status == -1 : errMsg already set by request()
         return false;
     }
     out.accessToken = jsonGetString(resp, "AccessToken");
     out.userId      = jsonGetString(resp, "Id");
     out.serverName  = jsonGetString(resp, "Name");
-    if (out.accessToken.empty()) { errMsg = "No token in response"; return false; }
+    if (out.accessToken.empty()) { errMsg = N_("No token in response"); return false; }
     return true;
 }
 
@@ -1147,14 +1151,17 @@ bool JellyfinClient::quickConnectInitiate(const std::string& serverUrl, QuickCon
     std::string resp;
     int status = httpRequest(url, "POST", "application/json", "{}", "", resp);
     if (status != 200) {
-        if (status >= 0)
-            errMsg = "QuickConnect initiate failed (HTTP " + std::to_string(status) + ")";
+        if (status >= 0) {
+            char buf[128];
+            snprintf(buf, sizeof(buf), tr("QuickConnect initiate failed (HTTP %d)"), status);
+            errMsg = buf;
+        }
         return false;
     }
     out.code   = jsonGetString(resp, "Code");
     out.secret = jsonGetString(resp, "Secret");
     out.authenticated = false;
-    if (out.code.empty()) { errMsg = "No code in QC response"; return false; }
+    if (out.code.empty()) { errMsg = N_("No code in QC response"); return false; }
     return true;
 }
 
@@ -1178,14 +1185,17 @@ bool JellyfinClient::quickConnectAuthenticate(const std::string& serverUrl,
     std::string resp;
     int status = httpRequest(url, "POST", "application/json", body, "", resp);
     if (status != 200) {
-        if (status >= 0)
-            errMsg = "QC auth failed (HTTP " + std::to_string(status) + ")";
+        if (status >= 0) {
+            char buf[128];
+            snprintf(buf, sizeof(buf), tr("QC auth failed (HTTP %d)"), status);
+            errMsg = buf;
+        }
         return false;
     }
     out.accessToken = jsonGetString(resp, "AccessToken");
     out.userId      = jsonGetString(resp, "Id");
     out.serverName  = jsonGetString(resp, "Name");
-    if (out.accessToken.empty()) { errMsg = "No token in QC auth response"; return false; }
+    if (out.accessToken.empty()) { errMsg = N_("No token in QC auth response"); return false; }
     return true;
 }
 
@@ -2318,7 +2328,8 @@ bool JellyfinClient::getPlaylistTracks(const std::string& serverUrl,
 // ---------------------------------------------------------------------------
 
 const char* JellyfinClient::videoQualityName(int q) {
-    static const char* names[VIDEO_QUALITY_COUNT] = { "Low", "Normal", "High", "Max" };
+    /* TRANSLATORS: video quality levels (Settings) */
+    static const char* names[VIDEO_QUALITY_COUNT] = { N_("Low"), N_("Normal"), N_("High"), N_("Max") };
     return (q >= 0 && q < VIDEO_QUALITY_COUNT) ? names[q] : names[1];
 }
 
@@ -2735,7 +2746,7 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
             SYS_Report("[PlaybackInfo] raw snippet: %.128s\n", resp.c_str() + p);
         else
             SYS_Report("[PlaybackInfo] key not found. First 256: %.256s\n", resp.c_str());
-        errMsg = "No TranscodingUrl in PlaybackInfo response";
+        errMsg = N_("No TranscodingUrl in PlaybackInfo response");
         return false;
     }
 
@@ -3130,7 +3141,7 @@ bool JellyfinClient::getSpecialFeatures(const std::string& serverUrl, const Jell
             if (!it.id.empty()) c->out->push_back(it);
         }, &ctx);
     }
-    if (!any) errMsg = "No special features";
+    if (!any) errMsg = N_("No special features");
     return any;
 }
 
@@ -3387,7 +3398,7 @@ bool JellyfinClient::getAudioStreamUrl(const std::string& serverUrl,
     if (outPlaySessionId.empty()) {
         SYS_Report("[AudioPlaybackInfo] No PlaySessionId in response (first 256): %.256s\n",
                    resp.c_str());
-        errMsg = "No PlaySessionId in AudioPlaybackInfo response";
+        errMsg = N_("No PlaySessionId in AudioPlaybackInfo response");
         return false;
     }
 

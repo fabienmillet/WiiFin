@@ -4,6 +4,7 @@
 #include "MusicBGM.h"
 #include "SoundFX.h"
 #include "Log.h"
+#include "Lang.h"
 #include "../ui/Ui.h"
 #include "../ui/LibraryView.h"
 #include "../jellyfin/JellyfinClient.h"
@@ -122,9 +123,10 @@ static float streamOriginSecs(long long startTicks) {
 
 static std::string episodeTitle(const JellyfinEpisode& ep) {
     if (ep.seasonNumber == 0 && ep.indexNumber == 0) return ep.name;   /* a clip of a shuffle */
-    char buf[32];
-    snprintf(buf, sizeof(buf), "S%d E%d - ", ep.seasonNumber, ep.indexNumber);
-    return buf + ep.name;
+    char buf[512];
+    /* TRANSLATORS: season and episode numbers, then the episode's name */
+    snprintf(buf, sizeof(buf), tr("S%d E%d - %s"), ep.seasonNumber, ep.indexNumber, ep.name.c_str());
+    return buf;
 }
 
 /* -----------------------------------------------------------------------
@@ -196,7 +198,7 @@ bool runPlaySession(JellyfinClient& client,
         if (subLoaded == idx) return true;
         std::string srt;
         bool ok = false;
-        runWithPlayerUI(view, ir, "Loading subtitles...", [&]() {
+        runWithPlayerUI(view, ir, N_("Loading subtitles..."), [&]() {
             ok = client.getSubtitleSrt(serverUrl, auth, itemId, mediaSourceId, idx, srt);
         });
         view.setBusy("");   /* may be during playback: the player goes on */
@@ -211,7 +213,7 @@ bool runPlaySession(JellyfinClient& client,
         /* no SRT after all: a stream with the track burned in */
         std::string newUrl, newSession;
         bool ok = false;
-        runWithPlayerUI(view, ir, "Loading...", [&]() {
+        runWithPlayerUI(view, ir, N_("Loading..."), [&]() {
             client.deleteActiveEncoding(serverUrl, auth, playSessionId);
             ok = client.getPlaybackUrl(serverUrl, auth, itemId, mediaSourceId, audioIdx, subIdx,
                                        startTicks, newUrl, newSession, how);
@@ -240,7 +242,7 @@ bool runPlaySession(JellyfinClient& client,
             title = episodeTitle(episodes[episodeIdx]);
         /* the parts to skip: episodes (intro, credits) and films (credits) */
         if (!introFetched) {
-            runWithPlayerUI(view, ir, "Loading...", [&]() {
+            runWithPlayerUI(view, ir, N_("Loading..."), [&]() {
                 intro = IntroInfo();
                 client.getIntroTimestamps(serverUrl, auth, itemId, intro);
             });
@@ -350,7 +352,7 @@ bool runPlaySession(JellyfinClient& client,
         while (wii_player_is_running()) {
             Input::update();
             Input::readIR(ir);
-            if (g_app_powerOff || g_app_reset) requestStop(PLAYER_STOP_EOF, "Stopping...");
+            if (g_app_powerOff || g_app_reset) requestStop(PLAYER_STOP_EOF, N_("Stopping..."));
 
             u64 now = ticks_to_millisecs(gettime());
 
@@ -413,7 +415,7 @@ bool runPlaySession(JellyfinClient& client,
                 qualityRestartAt = view.position();
                 SYS_Report("[runPlay] slow link, lowering quality to %s\n",
                            JellyfinClient::videoQualityName(client.effectiveQuality()));
-                requestStop(PLAYER_STOP_SEEK, "Slow connection: lowering quality...");
+                requestStop(PLAYER_STOP_SEEK, N_("Slow connection: lowering quality..."));
             }
 
             float timePos = wii_player_time_pos();
@@ -439,7 +441,7 @@ bool runPlaySession(JellyfinClient& client,
                                got / 1024, (double)cache_fill_status,
                                pictureStuck ? "the picture is stuck" : "no data");
                     requestStop(ctx.runtime > 0.0f ? PLAYER_STOP_ERROR : PLAYER_STOP_EOF,
-                                pictureStuck ? "The picture is stuck: trying again..." : "Reconnecting...");
+                                pictureStuck ? N_("The picture is stuck: trying again...") : N_("Reconnecting..."));
                 }
             }
             /* MPlayer waits for its cache thread before quitting; unblock
@@ -483,7 +485,7 @@ bool runPlaySession(JellyfinClient& client,
                     if (rate < 0.85f * how.fps) {
                         allowDirect      = false;
                         qualityRestartAt = view.position();
-                        requestStop(PLAYER_STOP_SEEK, "Too heavy for the Wii: transcoding...");
+                        requestStop(PLAYER_STOP_SEEK, N_("Too heavy for the Wii: transcoding..."));
                     }
                 }
             }
@@ -505,43 +507,43 @@ bool runPlaySession(JellyfinClient& client,
             /* the server's remote control: as the Wii Remote's buttons (a
              * volume change reported at once: lastProgressAt); something else
              * to play ("Play on..."): the library starts it */
-            if (!stopRequested && Remote::hasPlay()) requestStop(PLAYER_STOP_EOF, "Stopping...");
+            if (!stopRequested && Remote::hasPlay()) requestStop(PLAYER_STOP_EOF, N_("Stopping..."));
             Remote::PlayRequest queued;   /* "Play next" during a video: music only */
             if (Remote::takeQueue(queued)) {
                 SYS_Report("[Remote] queue during a video: not supported\n");
-                view.toast("Play next / Add to queue: music only", 2500);
+                view.toast(tr("Play next / Add to queue: music only"), 2500);
             }
             for (Remote::Command rc; !stopRequested && Remote::poll(rc); ) {
                 switch (rc.cmd) {
                 case Remote::Cmd::Pause:     if (!g_mplayer_paused) wii_player_pause_toggle(); break;
                 case Remote::Cmd::Unpause:   if (g_mplayer_paused)  wii_player_pause_toggle(); break;
                 case Remote::Cmd::PlayPause: wii_player_pause_toggle(); break;
-                case Remote::Cmd::Stop:      requestStop(PLAYER_STOP_EOF, "Stopping..."); break;
+                case Remote::Cmd::Stop:      requestStop(PLAYER_STOP_EOF, N_("Stopping...")); break;
                 case Remote::Cmd::Seek:      view.remoteSeek((float)(rc.ticks / 10000000.0)); break;
                 case Remote::Cmd::FastForward: view.remoteNudge(+30.0f); break;
                 case Remote::Cmd::Rewind:      view.remoteNudge(-10.0f); break;
                 case Remote::Cmd::Next:
-                    if (episodeIdx + 1 < (int)episodes.size()) requestStop(PLAYER_STOP_NEXT, "Loading next episode...");
-                    else view.toast("No next episode");
+                    if (episodeIdx + 1 < (int)episodes.size()) requestStop(PLAYER_STOP_NEXT, N_("Loading next episode..."));
+                    else view.toast(tr("No next episode"));
                     break;
                 case Remote::Cmd::Prev:
-                    if (!episodes.empty() && episodeIdx > 0) requestStop(PLAYER_STOP_PREV, "Loading previous episode...");
-                    else view.toast("No previous episode");
+                    if (!episodes.empty() && episodeIdx > 0) requestStop(PLAYER_STOP_PREV, N_("Loading previous episode..."));
+                    else view.toast(tr("No previous episode"));
                     break;
-                case Remote::Cmd::VolumeUp:   wii_player_vol_up();   view.toast("Volume +", 1000); lastProgressAt = 0; break;
-                case Remote::Cmd::VolumeDown: wii_player_vol_down(); view.toast("Volume -", 1000); lastProgressAt = 0; break;
+                case Remote::Cmd::VolumeUp:   wii_player_vol_up();   view.toast(tr("Volume +"), 1000); lastProgressAt = 0; break;
+                case Remote::Cmd::VolumeDown: wii_player_vol_down(); view.toast(tr("Volume -"), 1000); lastProgressAt = 0; break;
                 case Remote::Cmd::SetVolume: {
                     wii_player_set_volume(rc.value);
-                    char t[24]; snprintf(t, sizeof(t), "Volume %d", wii_player_volume());
+                    char t[48]; snprintf(t, sizeof(t), tr("Volume %d"), wii_player_volume());
                     view.toast(t, 1000);
                     lastProgressAt = 0;
                     break;
                 }
-                case Remote::Cmd::Mute:       wii_player_set_mute(1); view.toast("Sound off", 1500); lastProgressAt = 0; break;
-                case Remote::Cmd::Unmute:     wii_player_set_mute(0); view.toast("Sound on", 1500);  lastProgressAt = 0; break;
+                case Remote::Cmd::Mute:       wii_player_set_mute(1); view.toast(tr("Sound off"), 1500); lastProgressAt = 0; break;
+                case Remote::Cmd::Unmute:     wii_player_set_mute(0); view.toast(tr("Sound on"), 1500);  lastProgressAt = 0; break;
                 case Remote::Cmd::ToggleMute:
                     wii_player_set_mute(!wii_player_muted());
-                    view.toast(wii_player_muted() ? "Sound off" : "Sound on", 1500);
+                    view.toast(wii_player_muted() ? tr("Sound off") : tr("Sound on"), 1500);
                     lastProgressAt = 0;
                     break;
                 case Remote::Cmd::AudioTrack:    view.remoteTrack(true,  rc.value); break;
@@ -551,10 +553,10 @@ bool runPlaySession(JellyfinClient& client,
             }
 
             switch (view.update(Input::rawDown(), ir)) {
-            case PlayerView::Action::Back:   requestStop(PLAYER_STOP_EOF,   "Stopping...");             break;
-            case PlayerView::Action::Next:   requestStop(PLAYER_STOP_NEXT,  "Loading next episode..."); break;
-            case PlayerView::Action::Prev:   requestStop(PLAYER_STOP_PREV,  "Loading previous episode..."); break;
-            case PlayerView::Action::Audio:  requestStop(PLAYER_STOP_AUDIO, "Switching audio track..."); break;
+            case PlayerView::Action::Back:   requestStop(PLAYER_STOP_EOF,   N_("Stopping..."));             break;
+            case PlayerView::Action::Next:   requestStop(PLAYER_STOP_NEXT,  N_("Loading next episode...")); break;
+            case PlayerView::Action::Prev:   requestStop(PLAYER_STOP_PREV,  N_("Loading previous episode...")); break;
+            case PlayerView::Action::Audio:  requestStop(PLAYER_STOP_AUDIO, N_("Switching audio track...")); break;
             case PlayerView::Action::Sub: {
                 /* to a text track or none, on a stream burning none: no
                  * restart, the new track is drawn over this stream */
@@ -564,7 +566,7 @@ bool runPlaySession(JellyfinClient& client,
                     s_pendingReport.subIndex = subIdx;
                     view.setSubtitles(subLoaded >= 0 ? &subs : nullptr, subIdx);
                 } else {
-                    requestStop(PLAYER_STOP_SUB, "Switching subtitles...");
+                    requestStop(PLAYER_STOP_SUB, N_("Switching subtitles..."));
                 }
                 break;
             }
@@ -578,14 +580,14 @@ bool runPlaySession(JellyfinClient& client,
                     seekFixed = false;
                     if (perfFrom > -2.0f) perfFrom = -1.0f;   /* count again from there */
                 } else {
-                    requestStop(PLAYER_STOP_SEEK, "Seeking...");
+                    requestStop(PLAYER_STOP_SEEK, N_("Seeking..."));
                 }
                 break;
             case PlayerView::Action::Home: {
                 bool wasPaused = g_mplayer_paused;
                 if (!wasPaused) wii_player_pause_toggle();
                 if (doShowHomeOverlay(font, btnTex, cursorTex, false))
-                    requestStop(PLAYER_STOP_WIIMENU, "Stopping...");
+                    requestStop(PLAYER_STOP_WIIMENU, N_("Stopping..."));
                 else if (!wasPaused)
                     wii_player_pause_toggle();
                 break;
@@ -648,24 +650,30 @@ bool runPlaySession(JellyfinClient& client,
             }
         }
         if (stuckGiveUp) {
-            failWhy = "The video comes in, but the Wii can't show it: the picture stays stuck.";
-            SYS_Report("[runPlay] giving up: %s\n", failWhy.c_str());
+            const char* why = N_("The video comes in, but the Wii can't show it: the picture stays stuck.");
+            failWhy = tr(why);
+            SYS_Report("[runPlay] giving up: %s\n", why);
         } else if ((reason == PLAYER_STOP_ERROR || dropped) && retries < maxRetries) {
             ++retries;
             SYS_Report("[runPlay] stream ended early at %.1f s, retry %d/%d\n",
                        (double)posSecs, retries, maxRetries);
             reason = PLAYER_STOP_SEEK;
         } else if (reason == PLAYER_STOP_ERROR || dropped) {
+            std::string why;
             if (httpFail >= 400) {
-                char buf[96];
+                char buf[160];
                 snprintf(buf, sizeof(buf), "The server could not start this video (HTTP %d).", httpFail);
+                why = buf;
+                snprintf(buf, sizeof(buf), tr("The server could not start this video (HTTP %d)."), httpFail);
                 failWhy = buf;
             } else if (!everPlayed) {
-                failWhy = "The video stream could not be opened.";
+                why = N_("The video stream could not be opened.");
+                failWhy = tr(why.c_str());
             } else {
-                failWhy = "The connection to the server keeps dropping.";
+                why = N_("The connection to the server keeps dropping.");
+                failWhy = tr(why.c_str());
             }
-            SYS_Report("[runPlay] giving up: %s\n", failWhy.c_str());
+            SYS_Report("[runPlay] giving up: %s\n", why.c_str());
         } else if (reason == PLAYER_STOP_SEEK) {
             restartAt = qualityRestartAt >= 0.0f ? qualityRestartAt : view.seekTarget();
             qualityRestartAt = -1.0f;
@@ -683,7 +691,7 @@ bool runPlaySession(JellyfinClient& client,
             long long fromTicks = (long long)(restartAt * 10000000.0);
             std::string newUrl, newSession;
             bool ok = false;
-            runWithPlayerUI(view, ir, "Loading...", [&]() {
+            runWithPlayerUI(view, ir, N_("Loading..."), [&]() {
                 client.deleteActiveEncoding(serverUrl, auth, playSessionId);
                 ok = client.getPlaybackUrl(serverUrl, auth, itemId, mediaSourceId,
                                            newAudio, newBurn, fromTicks,
@@ -698,8 +706,10 @@ bool runPlaySession(JellyfinClient& client,
                 startTicks    = fromTicks;
                 continue;
             }
-            failWhy = "The server did not answer: " + client.lastError();
-            SYS_Report("[runPlay] giving up: %s\n", failWhy.c_str());
+            char buf[256];
+            snprintf(buf, sizeof(buf), tr("The server did not answer: %s"), client.lastError().c_str());
+            failWhy = buf;
+            SYS_Report("[runPlay] giving up: The server did not answer: %s\n", client.lastError().c_str());
             reason = PLAYER_STOP_EOF;
         }
 
@@ -712,7 +722,7 @@ bool runPlaySession(JellyfinClient& client,
                 bool ok = false;
                 /* its tracks as the server picks them (as on its page) */
                 int nextAudio = 0, nextSub = -1, nextBurn = -1;
-                runWithPlayerUI(view, ir, "Loading episode...", [&]() {
+                runWithPlayerUI(view, ir, N_("Loading episode..."), [&]() {
                     if (posTicks > 0)
                         client.reportPlaybackStopped(serverUrl, auth, itemId, mediaSourceId,
                                                      playSessionId, posTicks);
@@ -768,7 +778,7 @@ bool runPlaySession(JellyfinClient& client,
     /* Bring the menu music back now so it plays during the final requests. */
     MusicBGM::stop();
     MusicBGM::init(musicWasRunning);
-    runWithPlayerUI(view, ir, "Stopping...", [&]() {
+    runWithPlayerUI(view, ir, N_("Stopping..."), [&]() {
         if (g_wiifin_stream_fail_status >= 500) client.logTranscodeFailure(serverUrl, auth);
         if (!reported && posTicks > 0)
             client.reportPlaybackStopped(serverUrl, auth, itemId, mediaSourceId,
@@ -777,15 +787,17 @@ bool runPlaySession(JellyfinClient& client,
     });
     wiifin_video_clear();
     if (!failWhy.empty() && !g_app_powerOff && !g_app_reset) {
+        char says[256];
+        snprintf(says, sizeof(says), tr("Server says: %s"), g_wiifin_stream_fail_body);
         std::string detail = g_wiifin_stream_fail_status >= 400 && g_wiifin_stream_fail_body[0]
-            ? std::string("Server says: ") + g_wiifin_stream_fail_body
-            : std::string("Details are in wiifin.log on the SD card.");
+            ? std::string(says)
+            : std::string(tr("Details are in wiifin.log on the SD card."));
         if (detail.size() > 70) detail = detail.substr(0, 67) + "...";
         if (g_wiifin_stream_fail_status == 500)
-            showErrorScreen("Can't play this video", failWhy,
-                            "Check the server's FFmpeg log (Dashboard > Logs).", false, ir);
+            showErrorScreen(tr("Can't play this video"), failWhy,
+                            tr("Check the server's FFmpeg log (Dashboard > Logs)."), false, ir);
         else
-            showErrorScreen("Can't play this video", failWhy, detail, false, ir);
+            showErrorScreen(tr("Can't play this video"), failWhy, detail, false, ir);
     }
     return reason == PLAYER_STOP_WIIMENU;
 }

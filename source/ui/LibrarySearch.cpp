@@ -4,6 +4,7 @@
 #include "Ui.h"
 #include "../input/Input.h"
 #include "../core/Text.h"
+#include "../core/Lang.h"
 #include <stdio.h>
 #include <ogc/lwp_watchdog.h>   // gettime(), ticks_to_millisecs()
 
@@ -11,7 +12,7 @@ using namespace LibDraw;
 
 bool LibraryView::updateSearchInput(ir_t& ir) {
     searchKb.setOrigin((640 - searchKb.width()) * 0.5f, 132);
-    searchKb.setEnterLabel("Search");
+    searchKb.setEnterLabel(N_("Search"));
     switch (searchKb.update(ir, searchQuery, 64)) {
     case Keyboard::Result::Enter:            // Search key or [+]
         if (!searchQuery.empty()) state = State::SearchLoad;
@@ -165,7 +166,7 @@ void LibraryView::performSearch() {
 // ---------------------------------------------------------------
 void LibraryView::renderSearchInput(ir_t& ir) {
     const Ui::Palette& p = Ui::pal();
-    Ui::header("Search");
+    Ui::header(tr("Search"));
 
     // Search field: placeholder when empty, blinking caret
     {
@@ -176,7 +177,7 @@ void LibraryView::renderSearchInput(ir_t& ir) {
             display.erase(display.begin());
         Ui::field(FX, FY, FW, FH, nullptr, 18, true);
         if (searchQuery.empty())
-            Ui::text(FX + 20, FY + 9, "Type a title, an actor...", 18, Ui::alpha(p.textDim, 0.8f));
+            Ui::text(FX + 20, FY + 9, tr("Type a title, an actor..."), 18, Ui::alpha(p.textDim, 0.8f));
         else
             Ui::text(FX + 20, FY + 9, display.c_str(), 18, p.text);
         if (caretOn) {
@@ -190,8 +191,8 @@ void LibraryView::renderSearchInput(ir_t& ir) {
              searchKb.width() + 20, searchKb.height() + 20, 16, 0.0f);
     searchKb.render(ir);
 
-    const Ui::Hint l[] = { { "A", "Type" }, { "B", searchQuery.empty() ? "Back" : "Delete" } };
-    const Ui::Hint r[] = { { "-", "Shift" }, { "+!", "Search" } };
+    const Ui::Hint l[] = { { "A", N_("Type") }, { "B", searchQuery.empty() ? N_("Back") : N_("Delete") } };
+    const Ui::Hint r[] = { { "-", N_("Shift") }, { "+!", N_("Search") } };
     Ui::footer(l, 2, r, 2);
 }
 
@@ -204,12 +205,14 @@ void LibraryView::renderSearchResults(ir_t& ir) {
     {
         char sc[32] = "";
         if (n > SEARCH_VISIBLE) snprintf(sc, sizeof(sc), "%d / %d", searchSel + 1, n);
-        std::string hdr = fitText(font, "Results: " + filterDejaVu(searchQuery, 40), 24, 460);
+        char hb[256];
+        snprintf(hb, sizeof(hb), tr("Results: %s"), filterDejaVu(searchQuery, 40).c_str());
+        std::string hdr = fitText(font, hb, 24, 460);
         Ui::header(hdr.c_str(), sc[0] ? sc : nullptr);
     }
 
     if (n == 0) {
-        Ui::textCentered(320, 200, "No results.", 20, p.textDim);
+        Ui::textCentered(320, 200, tr("No results."), 20, p.textDim);
     } else {
         for (int i = 0; i < SEARCH_VISIBLE; i++) {
             int idx = searchTop + i;
@@ -226,26 +229,28 @@ void LibraryView::renderSearchResults(ir_t& ir) {
             const std::string& type = searchResults[idx].type;
             const char* badge = "?";
             u32 bCol = 0x446688FF;
-            if      (type == "Movie")       { badge = "MOVIE";   bCol = 0x2D7DE0FF; }
-            else if (type == "Series")      { badge = "SERIES";  bCol = 0xE0563FFF; }
-            else if (type == "Episode")     { badge = "EP";      bCol = 0xC2453AFF; }
-            else if (type == "MusicAlbum")  { badge = "ALBUM";   bCol = 0x3DAF5AFF; }
-            else if (type == "Audio")       { badge = "TRACK";   bCol = 0x3DAF5AFF; }
-            else if (type == "MusicArtist") { badge = "ARTIST";  bCol = 0x2C9450FF; }
-            else if (type == "BoxSet")      { badge = "COLLEC";  bCol = 0x8E54D6FF; }
-            else if (type == "Playlist")    { badge = "LIST";    bCol = 0x2A9FB0FF; }
+            /* TRANSLATORS: type badges of the search results, 54 pixels wide: keep them short */
+            if      (type == "Movie")       { badge = N_("MOVIE");   bCol = 0x2D7DE0FF; }
+            else if (type == "Series")      { badge = N_("SERIES");  bCol = 0xE0563FFF; }
+            else if (type == "Episode")     { badge = N_("EP");      bCol = 0xC2453AFF; }
+            else if (type == "MusicAlbum")  { badge = N_("ALBUM");   bCol = 0x3DAF5AFF; }
+            else if (type == "Audio")       { badge = N_("TRACK");   bCol = 0x3DAF5AFF; }
+            else if (type == "MusicArtist") { badge = N_("ARTIST");  bCol = 0x2C9450FF; }
+            else if (type == "BoxSet")      { badge = N_("COLLEC");  bCol = 0x8E54D6FF; }
+            else if (type == "Playlist")    { badge = N_("LIST");    bCol = 0x2A9FB0FF; }
             Ui::roundRect(LIST_X + 8, ry + 12, 54, 20, 10, Ui::mix(bCol, 0xFFFFFFFF, 0.15f), bCol);
-            Ui::textCentered(LIST_X + 35, ry + 15, badge, 10, 0xFFFFFFFF);
+            Ui::textCentered(LIST_X + 35, ry + 15, tr(badge), 10, 0xFFFFFFFF);
 
             // Title
-            std::string label = filterDejaVu(searchResults[idx].name, 38);
+            std::string label = filterDejaVu(searchResults[idx].name, 200);
             if (type == "Episode" && !searchResults[idx].seriesName.empty()) {
                 // Show "Series S01E02 - Episode title"
                 char ep[64];
-                snprintf(ep, sizeof(ep), "S%02dE%02d - ",
+                /* TRANSLATORS: season and episode numbers before the episode's title */
+                snprintf(ep, sizeof(ep), tr("S%02dE%02d - "),
                          searchResults[idx].seasonNumber,
                          searchResults[idx].episodeNumber);
-                label = filterDejaVu(searchResults[idx].seriesName, 20) + " " + ep + filterDejaVu(searchResults[idx].name, 14);
+                label = filterDejaVu(searchResults[idx].seriesName, 200) + " " + ep + filterDejaVu(searchResults[idx].name, 200);
             } else if (searchResults[idx].year > 0) {
                 char yb[16];
                 snprintf(yb, sizeof(yb), " (%d)", searchResults[idx].year);
@@ -256,7 +261,7 @@ void LibraryView::renderSearchResults(ir_t& ir) {
         }
     }
 
-    const Ui::Hint l[] = { { "A", "Open" }, { "1", "New search" } };
-    const Ui::Hint r[] = { { "B", "Back" } };
+    const Ui::Hint l[] = { { "A", N_("Open") }, { "1", N_("New search") } };
+    const Ui::Hint r[] = { { "B", N_("Back") } };
     Ui::footer(l, 2, r, 1);
 }

@@ -3,6 +3,7 @@
 #include "LibraryDraw.h"
 #include "Ui.h"
 #include "../input/Input.h"
+#include "../core/Lang.h"
 #include <stdio.h>
 
 using namespace LibDraw;
@@ -111,6 +112,6 @@ void LibraryView::renderMusicTracks(ir_t& ir) {
     }
     Ui::scrollbar(614, LIST_Y + 2, MUSIC_TRACKS_VISIBLE * ROW_H - 6, musicTrackTop,
                   MUSIC_TRACKS_VISIBLE, n);
-    const Ui::Hint l[] = { { "A", "Play" }, { "2", "Shuffle" }, { "B", "Back" } };
+    const Ui::Hint l[] = { { "A", N_("Play") }, { "2", N_("Shuffle") }, { "B", N_("Back") } };
     Ui::footer(l, 3);
 }

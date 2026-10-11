@@ -3,6 +3,7 @@
 #include "LibraryDraw.h"
 #include "Ui.h"
 #include "../input/Input.h"
+#include "../core/Lang.h"
 #include <stdio.h>
 #include <math.h>
 #include <ogc/lwp_watchdog.h>
@@ -117,7 +118,7 @@ bool LibraryView::updateEpisodes(ir_t& ir, bool aPressed) {
 void LibraryView::renderSeasons(ir_t& ir) {
     const Ui::Palette& p = Ui::pal();
     drawBreadcrumb(currentSeriesName, 20, seriesFavorite ? 480 : 580);
-    if (seriesFavorite) Ui::textRight(620, 16, "\xe2\x99\xa5 Favorite", 16, 0xE8455AFF);
+    if (seriesFavorite) Ui::textRight(620, 16, (std::string("\xe2\x99\xa5 ") + tr("Favorite")).c_str(), 16, 0xE8455AFF);
     headerLine(46);
 
     int n = (int)seasons.size();
@@ -168,8 +169,8 @@ void LibraryView::renderSeasons(ir_t& ir) {
             Ui::text(PX, PY + PH + 10, name.c_str(), 15, p.text);
         }
     }
-    const Ui::Hint l[] = { { "A", "Select" }, { "2", "Shuffle" }, { "B", "Back" } };
-    const Ui::Hint r[] = { { "1", seriesFavorite ? "Unfavorite" : "Favorite" } };
+    const Ui::Hint l[] = { { "A", N_("Select") }, { "2", N_("Shuffle") }, { "B", N_("Back") } };
+    const Ui::Hint r[] = { { "1", seriesFavorite ? N_("Unfavorite") : N_("Favorite") } };
     Ui::footer(l, 3, r, 1);
 }
 
@@ -197,7 +198,8 @@ void LibraryView::renderEpisodes(ir_t& ir) {
         // Episode number badge
         if (episodes[idx].indexNumber > 0) {
             char num[16];
-            snprintf(num, sizeof(num), "E%02d", episodes[idx].indexNumber);
+            /* TRANSLATORS: E = episode, its number in the season */
+            snprintf(num, sizeof(num), tr("E%02d"), episodes[idx].indexNumber);
             int bw = Ui::textWidth(num, 12) + 14;
             Ui::roundRect(tx, ry + 12, bw, 20, 10, Ui::mix(p.accent, 0xFFFFFFFF, 0.2f), p.accentDark);
             Ui::textCentered(tx + bw / 2, ry + 15, num, 12, p.textOnAccent);
@@ -228,7 +230,7 @@ void LibraryView::renderEpisodes(ir_t& ir) {
     }
     Ui::scrollbar(614, LIST_Y + 2, ITEMS_VISIBLE * ROW_H - 6, episodeTop, ITEMS_VISIBLE, n);
     const bool seenSel = episodeSel < n && episodes[episodeSel].played;
-    const Ui::Hint l[] = { { "A", "Details" }, { "2", "Shuffle" }, { "B", "Back" } };
-    const Ui::Hint r[] = { { "+!", seenSel ? "Unwatched" : "Watched" } };
+    const Ui::Hint l[] = { { "A", N_("Details") }, { "2", N_("Shuffle") }, { "B", N_("Back") } };
+    const Ui::Hint r[] = { { "+!", seenSel ? N_("Unwatched") : N_("Watched") } };
     Ui::footer(l, 3, r, 1);
 }

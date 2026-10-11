@@ -61,7 +61,8 @@ public:
     void setContext(const PlayerViewContext& c);
 
     /* Busy message shown with the spinner over the last frame (stream
-     * switch, stopping...).  Empty string = normal playback UI. */
+     * switch, stopping...), in English (N_): translated when drawn.
+     * Empty string = normal playback UI. */
     void setBusy(const std::string& msg) { busyMsg = msg; }
 
     /* Rebuffering progress (0-100) while App holds playback paused to refill

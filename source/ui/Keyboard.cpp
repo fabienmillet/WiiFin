@@ -2,6 +2,7 @@
 #include "Ui.h"
 #include "../input/Input.h"
 #include "../core/SoundFX.h"
+#include "../core/Lang.h"
 
 #include <string.h>
 #include <ogc/lwp_watchdog.h>
@@ -140,10 +141,11 @@ Keyboard::Result Keyboard::update(const ir_t& ir, std::string& text, size_t maxL
 const char* Keyboard::label(const Key& k, char* buf) const
 {
     switch (k.sp) {
-    case K_SHIFT: return shift == 2 ? "\xe2\x87\xaa Caps" : "\xe2\x87\xa7 Shift";
+    /* TRANSLATORS: keys of the on-screen keyboard; keep the arrow in front */
+    case K_SHIFT: return shift == 2 ? N_("\xe2\x87\xaa Caps") : N_("\xe2\x87\xa7 Shift");
     case K_SYM:   return page == 0 ? "#+=" : "ABC";
-    case K_SPACE: return "Space";
-    case K_DEL:   return "\xe2\x86\x90 Delete";
+    case K_SPACE: return N_("Space");
+    case K_DEL:   return N_("\xe2\x86\x90 Delete");
     case K_ENTER: return enterLabel;
     default: break;
     }
@@ -182,7 +184,7 @@ void Keyboard::render(const ir_t& ir) const
                 if (sel) Ui::shadow(x - 2, y - 2, w + 4, h + 4, 9, 8.0f, p.glow);
                 Ui::roundRect(x, y, w, h, 7, Ui::mix(p.accent, 0xFFFFFFFF, sel ? 0.35f : 0.15f), p.accentDark);
                 if (sel) Ui::roundBorder(x, y, w, h, 7, 2.0f, 0xFFFFFFC0);
-                Ui::textCentered(x + w * 0.5f, y + (h - 15) * 0.5f - 1, lab, 15, p.textOnAccent);
+                Ui::textCentered(x + w * 0.5f, y + (h - 15) * 0.5f - 1, tr(lab), 15, p.textOnAccent);
                 continue;
             }
             bool latched = (k.sp == K_SHIFT && shift) || (k.sp == K_SYM && page == 1);

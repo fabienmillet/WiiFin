@@ -2,6 +2,7 @@
 #include "App.h"
 #include "../ui/Ui.h"
 #include "Utils.h"
+#include "Lang.h"
 #include "SoundFX.h"
 #include "../player/VideoSurface.h"
 #include "../player/vo_wiifin.h"
@@ -60,6 +61,8 @@ void App::loadSettings() {
             if (v >= 0 && v < Ui::LIBRARY_STYLE_COUNT) Ui::setLibraryStyle((Ui::LibraryStyle)v);
         } else if (strcmp(key, "home_layout") == 0) {
             Ui::setHomeLayout(atoi(val) == 1 ? Ui::HomeLayout::Rows : Ui::HomeLayout::Grid);
+        } else if (strcmp(key, "language") == 0) {
+            Lang::chooseKey(val);
         } else if (strcmp(key, "clock_12h") == 0) {
             Ui::setClock12h(atoi(val) != 0);
         } else if (strcmp(key, "solid_colors") == 0) {
@@ -128,12 +131,13 @@ void App::logSettings() {
     int l, t, r, b;
     Ui::safeArea(l, t, r, b);
     SYS_Report("[Settings] ssl %d, music %d, sounds %d, quality %s, direct %d, smooth %d, "
-               "theme %s, home %s, view %d, light %d, area %d,%d,%d,%d, solid %d, clock %s\n",
+               "theme %s, home %s, view %d, light %d, area %d,%d,%d,%d, solid %d, clock %s, language %s\n",
                jellyfinClient.sslVerify, musicEnabled, SoundFX::enabled(),
                JellyfinClient::videoQualityName(jellyfinClient.videoQuality), jellyfinClient.directPlay,
                g_wiifin_smooth_motion, Ui::themeName(Ui::theme()),
                Ui::homeLayout() == Ui::HomeLayout::Rows ? "rows" : "grid", (int)Ui::libraryStyle(),
-               (int)g_wiifin_disc_light, l, t, r, b, Ui::solidColors(), Ui::clock12h() ? "12h" : "24h");
+               (int)g_wiifin_disc_light, l, t, r, b, Ui::solidColors(), Ui::clock12h() ? "12h" : "24h",
+               Lang::code(Lang::current()));
 }
 
 void App::saveSettings() {
@@ -150,6 +154,7 @@ void App::saveSettings() {
     fprintf(f, "library_view=%d\n",     (int)Ui::libraryStyle());
     fprintf(f, "solid_colors=%d\n",     Ui::solidColors() ? 1 : 0);
     fprintf(f, "clock_12h=%d\n",        Ui::clock12h() ? 1 : 0);
+    fprintf(f, "language=%s\n",         Lang::choiceKey());
     fprintf(f, "smooth_motion=%d\n",    g_wiifin_smooth_motion ? 1 : 0);
     fprintf(f, "disc_light=%d\n",     g_wiifin_disc_light ? 1 : 0);
     fprintf(f, "video_zoom=%d\n",       (int)VideoSurface::zoom());

@@ -5,6 +5,7 @@
 #include "SoundFX.h"
 #include "Text.h"
 #include "Utils.h"
+#include "Lang.h"
 #include "../ui/Ui.h"
 #include <grrlib.h>
 #include <wiiuse/wpad.h>
@@ -167,17 +168,17 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
         Ui::shadow(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, 92, 22, 8.0f, P.shadow);
         Ui::roundRect(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, 92, 22, P.barTop, P.barBottom);
         Ui::roundBorder(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, 92, 22, 1.5f, P.barBorder);
-        Ui::text(28, 17, "HOME Menu", 26, P.text);
+        Ui::text(28, 17, tr("HOME Menu"), 26, P.text);
         {
-            const Ui::Hint close = { "B", "Close" };
+            const Ui::Hint close = { "B", N_("Close") };
             Ui::hint(626 - Ui::hintWidth(close), 22, close);
         }
         Ui::popOffset();
 
         Ui::pushOffset(0, slideF);
         {
-            const Ui::Hint l[] = { { "A", "Confirm" } };
-            const Ui::Hint r[] = { { "B", "Close" } };
+            const Ui::Hint l[] = { { "A", N_("Confirm") } };
+            const Ui::Hint r[] = { { "B", N_("Close") } };
             Ui::bottomBar(l, 1, r, 1);
         }
         Ui::popOffset();
@@ -188,7 +189,7 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
             float dw = BTN_W * sc, dh = BTN_H * sc;
             bool  sel = (hmSel == i);
             Ui::button(bcx[i] - dw * 0.5f, bcy - dh * 0.5f, dw, dh,
-                       i == 0 ? "Wii Menu" : "Reset", (int)(22 * sc),
+                       i == 0 ? N_("Wii Menu") : N_("Reset"), (int)(22 * sc),
                        sel ? Ui::pulse() : 0.0f);
         }
 
@@ -203,10 +204,10 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
             Ui::card(adx, ady, adw, adh, 20 * psc, 0.0f);
 
             const char* line1 = (confirmFor == 0)
-                ? "Return to the Wii Menu?"
-                : "Reset the application?";
+                ? tr("Return to the Wii Menu?")
+                : tr("Reset the application?");
             Ui::textCentered(320, ady + 32 * psc, line1, (int)(20 * psc), P.text);
-            Ui::textCentered(320, ady + 62 * psc, "(Anything not saved will be lost.)",
+            Ui::textCentered(320, ady + 62 * psc, tr("(Anything not saved will be lost.)"),
                              (int)(14 * psc), P.textDim);
 
             /* Yes / No buttons */
@@ -217,7 +218,7 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
                 float bx = 320 + (pbcx[i] - 320.0f) * psc - bdw * 0.5f;
                 float by = 240 + (pbcy    - 240.0f) * psc - bdh * 0.5f;
                 bool  bsel = (popSel == i);
-                Ui::button(bx, by, bdw, bdh, i == 0 ? "Yes" : "No", (int)(19 * psc),
+                Ui::button(bx, by, bdw, bdh, i == 0 ? N_("Yes") : N_("No"), (int)(19 * psc),
                            bsel ? Ui::pulse() : 0.0f);
             }
         }

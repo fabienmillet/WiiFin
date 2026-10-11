@@ -55,7 +55,8 @@ ASSET_OFILES := \
 	$(BUILD)/fx_menu_enter_mp3.o \
 	$(BUILD)/fx_loading_mp3.o \
 	$(BUILD)/fx_backspace_mp3.o \
-	$(BUILD)/fx_back_mp3.o
+	$(BUILD)/fx_back_mp3.o \
+	$(BUILD)/lang_mo.o
 
 OFILES      := $(ASSET_OFILES) $(SRC_OFILES)
 
@@ -147,6 +148,12 @@ $(BUILD)/button_start_png.o: data/images/button_start.png
 $(BUILD)/logo_wiifin_png.o: data/images/logo_wiifin.png
 	xxd -i -n data_logo_wiifin_png $< > $(BUILD)/logo_wiifin_png.h
 	$(CC) -x c -c -o $@ $(BUILD)/logo_wiifin_png.h
+
+# The interface's translations (lang/*.po), see source/core/Lang.cpp
+LANG_PO := $(sort $(wildcard lang/*.po))
+$(BUILD)/lang_mo.o: $(LANG_PO) tools/lang_table.sh
+	bash tools/lang_table.sh $(BUILD) $(LANG_PO) > $(BUILD)/lang_mo.c
+	$(CC) -c -o $@ $(BUILD)/lang_mo.c
 
 $(BUILD)/wii_font_ttf.o: data/fonts/wii_font.ttf
 	xxd -i -n data_wii_font_ttf $< > $(BUILD)/wii_font_ttf.h

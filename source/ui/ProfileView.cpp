@@ -3,6 +3,7 @@
 #include "Ui.h"
 #include "../input/Input.h"
 #include "../core/SoundFX.h"
+#include "../core/Lang.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -90,7 +91,7 @@ ProfileResult ProfileView::update(ir_t& ir) {
 void ProfileView::render(ir_t& ir) {
     const Ui::Palette& pal = Ui::pal();
     Ui::background();
-    Ui::header(profiles.empty() ? "Add a Profile" : "Who's watching?");
+    Ui::header(profiles.empty() ? tr("Add a Profile") : tr("Who's watching?"));
 
     int totalRows = (int)profiles.size() + 1;
     int vis = (totalRows < MAX_VIS) ? totalRows : MAX_VIS;
@@ -109,7 +110,7 @@ void ProfileView::render(ir_t& ir) {
             Ui::circle(cx, cy, 20, Ui::mix(pal.cardBorder, pal.accent, f));
             Ui::circle(cx, cy, 17, pal.cardTop);
             Ui::textCentered(cx, cy - 15, "+", 26, Ui::mix(pal.textDim, pal.accentDark, f));
-            Ui::text(x + 68, cy - 10, "Add New Profile", 19, Ui::mix(pal.textDim, pal.accentDark, f));
+            Ui::text(x + 68, cy - 10, tr("Add New Profile"), 19, Ui::mix(pal.textDim, pal.accentDark, f));
             continue;
         }
         const SavedProfile& p = profiles[i];
@@ -130,18 +131,18 @@ void ProfileView::render(ir_t& ir) {
     if (confirmDelete) {
         GRRLIB_Rectangle(Ui::screenLeft(), 0, Ui::screenWidth(), 480, pal.dim, 1);
         Ui::card(140, 170, 360, 130, 20, 0.0f);
-        Ui::textCentered(320, 192, "Delete this profile?", 21, pal.danger);
-        Ui::textCentered(320, 222, "Its saved sign-in will be forgotten.", 14, pal.textDim);
-        Ui::button(170, 248, 140, 38, "Delete", 17, 1.0f);
-        Ui::button(330, 248, 140, 38, "Cancel", 17, 0.0f);
+        Ui::textCentered(320, 192, tr("Delete this profile?"), 21, pal.danger);
+        Ui::textCentered(320, 222, tr("Its saved sign-in will be forgotten."), 14, pal.textDim);
+        Ui::button(170, 248, 140, 38, N_("Delete"), 17, 1.0f);
+        Ui::button(330, 248, 140, 38, N_("Cancel"), 17, 0.0f);
     }
 
     if (confirmDelete) {
-        static const Ui::Hint left[] = { { "A", "Delete" }, { "B", "Cancel" } };
+        static const Ui::Hint left[] = { { "A", N_("Delete") }, { "B", N_("Cancel") } };
         Ui::bottomBar(left, 2);
     } else {
-        static const Ui::Hint left[]  = { { "A", "Open" }, { "-", "Delete" } };
-        static const Ui::Hint right[] = { { "B", "Back" } };
+        static const Ui::Hint left[]  = { { "A", N_("Open") }, { "-", N_("Delete") } };
+        static const Ui::Hint right[] = { { "B", N_("Back") } };
         Ui::bottomBar(left, 2, right, 1);
     }
 

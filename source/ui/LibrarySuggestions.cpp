@@ -4,6 +4,7 @@
 #include "Ui.h"
 #include "../input/Input.h"
 #include "../core/Utils.h"
+#include "../core/Lang.h"
 
 using namespace LibDraw;
 
@@ -367,17 +368,17 @@ void LibraryView::renderMovieSuggestions(ir_t& ir) {
         drawSuggestionRow(ir, SG_ROW0_Y, movieContItems, movieContTex, movieSuggestContOff,
                               movieSuggestContSel, movieSuggestRow == 0, false, true);
     else
-        Ui::text(SG_X0 + 20, SG_ROW0_Y + 60, "No movie in progress", 14, p.textDim);
+        Ui::text(SG_X0 + 20, SG_ROW0_Y + 60, tr("No movie in progress"), 14, p.textDim);
 
     sectionLabel(SG_X0, 252, "RECENTLY ADDED", nr > 0);
     if (nr > 0)
         drawSuggestionRow(ir, SG_ROW1_Y, movieRecentItems, movieRecentTex, movieSuggestRecOff,
                               movieSuggestRecSel, movieSuggestRow == 1, false, true);
     else
-        Ui::text(SG_X0 + 20, SG_ROW1_Y + 60, "No recent movies", 14, p.textDim);
+        Ui::text(SG_X0 + 20, SG_ROW1_Y + 60, tr("No recent movies"), 14, p.textDim);
 
-    const Ui::Hint l[] = { { "A", "Detail" }, { "B", "Back" } };
-    const Ui::Hint r[] = { { "-/+", "Tab" } };
+    const Ui::Hint l[] = { { "A", N_("Detail") }, { "B", N_("Back") } };
+    const Ui::Hint r[] = { { "-/+", N_("Tab") } };
     Ui::footer(l, 2, r, 1);
 }
 
@@ -394,17 +395,17 @@ void LibraryView::renderTVSuggestions(ir_t& ir) {
         drawSuggestionRow(ir, SG_ROW0_Y, tvContItems, tvContTex, tvSuggestContOff,
                               tvSuggestContSel, tvSuggestRow == 0, true, true);
     else
-        Ui::text(SG_X0 + 20, SG_ROW0_Y + 60, "No episode in progress", 14, p.textDim);
+        Ui::text(SG_X0 + 20, SG_ROW0_Y + 60, tr("No episode in progress"), 14, p.textDim);
 
     sectionLabel(SG_X0, 252, "RECENT SERIES", nr > 0);
     if (nr > 0)
         drawSuggestionRow(ir, SG_ROW1_Y, tvRecentItems, tvRecentTex, tvSuggestRecOff,
                               tvSuggestRecSel, tvSuggestRow == 1, true, true);
     else
-        Ui::text(SG_X0 + 20, SG_ROW1_Y + 60, "No recent series", 14, p.textDim);
+        Ui::text(SG_X0 + 20, SG_ROW1_Y + 60, tr("No recent series"), 14, p.textDim);
 
-    const Ui::Hint l[] = { { "A", "Select" }, { "B", "Back" } };
-    const Ui::Hint r[] = { { "-/+", "Tab" } };
+    const Ui::Hint l[] = { { "A", N_("Select") }, { "B", N_("Back") } };
+    const Ui::Hint r[] = { { "-/+", N_("Tab") } };
     Ui::footer(l, 2, r, 1);
 }
 
@@ -415,15 +416,15 @@ void LibraryView::renderTVUpcoming(ir_t& ir) {
     int nu = (int)tvUpcomingItems.size();
     if (nu == 0) {
         Ui::card(170, 160, 300, 90, 18, 0.0f);
-        Ui::textCentered(320, 182, "No content.", 20, p.text);
-        Ui::textCentered(320, 214, "Make sure metadata download is enabled.", 13, p.textDim);
+        Ui::textCentered(320, 182, tr("No content."), 20, p.text);
+        Ui::textCentered(320, 214, tr("Make sure metadata download is enabled."), 13, p.textDim);
     } else {
         sectionLabel(SG_X0, 55, "COMING UP", true);
         drawSuggestionRow(ir, 80, tvUpcomingItems, tvUpcomingTex, tvUpcomingOff,
                               tvUpcomingSel, true, true, false);
     }
-    const Ui::Hint l[] = { { "A", "Detail" }, { "B", "Back" } };
-    const Ui::Hint r[] = { { "-/+", "Tab" } };
+    const Ui::Hint l[] = { { "A", N_("Detail") }, { "B", N_("Back") } };
+    const Ui::Hint r[] = { { "-/+", N_("Tab") } };
     Ui::footer(l, 2, r, 1);
 }
 
@@ -462,7 +463,7 @@ void LibraryView::renderMusicSuggestions(ir_t& ir) {
     };
 
     if (nr == 0) {
-        Ui::textCentered(320, 200, "No recent albums", 16, p.textDim);
+        Ui::textCentered(320, 200, tr("No recent albums"), 16, p.textDim);
     } else {
         for (int pass = 0; pass < 2; pass++) {
             for (int i = 0; i < nr && i < COLS * 2; i++) {
@@ -471,7 +472,7 @@ void LibraryView::renderMusicSuggestions(ir_t& ir) {
             }
         }
     }
-    const Ui::Hint l[] = { { "A", "Open" }, { "B", "Back" } };
-    const Ui::Hint r[] = { { "-/+", "Tab" } };
+    const Ui::Hint l[] = { { "A", N_("Open") }, { "B", N_("Back") } };
+    const Ui::Hint r[] = { { "-/+", N_("Tab") } };
     Ui::footer(l, 2, r, 1);
 }

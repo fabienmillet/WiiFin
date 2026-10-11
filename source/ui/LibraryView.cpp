@@ -5,6 +5,7 @@
 #include "../version.h"
 #include "../core/ExitZone.h"
 #include "../core/Text.h"
+#include "../core/Lang.h"
 #include "Ui.h"
 #include "../input/Input.h"
 
@@ -101,18 +102,18 @@ u32 LibraryView::colorForType(const std::string& type, bool sel) {
 }
 
 const char* LibraryView::labelForType(const std::string& type) {
-    if (type == "movies")      return "MOVIES";
-    if (type == "tvshows")     return "SERIES";
-    if (type == "music")       return "MUSIC";
-    if (type == "books")       return "BOOKS";
-    if (type == "playlists")   return "PLAYLISTS";
-    if (type == "boxsets")     return "COLLECTIONS";
-    if (type == "livetv")      return "LIVE TV";
-    if (type == "homevideos")  return "HOME VIDEOS";
-    if (type == "photos")      return "PHOTOS";
-    if (type == "musicvideos") return "MUSIC VIDEOS";
-    if (type == "trailers")    return "TRAILERS";
-    if (type == "mixed")       return "MIXED";
+    if (type == "movies")      return tr("MOVIES");
+    if (type == "tvshows")     return tr("SERIES");
+    if (type == "music")       return tr("MUSIC");
+    if (type == "books")       return tr("BOOKS");
+    if (type == "playlists")   return tr("PLAYLISTS");
+    if (type == "boxsets")     return tr("COLLECTIONS");
+    if (type == "livetv")      return tr("LIVE TV");
+    if (type == "homevideos")  return tr("HOME VIDEOS");
+    if (type == "photos")      return tr("PHOTOS");
+    if (type == "musicvideos") return tr("MUSIC VIDEOS");
+    if (type == "trailers")    return tr("TRAILERS");
+    if (type == "mixed")       return tr("MIXED");
     // Fallback: show the raw type in upper case (max 12 chars) so it's still informative
     if (!type.empty()) {
         static char buf[16];
@@ -124,7 +125,7 @@ const char* LibraryView::labelForType(const std::string& type) {
         buf[i] = '\0';
         return buf;
     }
-    return "MEDIA";
+    return tr("MEDIA");
 }
 
 void LibraryView::drawLoadingFrame() {
@@ -562,7 +563,7 @@ void LibraryView::loadLibraries() {
         if (!ok) err = client.lastError();
     });
     if (!ok)             { errMsg = err;                state = State::Error; return; }
-    if (libraries.empty()) { errMsg = "No library found"; state = State::Error; return; }
+    if (libraries.empty()) { errMsg = N_("No library found"); state = State::Error; return; }
     loadContinueWatching();
     loadNextUp();
     buildActDisplayStrings();
@@ -699,7 +700,7 @@ void LibraryView::loadMovieCollections() {
                                         startIndex, limit, items, itemTotal);
         if (!ok) err = client.lastError();
     });
-    if (!ok) { errMsg = err.empty() ? "Collections unavailable" : err; state = State::Error; }
+    if (!ok) { errMsg = err.empty() ? N_("Collections unavailable") : err; state = State::Error; }
     else     { globFavMode = false; itemSel = 0; viewTop = 0; posterSel = 0; state = State::PostersLoad; }
 }
 
@@ -713,7 +714,7 @@ void LibraryView::loadMovieFavorites() {
                                       startIndex, limit, items, itemTotal);
         if (!ok) err = client.lastError();
     });
-    if (!ok) { errMsg = err.empty() ? "Favorites unavailable" : err; state = State::Error; }
+    if (!ok) { errMsg = err.empty() ? N_("Favorites unavailable") : err; state = State::Error; }
     else     { globFavMode = false; itemSel = 0; viewTop = 0; posterSel = 0; state = State::PostersLoad; }
 }
 
@@ -726,7 +727,7 @@ void LibraryView::loadGlobalFavorites() {
         ok = client.getGlobalFavorites(serverUrl, auth, startIndex, limit, items, itemTotal);
         if (!ok) err = client.lastError();
     });
-    if (!ok) { errMsg = err.empty() ? "Favorites unavailable" : err; state = State::Error; }
+    if (!ok) { errMsg = err.empty() ? N_("Favorites unavailable") : err; state = State::Error; }
     else     { globFavMode = true; itemSel = 0; viewTop = 0; posterSel = 0; state = State::PostersLoad; }
 }
 
@@ -811,7 +812,8 @@ void LibraryView::loadItems() {
             /* the tab's own query, a page of it (Posters view) */
             const std::string f = musicFilter();
             char page[96];
-            snprintf(page, sizeof(page), "&SortBy=SortName&SortOrder=Ascending&StartIndex=%d&Limit=%d",
+            snprintf(page, sizeof(page), "%s&StartIndex=%d&Limit=%d",
+                     f.find("&SortBy=") == std::string::npos ? "&SortBy=SortName&SortOrder=Ascending" : "",
                      startIndex, limit);
             ok = client.getItemsByQuery(serverUrl, auth,
                                         (f[0] == '/' ? f : "/Users/" + auth.userId + "/Items?" + f) + page,
@@ -907,7 +909,7 @@ void LibraryView::loadSeasons() {
         if (seriesSpecials > 0) {
             JellyfinSeason s;
             s.id   = SPECIALS_ROW;
-            s.name = "Special Features";
+            s.name = tr("Special Features");
             seasons.push_back(s);
         }
         seasonTex = tex;
@@ -1371,7 +1373,7 @@ bool LibraryView::render(ir_t& ir) {
     Ui::background(!loading);
     if (loading) {
         if (ringTex) Ui::spinner(ringTex, 320, 240);
-        else         Ui::textCentered(320, 200, "Loading...", 22, p.textDim);
+        else         Ui::textCentered(320, 200, tr("Loading..."), 22, p.textDim);
         drawCursor(ir);
         return true;
     }
@@ -1383,7 +1385,7 @@ bool LibraryView::render(ir_t& ir) {
         std::vector<std::string> lines;
         {
             std::string cur, word;
-            std::string msg = filterDejaVu(errMsg, 400) + " ";
+            std::string msg = filterDejaVu(tr(errMsg.c_str()), 400) + " ";
             for (char ch : msg) {
                 if (ch != ' ' && ch != '\n') { word += ch; continue; }
                 std::string cand = cur.empty() ? word : cur + " " + word;
@@ -1403,11 +1405,11 @@ bool LibraryView::render(ir_t& ir) {
         Ui::card(EX, EY, EW, EH, 18, 0.0f);
         Ui::circle(EX + 34, EY + 32, 13, p.danger);
         Ui::textCentered(EX + 34, EY + 22, "!", 18, 0xFFFFFFFF);
-        Ui::text(EX + 58, EY + 20, "Error", 20, p.danger);
+        Ui::text(EX + 58, EY + 20, tr("Error"), 20, p.danger);
         for (size_t i = 0; i < lines.size(); ++i)
             Ui::text(EX + 20, EY + 58 + i * 20, lines[i].c_str(), 15, p.text);
         Ui::textRight(EX + EW - 16, EY + 22, "WiiFin v" WIIFIN_VERSION, 11, p.textDim);   /* for bug reports */
-        const Ui::Hint h[] = { { "A", "Back" } };
+        const Ui::Hint h[] = { { "A", N_("Back") } };
         Ui::footer(h, 1);
         drawCursor(ir);
         return true;

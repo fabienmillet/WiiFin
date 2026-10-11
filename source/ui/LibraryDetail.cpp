@@ -4,6 +4,7 @@
 #include "Ui.h"
 #include "../input/Input.h"
 #include "../core/Text.h"
+#include "../core/Lang.h"
 #include "../core/Utils.h"
 #include <stdio.h>
 
@@ -126,18 +127,19 @@ void LibraryView::renderResumePrompt() {
     const int DY = (480 - DH) / 2;
     Ui::card(DX, DY, DW, DH + 34, 18, 0.0f);
 
-    Ui::textCentered(320, DY + 14, "Resume playback?", 17, p.text);
+    Ui::textCentered(320, DY + 14, tr("Resume playback?"), 17, p.text);
     {
         int secs = (int)(detail.playbackPositionTicks / 10000000LL);
         int rh = secs / 3600, rm = (secs % 3600) / 60, rs = secs % 60;
         char hint[48];
-        if (rh > 0) snprintf(hint, sizeof(hint), "at %d:%02d:%02d", rh, rm, rs);
-        else        snprintf(hint, sizeof(hint), "at %d:%02d", rm, rs);
+        /* TRANSLATORS: under "Resume playback?": where it stopped, h:mm:ss or m:ss */
+        if (rh > 0) snprintf(hint, sizeof(hint), tr("at %d:%02d:%02d"), rh, rm, rs);
+        else        snprintf(hint, sizeof(hint), tr("at %d:%02d"), rm, rs);
         Ui::textCentered(320, DY + 38, hint, 13, p.accentDark);
     }
 
     // Two buttons: Continue | From Start
-    const char* btnLabels[2] = { "Continue", "From Start" };
+    const char* btnLabels[2] = { N_("Continue"), N_("From Start") };
     const int BW = 130, BH = 30, BGAP = 16;
     int bTotalW = BW * 2 + BGAP;
     int bStartX = DX + (DW - bTotalW) / 2;
@@ -147,7 +149,7 @@ void LibraryView::renderResumePrompt() {
                    resumeSel == i ? Ui::pulse() : 0.0f);
 
     // Hints inside the dialog
-    const Ui::Hint h[] = { { "LR", "Select" }, { "A", "Confirm" }, { "B", "Cancel" } };
+    const Ui::Hint h[] = { { "LR", N_("Select") }, { "A", N_("Confirm") }, { "B", N_("Cancel") } };
     float hw = 0;
     for (const auto& hi : h) hw += Ui::hintWidth(hi);
     float hx = 320 - (hw - 14) * 0.5f;
@@ -192,7 +194,7 @@ void LibraryView::drawDetailView(ir_t& ir) {
         Ui::circle(cx, cy, 26, p.accent);
         Ui::roundBorder(cx - 26, cy - 26, 52, 52, 26, 2.0f, 0xFFFFFFE0);
         Ui::triangle(cx - 8, cy - 12, cx + 13, cy, cx - 8, cy + 12, 0xFFFFFFFF);
-        Ui::textCentered(cx, cy + 32, "Play", 15, 0xFFFFFFFF);
+        Ui::textCentered(cx, cy + 32, tr("Play"), 15, 0xFFFFFFFF);
     }
 
     // ---- Title ----
@@ -217,15 +219,16 @@ void LibraryView::drawDetailView(ir_t& ir) {
         if (detail.runtimeTicks > 0) {
             int secs = (int)(detail.runtimeTicks / 10000000LL);
             int h = secs / 3600, m = (secs % 3600) / 60;
-            if (h > 0)        snprintf(chips[nChips++], sizeof(chips[0]), "%dh %02dmin", h, m);
-            else if (m > 0)   snprintf(chips[nChips++], sizeof(chips[0]), "%dmin", m);
-            else              snprintf(chips[nChips++], sizeof(chips[0]), "%ds", secs);   /* a trailer, a clip */
+            /* TRANSLATORS: a running time: hours and minutes, minutes, seconds */
+            if (h > 0)        snprintf(chips[nChips++], sizeof(chips[0]), tr("%dh %02dmin"), h, m);
+            else if (m > 0)   snprintf(chips[nChips++], sizeof(chips[0]), tr("%dmin"), m);
+            else              snprintf(chips[nChips++], sizeof(chips[0]), tr("%ds"), secs);   /* a trailer, a clip */
         }
         if (!detail.officialRating.empty())
             snprintf(chips[nChips++], sizeof(chips[0]), "%s", detail.officialRating.c_str());
         const int nInfo = nChips;
         if (detail.played)
-            snprintf(chips[nChips++], sizeof(chips[0]), "\xe2\x9c\x93 Watched");
+            snprintf(chips[nChips++], sizeof(chips[0]), "\xe2\x9c\x93 %s", tr("Watched"));
         int cx = INFO_X;
         for (int i = 0; i < nChips; ++i) {
             const bool seen = i >= nInfo;   /* the last chip, in green */
@@ -244,8 +247,9 @@ void LibraryView::drawDetailView(ir_t& ir) {
         int h    = secs / 3600, m = (secs % 3600) / 60;
         int pct  = (int)(detail.playbackPositionTicks * 100LL / detail.runtimeTicks);
         char buf[48];
-        if (h > 0) snprintf(buf, sizeof(buf), "Resume at %dh%02d (%d%%)", h, m, pct);
-        else       snprintf(buf, sizeof(buf), "Resume at %dmin (%d%%)", m, pct);
+        /* TRANSLATORS: hours and minutes into the video, then how much of it is watched */
+        if (h > 0) snprintf(buf, sizeof(buf), tr("Resume at %dh%02d (%d%%)"), h, m, pct);
+        else       snprintf(buf, sizeof(buf), tr("Resume at %dmin (%d%%)"), m, pct);
         Ui::triangle(INFO_X, y + 3, INFO_X + 9, y + 8, INFO_X, y + 13, p.accentDark);
         Ui::text(INFO_X + 14, y, buf, 14, p.accentDark);
         y += 20;
@@ -274,7 +278,7 @@ void LibraryView::drawDetailView(ir_t& ir) {
             y += 17;
         }
         if (overviewCut) {   /* the rest of it: - (or A on the text) */
-            const Ui::Hint more = { "-", "Read more" };
+            const Ui::Hint more = { "-", N_("Read more") };
             Ui::hint(INFO_X + INFO_W - 12 - Ui::hintWidth(more) + 14, y - 1, more);
             y += 17;
         }
@@ -284,7 +288,7 @@ void LibraryView::drawDetailView(ir_t& ir) {
 
     // ---- Cast & crew (max 6) ----
     if (!detail.people.empty()) {
-        Ui::text(INFO_X, y, "Cast & crew", 14, p.accentDark);
+        Ui::text(INFO_X, y, tr("Cast & crew"), 14, p.accentDark);
         y += 18;
         int shown = 0;
         for (const auto& pp : detail.people) {
@@ -298,7 +302,7 @@ void LibraryView::drawDetailView(ir_t& ir) {
                 Ui::text(rx, y, nm.c_str(), 13, p.text);
                 std::string suffix;
                 if (!pp.name.empty()) {
-                    if (pp.role == "Director")          suffix = " (director)";
+                    if (pp.role == "Director")          suffix = std::string(" ") + tr("(director)");
                     else if (!pp.character.empty())     suffix = " - " + pp.character;
                 }
                 if (!suffix.empty()) {
@@ -350,7 +354,7 @@ void LibraryView::drawDetailView(ir_t& ir) {
             return out;
         };
 
-        for (int row = hasVersions ? -1 : 0; row < 2; row++) {
+        for (int row = hasVersions ? -1 : 0; row < 3; row++) {
             if (row == 0 && !hasAudio) continue;
             if (row == 1 && !hasSub)   continue;
 
@@ -363,7 +367,7 @@ void LibraryView::drawDetailView(ir_t& ir) {
             u32 labelCol = focused ? p.textOnAccent : p.textDim;
             u32 valueCol = focused ? p.textOnAccent : p.text;
 
-            const char* label = row < 0 ? "Version" : row == 0 ? "Audio" : "Subtitles";
+            const char* label = row < 0 ? N_("Version") : row == 0 ? N_("Audio") : N_("Subtitles");
             const char* rawTitle;
             if (row < 0)
                 rawTitle = detail.versions[detailVersionSel].name.c_str();
@@ -372,10 +376,10 @@ void LibraryView::drawDetailView(ir_t& ir) {
                     ? detail.audioStreams[detailAudioSel].displayTitle.c_str() : "-";
             else
                 rawTitle = (detailSubSel == -1)
-                    ? "Off"
+                    ? tr("Off")
                     : (detailSubSel < (int)detail.subtitleStreams.size()
                         ? detail.subtitleStreams[detailSubSel].displayTitle.c_str() : "-");
-            Ui::text(INFO_X + 4, ry, label, 13, labelCol);
+            Ui::text(INFO_X + 4, ry, tr(label), 13, labelCol);
             std::string t = safeTitle(rawTitle, 36);
             char buf[64];
             snprintf(buf, sizeof(buf), "\xe2\x80\xb9 %s \xe2\x80\xba", t.c_str());
@@ -415,7 +419,7 @@ void LibraryView::renderOverviewPanel() {
     if (n > OV_PANEL_ROWS)
         Ui::scrollbar(PX + PW - 14, LY, OV_PANEL_ROWS * 20 - 4, overviewTop, OV_PANEL_ROWS, n);
     /* hints at the bottom of the panel */
-    const Ui::Hint h[] = { { "UD", "Scroll" }, { "B", "Close" } };
+    const Ui::Hint h[] = { { "UD", N_("Scroll") }, { "B", N_("Close") } };
     const int nh = n > OV_PANEL_ROWS ? 2 : 1;
     float hw = 0;
     for (int i = 2 - nh; i < 2; i++) hw += Ui::hintWidth(h[i]);

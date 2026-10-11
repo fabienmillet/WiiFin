@@ -2,6 +2,7 @@
 #include "AppInternal.h"
 #include "ExitZone.h"
 #include "Text.h"
+#include "Lang.h"
 #include "../ui/Ui.h"
 #include "Utils.h"
 #include "Input.h"
@@ -82,11 +83,11 @@ bool showErrorScreen(const char* title, const std::string& line1,
         Ui::text(100, 236, line2.c_str(), 13, p.textDim);
         Ui::textRight(546, 258, "WiiFin v" WIIFIN_VERSION, 11, p.textDim);   /* for bug reports */
         if (retry) {
-            const Ui::Hint l[] = { { "A", "Retry" } };
-            const Ui::Hint r[] = { { "B", "Back" } };
+            const Ui::Hint l[] = { { "A", N_("Retry") } };
+            const Ui::Hint r[] = { { "B", N_("Back") } };
             Ui::bottomBar(l, 1, r, 1);
         } else {
-            const Ui::Hint r[] = { { "A", "OK" } };
+            const Ui::Hint r[] = { { "A", N_("OK") } };
             Ui::bottomBar(nullptr, 0, r, 1);
         }
         GRRLIB_Render();
@@ -314,6 +315,7 @@ void App::init(const char* argv0) {
  * then (FreeType keeps reading them). */
 void App::loadSdFonts(const std::string& dir)
 {
+    struct Langs { bool hangul = false, han = false; ~Langs() { Lang::setFonts(hangul, han); } } langs;
     std::string fdir = dir + "fonts";
     DIR* d = opendir(fdir.c_str());
     if (!d) return;
@@ -345,6 +347,9 @@ void App::loadSdFonts(const std::string& dir)
         }
         sdFonts.push_back(font);
         sdFontData.push_back(buf);
+        /* Korean and Chinese: the languages it lets WiiFin speak */
+        if (FT_Get_Char_Index((FT_Face)font->face, 0xD55C)) langs.hangul = true;   /* 한 */
+        if (FT_Get_Char_Index((FT_Face)font->face, 0x4E2D)) langs.han    = true;   /* 中 */
         Text::addFallback(font);
         SYS_Report("[Text] fonts/%s: %ld KB at %p, %ld glyphs\n", n.c_str(), size / 1024, buf,
                    (long)((FT_Face)font->face)->num_glyphs);
@@ -399,14 +404,15 @@ void App::offerScreenCalibration(ir_t& ir) {
         }
         Ui::background(false);
         Ui::card(70, 120, 500, 190, 18, 0.0f);
-        Ui::textCentered(320, 140, "Does the whole picture fit your TV?", 22, p.text);
-        Ui::textCentered(320, 182, "Older TVs (CRT) often cut the edges of the picture.", 15, p.textDim);
-        Ui::textCentered(320, 204, "You can shrink it to fit now, or later in", 15, p.textDim);
-        Ui::textCentered(320, 226, "Settings > Screen Area.", 15, p.textDim);
-        Ui::button(bx[0], BY, BW2, BH2, "Adjust", 18, sel == 0 ? Ui::pulse() : 0.0f);
-        Ui::button(bx[1], BY, BW2, BH2, "Not now", 18, sel == 1 ? Ui::pulse() : 0.0f);
-        const Ui::Hint l2[] = { { "A", "Select" } };
-        const Ui::Hint r2[] = { { "B", "Not now" } };
+        Ui::textCentered(320, 140, tr("Does the whole picture fit your TV?"), 22, p.text);
+        Ui::textCentered(320, 182, tr("Older TVs (CRT) often cut the edges of the picture."), 15, p.textDim);
+        /* TRANSLATORS: one sentence on two lines, the second one naming the menu */
+        Ui::textCentered(320, 204, tr("You can shrink it to fit now, or later in"), 15, p.textDim);
+        Ui::textCentered(320, 226, tr("Settings > Screen Area."), 15, p.textDim);
+        Ui::button(bx[0], BY, BW2, BH2, N_("Adjust"), 18, sel == 0 ? Ui::pulse() : 0.0f);
+        Ui::button(bx[1], BY, BW2, BH2, N_("Not now"), 18, sel == 1 ? Ui::pulse() : 0.0f);
+        const Ui::Hint l2[] = { { "A", N_("Select") } };
+        const Ui::Hint r2[] = { { "B", N_("Not now") } };
         Ui::bottomBar(l2, 1, r2, 1);
         drawPointer();
         GRRLIB_Render();
@@ -422,9 +428,9 @@ void App::loop() {
     const int MENU_COUNT = 3;
     float menuFocus[MENU_COUNT] = {};
     const std::string menuItems[] = {
-        "Connect To Jellyfin",
-        "Settings",
-        "Exit"
+        N_("Connect To Jellyfin"),
+        N_("Settings"),
+        N_("Exit")
     };
 
     /* Thin wrapper so existing call sites don't need to change. */
@@ -448,16 +454,16 @@ void App::loop() {
                 bool slow = ticks_to_millisecs(gettime()) - t0 > 10000;
                 Ui::background(false);
                 Ui::spinner(ringTex, 320, 220);
-                Ui::textCentered(320, 274, "Connecting to the network...", 18, p.textDim);
+                Ui::textCentered(320, 274, tr("Connecting to the network..."), 18, p.textDim);
                 if (slow)
-                    Ui::textCentered(320, 300, "This is taking long: the Wii's network may need a restart.", 13, p.textDim);
-                const Ui::Hint r[] = { { "B", "Back" } };
+                    Ui::textCentered(320, 300, tr("This is taking long: the Wii's network may need a restart."), 13, p.textDim);
+                const Ui::Hint r[] = { { "B", N_("Back") } };
                 Ui::bottomBar(nullptr, 0, r, 1);
                 GRRLIB_Render();
             }
             if (jellyfinClient.takeNetworkResult()) return true;
-            if (!showErrorScreen("No network connection",
-                                 "Check the Wii's Internet settings, then try again.",
+            if (!showErrorScreen(tr("No network connection"),
+                                 tr("Check the Wii's Internet settings, then try again."),
                                  jellyfinClient.lastError(), true, ir)) {
                 if (g_app_powerOff || g_app_reset) running = false;
                 return false;
@@ -694,8 +700,8 @@ void App::loop() {
         }
 
         {
-            static const Ui::Hint left[]  = { { "A", "Select" } };
-            static const Ui::Hint right[] = { { "HOME", "Menu" } };
+            static const Ui::Hint left[]  = { { "A", N_("Select") } };
+            static const Ui::Hint right[] = { { "HOME", N_("Menu") } };
             Ui::bottomBar(left, 1, right, 1);
         }
 

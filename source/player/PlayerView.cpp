@@ -1,5 +1,6 @@
 #include "PlayerView.h"
 #include "../core/Text.h"
+#include "../core/Lang.h"
 #include "../ui/Ui.h"
 #include "WiiPlayer.h"
 #include "VideoSurface.h"
@@ -52,7 +53,9 @@ static std::string streamLabel(const MediaStream& s, int n)
     if (!s.language.empty() && !s.codec.empty()) return s.language + " (" + s.codec + ")";
     if (!s.language.empty()) return s.language;
     if (!s.codec.empty())    return s.codec;
-    return "Track " + std::to_string(n);
+    char buf[48];
+    snprintf(buf, sizeof(buf), tr("Track %d"), n);
+    return buf;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -112,12 +115,12 @@ int PlayerView::activeSegment() const
 const char* PlayerView::segmentLabel(int i) const
 {
     switch (ctx.intro.segments[i].kind) {
-    case MediaSegment::Recap:      return "Skip recap";
-    case MediaSegment::Preview:    return "Skip preview";
-    case MediaSegment::Commercial: return "Skip ad";
+    case MediaSegment::Recap:      return N_("Skip recap");
+    case MediaSegment::Preview:    return N_("Skip preview");
+    case MediaSegment::Commercial: return N_("Skip ad");
     case MediaSegment::Outro:
-        return ctx.episodeIdx + 1 < (int)ctx.episodes.size() ? "Next episode" : "Skip credits";
-    default:                       return "Skip intro";
+        return ctx.episodeIdx + 1 < (int)ctx.episodes.size() ? N_("Next episode") : N_("Skip credits");
+    default:                       return N_("Skip intro");
     }
 }
 
@@ -246,7 +249,7 @@ int PlayerView::panelCount() const
 std::string PlayerView::panelLabel(int row) const
 {
     if (panel == Panel::Audio) return streamLabel(ctx.audioStreams[row], row + 1);
-    if (row == 0) return "Off";
+    if (row == 0) return tr("Off");
     return streamLabel(ctx.subStreams[row - 1], row);
 }
 
@@ -301,7 +304,7 @@ void PlayerView::toggleZoom()
 {
     bool fill = VideoSurface::zoom() != VideoSurface::Zoom::Fill;
     VideoSurface::setZoom(fill ? VideoSurface::Zoom::Fill : VideoSurface::Zoom::Fit);
-    toast(fill ? "Zoom: fill the screen" : "Zoom: whole picture", 1500);
+    toast(fill ? tr("Zoom: fill the screen") : tr("Zoom: whole picture"), 1500);
 }
 
 /* ---- Input ----------------------------------------------------------- */
@@ -421,19 +424,19 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
     if (down & WPAD_BUTTON_UP)    { wii_player_vol_up();   toast("Volume +", 1000); }
     if (down & WPAD_BUTTON_DOWN)  { wii_player_vol_down(); toast("Volume -", 1000); }
     if (down & WPAD_BUTTON_PLUS) {
-        if (hasNext) act = Action::Next; else toast("No next episode");
+        if (hasNext) act = Action::Next; else toast(tr("No next episode"));
     }
     if (down & WPAD_BUTTON_MINUS) {
-        if (hasPrev) act = Action::Prev; else toast("No previous episode");
+        if (hasPrev) act = Action::Prev; else toast(tr("No previous episode"));
     }
     if (down & Input::BTN_ZOOM) toggleZoom();   /* Classic ZL/ZR, GameCube Z */
     if (down & WPAD_BUTTON_1) {
         if (ctx.audioStreams.size() > 1) openPanel(Panel::Audio);
-        else toast("No other audio track");
+        else toast(tr("No other audio track"));
     }
     if (down & WPAD_BUTTON_2) {
         if (!ctx.subStreams.empty()) openPanel(Panel::Sub);
-        else toast("No subtitles available");
+        else toast(tr("No subtitles available"));
     }
     return act;
 }
@@ -499,11 +502,11 @@ void PlayerView::render(const ir_t& ir)
     if (!busyMsg.empty() || loadingLong || !hasVideo || stalled) {
         if (hasVideo) GRRLIB_Rectangle(Ui::screenLeft(), 0, Ui::screenWidth(), 480, 0x00000099, 1);
         drawSpinner(320.0f, 220.0f);
-        char msg[48];
-        if (!busyMsg.empty())       snprintf(msg, sizeof(msg), "%s", busyMsg.c_str());
-        else if (rebufPercent >= 0) snprintf(msg, sizeof(msg), "Buffering... %d%%", rebufPercent);
-        else if (stalled)           snprintf(msg, sizeof(msg), "Buffering...");
-        else                        snprintf(msg, sizeof(msg), "Loading...");
+        char msg[128];
+        if (!busyMsg.empty())       snprintf(msg, sizeof(msg), "%s", tr(busyMsg.c_str()));
+        else if (rebufPercent >= 0) snprintf(msg, sizeof(msg), tr("Buffering... %d%%"), rebufPercent);
+        else if (stalled)           snprintf(msg, sizeof(msg), "%s", tr("Buffering..."));
+        else                        snprintf(msg, sizeof(msg), "%s", tr("Loading..."));
         messagePill(300, msg, 16);
     }
 
@@ -519,8 +522,8 @@ void PlayerView::render(const ir_t& ir)
         {
             /* zoom has a button on the Classic (ZR) and GameCube (Z) only */
             const Ui::ButtonStyle bs = Ui::buttonStyle();
-            const Ui::Hint all[] = { { bs == Ui::ButtonStyle::GameCube ? "Z" : "ZR", "Zoom" },
-                                     { "1", "Audio" }, { "2", "Subtitles" }, { "B", "Back" } };
+            const Ui::Hint all[] = { { bs == Ui::ButtonStyle::GameCube ? "Z" : "ZR", N_("Zoom") },
+                                     { "1", N_("Audio") }, { "2", N_("Subtitles") }, { "B", N_("Back") } };
             const Ui::Hint* hints = bs == Ui::ButtonStyle::WiiRemote ? all + 1 : all;
             const int nHints = bs == Ui::ButtonStyle::WiiRemote ? 3 : 4;
             float hw = 0;
@@ -654,7 +657,7 @@ void PlayerView::render(const ir_t& ir)
         int rows = n - panelTop < LIST_ROWS ? n - panelTop : LIST_ROWS;
         int h = 44 + rows * ROW_H + 12;
         Ui::card(LIST_X, LIST_Y, LIST_W, h, 16, 0.0f);
-        Ui::text(LIST_X + 18, LIST_Y + 12, panel == Panel::Audio ? "Audio track" : "Subtitles",
+        Ui::text(LIST_X + 18, LIST_Y + 12, panel == Panel::Audio ? tr("Audio track") : tr("Subtitles"),
                  18, p.accentDark);
         Ui::roundRect(LIST_X + 14, LIST_Y + 38, LIST_W - 28, 1.5f, 0.75f, Ui::alpha(p.cardBorder, 0.6f));
         for (int i = 0; i < rows; ++i) {
@@ -669,7 +672,7 @@ void PlayerView::render(const ir_t& ir)
             Ui::text(LIST_X + 22, y + 7, fitText(panelLabel(row), 16, maxW).c_str(), 16,
                      sel ? p.textOnAccent : p.text);
             if (current)
-                Ui::textRight(LIST_X + LIST_W - 22, y + 9, "\xe2\x9c\x93 Current", 13,
+                Ui::textRight(LIST_X + LIST_W - 22, y + 9, tr("\xe2\x9c\x93 Current"), 13,
                               sel ? p.textOnAccent : p.ok);
         }
     }

@@ -6,6 +6,7 @@
 #include "LibraryDraw.h"
 #include "Ui.h"
 #include "../input/Input.h"
+#include "../core/Lang.h"
 #include <stdio.h>
 #include <algorithm>
 
@@ -35,11 +36,11 @@ int kindRank(const std::string& t) {
 }
 const char* kindLabel(const std::string& t) {
     int r = kindRank(t);
-    return r < KIND_COUNT ? KINDS[r].label : "Extra";
+    return r < KIND_COUNT ? tr(KINDS[r].label) : tr("Extra");
 }
 const char* kindFolder(const std::string& t) {
     int r = kindRank(t);
-    return r < KIND_COUNT ? KINDS[r].plural : "Extras";
+    return r < KIND_COUNT ? tr(KINDS[r].plural) : tr("Extras");
 }
 
 } // namespace
@@ -76,7 +77,7 @@ void LibraryView::loadSpecials()
         ok = client.getSpecialFeatures(serverUrl, auth, specialsOfId, specials);
         if (!ok) err = client.lastError();
     });
-    if (!ok || specials.empty()) { errMsg = ok ? "No special features" : err; state = State::Error; return; }
+    if (!ok || specials.empty()) { errMsg = ok ? N_("No special features") : err; state = State::Error; return; }
     std::stable_sort(specials.begin(), specials.end(), [](const JellyfinItem& a, const JellyfinItem& b) {
         return kindRank(a.extraType) < kindRank(b.extraType);
     });
@@ -138,7 +139,7 @@ bool LibraryView::updateSpecials(ir_t& ir, bool aPressed)
 void LibraryView::renderSpecials(ir_t& ir)
 {
     const Ui::Palette& p = Ui::pal();
-    std::string title = specialsOfName + "  \xc2\xb7  Special Features";
+    std::string title = specialsOfName + "  \xc2\xb7  " + tr("Special Features");
     if (specialsFolders() && specialsGroup >= 0) title += std::string("  \xc2\xb7  ") + kindFolder(specialsTypes[specialsGroup]);
     drawBreadcrumb(title, 20, 580);
     headerLine(46);
@@ -161,13 +162,19 @@ void LibraryView::renderSpecials(ir_t& ir)
             int count = 0;
             for (const JellyfinItem& it : specials) count += it.extraType == t;
             name = kindFolder(t);
-            snprintf(right, sizeof(right), "%d video%s", count, count > 1 ? "s" : "");
+            if (count == 1) snprintf(right, sizeof(right), "%s", tr("1 video"));
+            else            snprintf(right, sizeof(right), tr("%d videos"), count);
         } else {       /* a video: its kind and length */
             const JellyfinItem& it = specials[rows[idx]];
             name = it.name;
             int mins = (int)((it.runtimeTicks / 10000000LL + 59) / 60);
-            if (it.runtimeTicks > 0) snprintf(right, sizeof(right), "%s  \xc2\xb7  %d min", kindLabel(it.extraType), mins);
-            else                     snprintf(right, sizeof(right), "%s", kindLabel(it.extraType));
+            if (it.runtimeTicks > 0) {
+                char len[24];
+                snprintf(len, sizeof(len), tr("%d min"), mins);
+                snprintf(right, sizeof(right), "%s  \xc2\xb7  %s", kindLabel(it.extraType), len);
+            } else {
+                snprintf(right, sizeof(right), "%s", kindLabel(it.extraType));
+            }
         }
         int rw = Ui::textWidth(right, 14);
         std::string shown = fitText(font, filterDejaVu(name, 60), 18, LIST_W - 48 - rw);
@@ -175,6 +182,6 @@ void LibraryView::renderSpecials(ir_t& ir)
         Ui::textRight(LIST_X + LIST_W - 16, ry + 14, right, 14, p.textDim);
     }
     Ui::scrollbar(614, LIST_Y + 2, ITEMS_VISIBLE * ROW_H - 6, specialsTop, ITEMS_VISIBLE, n);
-    const Ui::Hint l[] = { { "A", kinds ? "Open" : "Details" }, { "B", "Back" } };
+    const Ui::Hint l[] = { { "A", kinds ? N_("Open") : N_("Details") }, { "B", N_("Back") } };
     Ui::footer(l, 2);
 }

@@ -4,6 +4,7 @@
 #include "Ui.h"
 #include "../input/Input.h"
 #include "../core/SoundFX.h"
+#include "../core/Lang.h"
 #include <cmath>
 
 using namespace LibDraw;
@@ -54,7 +55,7 @@ bool LibraryView::updateHome(ir_t& ir, bool aPressed) {
         return false;
     }
 
-    // User icon click (top right of header) → return to profile picker
+    // User icon click (top right of header) → the profile menu
     if (aPressed && irMode && ir.valid &&
         fabsf(ir.x - 614.0f) < 24.0f && fabsf(ir.y - 26.0f) < 24.0f) {
         SoundFX::play(SoundFX::FX::Back);
@@ -363,7 +364,7 @@ void LibraryView::renderHome(ir_t& ir) {
                             i == continueSel && actRow == 0, true,
                             cwDisplayMain[i], cwDisplaySub[i]);
         } else {
-            Ui::text(ACT_X0 + 20, ACT_ROW0_Y + 40, "Nothing in progress", 14, p.textDim);
+            Ui::text(ACT_X0 + 20, ACT_ROW0_Y + 40, tr("Nothing in progress"), 14, p.textDim);
         }
 
         // Next Up row
@@ -374,11 +375,11 @@ void LibraryView::renderHome(ir_t& ir) {
                             i == nextUpSel && actRow == 1, false,
                             nuDisplayMain[i], nuDisplaySub[i]);
         } else {
-            Ui::text(ACT_X0 + 20, ACT_ROW1_Y + 40, "No next episode", 14, p.textDim);
+            Ui::text(ACT_X0 + 20, ACT_ROW1_Y + 40, tr("No next episode"), 14, p.textDim);
         }
 
-        const Ui::Hint l[] = { { "A", "Open" }, { "UD", "Row" } };
-        const Ui::Hint r[] = { { "-/+", "Tab" }, { "B", "Back" } };
+        const Ui::Hint l[] = { { "A", N_("Open") }, { "UD", N_("Row") } };
+        const Ui::Hint r[] = { { "-/+", N_("Tab") }, { "B", N_("Back") } };
         Ui::footer(l, 2, r, 2);
     }
 }
@@ -392,7 +393,7 @@ void LibraryView::renderGlobalFavorites(ir_t& ir) {
 
     // Count top-right
     if (itemTotal > 0) drawCount(itemPage, POSTERS_PER_PAGE, (int)items.size(), itemTotal);
-    else               Ui::textRight(620, 18, "No favorites", 15, headerDim());
+    else               Ui::textRight(620, 18, tr("No favorites"), 15, headerDim());
 
     int n = (int)items.size();
     const int GF_Y0 = POSTER_Y0 + 12; // header is 52px tall vs 46px for library sub-pages
@@ -419,8 +420,8 @@ void LibraryView::renderGlobalFavorites(ir_t& ir) {
     drawPageArrows(ir, ARROW_UP_CY + 12, ARROW_DN_CY + 12, itemPage > 0,
                    itemPage + 1 < totalPages, ARROW_CX, ARROW_HIT_R);
 
-    const Ui::Hint l[] = { { "A", "Detail" } };
-    const Ui::Hint r[] = { { "-/+", "Tab" }, { "B", "Back" } };
+    const Ui::Hint l[] = { { "A", N_("Detail") } };
+    const Ui::Hint r[] = { { "-/+", N_("Tab") }, { "B", N_("Back") } };
     const char* center = (posterSel >= 0 && posterSel < n) ? items[posterSel].name.c_str() : nullptr;
     Ui::footer(l, 1, r, 2, center);
 }

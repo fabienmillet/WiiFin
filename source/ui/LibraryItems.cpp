@@ -2,6 +2,7 @@
 #include "LibraryView.h"
 #include "LibraryDraw.h"
 #include "../core/Utils.h"
+#include "../core/Lang.h"
 #include "Ui.h"
 #include "../input/Input.h"
 #include <stdio.h>
@@ -447,7 +448,7 @@ void LibraryView::renderItemList(ir_t& ir) {
         headerLine(46);
     }
 
-    if (n == 0) Ui::textCentered(320, 200, "This library is empty", 16, p.textDim);
+    if (n == 0) Ui::textCentered(320, 200, tr("This library is empty"), 16, p.textDim);
 
     for (int i = 0; i < LIST_ROWS; i++) {
         int idx = viewTop + i;
@@ -474,8 +475,8 @@ void LibraryView::renderItemList(ir_t& ir) {
         }
         int textX = LIST_X + 14;
         // type badge for mixed lists (series among films, folders...)
-        const char* badge = it.type == "Series" ? "SERIES" : it.type == "BoxSet" ? "COLLECTION"
-                          : (it.type == "Folder" || it.type == "CollectionFolder") ? "FOLDER" : nullptr;
+        const char* badge = it.type == "Series" ? tr("SERIES") : it.type == "BoxSet" ? tr("COLLECTION")
+                          : (it.type == "Folder" || it.type == "CollectionFolder") ? tr("FOLDER") : nullptr;
         if (badge && currentLibType != "tvshows") {
             int bw = Ui::textWidth(badge, 9) + 12;
             Ui::roundRect(textX, ry + 11, bw, 14, 7, Ui::alpha(p.accent, 0.85f));
@@ -503,10 +504,12 @@ void LibraryView::renderItemList(ir_t& ir) {
         Ui::text(PX, ty, t.c_str(), 15, p.text);
         char meta[64] = "";
         int mins = (int)(selItem.runtimeTicks / 600000000LL);
-        if (selItem.type == "Series" && selItem.childCount > 0)
-            snprintf(meta, sizeof(meta), "%d season%s", selItem.childCount, selItem.childCount > 1 ? "s" : "");
+        if (selItem.type == "Series" && selItem.childCount == 1)
+            snprintf(meta, sizeof(meta), "%s", tr("1 season"));
+        else if (selItem.type == "Series" && selItem.childCount > 1)
+            snprintf(meta, sizeof(meta), tr("%d seasons"), selItem.childCount);
         else if (mins > 0)
-            snprintf(meta, sizeof(meta), "%dh %02dmin", mins / 60, mins % 60);
+            snprintf(meta, sizeof(meta), tr("%dh %02dmin"), mins / 60, mins % 60);
         if (selItem.year > 0) {
             size_t l = strlen(meta);
             snprintf(meta + l, sizeof(meta) - l, "%s%d", l ? "  \xc2\xb7  " : "", selItem.year);
@@ -531,17 +534,17 @@ void LibraryView::renderItemList(ir_t& ir) {
     // Footer: the sort in force beside its button
     const std::string sum = sortSummary();
     const bool shuffles = !sortable() && (currentLibType == "music" || currentLibType == "musicvideos");
-    const Ui::Hint l[] = { { "A", "Open" }, { "B", "Back" },
-                           { "2", shuffles ? "Shuffle" : sum.empty() ? "Sort" : sum.c_str() } };
+    const Ui::Hint l[] = { { "A", N_("Open") }, { "B", N_("Back") },
+                           { "2", shuffles ? N_("Shuffle") : sum.empty() ? N_("Sort") : sum.c_str() } };
     const int nl = sortable() || shuffles ? 3 : 2;
     if (currentLibType == "music" && !inItemsDrilldown) {
         const Ui::Hint r[] = { { "LR", "A-Z" }, { "-/+", "Tab" } };
         Ui::footer(l, nl, r, 2);
     } else if (sortable() && listSort.sort != 0) {
-        const Ui::Hint r[] = { { "-/+", "Page" } };
+        const Ui::Hint r[] = { { "-/+", N_("Page") } };
         Ui::footer(l, nl, r, 1);
     } else {
-        const Ui::Hint r[] = { { "LR", "A-Z" }, { "-/+", "Page" } };
+        const Ui::Hint r[] = { { "LR", N_("A-Z") }, { "-/+", N_("Page") } };
         Ui::footer(l, nl, r, 2);
     }
     if (sortPanel) renderSortPanel();
@@ -598,9 +601,9 @@ void LibraryView::renderPosterGrid(ir_t& ir) {
 
     // Footer: selected title centred, page on the right, the sort in force
     const std::string sum = sortSummary();
-    const Ui::Hint l[] = { { "B", "Back" }, { "2", sum.empty() ? "Sort" : sum.c_str() } };
+    const Ui::Hint l[] = { { "B", N_("Back") }, { "2", sum.empty() ? N_("Sort") : sum.c_str() } };
     char pageStr[32];
-    snprintf(pageStr, sizeof(pageStr), "Page %d / %d", itemPage + 1, totalPages);
+    snprintf(pageStr, sizeof(pageStr), tr("Page %d / %d"), itemPage + 1, totalPages);
     const Ui::Hint r[] = { { "", pageStr } };
     const char* center = (posterSel >= 0 && posterSel < n) ? items[posterSel].name.c_str() : nullptr;
     if (currentLibType == "music") {   /* 2 shuffles; -/+ the tabs */

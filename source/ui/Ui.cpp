@@ -1,5 +1,6 @@
 #include "Ui.h"
 #include "../core/Text.h"
+#include "../core/Lang.h"
 
 #include <gccore.h>
 #include <math.h>
@@ -68,9 +69,9 @@ Theme       nextTheme(Theme t)  { return (Theme)(((int)t + 1) % THEME_COUNT); }
 const char* themeName(Theme t)
 {
     switch (t) {
-    case Theme::Dark: return "Dark";
-    case Theme::Flix: return "Flix";
-    default:          return "Light";
+    case Theme::Dark: return N_("Dark");
+    case Theme::Flix: return N_("Flix");
+    default:          return N_("Light");
     }
 }
 static const Palette& themePal()
@@ -416,6 +417,7 @@ void card(float x, float y, float w, float h, float r, float focus)
 void button(float x, float y, float w, float h, const char* label, int size, float focus)
 {
     const Palette& p = pal();
+    label = tr(label);   /* buttons, hints, tabs and keys say the interface's words */
     card(x, y, w, h, h * 0.5f, focus);
     /* glossy top highlight */
     roundRect(x + h * 0.3f, y + 3, w - h * 0.6f, h * 0.36f, h * 0.18f,
@@ -537,14 +539,14 @@ float hint(float x, float y, const Hint& h)
         else textCentered(x + 9, cy - 7, b, 12, tc);
     }
     if (w > 0) w += 5;
-    text(x + w, y + 2, h.label, 14, p.textDim);
-    return w + textWidth(h.label, 14) + 14;
+    text(x + w, y + 2, tr(h.label), 14, p.textDim);
+    return w + textWidth(tr(h.label), 14) + 14;
 }
 
 float hintWidth(const Hint& h)
 {
     float g = glyphWidth(buttonName(h.button));
-    return (g > 0 ? g + 5 : 0) + textWidth(h.label, 14) + 14;
+    return (g > 0 ? g + 5 : 0) + textWidth(tr(h.label), 14) + 14;
 }
 
 void bottomBar(const Hint* left, int nLeft, const Hint* right, int nRight)
@@ -562,19 +564,24 @@ void bottomBar(const Hint* left, int nLeft, const Hint* right, int nRight)
     struct tm lt;
     localtime_r(&now, &lt);
     char clock[8], date[24];
+    /* TRANSLATORS: days of the week, abbreviated (the date under the clock) */
+    static const char* const days[7] = { N_("Sun"), N_("Mon"), N_("Tue"), N_("Wed"),
+                                         N_("Thu"), N_("Fri"), N_("Sat") };
+    const char* day = tr(days[lt.tm_wday % 7]);
     if (s_clock12) {
         /* 1:31 and a small PM after it, the pair centred */
         snprintf(clock, sizeof(clock), "%d:%02d", lt.tm_hour % 12 ? lt.tm_hour % 12 : 12, lt.tm_min);
-        const char* ampm = lt.tm_hour < 12 ? "AM" : "PM";
+        /* TRANSLATORS: after the time on the 12-hour clock, keep it short */
+        const char* ampm = lt.tm_hour < 12 ? tr("AM") : tr("PM");
         const float cw = textWidth(clock, 26), aw = textWidth(ampm, 13);
         const float cx = 320 - (cw + 4 + aw) * 0.5f;
         text(cx, top + 7, clock, 26, p.text);
         text(cx + cw + 4, top + 18, ampm, 13, p.textDim);
-        strftime(date, sizeof(date), "%a %m/%d", &lt);
+        snprintf(date, sizeof(date), "%s %02d/%02d", day, lt.tm_mon + 1, lt.tm_mday);
     } else {
         strftime(clock, sizeof(clock), "%H:%M", &lt);
         textCentered(320, top + 7, clock, 26, p.text);
-        strftime(date, sizeof(date), "%a %d/%m", &lt);
+        snprintf(date, sizeof(date), "%s %02d/%02d", day, lt.tm_mday, lt.tm_mon + 1);
     }
     textCentered(320, top + 36, date, 13, p.textDim);
 
@@ -638,7 +645,7 @@ float tabs(float cx, float y, const char* const* names, int n, int sel, int size
     const float pad = 13, h = size + 14;
     float w[8], total = 0;
     if (n > 8) n = 8;
-    for (int i = 0; i < n; ++i) { w[i] = textWidth(names[i], size) + pad * 2; total += w[i]; }
+    for (int i = 0; i < n; ++i) { w[i] = textWidth(tr(names[i]), size) + pad * 2; total += w[i]; }
     float x0 = cx - total * 0.5f;
     shadow(x0, y + 1, total, h, h * 0.5f, 4.0f, p.shadow);
     roundRect(x0, y, total, h, h * 0.5f, p.field, mix(p.field, p.cardBottom, 0.5f));
@@ -648,9 +655,9 @@ float tabs(float cx, float y, const char* const* names, int n, int sel, int size
         if (i == sel) {
             roundRect(x + 2, y + 2, w[i] - 4, h - 4, (h - 4) * 0.5f,
                       mix(p.accent, 0xFFFFFFFF, 0.25f), p.accentDark);
-            textCentered(x + w[i] * 0.5f, y + (h - size) * 0.5f - 1, names[i], size, p.textOnAccent);
+            textCentered(x + w[i] * 0.5f, y + (h - size) * 0.5f - 1, tr(names[i]), size, p.textOnAccent);
         } else {
-            textCentered(x + w[i] * 0.5f, y + (h - size) * 0.5f - 1, names[i], size, p.textDim);
+            textCentered(x + w[i] * 0.5f, y + (h - size) * 0.5f - 1, tr(names[i]), size, p.textDim);
         }
         x += w[i];
     }
@@ -715,6 +722,7 @@ void key(float x, float y, float w, float h, const char* label,
          bool sel, bool hover, bool special, bool latched)
 {
     const Palette& p = pal();
+    label = tr(label);
     if (sel) {
         shadow(x - 2, y - 2, w + 4, h + 4, 9, 7.0f, p.glow);
         roundRect(x, y, w, h, 7, mix(p.accent, 0xFFFFFFFF, 0.25f), p.accentDark);
@@ -845,7 +853,8 @@ void drawNotice()
         }
         if (!cur.empty() && lines.size() < 4) lines.push_back(cur);
     }
-    const std::string& head = s_noticeHeader.empty() ? std::string("Message") : s_noticeHeader;
+    /* TRANSLATORS: heading of a message sent from the server's dashboard without one */
+    const std::string& head = s_noticeHeader.empty() ? std::string(tr("Message")) : s_noticeHeader;
     int wNeed = textWidth(head.c_str(), HS);
     for (const auto& l : lines) { int lw = textWidth(l.c_str(), TS); if (lw > wNeed) wNeed = lw; }
     float w = wNeed + 2 * PAD + 6;

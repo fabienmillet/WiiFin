@@ -6,16 +6,16 @@
 #include "LibraryDraw.h"
 #include "Ui.h"
 #include "../input/Input.h"
+#include "../core/Lang.h"
 #include <stdio.h>
 
 using namespace LibDraw;
 
-static const char* const SORTS[] = { "Name", "Year", "Rating", "Date added" };
-static const char* const SHOWS[] = { "All", "Not watched", "Watched", "Favorites" };
+static const char* const SORTS[] = { N_("Name"), N_("Year"), N_("Rating"), N_("Date added") };
+static const char* const SHOWS[] = { N_("All"), N_("Not watched"), N_("Watched"), N_("Favorites") };
 
 bool LibraryView::sortable() const
 {
-    if (currentLibType != "movies" && currentLibType != "tvshows") return false;
     if (inItemsDrilldown || inBoxSetDrilldown) return false;
     if (!posterMode) return true;
     return currentLibType == "movies" ? movieTab == 0 : tvTab == 0;
@@ -46,11 +46,11 @@ std::string LibraryView::sortSummary() const
 {
     std::string s;
     auto add = [&](const std::string& part) { s += (s.empty() ? "" : "  \xc2\xb7  ") + part; };
-    if (listSort.sort) add(SORTS[listSort.sort]);
+    if (listSort.sort) add(tr(SORTS[listSort.sort]));
     if (listSort.desc != (listSort.sort != 0))   /* not the usual way round */
-        add(listSort.desc ? "Descending" : "Ascending");
+        add(listSort.desc ? tr("Descending") : tr("Ascending"));
     if (listSort.genre >= 0 && listSort.genre < (int)sortGenres.size()) add(sortGenres[listSort.genre].name);
-    if (listSort.show) add(SHOWS[listSort.show]);
+    if (listSort.show) add(tr(SHOWS[listSort.show]));
     return s;
 }
 
@@ -108,23 +108,24 @@ void LibraryView::renderSortPanel()
     Ui::shadow(X, Y + 4, W, H, 16, 10.0f, p.shadow);
     Ui::roundRect(X, Y, W, H, 16, p.cardTop, p.cardBottom);
     Ui::roundBorder(X, Y, W, H, 16, 1.5f, p.cardBorder);
-    Ui::textCentered(320, Y + 14, "Sort & filter", 19, p.text);
+    Ui::textCentered(320, Y + 14, tr("Sort & filter"), 19, p.text);
 
-    const char* labels[4] = { "Sort by", "Order", "Genre", "Show" };
+    const char* labels[4] = { N_("Sort by"), N_("Order"), N_("Genre"), N_("Show") };
     std::string values[4] = {
-        SORTS[sortEdit.sort],
-        sortEdit.desc ? "Descending" : "Ascending",
+        tr(SORTS[sortEdit.sort]),
+        sortEdit.desc ? tr("Descending") : tr("Ascending"),
         sortEdit.genre >= 0 && sortEdit.genre < (int)sortGenres.size()
-            ? fitText(font, sortGenres[sortEdit.genre].name, 16, 180) : std::string("Every genre"),
-        SHOWS[sortEdit.show],
+            ? fitText(font, sortGenres[sortEdit.genre].name, 16, 180) : std::string(tr("Every genre")),
+        tr(SHOWS[sortEdit.show]),
     };
     for (int i = 0; i < 4; ++i) {
         float ry = Y + 50 + i * 42;
         bool on = i == sortRow;
         Ui::card(X + 16, ry, W - 32, 34, 10, on ? Ui::pulse() : 0.0f);
-        Ui::text(X + 30, ry + 8, labels[i], 15, p.textDim);
+        Ui::text(X + 30, ry + 8, tr(labels[i]), 15, p.textDim);
         std::string v = std::string(on ? "\xe2\x80\xb9  " : "") + values[i] + (on ? "  \xe2\x80\xba" : "");
         Ui::textRight(X + W - 30, ry + 7, v.c_str(), 16, on ? p.text : p.textDim);
     }
-    Ui::textCentered(320, Y + H - 28, "A  apply      B  cancel", 13, p.textDim);
+    /* TRANSLATORS: A and B are the Wii Remote's buttons */
+    Ui::textCentered(320, Y + H - 28, tr("A  apply      B  cancel"), 13, p.textDim);
 }

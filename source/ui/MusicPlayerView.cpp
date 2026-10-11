@@ -25,6 +25,7 @@
 #include "../jellyfin/RemoteControl.h"
 #include "../core/ExitZone.h"
 #include "../core/MusicBGM.h"
+#include "../core/Lang.h"
 #include "../input/Input.h"
 #include "../player/AudioSpectrum.h"
 #include "../player/WiiPlayer.h"
@@ -53,6 +54,7 @@ const int  BARS       = 32;       /* spectrum bands                         */
 const u64  IDLE_MS    = 20000;    /* controls fade away after this          */
 const int  PANEL_ROWS = 8;
 const int  AUTOPLAY   = 40;       /* tracks fetched when the queue runs out */
+const int  BUBBLES    = 40;
 
 u64 nowMs() { return ticks_to_millisecs(gettime()); }
 
@@ -227,7 +229,7 @@ void appendQueued()
     SYS_Report("[Music] %u track(s) %s\n", (unsigned)s_queued.size(),
                s_queueReq.next ? "to play next" : "added to the queue");
     if (!s_queued.empty()) {
-        S->toastMsg = s_queueReq.next ? "Playing next" : "Added to the queue";
+        S->toastMsg = s_queueReq.next ? N_("Playing next") : N_("Added to the queue");
         S->toastUntil = nowMs() + 1600;
     }
     s.autoplayAsked = false;   /* the queue's end moved */
@@ -544,10 +546,10 @@ void drawPanel()
     Ui::shadow(panelX(), PANEL_Y + 4, PANEL_W, PANEL_H, 18, 14.0f, Ui::alpha(0x000000FF, 0.5f));
     Ui::roundRect(panelX(), PANEL_Y, PANEL_W, PANEL_H, 18, p.cardTop, p.cardBottom);
     Ui::roundBorder(panelX(), PANEL_Y, PANEL_W, PANEL_H, 18, 1.5f, Ui::alpha(p.cardBorder, 0.8f));
-    Ui::text(panelX() + 20, PANEL_Y + 14, "Up Next", 20, p.text);
-    char mode[64];
-    snprintf(mode, sizeof(mode), "Shuffle %s  \xc2\xb7  Repeat %s", s.shuffle ? "on" : "off",
-             s.repeat == 0 ? "off" : (s.repeat == 1 ? "all" : "one"));
+    Ui::text(panelX() + 20, PANEL_Y + 14, tr("Up Next"), 20, p.text);
+    char mode[128];
+    snprintf(mode, sizeof(mode), "%s  \xc2\xb7  %s", s.shuffle ? tr("Shuffle on") : tr("Shuffle off"),
+             s.repeat == 0 ? tr("Repeat off") : (s.repeat == 1 ? tr("Repeat all") : tr("Repeat one")));
     Ui::text(panelX() + 20, PANEL_Y + 42, mode, 12, p.textDim);
     char cnt[24];
     snprintf(cnt, sizeof(cnt), "%d / %d", s.pos + 1, (int)s.order.size());
@@ -609,10 +611,12 @@ void drawScreen(bool live, bool loading)
         float pulse = 1 + fminf(s.beat, 0.3f) * 0.10f, sz = ART * pulse, off = (sz - ART) / 2;
         drawCover(ART_X - off, ART_Y - off, sz, a);
 
-        Ui::text(48, 22, "NOW PLAYING", 13, Ui::alpha(p.textDim, a));
+        Ui::text(48, 22, tr("NOW PLAYING"), 13, Ui::alpha(p.textDim, a));
         if (s.order.size() > 1) {
-            char b[40];
-            snprintf(b, sizeof(b), "%d of %d%s", s.pos + 1, (int)s.order.size(), s.shuffle ? "  \xc2\xb7  Shuffle" : "");
+            char b[96];
+            /* TRANSLATORS: the track's place in the queue; Shuffle: shuffle is on */
+            snprintf(b, sizeof(b), s.shuffle ? tr("%d of %d  \xc2\xb7  Shuffle") : tr("%d of %d"),
+                     s.pos + 1, (int)s.order.size());
             Ui::textRight(592, 22, b, 13, Ui::alpha(p.textDim, a));
         }
         marquee(s.title, COL_X, ART_Y - 2, COL_W, 26, Ui::alpha(p.text, a), s.titleSince);
@@ -631,20 +635,23 @@ void drawScreen(bool live, bool loading)
                 drawControl(i, f, live ? playing : true);
             }
             if (loading)
-                Ui::textCentered(320, BAR_Y + 12, "Loading...", 14, p.textDim);
+                Ui::textCentered(320, BAR_Y + 12, tr("Loading..."), 14, p.textDim);
             /* what comes next */
             int nextPos = s.repeat == 2 ? s.pos : (s.pos + 1 < (int)s.order.size() ? s.pos + 1
                                                    : (s.repeat == 1 ? 0 : -1));
             if (nextPos >= 0 && !s.panel) {
                 std::string t, ar;
                 splitName(s.tracks[s.order[nextPos]], "", t, ar);
-                std::string line = "Next:  " + t + (ar.empty() ? "" : "  \xe2\x80\x94  " + ar);
+                char line[512];
+                /* TRANSLATORS: the track after this one: its title (and its artist) */
+                if (ar.empty()) snprintf(line, sizeof(line), tr("Next:  %s"), t.c_str());
+                else            snprintf(line, sizeof(line), tr("Next:  %s  \xe2\x80\x94  %s"), t.c_str(), ar.c_str());
                 Ui::textCentered(320, 414, LibDraw::fitText(Ui::font(), line, 13, 400).c_str(), 13,
                                  Ui::alpha(p.textDim, 0.9f));
             }
             if (s.panel) {
-                const Ui::Hint l[] = { { "A", "Play" }, { "2", "Shuffle" } };
-                const Ui::Hint r[] = { { "B", "Close" } };
+                const Ui::Hint l[] = { { "A", N_("Play") }, { "2", N_("Shuffle") } };
+                const Ui::Hint r[] = { { "B", N_("Close") } };
                 Ui::footer(l, 2, r, 1);
             } else {
                 const Ui::Hint l[] = { { "A", "Select" }, { "-/+", "Track" } };
@@ -672,10 +679,11 @@ void drawScreen(bool live, bool loading)
     if (s.panelK > 0.01f) drawPanel();
 
     if (!s.toastMsg.empty() && nowMs() < s.toastUntil) {
-        int w = Ui::textWidth(s.toastMsg.c_str(), 15) + 28;
+        const char* msg = tr(s.toastMsg.c_str());
+        int w = Ui::textWidth(msg, 15) + 28;
         Ui::shadow(320 - w / 2, 40, w, 30, 15, 8.0f, p.shadow);
         Ui::roundRect(320 - w / 2, 40, w, 30, 15, p.accent, p.accentDark);
-        Ui::textCentered(320, 46, s.toastMsg.c_str(), 15, p.textOnAccent);
+        Ui::textCentered(320, 46, msg, 15, p.textOnAccent);
     }
 }
 
@@ -715,18 +723,18 @@ void activate(int c)
     case C_FAV:
         s.favorite = !s.favorite;
         s_jobFavorite = s.favorite ? 1 : 2;
-        toast(s.favorite ? "Added to favorites" : "Removed from favorites");
+        toast(s.favorite ? N_("Added to favorites") : N_("Removed from favorites"));
         break;
     case C_SHUFFLE:
         setShuffle(!s.shuffle);
-        toast(s.shuffle ? "Shuffle on" : "Shuffle off");
+        toast(s.shuffle ? N_("Shuffle on") : N_("Shuffle off"));
         break;
     case C_PREV:   requestTrack(Req::Prev); break;
     case C_PLAY:   wii_player_pause_toggle(); break;
     case C_NEXT:   requestTrack(Req::Next); break;
     case C_REPEAT:
         s.repeat = (s.repeat + 1) % 3;
-        toast(s.repeat == 0 ? "Repeat off" : (s.repeat == 1 ? "Repeat all" : "Repeat this track"));
+        toast(s.repeat == 0 ? N_("Repeat off") : (s.repeat == 1 ? N_("Repeat all") : N_("Repeat this track")));
         break;
     case C_QUEUE:
         s.panel = !s.panel;
@@ -792,14 +800,14 @@ void tick(int paused, u32 down, u32 held)
         case Remote::Cmd::Seek:        seekTo((float)(rc.ticks / 10000000.0)); break;
         case Remote::Cmd::FastForward: seekTo(position() + 30.0f); break;
         case Remote::Cmd::Rewind:      seekTo(position() - 10.0f); break;
-        case Remote::Cmd::VolumeUp:    wii_player_vol_up();   toast("Volume +"); break;
-        case Remote::Cmd::VolumeDown:  wii_player_vol_down(); toast("Volume -"); break;
-        case Remote::Cmd::SetVolume:   wii_player_set_volume(rc.value); toast("Volume"); break;
-        case Remote::Cmd::Mute:        wii_player_set_mute(1); toast("Sound off"); break;
-        case Remote::Cmd::Unmute:      wii_player_set_mute(0); toast("Sound on"); break;
+        case Remote::Cmd::VolumeUp:    wii_player_vol_up();   toast(N_("Volume +")); break;
+        case Remote::Cmd::VolumeDown:  wii_player_vol_down(); toast(N_("Volume -")); break;
+        case Remote::Cmd::SetVolume:   wii_player_set_volume(rc.value); toast(N_("Volume")); break;
+        case Remote::Cmd::Mute:        wii_player_set_mute(1); toast(N_("Sound off")); break;
+        case Remote::Cmd::Unmute:      wii_player_set_mute(0); toast(N_("Sound on")); break;
         case Remote::Cmd::ToggleMute:
             wii_player_set_mute(!wii_player_muted());
-            toast(wii_player_muted() ? "Sound off" : "Sound on");
+            toast(wii_player_muted() ? N_("Sound off") : N_("Sound on"));
             break;
         default: break;
         }
@@ -836,8 +844,6 @@ void tick(int paused, u32 down, u32 held)
         if (s.focusBar) seekTo(position() + 10.0f * d);
         else            s.focus = (s.focus + d + C_COUNT) % C_COUNT;
     }
-    if (down & WPAD_BUTTON_UP)   s.focusBar = true;
-    if (down & WPAD_BUTTON_DOWN) s.focusBar = false;
     if (down & WPAD_BUTTON_A) {
         if (s.pointer) {
             if (s.hoverBar)       seekTo(s.hoverFrac * duration());

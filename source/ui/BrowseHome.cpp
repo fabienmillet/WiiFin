@@ -3,6 +3,7 @@
 #include "Ui.h"
 #include "../core/Text.h"
 #include "../core/Utils.h"
+#include "../core/Lang.h"
 #include "../input/Input.h"
 
 #include <math.h>
@@ -39,7 +40,8 @@ static const float PILL_Y = 9, PILL_H = 26;
 static const float AVATAR_CY = 22, AVATAR_R = 14;
 static const char* pillLabel(int i, bool catalog)
 {
-    return i == 0 ? "search" : (catalog ? "home" : "browse");
+    /* TRANSLATORS: the pills at the top right of the home screen, in lower case */
+    return i == 0 ? tr("search") : (catalog ? tr("home") : tr("browse"));
 }
 
 static u32 lerpCol(u32 a, u32 b, float t) { return Ui::mix(a, b, t); }
@@ -199,10 +201,11 @@ void BrowseHome::buildHome(const std::vector<JellyfinLibrary>& libs)
     };
 
     char q[320];
+    char title[160];
     snprintf(q, sizeof(q), "/Users/%s/Items/Resume?Limit=%d&MediaTypes=Video", uid.c_str(), MAX_ITEMS);
-    add("Continue Watching", q, false);
+    add(tr("Continue Watching"), q, false);
     snprintf(q, sizeof(q), "/Shows/NextUp?UserId=%s&Limit=%d", uid.c_str(), MAX_ITEMS);
-    add("Next Up", q, false);
+    add(tr("Next Up"), q, false);
 
     for (const auto& lib : libs) {
         const std::string& t = lib.collectionType;
@@ -212,26 +215,30 @@ void BrowseHome::buildHome(const std::vector<JellyfinLibrary>& libs)
             continue;
         snprintf(q, sizeof(q), "/Users/%s/Items/Latest?ParentId=%s&Limit=%d",
                  uid.c_str(), lib.id.c_str(), MAX_ITEMS);
-        add("New in " + lib.name, q, music);
+        /* TRANSLATORS: a row of the home screen; %s is the name of a library */
+        snprintf(title, sizeof(title), tr("New in %s"), lib.name.c_str());
+        add(title, q, music);
         if (t == "movies" || t == "tvshows") {
             snprintf(q, sizeof(q),
                      "/Users/%s/Items?ParentId=%s&Recursive=true&IncludeItemTypes=%s"
                      "&SortBy=CommunityRating,SortName&SortOrder=Descending&Limit=%d",
                      uid.c_str(), lib.id.c_str(), t == "movies" ? "Movie" : "Series", MAX_ITEMS);
-            add("Top Rated " + lib.name, q, false);
+            /* TRANSLATORS: a row of the home screen; %s is the name of a library */
+            snprintf(title, sizeof(title), tr("Top Rated %s"), lib.name.c_str());
+            add(title, q, false);
         }
     }
 
     snprintf(q, sizeof(q),
              "/Users/%s/Items?Filters=IsFavorite&Recursive=true"
              "&IncludeItemTypes=Movie,Series,Episode&SortBy=SortName&Limit=%d", uid.c_str(), MAX_ITEMS);
-    add("My Favorites", q, false);
+    add(tr("My Favorites"), q, false);
     snprintf(q, sizeof(q),
              "/Users/%s/Items?Filters=IsFavorite&Recursive=true"
              "&IncludeItemTypes=MusicAlbum&SortBy=SortName&Limit=%d", uid.c_str(), MAX_ITEMS);
-    add("Favorite Albums", q, true);
+    add(tr("Favorite Albums"), q, true);
     int favs = 0;
-    for (const auto& r : rows) if (r.title == "My Favorites") favs = (int)r.items.size();
+    for (const auto& r : rows) if (r.title == tr("My Favorites")) favs = (int)r.items.size();
     SYS_Report("[Home] %d rows, %d favourite titles\n", (int)rows.size(), favs);
 }
 
@@ -244,7 +251,7 @@ void BrowseHome::buildCatalog(const std::vector<JellyfinLibrary>& libs)
 
     {
         Row r;
-        r.title = "Libraries";
+        r.title = tr("Libraries");
         /* Jellyfin draws each library's picture itself, 16:9 with the name
          * across the middle: shown whole, not cut to a portrait poster (that
          * kept a blurred strip of it, a few letters of the name) */
@@ -276,7 +283,10 @@ void BrowseHome::buildCatalog(const std::vector<JellyfinLibrary>& libs)
                  "/Users/%s/Items?ParentId=%s&Recursive=true&IncludeItemTypes=%s"
                  "&SortBy=SortName&SortOrder=Ascending&Limit=%d",
                  uid.c_str(), lib.id.c_str(), types, CATALOG_ITEMS);
-        ADD_ROW("All " + lib.name, q, t == "music", CATALOG_ITEMS);
+        char title[160];
+        /* TRANSLATORS: a row of the browse page; %s is the name of a library */
+        snprintf(title, sizeof(title), tr("All %s"), lib.name.c_str());
+        ADD_ROW(std::string(title), q, t == "music", CATALOG_ITEMS);
 
         if (t != "movies" && t != "tvshows") continue;
         std::vector<JellyfinItem> genres;
@@ -718,14 +728,18 @@ void BrowseHome::drawInfoPanel(float k)
     char meta[160] = "";
     if (it.type == "CollectionFolder") {
         const std::string& t = it.seriesName;
-        snprintf(meta, sizeof(meta), "%s library  \xc2\xb7  open it with A",
-                 t == "movies" ? "Movie" : t == "tvshows" ? "TV" : t == "music" ? "Music"
-                 : t == "boxsets" ? "Collection" : "Media");
+        snprintf(meta, sizeof(meta), "%s",
+                 t == "movies" ? tr("Movie library  \xc2\xb7  open it with A")
+                 : t == "tvshows" ? tr("TV library  \xc2\xb7  open it with A")
+                 : t == "music" ? tr("Music library  \xc2\xb7  open it with A")
+                 : t == "boxsets" ? tr("Collection library  \xc2\xb7  open it with A")
+                 : tr("Media library  \xc2\xb7  open it with A"));
     } else if (it.type == "Series") {
         if (it.recursiveItemCount > 0)
-            snprintf(meta, sizeof(meta), "%d episode%s", it.recursiveItemCount, it.recursiveItemCount > 1 ? "s" : "");
+            snprintf(meta, sizeof(meta), it.recursiveItemCount > 1 ? tr("%d episodes") : tr("%d episode"),
+                     it.recursiveItemCount);
         else if (it.childCount > 0)
-            snprintf(meta, sizeof(meta), "%d season%s", it.childCount, it.childCount > 1 ? "s" : "");
+            snprintf(meta, sizeof(meta), it.childCount > 1 ? tr("%d seasons") : tr("%d season"), it.childCount);
         if (it.year > 0) {
             size_t l = strlen(meta);
             snprintf(meta + l, sizeof(meta) - l, "%s%d", l ? "   \xc2\xb7   " : "", it.year);
@@ -735,24 +749,36 @@ void BrowseHome::drawInfoPanel(float k)
         int eps = it.recursiveItemCount > 0 ? it.recursiveItemCount : it.childCount;
         snprintf(meta, sizeof(meta), "%s", it.name.c_str());
         size_t l = strlen(meta);
-        if (eps > 0) snprintf(meta + l, sizeof(meta) - l, "   \xc2\xb7   %d episode%s", eps, eps > 1 ? "s" : "");
+        if (eps > 0) {
+            snprintf(meta + l, sizeof(meta) - l, "   \xc2\xb7   ");
+            l = strlen(meta);
+            snprintf(meta + l, sizeof(meta) - l, eps > 1 ? tr("%d episodes") : tr("%d episode"), eps);
+        }
         l = strlen(meta);
         if (it.year > 0) snprintf(meta + l, sizeof(meta) - l, "   \xc2\xb7   %d", it.year);
     } else if (it.type == "Episode") {
-        snprintf(meta, sizeof(meta), "S%d E%d  \xc2\xb7  %s", it.seasonNumber, it.episodeNumber, it.name.c_str());
+        /* TRANSLATORS: season and episode numbers, then the episode's title */
+        snprintf(meta, sizeof(meta), tr("S%d E%d  \xc2\xb7  %s"), it.seasonNumber, it.episodeNumber, it.name.c_str());
     } else {
         int mins = (int)(it.runtimeTicks / 600000000LL);
-        if (it.year > 0 && mins > 0)
-            snprintf(meta, sizeof(meta), "%d   \xc2\xb7   %dh %02dmin", it.year, mins / 60, mins % 60);
-        else if (it.year > 0)
+        if (it.year > 0 && mins > 0) {
+            snprintf(meta, sizeof(meta), "%d   \xc2\xb7   ", it.year);
+            size_t l = strlen(meta);
+            /* TRANSLATORS: a running time, hours and minutes */
+            snprintf(meta + l, sizeof(meta) - l, tr("%dh %02dmin"), mins / 60, mins % 60);
+        } else if (it.year > 0)
             snprintf(meta, sizeof(meta), "%d", it.year);
         else if (mins > 0)
-            snprintf(meta, sizeof(meta), "%dh %02dmin", mins / 60, mins % 60);
+            snprintf(meta, sizeof(meta), tr("%dh %02dmin"), mins / 60, mins % 60);
     }
     if (it.playbackPositionTicks > 0 && it.runtimeTicks > 0) {
         int left = (int)((it.runtimeTicks - it.playbackPositionTicks) / 600000000LL);
         size_t l = strlen(meta);
-        if (left > 0) snprintf(meta + l, sizeof(meta) - l, "%s%d min left", l ? "   \xc2\xb7   " : "", left);
+        if (left > 0) {
+            snprintf(meta + l, sizeof(meta) - l, "%s", l ? "   \xc2\xb7   " : "");
+            l = strlen(meta);
+            snprintf(meta + l, sizeof(meta) - l, tr("%d min left"), left);
+        }
     }
     if (meta[0]) {
         std::string m = fit(meta, 14, (int)(INFO_X + INFO_W - 16 - x));
@@ -829,8 +855,8 @@ void BrowseHome::render(const ir_t& ir)
     Ui::roundRect(Ui::screenLeft() - 20, BAND_Y, Ui::screenWidth() + 40, 1.5f, 0.75f, L.bandEdge);
 
     if (rows.empty()) {
-        Ui::textCentered(320, 150, "Nothing to show yet", 20, L.title);
-        Ui::textCentered(320, 180, "Use \"browse\" to open your libraries.", 14, L.titleDim);
+        Ui::textCentered(320, 150, tr("Nothing to show yet"), 20, L.title);
+        Ui::textCentered(320, 180, tr("Use \"browse\" to open your libraries."), 14, L.titleDim);
     }
 
     /* Rows around the focus, sliding with rowAnim */
@@ -860,8 +886,8 @@ void BrowseHome::render(const ir_t& ir)
 
     /* Button hints along the bottom */
     {
-        const Ui::Hint hHome[] = { { "A", "Open" }, { "1", "Search" }, { "+!", "Browse" } };
-        const Ui::Hint hCat[]  = { { "A", "Open" }, { "1", "Search" }, { "B", "Home" } };
+        const Ui::Hint hHome[] = { { "A", N_("Open") }, { "1", N_("Search") }, { "+!", N_("Browse") } };
+        const Ui::Hint hCat[]  = { { "A", N_("Open") }, { "1", N_("Search") }, { "B", N_("Home") } };
         const Ui::Hint* h = mode == Mode::Catalog ? hCat : hHome;
         float w = 0;
         for (int i = 0; i < 3; ++i) w += Ui::hintWidth(h[i]);

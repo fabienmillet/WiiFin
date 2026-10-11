@@ -4,6 +4,7 @@
 #include "Ui.h"
 #include "../input/Input.h"
 #include "../core/SoundFX.h"
+#include "../core/Lang.h"
 #include <wiikeyboard/keyboard.h>
 #include <ogc/lwp.h>
 #include <string.h>
@@ -107,7 +108,7 @@ void ConnectView::startLogin() {
     struct Out { bool ok = false; JellyfinAuth auth; std::string err; };
     auto out = std::make_shared<Out>();
     std::string url = fields[0], user = fields[1], pass = fields[2];
-    startJob("Signing in", false,
+    startJob(N_("Signing in"), false,
         [this, out, url, user, pass]() {
             out->ok = client.authenticate(url, user, pass, out->auth);
             if (out->ok) {
@@ -130,7 +131,7 @@ ConnectResult ConnectView::updateBusy() {
     if (busy == Busy::Network) {
         if (Input::isBackPressed()) {            /* start-up goes on in the background */
             busy = Busy::None;
-            setStatus("Cancelled.", true);
+            setStatus(N_("Cancelled."), true);
             return ConnectResult::None;
         }
         if (client.networkBusy()) return ConnectResult::None;
@@ -313,7 +314,7 @@ ConnectResult ConnectView::update(ir_t& ir) {
                 if ((aPressed && (qcBtnHit || (!ir.valid && !irMode))) || autoQuickConnect) {
                     autoQuickConnect = false;
                     if (fields[0].empty()) {
-                        setStatus("Set the Server URL in the Credentials tab first.", true);
+                        setStatus(N_("Set the Server URL in the Credentials tab first."), true);
                         break;
                     }
                     if (!needNetwork(AfterNet::QuickConnect)) break;
@@ -323,7 +324,7 @@ ConnectResult ConnectView::update(ir_t& ir) {
                     auto res = std::make_shared<QuickConnectResult>();
                     auto err = std::make_shared<std::string>();
                     std::string url = serverUrl;
-                    startJob("Contacting the server", false,
+                    startJob(N_("Contacting the server"), false,
                         [this, ok, res, err, url]() {
                             *ok = client.quickConnectInitiate(url, *res);
                             if (!*ok) *err = client.lastError();
@@ -333,7 +334,7 @@ ConnectResult ConnectView::update(ir_t& ir) {
                             qcResult    = *res;
                             qcState     = QCState::Waiting;
                             qcPollTimer = 90;
-                            setStatus("Enter code on another device:");
+                            setStatus(N_("Enter code on another device:"));
                             return ConnectResult::None;
                         });
                 }
@@ -350,7 +351,7 @@ ConnectResult ConnectView::update(ir_t& ir) {
                     auto err = std::make_shared<std::string>();
                     auto user = std::make_shared<std::string>();
                     std::string url = serverUrl, secret = qcResult.secret;
-                    startJob("Waiting for approval", true,
+                    startJob(N_("Waiting for approval"), true,
                         [this, approved, signedIn, a, err, user, url, secret]() {
                             QuickConnectResult r;
                             if (!client.quickConnectCheck(url, secret, r) || !r.authenticated) return;
@@ -400,7 +401,7 @@ ConnectResult ConnectView::update(ir_t& ir) {
                         delete discoverCtx;
                         discoverCtx = nullptr;
                         discoverThread = LWP_THREAD_NULL;
-                        setStatus("Failed to start scan thread.", true);
+                        setStatus(N_("Failed to start scan thread."), true);
                         break;
                     }
                     discoverState = DiscoverState::Scanning;
@@ -415,7 +416,7 @@ ConnectResult ConnectView::update(ir_t& ir) {
                     discoverCtx = nullptr;
                     discoverState  = DiscoverState::Done;
                     if (discoveredServers.empty())
-                        setStatus("No servers found on the local network.", false);
+                        setStatus(N_("No servers found on the local network."), false);
                 }
                 break;
             case DiscoverState::Done: {
@@ -456,7 +457,7 @@ ConnectResult ConnectView::update(ir_t& ir) {
                     serverUrl = fields[0];
                     activeTab = Tab::Credentials;
                     focusedField = Field::Username;
-                    setStatus("Server URL set. Enter your credentials.", false);
+                    setStatus(N_("Server URL set. Enter your credentials."), false);
                 }
                 break;
             }
@@ -472,7 +473,7 @@ void ConnectView::handleVKBInput(ir_t& ir) {
     int fi = (int)focusedField;
     if (fi > 2) { kbActive = false; return; }
     kb.setOrigin((640 - kb.width()) * 0.5f, 238);
-    kb.setEnterLabel(fi < 2 ? "Next" : "Done");
+    kb.setEnterLabel(fi < 2 ? N_("Next") : N_("Done"));
     switch (kb.update(ir, fields[fi], 255)) {
     case Keyboard::Result::Enter:
         /* OK walks through the fields, then lands on Connect */
@@ -492,7 +493,7 @@ void ConnectView::handleVKBInput(ir_t& ir) {
 static void drawField(const char* label, int x, int y, int w, const std::string& value,
                       bool focused, bool masked) {
     const Ui::Palette& p = Ui::pal();
-    Ui::text(x + 4, y - 21, label, 15, focused ? p.accentDark : p.textDim);
+    Ui::text(x + 4, y - 21, tr(label), 15, focused ? p.accentDark : p.textDim);
     std::string display = masked ? std::string(value.size(), '*') : value;
     if (focused) display += "_"; // caret
     // keep the end (and the caret) visible
@@ -513,13 +514,13 @@ static void line(int y, const char* s, int size, u32 col) {
 void ConnectView::renderBackground() {
     const Ui::Palette& p = Ui::pal();
     Ui::background();
-    Ui::text(28, 12, "Connect to Jellyfin", 22, p.text);
+    Ui::text(28, 12, tr("Connect to Jellyfin"), 22, p.text);
 
     // Tabs: one pill split into the segments update() hit-tests
     {
         const float X0 = TAB_X0, X3 = TAB_X0 + 3 * TAB_W, Y = TAB_Y, H = TAB_H;
         const float seg[4] = { X0, X0 + TAB_W, X0 + 2 * TAB_W, X3 };
-        const char* names[3] = { "Credentials", "Quick Connect", "Discover" };
+        const char* names[3] = { N_("Credentials"), N_("Quick Connect"), N_("Discover") };
         Ui::shadow(X0, Y + 1, X3 - X0, H, H * 0.5f, 4.0f, p.shadow);
         Ui::roundRect(X0, Y, X3 - X0, H, H * 0.5f, p.field, Ui::mix(p.field, p.cardBottom, 0.5f));
         Ui::roundBorder(X0, Y, X3 - X0, H, H * 0.5f, 1.5f, p.fieldBorder);
@@ -528,7 +529,7 @@ void ConnectView::renderBackground() {
             float sx = seg[i], sw = seg[i + 1] - seg[i];
             if (on) Ui::roundRect(sx + 2, Y + 2, sw - 4, H - 4, (H - 4) * 0.5f,
                                   Ui::mix(p.accent, 0xFFFFFFFF, 0.25f), p.accentDark);
-            Ui::textCentered(sx + sw * 0.5f, Y + 7, names[i], 15, on ? p.textOnAccent : p.textDim);
+            Ui::textCentered(sx + sw * 0.5f, Y + 7, tr(names[i]), 15, on ? p.textOnAccent : p.textDim);
         }
     }
 
@@ -537,9 +538,11 @@ void ConnectView::renderBackground() {
         static const char* const dots[4] = { "", ".", "..", "..." };
         char msg[64];
         snprintf(msg, sizeof(msg), "%s%s",
-                 busy == Busy::Network ? "Connecting to the network" : busyLabel,
+                 busy == Busy::Network ? tr("Connecting to the network") : tr(busyLabel),
                  dots[(ticks_to_millisecs(gettime()) / 400) % 4]);
-        int w = Ui::textWidth("Connecting to the network...", 14);
+        char wb[64];
+        snprintf(wb, sizeof(wb), "%s...", tr("Connecting to the network"));
+        int w = Ui::textWidth(wb, 14);
         Ui::roundRect(320 - w / 2 - 16, 420, w + 32, 26, 13, p.cardTop, p.cardBottom);
         Ui::roundBorder(320 - w / 2 - 16, 420, w + 32, 26, 13, 1.5f, p.accent);
         Ui::text(320 - w / 2, 425, msg, 14, p.accentDark);
@@ -547,7 +550,7 @@ void ConnectView::renderBackground() {
     // Status (on two lines when the message is too wide)
     if (statusTimer > 0) {
         u32 sc = statusError ? p.danger : p.ok;
-        const std::string& msg = statusMsg;
+        const std::string msg = tr(statusMsg.c_str());
         int sw = Ui::textWidth(msg.c_str(), 14);
         std::string l1 = msg, l2;
         if (sw > 580) {
@@ -571,25 +574,25 @@ void ConnectView::renderBackground() {
 
 void ConnectView::renderCredentials(ir_t& ir) {
     int fx = 80, fw = 480;
-    drawField("Server URL", fx, 110, fw, fields[0],
+    drawField(N_("Server URL"), fx, 110, fw, fields[0],
               focusedField == Field::Server && !kbActive, false);
-    drawField("Username",   fx, 180, fw, fields[1],
+    drawField(N_("Username"),   fx, 180, fw, fields[1],
               focusedField == Field::Username && !kbActive, false);
-    drawField("Password",   fx, 250, fw, fields[2],
+    drawField(N_("Password"),   fx, 250, fw, fields[2],
               focusedField == Field::Password && !kbActive, true);
 
     // Submit button
-    drawButton(320, 330, 200, 48, "Connect",
+    drawButton(320, 330, 200, 48, N_("Connect"),
                focusedField == Field::SubmitBtn && !kbActive);
 
     if (kbActive) {
         renderVKB(ir);
-        const Ui::Hint l[] = { { "A", "Type" }, { "B", "Delete" } };
-        const Ui::Hint r[] = { { "-", "Shift" }, { "+!", focusedField == Field::Password ? "Done" : "Next" } };
+        const Ui::Hint l[] = { { "A", N_("Type") }, { "B", N_("Delete") } };
+        const Ui::Hint r[] = { { "-", N_("Shift") }, { "+!", focusedField == Field::Password ? N_("Done") : N_("Next") } };
         Ui::footer(l, 2, r, 2);
     } else {
-        const Ui::Hint l[] = { { "A", "Select" }, { "UD", "Move" } };
-        const Ui::Hint r[] = { { "-/+", "Tabs" }, { "B", "Back" } };
+        const Ui::Hint l[] = { { "A", N_("Select") }, { "UD", N_("Move") } };
+        const Ui::Hint r[] = { { "-/+", N_("Tabs") }, { "B", N_("Back") } };
         Ui::footer(l, 2, r, 2);
     }
 }
@@ -604,13 +607,13 @@ void ConnectView::renderVKB(ir_t& ir) {
     Ui::card(PX, PY, PW, PH, 16, 0.0f);
     {
         int fi = (int)focusedField;
-        const char* names[3] = { "Server URL", "Username", "Password" };
+        const char* names[3] = { N_("Server URL"), N_("Username"), N_("Password") };
         if (fi <= 2) {
             std::string v = fi == 2 ? std::string(fields[fi].size(), '*') : fields[fi];
             v += "_";
             while (v.size() > 1 && Ui::textWidth(v.c_str(), 16) > PW - 150)
                 v.erase(v.begin());
-            Ui::text(PX + 16, PY + 13, names[fi], 14, Ui::pal().textDim);
+            Ui::text(PX + 16, PY + 13, tr(names[fi]), 14, Ui::pal().textDim);
             Ui::field(PX + 110, PY + 8, PW - 122, 28, v.c_str(), 16, true);
         }
     }
@@ -624,43 +627,43 @@ void ConnectView::renderQuickConnect(ir_t& ir) {
     switch (qcState) {
         case QCState::Idle: {
             Ui::card(70, 96, 500, 108, 16, 0.0f);
-            line(112, "Quick Connect lets you sign in by approving", 17, p.text);
-            line(136, "a code in the Jellyfin web interface.", 17, p.text);
+            line(112, tr("Quick Connect lets you sign in by approving"), 17, p.text);
+            line(136, tr("a code in the Jellyfin web interface."), 17, p.text);
 
             /* Show current server URL or a warning if not set */
             if (fields[0].empty()) {
-                line(174, "Go to Credentials tab and enter the Server URL first.", 14, p.danger);
+                line(174, tr("Go to Credentials tab and enter the Server URL first."), 14, p.danger);
             } else {
                 char sbuf[128];
-                snprintf(sbuf, sizeof(sbuf), "Server: %s", fields[0].c_str());
+                snprintf(sbuf, sizeof(sbuf), tr("Server: %s"), fields[0].c_str());
                 line(174, sbuf, 14, p.textDim);
             }
 
             bool focused = ir.valid &&
                            ir.x >= 200 && ir.x <= 440 &&
                            ir.y >= 250 && ir.y <= 302;
-            drawButton(cx, 250, 240, 52, "Start Quick Connect", focused || !ir.valid);
+            drawButton(cx, 250, 240, 52, N_("Start Quick Connect"), focused || !ir.valid);
             break;
         }
 
         case QCState::Waiting: {
-            line(112, "Enter this code on your Jellyfin server:", 17, p.text);
+            line(112, tr("Enter this code on your Jellyfin server:"), 17, p.text);
             // Big code display on a card
             int cw = Ui::textWidth(qcResult.code.c_str(), 52);
             Ui::card(320 - cw / 2 - 30, 148, cw + 60, 80, 18, Ui::pulse());
             Ui::textCentered(320, 160, qcResult.code.c_str(), 52, p.accentDark);
-            line(250, "Waiting for approval...", 17, p.textDim);
+            line(250, tr("Waiting for approval..."), 17, p.textDim);
             break;
         }
         case QCState::Done:
-            line(200, "Approved! Signing in...", 22, p.ok);
+            line(200, tr("Approved! Signing in..."), 22, p.ok);
             break;
         case QCState::Error:
-            line(200, "Error. Press A to retry.", 20, p.danger);
+            line(200, tr("Error. Press A to retry."), 20, p.danger);
             break;
     }
-    const Ui::Hint l[] = { { "A", "Select" } };
-    const Ui::Hint r[] = { { "-/+", "Tabs" }, { "B", qcState == QCState::Waiting ? "Cancel" : "Back" } };
+    const Ui::Hint l[] = { { "A", N_("Select") } };
+    const Ui::Hint r[] = { { "-/+", N_("Tabs") }, { "B", qcState == QCState::Waiting ? N_("Cancel") : N_("Back") } };
     Ui::footer(l, 1, r, 2);
 }
 
@@ -679,32 +682,32 @@ void ConnectView::renderDiscover(ir_t& ir) {
     switch (discoverState) {
         case DiscoverState::Idle:
             Ui::card(70, 96, 500, 84, 16, 0.0f);
-            line(114, "Find Jellyfin servers on your local network.", 17, p.text);
-            line(142, "The Wii must be on the same network as the server.", 14, p.textDim);
+            line(114, tr("Find Jellyfin servers on your local network."), 17, p.text);
+            line(142, tr("The Wii must be on the same network as the server."), 14, p.textDim);
             {
                 bool btnFocus = ir.valid &&
                                 ir.x >= 200 && ir.x <= 440 &&
                                 ir.y >= 240 && ir.y <= 292;
-                drawButton(cx, 240, 240, 52, "Scan for Servers", btnFocus || !ir.valid);
+                drawButton(cx, 240, 240, 52, N_("Scan for Servers"), btnFocus || !ir.valid);
             }
             break;
 
         case DiscoverState::Scanning:
-            line(220, "Scanning...", 22, p.accentDark);
+            line(220, tr("Scanning..."), 22, p.accentDark);
             break;
 
         case DiscoverState::Done: {
             int n = (int)discoveredServers.size();
             if (n == 0) {
-                line(170, "No servers found.", 20, p.danger);
-                line(200, "Check your network and server settings, then try again.", 14, p.textDim);
+                line(170, tr("No servers found."), 20, p.danger);
+                line(200, tr("Check your network and server settings, then try again."), 14, p.textDim);
                 bool btnFocus = ir.valid &&
                                 ir.x >= 200 && ir.x <= 440 &&
                                 ir.y >= 240 && ir.y <= 292;
-                drawButton(cx, 240, 200, 48, "Scan Again", btnFocus || !ir.valid);
+                drawButton(cx, 240, 200, 48, N_("Scan Again"), btnFocus || !ir.valid);
                 break;
             }
-            Ui::text(28, 98, "Found \xe2\x80\x94 select a server:", 15, p.textDim);
+            Ui::text(28, 98, tr("Found \xe2\x80\x94 select a server:"), 15, p.textDim);
             for (int i = 0; i < n && i < 6; i++) {
                 int rowY = 126 + i * 50;
                 bool sel = (i == discoverSelected);
@@ -720,8 +723,8 @@ void ConnectView::renderDiscover(ir_t& ir) {
             break;
         }
     }
-    const Ui::Hint l[] = { { "A", "Select" } };
-    const Ui::Hint r[] = { { "-/+", "Tabs" }, { "B", "Back" } };
+    const Ui::Hint l[] = { { "A", N_("Select") } };
+    const Ui::Hint r[] = { { "-/+", N_("Tabs") }, { "B", N_("Back") } };
     Ui::footer(l, 1, r, 2);
 }
 
