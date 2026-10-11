@@ -1,0 +1,19 @@
+# The interface in French (language=fr in wiifin.cfg): not one character
+# it draws missing from the fonts; in System Settings, Language goes on
+# to the Wii's language, English in Dolphin:
+# the line logged on leaving says so.
+server http://127.0.0.1:18096
+cfg language=fr
+3000  DOWN
+4000  A          Paramètres
+5000  DOWN       Paramètres système
+5500  A
+6000  DOWN
+6300  DOWN
+6600  DOWN       Langue
+7000  A          the language of the Wii
+7500  B          the sections
+8500  B          leave
+10000 END
+expect logre "\[Settings\] .*, language en"
+expect nolog [Text] no glyph
