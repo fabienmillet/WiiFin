@@ -121,7 +121,7 @@ SECTIONS {
 
         /* Normal mutable data — exclude large blobs */
         .data : ALIGN_WITH_INPUT {
-                EXCLUDE_FILE(*wii_font_ttf.o *jp_font_ttf.o *cacert_pem.o *music_mp3.o) *(.data .data.* .gnu.linkonce.d.*)
+                EXCLUDE_FILE(*wii_font_ttf.o *jp_font_ttf.o *cacert_pem.o *music_mp3.o *fx_*_mp3.o *_png.o *lang_mo.o) *(.data .data.* .gnu.linkonce.d.*)
                 *(.data1)
                 SORT(CONSTRUCTORS)
         } :data = 0
@@ -178,6 +178,11 @@ SECTIONS {
                 *jp_font_ttf.o(.data .data.*)
                 *cacert_pem.o(.data .data.*)
                 *music_mp3.o(.data .data.*)
+                /* the interface's sounds and pictures, the translations: the
+                 * data below 0x80804000 had grown to a few KB from it */
+                *fx_*_mp3.o(.data .data.*)
+                *_png.o(.data .data.*)
+                *lang_mo.o(.data .data.*)
                 *stub_zone.o(.stub_zone)
                 . = ALIGN(32);   /* DOL loaders round section sizes up to 32 bytes */
         } :text2 = 0
