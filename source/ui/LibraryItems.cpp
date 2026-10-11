@@ -531,6 +531,10 @@ void LibraryView::renderItemList(ir_t& ir) {
             snprintf(meta + l, sizeof(meta) - l, "%s%d", l ? "  \xc2\xb7  " : "", selItem.year);
         }
         if (meta[0]) Ui::text(PX, ty + 20, meta, 13, p.textDim);
+        /* an album's or a song's artist: albums of the same name told apart */
+        if (!selItem.artist.empty())
+            Ui::text(PX, ty + (meta[0] ? 38 : 20), fitText(font, filterDejaVu(selItem.artist, 60), 13, (int)PW).c_str(),
+                     13, p.accentDark);
     }
 
     // Letter jump feedback: a big letter for a moment
@@ -623,6 +627,12 @@ void LibraryView::renderPosterGrid(ir_t& ir) {
     const Ui::Hint r[] = { { "", pageStr } };
     const char* center = (posterSel >= 0 && posterSel < n) ? items[posterSel].name.c_str() : nullptr;
     if (currentLibType == "music") {   /* 2 sorts the albums, shuffles the rest; -/+ the tabs */
+        /* the selected album and its artist: the name alone is under its cover */
+        std::string named;
+        if (center && !items[posterSel].artist.empty()) {
+            named = items[posterSel].name + "  \xe2\x80\x94  " + items[posterSel].artist;
+            center = named.c_str();
+        }
         const Ui::Hint lm[] = { { "B", N_("Back") },
                                 { "2", sortable() ? (sum.empty() ? N_("Sort") : sum.c_str()) : N_("Shuffle") } };
         const Ui::Hint rm[] = { { "-/+", N_("Tab") }, { "", pageStr } };

@@ -3668,6 +3668,7 @@ bool JellyfinClient::getItemsByQuery(const std::string& serverUrl,
         item.childCount            = c->self->jsonGetInt(obj,    "ChildCount");
         item.recursiveItemCount    = c->self->jsonGetInt(obj,    "RecursiveItemCount");
         item.sortName              = c->self->jsonGetString(obj, "SortName");
+        item.artist                = c->self->jsonGetString(obj, "AlbumArtist");
         if (!item.id.empty() && !item.name.empty())
             c->out->push_back(item);
     }, &ctx);

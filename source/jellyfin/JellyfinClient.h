@@ -26,6 +26,7 @@ struct JellyfinItem {
     int         recursiveItemCount = 0;    // Series: episodes
     std::string sortName;                  // what the list is sorted on ("matrix" for "The Matrix")
     std::string extraType;                 // a special feature's: "Trailer", "Featurette"...
+    std::string artist;                    // an album's or a song's: AlbumArtist
 };
 
 struct JellyfinSeason {
