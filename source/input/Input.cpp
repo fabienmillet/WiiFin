@@ -8,6 +8,7 @@
 static u32 rawDownBits = 0;   /* pressed this frame, no repeat */
 static u32 heldBits    = 0;
 static u32 buttonsDown = 0;   /* rawDownBits + repeated directions */
+static bool actionDown = false;   /* isActionPressed */
 
 static const u32 DIRS = WPAD_BUTTON_UP | WPAD_BUTTON_DOWN | WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT;
 
@@ -153,6 +154,10 @@ void Input::update() {
         }
     }
 
+    /* + as an action: the Wii Remote's or the Classic's + button, or a
+     * zoom button (the GameCube's Z), not the R triggers: they turn pages */
+    actionDown = (wDown & WPAD_BUTTON_PLUS) || (classic && (wDown & WPAD_CLASSIC_BUTTON_PLUS)) ||
+                 (down & BTN_ZOOM);
     rawDownBits = down;
     heldBits    = held;
     buttonsDown = down | (repeat & DIRS);
@@ -170,7 +175,7 @@ bool Input::isBPressed()     { return buttonsDown & WPAD_BUTTON_B; }
 bool Input::isBackPressed()  { return buttonsDown & WPAD_BUTTON_B; }
 bool Input::isLPressed()     { return buttonsDown & WPAD_BUTTON_MINUS; }
 bool Input::isRPressed()     { return buttonsDown & WPAD_BUTTON_PLUS; }
-bool Input::isActionPressed() { return buttonsDown & (WPAD_BUTTON_PLUS | BTN_ZOOM); }
+bool Input::isActionPressed() { return actionDown; }
 bool Input::is1Pressed()     { return buttonsDown & WPAD_BUTTON_1; }
 bool Input::is2Pressed()     { return buttonsDown & WPAD_BUTTON_2; }
 

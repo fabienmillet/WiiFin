@@ -46,8 +46,8 @@ public:
     static bool isLPressed();     // -
     static bool isRPressed();     // +
     /* + as an action of its own (Watched, Browse, the keyboard's Enter), not
-     * the next page: Z too, a button where the GameCube's R is a trigger
-     * (hints: "+!") */
+     * the next page: the + buttons and Z (ZL / ZR), not the R triggers,
+     * which only turn pages (hints: "+!") */
     static bool isActionPressed();
     static bool is1Pressed();
     static bool is2Pressed();
