@@ -1,6 +1,7 @@
 # The profile menu (A on the avatar): Settings while signed in, with the
 # profile's own sections; View Settings: Home Screen to rows, for this
-# profile; Sign-In Settings: a passcode, typed twice; WiiFin Menu goes
+# profile; Sign-In Settings (before System Settings): Passcode, chosen
+# among the others, typed twice on leaving; WiiFin Menu goes
 # past the profiles.  Opening the profile again asks the passcode: a
 # wrong one, then 1234.
 server http://127.0.0.1:18096
@@ -17,29 +18,31 @@ cfg home_layout=0
 17400 DOWN       Home Screen
 18000 A          rows
 19000 B          the sections
-19500 DOWN
-19800 DOWN       Sign-In Settings
+19500 DOWN       Sign-In Settings, right after View Settings
 20200 A
-21000 A          Sign-In: a passcode
-22000 A          1
-22500 RIGHT
-22800 A          2
-23300 RIGHT
-23600 A          3
-24100 DOWN
-24400 LEFT
-24700 LEFT
-25000 A          4
-26000 A          again: 1
-26500 RIGHT
-26800 A          2
-27300 RIGHT
-27600 A          3
-28100 DOWN
-28400 LEFT
-28700 LEFT
-29000 A          4
-30000 B          the sections
+21000 A          Sign-In: Passcode
+21400 A          Password
+21800 A          Automatic
+22200 A          Passcode again: nothing asked yet
+22600 B          leaving: the passcode, typed twice
+23400 A          1
+23900 RIGHT
+24200 A          2
+24700 RIGHT
+25000 A          3
+25500 DOWN
+25800 LEFT
+26100 LEFT
+26400 A          4
+27400 A          again: 1
+27900 RIGHT
+28200 A          2
+28700 RIGHT
+29000 A          3
+29500 DOWN
+29800 LEFT
+30100 LEFT
+30400 A          4: the sections
 31000 B          the home, in rows now
 33000 UP         the header
 33500 RIGHT      the profile button
@@ -64,5 +67,6 @@ cfg home_layout=0
 45700 LEFT
 46000 A          4: the home
 49000 END
+expect logcount 1 [Settings] sign-in 
 expect logorder "[WiiFin] profile menu" "[Settings] sign-in 1" "[WiiFin] back to the menu" "[WiiFin] passcode wrong" "[WiiFin] passcode right"
 expect logre "\[Settings\] .*, home rows,"

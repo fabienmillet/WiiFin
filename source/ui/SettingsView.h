@@ -45,6 +45,10 @@ private:
     float focusAnim[16] = {};     /* one per place in rows */
     int   pages() const;
 
+    /* the Sign-In row's choice, applied on leaving its section (a new
+     * passcode asked then) */
+    int    signInWant = -1;
+    bool   leaveSignIn();
     /* a new passcode, typed twice */
     PinPad pin;
     int    pinStep = 0;           /* 0 none, 1 first time, 2 again */

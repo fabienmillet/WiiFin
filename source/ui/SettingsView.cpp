@@ -20,6 +20,8 @@ enum Row { R_SSL, R_MUSIC, R_SOUNDS, R_QUALITY, R_DIRECT, R_SMOOTH, R_THEME, R_H
  * theme and backgrounds only), what every profile shares, how a profile
  * signs in */
 static const char* const SECTIONS[3] = { N_("View Settings"), N_("System Settings"), N_("Sign-In Settings") };
+/* in the menu, a profile's two sections first: View, Sign-In, System */
+static int sectionAt(int i, bool profile) { return profile && i > 0 ? 3 - i : i; }
 
 /* Row layout (also used for pointer hit-testing).  Settings come in pages
  * of PER_PAGE rows, turned with arrows on the screen edges like the Wii
@@ -58,6 +60,22 @@ void SettingsView::openSection(int s) {
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE, R_AREA,
                               R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT };
     else rows = { R_SIGNIN };
+    signInWant = profile ? profile->signIn : -1;
+}
+
+/* B in the Sign-In section: its choice applied; a passcode new to the
+ * profile is typed first (twice), the section left once it is.  False:
+ * the pad is up */
+bool SettingsView::leaveSignIn() {
+    if (!profile || signInWant < 0 || signInWant == profile->signIn) return true;
+    if (signInWant == SavedProfile::Passcode) {
+        pinStep = 1;
+        pin.start(N_("Choose a passcode"), N_("Four digits, asked when this profile opens"));
+        return false;
+    }
+    profile->signIn = signInWant;
+    SYS_Report("[Settings] sign-in %d\n", profile->signIn);
+    return true;
 }
 
 bool SettingsView::updateMenu(ir_t& ir) {
@@ -75,7 +93,7 @@ bool SettingsView::updateMenu(ir_t& ir) {
     if (menuSel != was) SoundFX::play(SoundFX::FX::Move);
     if (Input::isAJustPressed() && (!ir.valid || hover >= 0)) {
         SoundFX::play(SoundFX::FX::Open);
-        openSection(menuSel);
+        openSection(sectionAt(menuSel, profile));
     }
     return false;
 }
@@ -88,7 +106,7 @@ void SettingsView::renderMenu(ir_t& ir) {
         menuFocus[i] = Ui::approach(menuFocus[i], i == menuSel ? 1.0f : 0.0f);
         float grow = 6.0f * menuFocus[i];
         Ui::button(320 - SB_W / 2 - grow, SB_Y0 + i * SB_STEP - grow * 0.25f, SB_W + grow * 2, SB_H + grow * 0.5f,
-                   SECTIONS[i], 20, menuFocus[i]);
+                   SECTIONS[sectionAt(i, profile)], 20, menuFocus[i]);
     }
     const char* version = "WiiFin v" WIIFIN_VERSION;
     std::string credits = std::string(tr("Made with \xe2\x9d\xa4 for Jellyfin")) + "  \xe2\x80\xa2  github.com/fabienmillet/WiiFin";
@@ -147,16 +165,9 @@ void SettingsView::activate(int index) {
         case 13:   /* the Wii's, then each language in turn */
             Lang::choose(Lang::next(Lang::choice()));
             break;
-        case R_SIGNIN:   /* at once, a passcode (typed twice first), the password */
+        case R_SIGNIN:   /* at once, a passcode, the password: chosen, applied on leaving */
             if (!profile) break;
-            if (profile->signIn == SavedProfile::Auto) {
-                pinStep = 1;
-                pin.start(N_("Choose a passcode"), N_("Four digits, asked when this profile opens"));
-            } else {
-                profile->signIn = profile->signIn == SavedProfile::Passcode ? SavedProfile::Password
-                                                                             : SavedProfile::Auto;
-                SYS_Report("[Settings] sign-in %d\n", profile->signIn);
-            }
+            signInWant = (signInWant + 1) % 3;
             break;
     }
 }
@@ -247,7 +258,7 @@ bool SettingsView::update(ir_t& ir) {
     if (calibrating) { updateCalibration(); return false; }
     if (pinStep) {
         const int r = pin.update(ir);
-        if (r < 0) { pinStep = 0; return false; }
+        if (r < 0) { pinStep = 0; signInWant = profile->signIn; return false; }   /* the section, as it was */
         if (r == 0) return false;
         if (pinStep == 1) {
             pinFirst = pin.code();
@@ -262,6 +273,7 @@ bool SettingsView::update(ir_t& ir) {
             profile->passHash = PinPad::hash(profile->passSalt, pin.code());
             profile->signIn   = SavedProfile::Passcode;
             pinStep = 0;
+            section = -1;
             SoundFX::play(SoundFX::FX::Start);
             SYS_Report("[Settings] sign-in %d\n", profile->signIn);
         }
@@ -272,7 +284,11 @@ bool SettingsView::update(ir_t& ir) {
     if (ir.valid) irMode = true;
     else          irMode = false;   /* no pointer on the screen: the D-pad drives, A acts on the highlighted item */
 
-    if (Input::isBackPressed()) { SoundFX::play(SoundFX::FX::Back); section = -1; return false; }
+    if (Input::isBackPressed()) {
+        SoundFX::play(SoundFX::FX::Back);
+        if (section != 2 || leaveSignIn()) section = -1;
+        return false;
+    }
     const int NUM_SETTINGS = (int)rows.size(), PAGES = pages();
 
     const int page = selectedIndex / PER_PAGE;
@@ -431,7 +447,7 @@ void SettingsView::render(ir_t& ir) {
             N_("Asks the profile's four-digit passcode first"),
             N_("Asks the password (or Quick Connect) each time"),
         };
-        const int m = profile->signIn >= 0 && profile->signIn < 3 ? profile->signIn : 0;
+        const int m = signInWant >= 0 && signInWant < 3 ? signInWant : 0;
         drawRow(R_SIGNIN, N_("Sign-In"), desc[m], how[m], m == 0 ? 0x8A9099FF : p.accent);
     }
 
