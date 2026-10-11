@@ -45,28 +45,37 @@ Il parcourt et lit vos films, séries et musiques sur la console elle-même. Il 
 **Connexion**
 - Connexion par nom d'utilisateur et mot de passe, ou par **Quick Connect** (validé depuis un autre appareil)
 - **Découverte des serveurs** sur le réseau local, ou adresse saisie à la main (HTTP ou **HTTPS**, certificats auto-signés acceptés)
-- **Profils enregistrés** : plusieurs comptes et serveurs, seul un jeton d'accès est conservé (aucun mot de passe)
+- **Profils enregistrés** : plusieurs comptes et serveurs, seul un jeton d'accès est conservé (aucun mot de passe) ; chacun avec son apparence (thème, arrière-plans, écran d'accueil, vue des bibliothèques) et sa connexion : immédiate, par un **code à quatre chiffres**, ou par le mot de passe (ou Quick Connect) à chaque fois, sans rien garder sur la Wii
+- Un nouveau profil demande comment il se connecte, puis son écran d'accueil et sa vue des bibliothèques, sur de petites images de chacun
+- Le **menu du profil** (l'avatar, en haut à droite) : retour aux bibliothèques, changer de profil, les Paramètres sans se déconnecter, le menu de WiiFin
 
 **Navigation**
 - Un accueil en **rangées** (Continuer à regarder, À suivre, ajouts récents, mieux notés, favoris, genres) ou en **grille** de bibliothèques
-- Bibliothèques de films, séries et musique en affiches ou en listes (avec la pochette du titre sélectionné) ; sauts **A-Z** avec gauche / droite
-- **Tri et filtre** d'une bibliothèque de films ou de séries (touche 2) : par nom, année, note ou date d'ajout ; un genre ; tout, non vus, vus ou favoris
+- Bibliothèques de films, séries et musique en affiches ou en listes (avec la pochette du titre sélectionné), leurs **onglets** dans toutes les vues (−/+, ou le pointeur sur l'un d'eux) ; sauts **A-Z** avec gauche / droite
+- Un titre trop long pour sa place **défile** quand il est sélectionné
+- **Tri et filtre** d'une bibliothèque de films ou de séries, ou des albums d'une bibliothèque de musique (touche 2) : par nom, année, note ou date d'ajout, croissant ou décroissant ; un genre ; tout, non vus, vus ou favoris
 - **Recherche** (touche 1 sur l'accueil)
 - **Fiche détaillée** : synopsis (en entier avec − quand la fiche le coupe), classification, genres, distribution, pistes audio et sous-titres (celles que le serveur choisit pour vous au départ : votre mode de sous-titres et vos langues, les pistes par défaut et forcées du fichier), plusieurs **versions** d'un film, **favoris** (touche 1, aussi sur une série), **vu / non vu** (+, aussi sur une ligne de la liste des épisodes)
 - **Bonus** : bandes-annonces, featurettes, coulisses… d'un film (touche 2 sur sa fiche) ou d'une série (après ses saisons)
+- **Scènes** : les chapitres d'un film ou d'un épisode (la rangée Scènes de sa fiche), avec l'image de Jellyfin pour chacun : lecture à partir de l'un d'eux
 - **Séries** : saisons (en affiches, ou en liste avec l'affiche de la saison) et épisodes, **lecture aléatoire** (touche 2), épisode suivant / précédent d'une saison à l'autre
+- **Playlists de vidéos** : lues l'une après l'autre à partir de celle choisie, ou en lecture aléatoire (touche 2)
+- **Photos** : les images d'une bibliothèque de photos en plein écran, gauche / droite pour parcourir le dossier, un **diaporama** avec A
 - Titres et sous-titres en **japonais, chinois et coréen** : le japonais est intégré, le chinois et le coréen passent par la police de `apps/WiiFin/fonts/` (fournie dans le paquet pour la Chaîne Homebrew)
 
 **Vidéo**
 - Lue par le moteur MPlayer CE intégré : **lecture directe** de ce que la Wii décode en temps réel (DivX/Xvid SD, MPEG-1/2, H.264 jusqu'en 480p, VP8 ; AVI, MKV, MP4, MPEG-TS/PS ; avance rapide dans le fichier lui-même), conversion par le serveur pour le reste, et retour à la conversion quand un fichier ne passe pas bien (voir [DIRECT_PLAY.md](../DIRECT_PLAY.md))
-- **Lecteur** : barre de progression avec les vignettes du serveur (Jellyfin 10.9+), volume, pistes audio et sous-titres (les sous-titres texte sont dessinés par WiiFin, la vidéo peut donc rester lue telle quelle), zoom (ajusté / plein écran)
+- **Lecteur** : barre de progression avec les vignettes du serveur (Jellyfin 10.9+), gauche / droite maintenus pour avancer en continu, |◀ ▶| d'un chapitre à l'autre, volume, pistes audio et sous-titres (les sous-titres texte sont dessinés par WiiFin, la vidéo peut donc rester lue telle quelle), zoom (ajusté / plein écran)
 - Boutons **Passer l'intro / le résumé / le générique** à partir des segments du serveur (Jellyfin 10.10+ avec un plugin comme Intro Skipper), et **Épisode suivant** pendant le générique
 - **Reprise** là où vous vous étiez arrêté ; progression, pauses et mode de lecture (direct ou converti) envoyés au serveur, chaque console comptant comme un appareil à part
 - Une connexion lente fait baisser la qualité d'elle-même ; une image qui se fige est relancée autrement, avec un message qui dit ce qui se passe
 
 **Musique**
 - Bibliothèques en onglets comme sur Jellyfin : **Albums, Suggestions, Artistes, Playlists, Morceaux** (une bibliothèque de fichiers sans album s'ouvre sur ses morceaux)
-- Un écran **Lecture en cours** avec la pochette, un spectre du son en direct, une file d'attente, lecture aléatoire, répétition, favoris, et des morceaux similaires une fois la file terminée
+- Un écran **En lecture** avec la pochette, le son en direct dans cinq visualiseurs (barres, anneau, bulles, vague, blocs : deux fois haut, puis A), une file d'attente, lecture aléatoire, répétition, favoris, et des morceaux similaires une fois la file terminée
+- **Lecture aléatoire** (touche 2) : un album, une playlist, ou des morceaux tirés de toute la bibliothèque
+- **Paroles** (Jellyfin 10.9+ : un `.lrc` à côté du morceau, ou intégrées) : le dernier visualiseur du lecteur, la ligne chantée éclairée au fur et à mesure, en plein écran une fois les commandes effacées, pour chanter avec
+- La musique **continue pendant la navigation** : B pendant qu'un morceau joue ; les pieds de page disent ce qui est lu, et **En lecture** dans le menu du profil rouvre le lecteur (une vidéo arrête la musique)
 
 **Commande à distance** depuis le tableau de bord ou les applis Jellyfin
 - **Lire sur… Nintendo Wii** (films, épisodes, musique ; « Lire ensuite » et « Ajouter à la file » pour la musique)
@@ -74,6 +83,7 @@ Il parcourt et lit vos films, séries et musiques sur la console elle-même. Il 
 - Les **messages** envoyés depuis le tableau de bord s'affichent sur n'importe quel écran
 
 **Et aussi**
+- L'interface dans les **dix langues de la Wii** : anglais, français, allemand, espagnol, italien, néerlandais, japonais, coréen, chinois simplifié et traditionnel, celle de la Wii par défaut (le français relu, les autres en attente de locuteurs natifs : voir [lang/README.md](../lang/README.md))
 - Pointeur de la **Wiimote**, **manette Classique**, **Wii U GamePad** (injections Virtual Console) et **manette GameCube** : tout se fait à la croix, sans barre de capteur (voir [Commandes](#-commandes))
 - **Sons de l'interface** et **musique de fond**, remplaçables par vos propres fichiers (voir [Sons personnalisés](#-sons-personnalisés))
 - Clavier à l'écran ; calibrage de la zone d'affichage pour les téléviseurs qui rognent l'image ; la lumière de la fente du lecteur peut rester éteinte
@@ -86,16 +96,18 @@ Le pointeur est facultatif : tous les écrans se pilotent à la croix.
 | Wiimote | Manette Classique / Wii U GamePad | Manette GameCube | Action |
 |---|---|---|---|
 | A / B | A / B | A / B | Valider / Retour |
-| Croix | Croix ou stick gauche | Croix ou stick | Se déplacer (maintenir pour répéter) ; gauche / droite : A-Z dans les listes, −10 / +10 s dans le lecteur |
+| Croix | Croix ou stick gauche | Croix ou stick | Se déplacer (maintenir pour répéter) ; gauche / droite : A-Z dans les listes, −10 / +10 s dans le lecteur (maintenu : en continu) |
 | − / + | − / + ou L / R | L / R | Onglets, pages, épisode ou morceau précédent / suivant ; + : vu / non vu (un film, un épisode) ; − : le synopsis en entier (une fiche) |
 | 1 | Y | Y | Recherche (accueil), favori (un film, une série), piste audio (lecteur), file d'attente (musique) |
-| 2 | X | X | Tri et filtre (listes), bonus (un film), lecture aléatoire (séries, musique), sous-titres (lecteur) |
+| 2 | X | X | Tri et filtre (listes, albums de musique), bonus (un film), lecture aléatoire (séries, musique), sous-titres (lecteur) |
 | HOME | HOME | START | Menu HOME |
 | pointeur | ZL / ZR | Z | Zoom de la vidéo (ajusté / plein écran) ; dans les menus, ce que fait + seul : vu / non vu, la page Browse, Entrée du clavier |
 
 Les aides à l'écran montrent les touches de la dernière manette utilisée (GameCube : A vert, B rouge, L / R, Z, START).
 
 ### ⚙️ Paramètres
+
+Les paramètres s'ouvrent sur leurs sections : **Paramètres d'affichage** (depuis le menu d'un profil, ceux de ce profil ; depuis le menu de WiiFin, l'apparence au démarrage), les **Paramètres de connexion** d'un profil, et les **Paramètres système**.
 
 | Paramètre | |
 |---|---|
@@ -104,11 +116,13 @@ Les aides à l'écran montrent les touches de la dernière manette utilisée (Ga
 | Video Quality | Le débit de la conversion, de Low (1,5 Mb/s) à Max (5 Mb/s, pour un adaptateur filaire) ; WiiFin mesure aussi la connexion et reste en dessous |
 | Direct Play | Lire tels quels les fichiers que la Wii sait décoder, sans conversion par le serveur |
 | Smooth Motion | Fondre les images lors des changements, pour que les films à 24 images/s défilent régulièrement sur un téléviseur à 60 Hz |
-| Theme / Home Screen / Library View | Clair, Sombre ou Flix ; rangées ou grille ; affiches, liste, ou liste avec la pochette |
+| Theme / Home Screen / Library View | Clair, Sombre, Flix, Luhu (noir, argent et vert) ou Sushi (gris foncé et orange) ; rangées ou grille ; affiches, liste, ou liste avec la pochette (Paramètres d'affichage, par profil) |
 | Disc Slot Light | La lumière qui pulse avec le son pendant la lecture, ou éteinte |
 | Screen Area | Réduire l'interface quand le téléviseur rogne les bords |
 | Backgrounds | Dégradés doux, ou couleurs unies pour les TV qui y montrent des bandes |
 | Clock | 24 h ou 12 h (AM/PM, la date en mois/jour) ; 12 h par défaut sur une Wii américaine |
+| Langue | Celle de la Wii, ou une choisie ici |
+| Connexion | Immédiate, un code à quatre chiffres, ou le mot de passe à chaque fois (Paramètres de connexion, par profil) |
 
 ### 🔊 Sons personnalisés
 
@@ -135,7 +149,7 @@ Chaque son est un `nom.mp3` ou un `nom.wav` (PCM, 8 ou 16 bits, mono ou stéréo
 - Lecture directe seulement pour ce que la Wii décode en temps réel (résolutions SD, voir [DIRECT_PLAY.md](../DIRECT_PLAY.md)) ; le serveur convertit le reste
 - Son en stéréo uniquement (le multicanal est réduit en stéréo)
 - Les sous-titres en image (PGS, VobSub) sont incrustés dans la vidéo par le serveur ; les sous-titres texte sont dessinés par WiiFin
-- Le chinois et le coréen demandent la police de `SD:/apps/WiiFin/fonts/` : le paquet pour la Chaîne Homebrew la contient ; avec le WAD, copiez-y `data/fonts/cjk/` (toute autre police `.ttf` / `.otf` posée là sert aussi, pour ce qui manque aux autres)
+- Le chinois et le coréen, pour les titres comme pour l'interface, demandent la police de `SD:/apps/WiiFin/fonts/` : le paquet pour la Chaîne Homebrew la contient ; avec le WAD, copiez-y ce dossier depuis le paquet (ou `data/fonts/cjk/`). Sans elle, WiiFin ne propose pas ces langues (l'anglais à la place) ; toute autre police `.ttf` / `.otf` posée là sert aussi, pour ce qui manque aux autres
 
 ---
 
