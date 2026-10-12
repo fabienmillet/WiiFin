@@ -515,8 +515,11 @@ void LibraryView::renderItemList(ir_t& ir) {
     // Cover of the selected title (List + Posters)
     if (coverPanel && haveSel) {
         GRRLIB_texImg* cover = feed.cover(selItem.id);
-        /* its own shape: a square album cover stays square */
-        const float PX = LIST_X + LW + 26, PW = 600 - PX, PH = fitHeight(cover, PW, PW * 1.5f), PY = LIST_Y + 2;
+        /* music: a square, as on Jellyfin (another shape cropped to it);
+         * the rest at its own shape (a square collection stays square) */
+        const bool music = currentLibType == "music" || selItem.type == "MusicAlbum" || selItem.type == "Audio";
+        const float PX = LIST_X + LW + 26, PW = 600 - PX, PY = LIST_Y + 2;
+        const float PH = music ? PW : fitHeight(cover, PW, PW * 1.5f);
         drawThumb(cover, PX, PY, PW, PH, 0.0f, progressOf(selItem),
                   cover ? nullptr : selItem.name.c_str(), false);
         float ty = PY + PH + 10;
@@ -603,12 +606,12 @@ void LibraryView::renderPosterGrid(ir_t& ir) {
             int px = POSTER_X0 + (i % POSTER_COLS) * POSTER_STRIDE_X;
             int py = POSTER_Y0 + (i / POSTER_COLS) * POSTER_STRIDE_Y;
             if (currentLibType == "music") {
-                /* square covers, the name under them (no poster says it) */
-                const float th = fitHeight(posterTextures[i], POSTER_W, POSTER_W);
-                drawThumb(posterTextures[i], px, py, POSTER_W, th, sel ? Ui::pulse() : 0.0f, -1.0f,
-                          items[i].name.c_str());
+                /* square covers, as on Jellyfin: another shape fills the
+                 * square (cropped), the names in line under them */
+                drawThumb(posterTextures[i], px, py, POSTER_W, POSTER_W,
+                          sel ? Ui::pulse() : 0.0f, -1.0f, items[i].name.c_str());
                 int visW = (int)(POSTER_W * WiiUtils::wsScaleX() + 0.5f);
-                titleText(1, px + 1, py + th + 6, visW, filterDejaVu(items[i].name, 200), 13,
+                titleText(1, px + 1, py + POSTER_W + 6, visW, filterDejaVu(items[i].name, 200), 13,
                           sel ? p.text : p.textDim, sel);
                 continue;
             }
