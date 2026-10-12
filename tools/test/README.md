@@ -45,7 +45,7 @@ tools/test/measure_av.py
 tools/test/make_media.sh playback music
 MOVIES=playback MIXED= tools/test/server.sh 300k
 NOPROFILE=1 BUILD_ONLY=1 tools/test/tour.sh ""
-for s in resume resume-transcode xvid formats audio-track https https-ecdsa slow subtitles subtitles-switch subtitles-big next next-from-home trickplay music-formats sounds sounds-off remote remote-play remote-queue segments stuck japanese music-favorite sort-favorite music-tabs specials cjk watched settings home-sounds music-quiet season-posters overview favorite-home versions music-after-video grid-profiles long-titles subtitles-transcode subtitles-resume subtitles-mp3 music-shuffle sort-order music-posters language music-sort profile-menu onboarding list-tabs music-visualizers scenes video-playlist lyrics photos music-browsing home-players token-refused; do tools/test/playback.sh $s; done
+for s in resume resume-transcode xvid formats audio-track https https-ecdsa slow subtitles subtitles-switch subtitles-big next next-from-home trickplay music-formats sounds sounds-off remote remote-play remote-queue segments stuck japanese music-favorite sort-favorite music-tabs specials cjk watched settings home-sounds music-quiet season-posters overview favorite-home versions music-after-video grid-profiles long-titles subtitles-transcode subtitles-resume subtitles-mp3 music-shuffle sort-order music-posters language music-sort profile-menu onboarding list-tabs music-visualizers scenes video-playlist lyrics photos music-browsing home-players token-refused suggestions-pointer; do tools/test/playback.sh $s; done
 
 # A server that keeps its accounts, with your own music as the Songs library
 KEEP=tools/test/out/keep MOVIES=playback MIXED= MUSIC=~/Music tools/test/server.sh 300k
@@ -110,6 +110,7 @@ commands, and what the log must or must not show):
 | `photos` | The Photos library (`make_media.sh photos`): A on a photo shows it with its folder's others, Right the next one, A a slideshow |
 | `music-browsing` | B while a song plays: back in the album, the song going on (the session's MPlayer, the footer says which); the profile menu's Now Playing opens the page over the same session, the song never stopped |
 | `home-players` | HOME in the music player and in a film opens the HOME menu over them, paused; HOME again closes it and playback goes on |
+| `suggestions-pointer` | The pointer on the third card of the Movies Suggestions tab's second row and A opens that card, not the first |
 | `token-refused` | A profile whose token the server refuses (`cfg profile.0.access_token=...`): opening it shows the sign-in screen with its server and name, not an error |
 | `watched` | Watched / not watched with +: on Counter Film's page (on, then off), then on the first row of Shuffle Show's episode list; its page shows it watched, the zoom button (a GameCube's Z, here a Classic's ZL) unmarks it, and the list follows |
 | `specials` | Special features: on Counter Film's page, 2 lists its trailer and its featurette; the featurette's page, then it plays; B back to the list, then to the film |

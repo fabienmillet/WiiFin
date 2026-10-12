@@ -206,7 +206,7 @@ jobs:
         run: |
           failed=''
           n=0
-          for s in resume resume-transcode xvid formats audio-track https https-ecdsa slow subtitles subtitles-switch subtitles-big next next-from-home trickplay music-formats sounds sounds-off remote remote-play remote-queue segments stuck japanese music-favorite sort-favorite music-tabs specials cjk watched settings home-sounds music-quiet season-posters overview favorite-home versions music-after-video grid-profiles long-titles subtitles-transcode subtitles-resume subtitles-mp3 music-shuffle sort-order music-posters language music-sort profile-menu onboarding list-tabs music-visualizers scenes video-playlist lyrics photos music-browsing home-players token-refused; do
+          for s in resume resume-transcode xvid formats audio-track https https-ecdsa slow subtitles subtitles-switch subtitles-big next next-from-home trickplay music-formats sounds sounds-off remote remote-play remote-queue segments stuck japanese music-favorite sort-favorite music-tabs specials cjk watched settings home-sounds music-quiet season-posters overview favorite-home versions music-after-video grid-profiles long-titles subtitles-transcode subtitles-resume subtitles-mp3 music-shuffle sort-order music-posters language music-sort profile-menu onboarding list-tabs music-visualizers scenes video-playlist lyrics photos music-browsing home-players token-refused suggestions-pointer; do
             # every fourth scenario, from this part's place
             n=$((n + 1)); [ $(( (n - 1) % 4 )) -eq ${{ matrix.part }} ] || continue
             dbus-run-session -- xvfb-run -a tools/test/playback.sh "$s" WiiFin-playback.dol 600 || failed="$failed $s"

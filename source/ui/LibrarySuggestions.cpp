@@ -110,6 +110,7 @@ bool LibraryView::updateMovieSuggestions(ir_t& ir, bool aPressed) {
             auto& selItems = (movieSuggestRow == 0) ? movieContItems : movieRecentItems;
             int   sel      = (movieSuggestRow == 0) ? movieSuggestContSel : movieSuggestRecSel;
             if (!selItems.empty() && sel < (int)selItems.size()) {
+                SYS_Report("[Suggestions] row %d, card %d\n", movieSuggestRow + 1, sel + 1);
                 detailItemId        = selItems[sel].id;
                 detailReturnState   = State::MovieSuggestionsReady;
                 detailIsEpisodeHint = false;
@@ -177,6 +178,8 @@ bool LibraryView::updateTVSuggestions(ir_t& ir, bool aPressed) {
         }
 
         if (aPressed) {
+            SYS_Report("[Suggestions] row %d, card %d\n", tvSuggestRow + 1,
+                       (tvSuggestRow == 0 ? tvSuggestContSel : tvSuggestRecSel) + 1);
             if (tvSuggestRow == 0) {
                 // Continue watching: episode → detail view
                 if (!tvContItems.empty() && tvSuggestContSel < nc) {
@@ -290,6 +293,7 @@ bool LibraryView::updateMusicSuggestions(ir_t& ir, bool aPressed) {
         }
 
         if (aPressed && nr > 0 && musicSuggestSel < nr) {
+            SYS_Report("[Suggestions] album %d\n", musicSuggestSel + 1);
             const JellyfinItem& item = musicRecentItems[musicSuggestSel];
             musicAlbumId     = item.id;
             musicAlbumName   = item.name;
