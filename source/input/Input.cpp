@@ -103,6 +103,20 @@ void Input::update() {
     static bool padInit = false;
     if (!padInit) { PAD_Init(); padInit = true; }
     WPAD_ScanPads();
+    /* a Wii Remote connecting (later than WiiFin, or back from sleep) is in
+     * buttons-only mode: libogc sets the pointer's mode only on those there
+     * when asked; so ask again for each one that comes */
+    static bool remoteThere[WPAD_BALANCE_BOARD] = {};
+    for (int ch = WPAD_CHAN_0; ch < WPAD_BALANCE_BOARD; ++ch) {
+        u32 type;
+        const bool there = WPAD_Probe(ch, &type) == WPAD_ERR_NONE;
+        if (there && !remoteThere[ch]) {
+            WPAD_SetDataFormat(ch, WPAD_FMT_BTNS_ACC_IR);
+            WPAD_SetVRes(ch, 640, 480);
+            SYS_Report("[Input] Wii Remote %d connected: pointer on\n", ch + 1);
+        }
+        remoteThere[ch] = there;
+    }
     bool padUp = (PAD_ScanPads() & 1) != 0;
     u64 nowMs = ticks_to_millisecs(gettime());
     static u64 lastAnswer = 0, lastDropReport = 0;
