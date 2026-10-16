@@ -17,10 +17,10 @@ cfg music_enabled=0
 26800 LEFT       the heart
 27200 A          favourite
 30000 A          not any more
-31000 RIGHT
-31400 RIGHT
-31800 RIGHT      play / pause
-32200 A          paused
+30400 RIGHT
+30700 RIGHT
+31000 RIGHT      play / pause
+31300 A          paused (before the first track ends, at about 32 s)
 33000 B          back to the album: the music stops
 34500 DOWN       a sound in the album
 36000 END
