@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     # devkitPPC, libogc and the portlibs come with the image: setup.sh then
     # finds them installed and never calls devkitPro's package server.
-    container: ${{ github.event_name == 'schedule' && 'devkitpro/devkitppc:latest' || 'devkitpro/devkitppc:20260503' }}
+    container: ${{ github.event_name == 'schedule' && 'devkitpro/devkitppc:latest' || 'devkitpro/devkitppc:20261016' }}
     outputs:
       version: ${{ steps.version.outputs.version }}
 

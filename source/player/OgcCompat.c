@@ -7,12 +7,30 @@
  * of the same name stays out of this file.  libogc 3.1 has no tuxedo and
  * its own udelay(): nothing here then.
  */
-#if __has_include(<tuxedo/ppc/clock.h>)
+#include <ogc/libversion.h>
+/* libogc 3.2 or later (3.1 has some of tuxedo's headers already: its
+ * version, not a header, tells them apart) */
+#if _V_MAJOR_ > 3 || (_V_MAJOR_ == 3 && _V_MINOR_ >= 2)
 #include <tuxedo/ppc/clock.h>
 
+/* the time base, read whole (its upper half again: no carry between) */
+static unsigned long long timeBase(void)
+{
+	unsigned hi, lo, again;
+	do {
+		__asm__ volatile ("mftbu %0" : "=r"(hi));
+		__asm__ volatile ("mftb %0" : "=r"(lo));
+		__asm__ volatile ("mftbu %0" : "=r"(again));
+	} while (hi != again);
+	return (unsigned long long)hi << 32 | lo;
+}
+
+/* busy, as 3.1's was: the time base itself (PPCBusyWaitTicks is declared
+ * by some 3.2 headers only, the CI's had none) */
 void udelay(unsigned us)
 {
-	PPCBusyWaitTicks(PPCUsToTicks(us));
+	const unsigned long long end = timeBase() + (unsigned long long)us * (PPC_TIMER_CLOCK / 1000) / 1000;
+	while (timeBase() < end) {}
 }
 
 /* libogc 3.2 turns on timeslicing as the first thread is made (a tick task
