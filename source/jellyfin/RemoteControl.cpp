@@ -33,6 +33,8 @@
 mbedtls_x509_crt* wiifin_ca_chain();
 int wiifin_cert_verify(void*, mbedtls_x509_crt*, int, uint32_t* flags);
 
+extern volatile bool g_netRestarting;   /* JellyfinClient.cpp: the network starting again */
+
 namespace {
 
 /* ---- State shared with the main thread ---------------------------------- */
@@ -454,6 +456,8 @@ void* threadMain(void*) {
     int backoff = 2;
     std::string lastErr;
     while (s_run) {
+        /* the network starting again: no socket of ours meanwhile */
+        if (g_netRestarting) { nap(500); continue; }
         Ws w;
         std::string err;
         if (!wsOpen(w, err)) {

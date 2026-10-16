@@ -12,6 +12,7 @@
 #include <ogc/lwp_watchdog.h>
 #include <sys/filio.h>
 #include <string.h>
+#include <map>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -111,9 +112,18 @@ void JellyfinClient::bringUpNetwork() {
     errMsg = buf;
 }
 
+/* the network restarting (RemoteControl waits for it, its sockets apart) */
+volatile bool g_netRestarting = false;
+
 void* JellyfinClient::netThreadMain(void* self) {
     JellyfinClient* c = static_cast<JellyfinClient*>(self);
+    if (c->netRestart) {
+        c->netRestart = false;
+        g_netRestarting = true;
+        net_deinit();
+    }
     c->bringUpNetwork();
+    g_netRestarting = false;
     c->netBusy = false;
     return nullptr;
 }
@@ -339,7 +349,11 @@ static std::string addScheme(const std::string& url) {
 bool JellyfinClient::parseUrl(const std::string& rawUrl,
                                std::string& host, int& port,
                                std::string& basePath, bool& isHttps) {
-    std::string u = normScheme(rawUrl);
+    /* no space has a place in a URL: one typed around it (the keyboard's
+     * space bar) would make the host a name to look up */
+    std::string bare;
+    for (char ch : rawUrl) if (!isspace((unsigned char)ch)) bare += ch;
+    std::string u = normScheme(bare);
     if (u.substr(0, 8) == "https://") {
         isHttps = true;
         u = u.substr(8);
@@ -744,10 +758,23 @@ bool resolve(const std::string& host, int port, struct sockaddr_in& addr, std::s
     addr.sin_family = AF_INET;
     addr.sin_port   = htons(port);
     if (inet_aton(host.c_str(), &addr.sin_addr) != 0) return true;
+    /* each name's last address: the Wii's DNS failing a while (it does, its
+     * Wi-Fi weak), that one again; a network really gone then fails to
+     * connect, and starts again */
+    static std::map<std::string, struct in_addr> s_known;
     struct hostent* he = net_gethostbyname(host.c_str());
-    if (!he) { err = "DNS failed: " + host; return false; }
+    if (!he || he->h_length > (int)sizeof(addr.sin_addr)) {
+        auto k = s_known.find(host);
+        if (k != s_known.end()) {
+            SYS_Report("[Net] DNS failed: its last address again\n");
+            addr.sin_addr = k->second;
+            return true;
+        }
+    }
+    if (!he) { err = "DNS failed: " + host; SYS_Report("[Net] DNS failed: \"%s\" (%u bytes)\n", host.c_str(), (unsigned)host.size()); return false; }
     if (he->h_length > (int)sizeof(addr.sin_addr)) { err = N_("DNS: unexpected address length"); return false; }
     memcpy(&addr.sin_addr, he->h_addr, he->h_length);
+    s_known[host] = addr.sin_addr;
     return true;
 }
 
@@ -1008,14 +1035,18 @@ void JellyfinClient::dropConnection() {
     closeConn();
 }
 
+/* The network lost (the Wi-Fi gone...): started again in the background.
+ * It may take a long while (if_config's tries, the access point away): the
+ * request fails at once meanwhile, the interface goes on (it froze 100 s on
+ * a tester's Wii, its Wi-Fi gone); the next ones work once it is back */
 bool JellyfinClient::recoverNetwork() {
-    if (netBusy) return false;          /* the start-up thread owns it */
+    if (netBusy) return false;          /* already restarting */
     takeNetworkResult();
     closeConn();
     networkReady = false;
-    net_deinit();
-    bringUpNetwork();
-    return networkReady;
+    netRestart = true;
+    startNetwork();
+    return false;
 }
 
 int JellyfinClient::request(bool tls, const std::string& host, int port,
@@ -1036,6 +1067,13 @@ int JellyfinClient::request(bool tls, const std::string& host, int port,
                    path.substr(0, path.find('?')).c_str(), why.c_str());
         return -1;
     };
+    /* the network starting again (after a loss): not now */
+    if (netBusy) return fail(N_("Network lost: reconnecting..."));
+    if (!networkReady && takeNetworkResult() == false && netThread == 0 && netRestart == false) {
+        /* the last restart failed: another, in the background */
+        recoverNetwork();
+        return fail(N_("Network lost: reconnecting..."));
+    }
     if (tls && !tlsSharedInit(sslVerify, err)) return fail(err);
 
     std::string authHdr = authToken.empty() ? "" : (", Token=\"" + authToken + "\"");
@@ -1081,7 +1119,7 @@ int JellyfinClient::request(bool tls, const std::string& host, int port,
                     SYS_Report("[Net] network lost (%d), restarting it\n", (int)s_lastSocketErr);
                     recovered = true;
                     if (recoverNetwork()) continue;
-                    return fail("Network lost: " + errMsg);
+                    return fail(N_("Network lost: reconnecting..."));
                 }
                 if (!transient || attempt == 2) return fail(err);
                 errMsg = err;

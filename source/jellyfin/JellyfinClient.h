@@ -665,6 +665,7 @@ private:
     bool fetchEpisodes(const std::string& url, const JellyfinAuth& auth,
                        std::vector<JellyfinEpisode>& out, size_t maxResponse = 0);
     volatile bool networkReady = false;
+    volatile bool netRestart = false;   /* the next start: after a loss (net_deinit first) */
     volatile bool netBusy      = false;
     unsigned int  netThread    = 0;         // lwp_t of the start-up thread, 0 = none
     void bringUpNetwork();
