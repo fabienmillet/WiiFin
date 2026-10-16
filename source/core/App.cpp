@@ -29,6 +29,7 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <gccore.h>
+#include <ogc/machine/processor.h>
 #include <ogc/wiilaunch.h>
 #include <sys/iosupport.h>
 
@@ -818,8 +819,17 @@ void App::loop() {
         exit(0);
     }
     else if (s_exitToLoader && loader) {
-        /* the main menu's Exit: back to the loader that launched WiiFin */
-        exit(0);
+        /* the main menu's Exit: back to the loader that launched WiiFin, its
+         * stub at 0x80001800.  Not by exit(): libogc 3.2's jumps there with
+         * the interrupts still on (3.1 stopped the threads first), and
+         * WiiFin's own (video, sound, IPC) broke into the loader: a black
+         * screen on a tester's Wii.  As Reload does: the system shut down,
+         * the interrupts off, then the stub */
+        SYS_ResetSystem(SYS_SHUTDOWN, 0, 0);
+        u32 level;
+        _CPU_ISR_Disable(level);
+        (void)level;
+        ((void (*)(void))0x80001800)();
     }
     else {
         /* Restore the NAND-loader stub bytes at their installed VA (0x80804000)
