@@ -78,7 +78,7 @@ LDFLAGS     := -g $(MACHDEP) -Wl,-Map,$(TARGET).map -T $(CURDIR)/tools/wii_wiifi
                -Wl,--wrap=LWP_JoinThread \
                -Wl,--wrap=SYS_Report \
                -Wl,--wrap=CONF_GetIdleLedMode \
-               -Wl,--wrap=GRRLIB_Render   # see source/core/LwpJoinFix.cpp, Log.cpp, WiiPlayer.cpp, RenderHook.cpp
+               -Wl,--wrap=GRRLIB_Render -Wl,--wrap=iosFree   # see source/core/LwpJoinFix.cpp, Log.cpp, WiiPlayer.cpp, RenderHook.cpp, player/OgcCompat.c
 LIBPATHS    := -L$(LIBOGC_LIB) -L/opt/devkitpro/portlibs/wii/lib -L/opt/devkitpro/portlibs/ppc/lib \
                -L$(CURDIR)/libs/mbedtls/lib
 

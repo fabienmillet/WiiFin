@@ -30,6 +30,9 @@ LIMIT=${3:-300}
 [ -f "$FILE" ] || { echo "playback: $FILE not found"; exit 2; }
 [ -f "$T/out/session" ] || { echo "playback: no out/session, start server.sh first"; exit 2; }
 
+# a scenario of a 50 Hz European Wii (its "pal50" line): PAL=1
+grep -q '^pal50$' "$SC" && PAL=1
+
 P=$T/out/playback/$NAME
 rm -rf "$P"
 python3 "$T/scenario.py" sd "$SC" "$P/sd" "$T/out/session" || exit 2
@@ -52,6 +55,14 @@ DumpFrames = True
 DumpFramesSilent = True}
 EOF
 dolphin_cmd "$P"
+# PAL=1: the console set to 50 Hz in its SYSCONF (IPL.E60 0), as a European
+# Wii's: libogc 3.2 reads it there to pick 576i over EuRGB60 (Dolphin's
+# -C SYSCONF.IPL.E60=False below sets its own boot, not that file).  A
+# SYSCONF Dolphin made, its E60 cleared (tools/test/SYSCONF-pal50)
+if [ -n "$PAL" ]; then
+    mkdir -p "$U/Wii/shared2/sys"
+    cp "$T/SYSCONF-pal50" "$U/Wii/shared2/sys/SYSCONF"
+fi
 
 VARGS=(-v "${VIDEO:-Null}")
 [ -n "$DUMP" ] && [ -z "$VIDEO" ] && VARGS=()   # Null draws nothing to dump

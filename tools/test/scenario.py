@@ -28,6 +28,8 @@ A scenario file holds, one per line (# starts a comment):
                             position), made again for the run; the server's
                             other playlists are deleted (a Playlists library
                             only shows up on the home screen while one exists)
+    pal50                   the console a European one at 50 Hz (576i): as
+                            PAL=1 for playback.sh
     sdfile <file> <to>      a file of the repository (path from its root) to
                             apps/WiiFin/<to> on the SD card (e.g. a font)
     remote <log text> <ms> <command> [args]
@@ -111,6 +113,8 @@ def parse(path):
             sc.setdefault('sdfiles', []).append((w[1], w[2]))
         elif w[0] == 'remote':
             sc.setdefault('remote', []).append((w[1], int(w[2]), w[3], w[4:]))
+        elif w[0] == 'pal50':   # playback.sh: the console at 50 Hz (PAL=1)
+            sc['pal50'] = True
         elif w[0] == 'expect':
             sc['expect'].append(w[1:])
         elif w[0].isdigit():
