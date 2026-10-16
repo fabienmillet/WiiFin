@@ -461,11 +461,14 @@ private:
     std::vector<JellyfinItem> photos;
     int            photoSel = 0;
     GRRLIB_texImg* photoTex = nullptr;
+    GRRLIB_texImg* photoPrevTex = nullptr;   /* fading out under the new one */
+    u64            photoFadeAt = 0;
     bool           slideshow = false;
     u64            photoShownAt = 0;
     State          photoBack = State::ItemsReady;
     void openPhotos(const std::string& id, State back);
     void showPhoto(int i);
+    void closePhotos();
     bool updatePhoto(ir_t& ir, bool aPressed);
     void renderPhoto(ir_t& ir);
     void        loadSpecials();
