@@ -332,6 +332,12 @@ void triangle(float x0, float y0, float x1, float y1, float x2, float y2, u32 c)
 
 int  textWidth(const char* s, int size) { return (int)Text::width(s_font, s, size); }
 void text(float x, float y, const char* s, int size, u32 c) { Text::print((int)x, (int)y, s_font, s, size, c); }
+/* one character, its ink centred on cx (a button's letter) */
+static void glyphCentered(float cx, float y, const char* s, int size, u32 c)
+{
+    Text::print((int)lroundf(cx - Text::inkCentre(s_font, s, size)), (int)y, s_font, s, size, c);
+}
+
 void textCentered(float cx, float y, const char* s, int size, u32 c)
 {
     Text::print((int)(cx - textWidth(s, size) * 0.5f), (int)y, s_font, s, size, c);
@@ -564,7 +570,7 @@ float hint(float x, float y, const Hint& h)
         for (int i = 0; i < 2; ++i) {
             float bx = x + 9 + i * 22;
             buttonDisc(bx, cy, "", tc);
-            if (b[0] == 'L') textCentered(bx, cy - 7, i == 0 ? "L" : "R", 12, tc);
+            if (b[0] == 'L') glyphCentered(bx, cy - 7, i == 0 ? "L" : "R", 12, tc);
             else if (i == 0) minusGlyph(bx, cy, tc);
             else             plusGlyph(bx, cy, tc);
         }
@@ -576,7 +582,7 @@ float hint(float x, float y, const Hint& h)
         buttonDisc(x + 9, cy, b, tc);
         if      (b[0] == '-') minusGlyph(x + 9, cy, tc);
         else if (b[0] == '+') plusGlyph(x + 9, cy, tc);
-        else textCentered(x + 9, cy - 7, b, 12, tc);
+        else glyphCentered(x + 9, cy - 7, b, 12, tc);
     }
     if (w > 0) w += 5;
     text(x + w, y + 2, tr(h.label), 14, p.textDim);

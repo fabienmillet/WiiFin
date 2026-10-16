@@ -17,6 +17,12 @@ namespace Text {
 
     u32  width(GRRLIB_ttfFont* font, const char* utf8, unsigned int size);
 
+    /* Where the ink of utf8's first character is centred, from the pen
+     * (drawing units): a letter centred on that, not on its advance (a
+     * button's letter in its disc: the font's spacing leaves "A" and "1"
+     * off to the right) */
+    float inkCentre(GRRLIB_ttfFont* font, const char* utf8, unsigned int size);
+
     /* The font drawing the characters another one lacks (the Japanese one:
      * titles, subtitles... in any text); nullptr: none.  addFallback: one
      * more after it (the SD card's fonts/: Chinese, Korean...). */

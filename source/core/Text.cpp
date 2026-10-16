@@ -220,6 +220,16 @@ float kerning(GRRLIB_ttfFont* font, unsigned size, FaceSize& fs, u32 left, u32 r
 
 } // namespace
 
+float Text::inkCentre(GRRLIB_ttfFont* font, const char* utf8, unsigned int size)
+{
+    if (!font || !utf8 || !*utf8) return 0;
+    FaceSize& fs = faceSize(font, size);
+    const unsigned char* s = (const unsigned char*)utf8;
+    const Glyph& g = glyph(font, size, fs, nextCodePoint(s));
+    if (g.w < 2) return g.advance * 0.5f;
+    return (g.left + (g.w - 2) * 0.5f) / s_scale;
+}
+
 u32 Text::width(GRRLIB_ttfFont* font, const char* utf8, unsigned int size)
 {
     if (!font || !utf8) return 0;
