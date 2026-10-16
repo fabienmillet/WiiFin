@@ -2407,16 +2407,21 @@ bool JellyfinClient::getPlaylistTracks(const std::string& serverUrl,
         playlistId.c_str(), auth.userId.c_str());
     std::string url  = serverUrl + qs;
     std::string resp;
-    int status = httpRequest(url, "GET", "", "", auth.accessToken, resp);
+    /* a long playlist goes past the usual 256 KB (about 250 songs): cut,
+     * it showed its first album only */
+    int status = httpRequest(url, "GET", "", "", auth.accessToken, resp, 4 * 1024 * 1024);
     if (status != 200) return false;
     struct Ctx { JellyfinClient* self; std::vector<JellyfinAudioItem>* out; };
     Ctx ctx{ this, &out };
     forEachItemObject(resp, [](const std::string& obj, void* vctx) {
         Ctx* c = static_cast<Ctx*>(vctx);
-        // songs, and the videos of a playlist of them
+        /* songs, and videos: films, episodes, clips, and special features
+         * (a trailer's type is Trailer) — whatever plays as audio or video */
         std::string type = c->self->jsonGetString(obj, "Type");
-        const bool video = type == "Movie" || type == "Episode" || type == "Video" || type == "MusicVideo";
-        if (type != "Audio" && !video) return;
+        const std::string media = c->self->jsonGetString(obj, "MediaType");
+        const bool video = media == "Video" || type == "Movie" || type == "Episode" || type == "Video" ||
+                           type == "MusicVideo" || type == "Trailer";
+        if (type != "Audio" && media != "Audio" && !video) return;
         JellyfinAudioItem item;
         item.id                    = c->self->jsonGetString(obj, "Id");
         item.name                  = c->self->jsonGetString(obj, "Name");
