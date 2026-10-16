@@ -1447,6 +1447,7 @@ bool JellyfinClient::getAlbumsByArtist(const std::string& serverUrl,
         item.name = c->self->jsonGetString(obj, "Name");
         item.type = c->self->jsonGetString(obj, "Type");
         item.year = c->self->jsonGetInt(obj, "ProductionYear");
+        item.played = c->self->jsonGetBool(obj, "Played");
         if (!item.id.empty() && !item.name.empty())
             c->out->push_back(item);
     }, &ctx);
@@ -3733,6 +3734,7 @@ bool JellyfinClient::getItemsByQuery(const std::string& serverUrl,
         item.name                  = c->self->jsonGetString(obj, "Name");
         item.type                  = c->self->jsonGetString(obj, "Type");
         item.year                  = c->self->jsonGetInt(obj,    "ProductionYear");
+        item.played                = c->self->jsonGetBool(obj,   "Played");
         item.seriesName            = c->self->jsonGetString(obj, "SeriesName");
         item.seriesId              = c->self->jsonGetString(obj, "SeriesId");
         item.seasonNumber          = c->self->jsonGetInt(obj,    "ParentIndexNumber");

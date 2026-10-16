@@ -493,11 +493,17 @@ void LibraryView::renderItemList(ir_t& ir) {
             continue;
         }
         int rightW = 0;
+        /* watched (a series: all its episodes): a check at the right, as the
+         * episodes' */
+        if (it.played && currentLibType != "music") {
+            Ui::textRight(LIST_X + LW - 12, ry + 8, "\xe2\x9c\x93", 18, p.ok);
+            rightW = 26;
+        }
         if (it.year > 0) {
             char y[12];
             snprintf(y, sizeof(y), "%d", it.year);
-            rightW = Ui::textWidth(y, 14) + 12;
-            Ui::textRight(LIST_X + LW - 12, ry + 10, y, 14, p.textDim);
+            Ui::textRight(LIST_X + LW - 12 - rightW, ry + 10, y, 14, p.textDim);
+            rightW += Ui::textWidth(y, 14) + 12;
         }
         int textX = LIST_X + 14;
         // type badge for mixed lists (series among films, folders...)
@@ -626,6 +632,12 @@ void LibraryView::renderPosterGrid(ir_t& ir) {
             const float th = fitHeight(posterTextures[i], POSTER_W, POSTER_H);
             drawThumb(posterTextures[i], px, py + (POSTER_H - th) * 0.5f, POSTER_W, th,
                       sel ? Ui::pulse() : 0.0f, progressOf(items[i]), items[i].name.c_str());
+            if (items[i].played) {   /* watched: a check in a green disc, its top right corner */
+                const float cx = px + POSTER_W - 11, cy = py + (POSTER_H - th) * 0.5f + 11;
+                Ui::circle(cx, cy, 10, 0x00000060);
+                Ui::circle(cx, cy, 9, p.ok);
+                Ui::textCentered(cx, cy - 8, "\xe2\x9c\x93", 14, 0xFFFFFFFF);
+            }
         }
     }
 
