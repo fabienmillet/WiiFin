@@ -368,6 +368,11 @@ void pointerToScreen(ir_t& ir)
     ir.x = -s_off + ir.x * (640.0f + 2.0f * s_off) / 640.0f;
 }
 
+/* the frame's lines over the 480 drawn: 1, but 528 / 480 on a 50 Hz PAL
+ * Wii (GRRLIB's mode there: the picture 528 lines tall, its 48 last ones
+ * left blank otherwise, a band at the bottom of the TV) */
+static float lineScale() { return rmode ? rmode->efbHeight / 480.0f : 1.0f; }
+
 void setSafeArea(int l, int t, int r, int b)
 {
     auto clampi = [](int v, int hi) { return v < 0 ? 0 : (v > hi ? hi : v); };
@@ -378,7 +383,8 @@ void setSafeArea(int l, int t, int r, int b)
     /* GRRLIB's orthographic projection covers 640x480; the viewport decides
      * where that lands in the frame.  Everything outside stays black (the
      * frame is cleared on every copy to the TV). */
-    GX_SetViewport((f32)s_safeL, (f32)s_safeT, 640.0f * s_sx, 480.0f * s_sy, 0.0f, 1.0f);
+    const float ky = lineScale();
+    GX_SetViewport((f32)s_safeL, s_safeT * ky, 640.0f * s_sx, 480.0f * s_sy * ky, 0.0f, 1.0f);
 }
 
 void safeArea(int& l, int& t, int& r, int& b) { l = s_safeL; t = s_safeT; r = s_safeR; b = s_safeB; }
@@ -386,9 +392,9 @@ void safeArea(int& l, int& t, int& r, int& b) { l = s_safeL; t = s_safeT; r = s_
 void clip(float x, float y, float w, float h)
 {
     /* drawing units -> frame pixels: aspect widening, then the safe area */
-    const float k = 640.0f / (640.0f + 2.0f * s_off);
-    GRRLIB_ClipDrawing((int)(s_safeL + (x + s_off) * k * s_sx), (int)(s_safeT + y * s_sy),
-                       (int)(w * k * s_sx + 0.5f), (int)(h * s_sy + 0.5f));
+    const float k = 640.0f / (640.0f + 2.0f * s_off), ky = lineScale();
+    GRRLIB_ClipDrawing((int)(s_safeL + (x + s_off) * k * s_sx), (int)((s_safeT + y * s_sy) * ky),
+                       (int)(w * k * s_sx + 0.5f), (int)(h * s_sy * ky + 0.5f));
 }
 
 void clipReset() { GRRLIB_ClipReset(); }
