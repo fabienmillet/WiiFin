@@ -667,16 +667,43 @@ void drawLyrics(float x, float base, float w, float h, float a, bool big)
     const int at = lyricAt(position(), duration()), around = big ? 2 : 1;
     const int curSize = big ? 26 : 18, size = big ? 18 : 14;
     const float step = big ? 38.0f : 24.0f;
+    /* the line sung now whole, on two lines when it is too long for one (to
+     * sing along); the others cut short, moved aside for it */
+    std::string first, second;
+    if (at >= 0 && at < (int)s.lyrics.size()) {
+        const std::string& t = s.lyrics[at].text;
+        if (Ui::textWidth(t.c_str(), curSize) > (int)w) {
+            /* the break: the last space where the first half fits, nearest the middle */
+            size_t best = std::string::npos;
+            for (size_t k = t.find(' '); k != std::string::npos; k = t.find(' ', k + 1)) {
+                if (Ui::textWidth(t.substr(0, k).c_str(), curSize) > (int)w) break;
+                if (best == std::string::npos ||
+                    std::abs((int)k - (int)t.size() / 2) < std::abs((int)best - (int)t.size() / 2))
+                    best = k;
+            }
+            if (best != std::string::npos) {
+                first = t.substr(0, best);
+                second = LibDraw::fitText(Ui::font(), t.substr(best + 1), curSize, (int)w);
+            }
+        }
+    }
+    const float extra = first.empty() ? 0.0f : curSize * 1.15f;
     for (int d = -around; d <= around + 1; ++d) {
         const int i = at + d;
         if (i < 0 || i >= (int)s.lyrics.size() || s.lyrics[i].text.empty()) continue;
         if (!big && d > around) continue;
         const bool now = d == 0;
         const int sz = now ? curSize : size;
-        const float y = cy + d * step - sz * 0.6f + (big ? 0 : 4);
+        const float y = cy + d * step - sz * 0.6f + (big ? 0 : 4) + (d < 0 ? -extra * 0.5f : d > 0 ? extra * 0.5f : 0);
         const float fade = now ? 1.0f : 0.75f - 0.2f * (d < 0 ? -d : d);
+        const u32 c = Ui::alpha(now ? p.accent : big ? p.text : p.textDim, a * fade);
+        if (now && !first.empty()) {
+            Ui::textCentered(cx, y - extra * 0.5f, first.c_str(), sz, c);
+            Ui::textCentered(cx, y + extra * 0.5f, second.c_str(), sz, c);
+            continue;
+        }
         std::string t = LibDraw::fitText(Ui::font(), s.lyrics[i].text, sz, (int)w);
-        Ui::textCentered(cx, y, t.c_str(), sz, Ui::alpha(now ? p.accent : big ? p.text : p.textDim, a * fade));
+        Ui::textCentered(cx, y, t.c_str(), sz, c);
     }
 }
 
