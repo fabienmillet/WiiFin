@@ -18,8 +18,11 @@ bool LibraryView::sortable() const
 {
     if (inItemsDrilldown || inBoxSetDrilldown) return false;
     if (currentLibType == "music") return musicTab == 0;   /* the albums (2 shuffles the others) */
-    if (currentLibType != "movies" && currentLibType != "tvshows") return false;
-    return currentLibType == "movies" ? movieTab == 0 : tvTab == 0;
+    /* 2 shuffles these */
+    if (currentLibType == "musicvideos" || currentLibType == "playlists") return false;
+    if (currentLibType == "movies") return movieTab == 0;
+    if (currentLibType == "tvshows") return tvTab == 0;
+    return true;   /* other media: home videos, mixed libraries... */
 }
 
 std::string LibraryView::sortQuery() const
@@ -37,9 +40,14 @@ std::string LibraryView::sortQuery() const
     if (listSort.show == 3) q += "&IsFavorite=true";
     /* the filters apply to the titles themselves, not to the library's
      * folders: a recursive search for that type (none matched otherwise) */
-    if (!q.empty() && currentLibType != "music")   /* musicFilter() names the albums */
+    if (!q.empty() && (currentLibType == "movies" || currentLibType == "tvshows"))   /* musicFilter() names the albums */
         q += currentLibType == "movies" ? "&Recursive=true&IncludeItemTypes=Movie"
                                         : "&Recursive=true&IncludeItemTypes=Series";
+    /* other media: sorted, its folders as they are; filtered, what plays in
+     * any of them */
+    else if (currentLibType != "music" &&
+             (listSort.genre >= 0 || listSort.show != 0))
+        q += "&Recursive=true&IncludeItemTypes=Video,Movie,Episode,MusicVideo,Photo";
     return q;
 }
 

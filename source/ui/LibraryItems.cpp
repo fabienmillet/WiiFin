@@ -172,6 +172,9 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
             if (haveSel && (sel.type == "MusicAlbum" || sel.type == "Playlist"))
                 return startMusicShuffle(sel.id, sel.type == "Playlist");
         }
+        /* the Playlists library: the one selected, shuffled (songs or videos) */
+        if (currentLibType == "playlists" && haveSel && sel.type == "Playlist")
+            return startMusicShuffle(sel.id, true);
     }
 
     // A: select item (rows still loading are ignored)
@@ -274,6 +277,9 @@ bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
     if (sortPanel) { updateSortPanel(); return false; }
     if (Input::is2Pressed() && sortable()) { openSortPanel(); return false; }
     if (Input::is2Pressed() && currentLibType == "musicvideos") return startVideoShuffle();
+    if (Input::is2Pressed() && currentLibType == "playlists" && posterSel < (int)items.size() &&
+        items[posterSel].type == "Playlist")
+        return startMusicShuffle(items[posterSel].id, true);
     if (currentLibType == "music") {
         /* 2: every song (Songs), or the album / playlist selected, shuffled */
         if (Input::is2Pressed()) {
@@ -560,7 +566,8 @@ void LibraryView::renderItemList(ir_t& ir) {
 
     // Footer: the sort in force beside its button
     const std::string sum = sortSummary();
-    const bool shuffles = !sortable() && (currentLibType == "music" || currentLibType == "musicvideos");
+    const bool shuffles = !sortable() && (currentLibType == "music" || currentLibType == "musicvideos" ||
+                                          currentLibType == "playlists");
     const Ui::Hint l[] = { { "A", N_("Open") }, { "B", N_("Back") },
                            { "2", shuffles ? N_("Shuffle") : sum.empty() ? N_("Sort") : sum.c_str() } };
     const int nl = sortable() || shuffles ? 3 : 2;
