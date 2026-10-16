@@ -1,5 +1,6 @@
 #include "App.h"
 #include "AppInternal.h"
+#include "Reload.h"
 #include "ExitZone.h"
 #include "Text.h"
 #include "Lang.h"
@@ -46,6 +47,9 @@ extern unsigned int  data_ring_png_len;
 volatile bool g_app_powerOff = false;
 volatile bool g_app_reset    = false;
 volatile bool g_restartApp = false;
+/* the main menu's Exit: back where WiiFin was launched from (a loader) */
+static bool s_exitToLoader = false;
+static std::string s_argv0;
 static void onPower() { g_app_powerOff = true; }
 static void onReset(u32, void*) { g_app_reset = true; }
 
@@ -130,6 +134,7 @@ static const int BY_START  = 168;
 static const int B_SPACING = 74;
 
 void App::init(const char* argv0) {
+    if (argv0) s_argv0 = argv0;
     SYS_SetPowerCallback(onPower);
     SYS_SetResetCallback(onReset);
     {   /* above the main thread: it runs even if that one spins */
@@ -727,7 +732,7 @@ void App::loop() {
                 case 1:
                     runSettings(nullptr);   /* WiiFin's own look, and the system */
                     break;
-                case 2: running = false; break;
+                case 2: running = false; s_exitToLoader = true; break;
             }
         }
 
@@ -791,17 +796,29 @@ void App::loop() {
     GRRLIB_Exit();
     ConnectView::shutdownUsbKeyboard();
     WPAD_Shutdown();
+    /* launched by a loader (the Homebrew Channel's stub, where exit() goes
+     * back): not the WAD's channel */
+    const bool loader = memcmp((const void*)0x80001804, "STUBHAXX", 8) == 0;
     if (g_app_powerOff)        SYS_ResetSystem(SYS_POWEROFF,    0, 0);
     else if (g_restartApp) {
         /* the HOME menu's Reset: the channel (WAD) launched again by the
-         * system, which exit() didn't do (it went to the Wii Menu); from
-         * the Homebrew Channel, back to it */
+         * system, which exit() didn't do (it went to the Wii Menu); from a
+         * loader, WiiFin's DOL started again (Reload); failing that, back
+         * to the loader */
         u64 tid = 0;
         if (ES_GetTitleID(&tid) >= 0 && tid == 0x000100015749464EULL) {   /* 00010001-WIFN */
             SYS_Report("[WiiFin] reset: the channel again\n");
             WII_Initialize();
             WII_LaunchTitle(tid);
         }
+        /* the DOL it was started from (argv[0]), else where it is usually */
+        const char* const TRY[] = {s_argv0.c_str(), "sd:/apps/WiiFin/boot.dol", "usb:/apps/WiiFin/boot.dol"};
+        for (const char* p : TRY)
+            if (p[0]) Reload::self(p);   /* returns only if it could not read it */
+        exit(0);
+    }
+    else if (s_exitToLoader && loader) {
+        /* the main menu's Exit: back to the loader that launched WiiFin */
         exit(0);
     }
     else {
