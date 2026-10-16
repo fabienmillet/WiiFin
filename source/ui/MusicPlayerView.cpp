@@ -1061,8 +1061,17 @@ void buttons(u32 down)
     if (down & WPAD_BUTTON_HOME) { s.homeWanted = true; s.lastInput = now; return; }
 
     if (!down) return;
+    if (s.idleK > 0.3f) {
+        /* the visualizer full screen stays: - / + the track before or
+         * after, A pause or play; B, the D-pad or anything else (the
+         * pointer too) wakes the controls */
+        if (down & WPAD_BUTTON_PLUS)  { requestTrack(Req::Next); return; }
+        if (down & WPAD_BUTTON_MINUS) { requestTrack(Req::Prev); return; }
+        if (down & WPAD_BUTTON_A)     { wii_player_pause_toggle(); return; }
+        s.lastInput = now;
+        return;                          /* the first press wakes the screen */
+    }
     s.lastInput = now;
-    if (s.idleK > 0.3f) return;          /* the first press wakes the screen */
 
     if (s.panel) {
         int n = (int)s.order.size();
