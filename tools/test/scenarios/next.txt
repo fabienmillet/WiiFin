@@ -8,6 +8,7 @@ position "Shuffle Show S01E02" 0
 12000 RIGHT      Shows
 12500 A
 15000 A          Shuffle Show
+17500 DOWN       the series page: down to its seasons
 18000 A          Season 1
 21000 A          S01E01
 24000 A          Play

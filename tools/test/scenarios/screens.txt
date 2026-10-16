@@ -30,6 +30,7 @@ position "Shuffle Show S01E01" 0
 36000 POINTER    series list
 37000 NOPOINTER
 38000 A          Shuffle Show
+40500 DOWN       the series page: down to its seasons
 41000 POINTER    seasons
 42000 NOPOINTER
 43000 A          Season 1

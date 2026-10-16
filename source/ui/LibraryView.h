@@ -246,6 +246,15 @@ private:
      * others, those without one and the Special Features tile */
     std::vector<GRRLIB_texImg*> seasonTex;
     GRRLIB_texImg* seriesPosterTex = nullptr;
+    /* the series' page above its seasons: its poster (A: from the start),
+     * its overview, genres, cast; Down to the seasons */
+    JellyfinItemDetail       seriesDetail;
+    std::vector<std::string> seriesLines;
+    bool  seriesTop = true;        /* the overview focused */
+    float seriesScrollK = 0;       /* 0 the overview, 1 the seasons */
+    bool  startSeriesFromStart();
+    void  drawSeriesOverview(ir_t& ir);
+    void  drawSeasonsBody(ir_t& ir);
     static const int SEASON_TEX_MAX = 20;
     bool seasonGrid() const;
     GRRLIB_texImg* seasonPoster(int i) const;
@@ -296,6 +305,10 @@ private:
     int         tvTab   = 0;    // 0=Series, 1=Suggestions, 2=Upcoming
     std::string tvLibId;         // root tvshows library id
     State       seasonsCallerState = State::PostersReady; // where B goes from season list
+    std::string seasonWant;   // the season to select once they are loaded (an episode's)
+    /* an album of one song: played at once, not listed; back from it, the
+     * albums again (not a list of one) */
+    bool musicAutoPlay = false, musicAutoBack = false;
 
     // Music tabs (only active when currentLibType == "music")
     int         musicTab       = 0;     // 0 Albums, 1 Suggestions, 2 Artists, 3 Playlists, 4 Songs

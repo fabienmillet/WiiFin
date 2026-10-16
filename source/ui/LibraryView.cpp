@@ -949,7 +949,16 @@ void LibraryView::loadSeasons() {
         seriesFavorite = false;
         seriesSpecials = 0;
         if (ok) client.getIsFavorite(serverUrl, auth, currentSeriesId, seriesFavorite, &seriesSpecials);
-        if (!ok || !posters) return;
+        if (!ok) return;
+        /* the series' page: its overview, its poster */
+        seriesDetail = JellyfinItemDetail();
+        client.getItemDetail(serverUrl, auth, currentSeriesId, seriesDetail);
+        {
+            std::string b;
+            client.getItemImageBytes(serverUrl, auth, currentSeriesId, 170, 255, b);
+            if (!b.empty()) seriesTex = loadJPEGTexture((const u8*)b.data(), (u32)b.size());
+        }
+        if (!posters) return;
         /* each season's poster, sized for the List + Posters panel (the grid
          * draws them smaller) */
         const int n = (int)seasons.size() < SEASON_TEX_MAX ? (int)seasons.size() : SEASON_TEX_MAX;
@@ -960,11 +969,6 @@ void LibraryView::loadSeasons() {
             client.getItemImageBytes(serverUrl, auth, seasons[i].id, 170, 255, b);
             if (!b.empty()) tex[i] = loadJPEGTexture((const u8*)b.data(), (u32)b.size());
             if (tex[i]) own++;
-        }
-        if (own < (int)seasons.size() || seriesSpecials > 0) {
-            std::string b;
-            client.getItemImageBytes(serverUrl, auth, currentSeriesId, 170, 255, b);
-            if (!b.empty()) seriesTex = loadJPEGTexture((const u8*)b.data(), (u32)b.size());
         }
         SYS_Report("[Seasons] %d seasons, %d poster%s of their own%s\n", (int)seasons.size(), own, own == 1 ? "" : "s",
                    seriesTex ? ", the series' for the others" : "");
@@ -981,6 +985,14 @@ void LibraryView::loadSeasons() {
         seasonTex = tex;
         seriesPosterTex = seriesTex;
         seasonSel = 0; seasonTop = 0; state = State::SeasonsReady;
+        seriesLines = wrapText(seriesDetail.overview, 14, 372, 9);
+        /* the series' page first; opened from an episode, its seasons */
+        seriesTop = seasonWant.empty();
+        seriesScrollK = seriesTop ? 0.0f : 1.0f;
+        /* opened from an episode: its season selected */
+        for (int i = 0; i < (int)seasons.size() && !seasonWant.empty(); ++i)
+            if (seasons[i].id == seasonWant) seasonSel = i;
+        seasonWant.clear();
     }
 }
 

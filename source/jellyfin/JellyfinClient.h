@@ -89,6 +89,7 @@ struct JellyfinItemDetail {
     int         specialFeatures       = 0;     // its bonus videos (trailers included)
     std::string seriesId;      // Episode only: its series and season, for
     std::string seasonId;      //   next / previous wherever it was opened
+    std::string seriesName;    //   (and its seasons from it, with 2)
     std::vector<std::string>    genres;          // up to 4
     std::vector<JellyfinPerson> people;          // up to 6 (cast + director)
     std::vector<MediaStream>    audioStreams;    // audio tracks

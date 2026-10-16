@@ -8,6 +8,7 @@ cfg library_view=0
 12000 RIGHT      Shows
 12500 A
 15000 A          Shuffle Show: its seasons
+17500 DOWN       the series page: down to its seasons
 18000 RIGHT      Season 2
 19000 A          its episodes
 22000 END

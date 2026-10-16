@@ -56,6 +56,27 @@ bool LibraryView::updateDetail(ir_t& ir, bool aPressed) {
                 if (e.played) e.playbackPositionTicks = 0;
             }
     }
+    /* an episode (Continue Watching, Next Up...): 2, its series' seasons,
+     * its own selected; B from there back where it was opened */
+    if (Input::is2Pressed() && !detail.seriesId.empty() && detailReturnState == State::EpisodesReady &&
+        !seasons.empty() && currentSeriesId == detail.seriesId) {
+        /* opened from its season's episodes: back to the seasons as they were */
+        for (int i = 0; i < (int)seasons.size(); ++i) if (seasons[i].id == detail.seasonId) seasonSel = i;
+        freeDetail();
+        state = State::SeasonsReady;
+        return false;
+    }
+    if (Input::is2Pressed() && !detail.seriesId.empty()) {
+        currentSeriesId    = detail.seriesId;
+        currentSeriesName  = detail.seriesName;
+        seasonWant         = detail.seasonId;
+        seasonsCallerState = detailReturnState;
+        SYS_Report("[Detail] its series' seasons\n");
+        freeDetail();
+        seasons.clear(); seasonSel = 0; seasonTop = 0;
+        state = State::SeasonsLoad;
+        return false;
+    }
     if (Input::is2Pressed() && detail.specialFeatures > 0) {
         specialsFilmReturn = detailReturnState;
         openSpecials(detailItemId, detail.name, State::DetailReady);
@@ -420,7 +441,8 @@ void LibraryView::drawDetailView(ir_t& ir) {
     const Ui::Hint l[] = { { "A", detailFocusRow == 2 && hasScenes ? N_("Scenes") : N_("Play") }, { "B", N_("Back") },
                            { "1", detail.isFavorite ? N_("Unfavorite") : N_("Favorite") },
                            { "+!", detail.played ? N_("Unwatched") : N_("Watched") },
-                           { "2", N_("Extras") } };   /* short: 5 hints + Focus, Change */
+                           /* TRANSLATORS: an episode's page: 2 opens its series' seasons */
+                           { "2", detail.seriesId.empty() ? N_("Extras") : N_("Seasons") } };   /* short: 5 hints + Focus, Change */
     const Ui::Hint r[] = { { "UD", N_("Focus") }, { "LR", N_("Change") } };
     const bool full = detail.specialFeatures > 0;   /* no room left for Focus */
     Ui::footer(l, full ? 5 : 4, full ? r + 1 : r, (hasAudio || hasSub || hasVersions || hasScenes) ? (full ? 1 : 2) : 0);

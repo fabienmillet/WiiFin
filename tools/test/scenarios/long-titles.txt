@@ -9,6 +9,7 @@ overview "Shuffle Show S02E03" "A test episode whose title runs on and on, so th
 12000 RIGHT      Shows
 12500 A
 15000 A          Shuffle Show
+17500 DOWN       the series page: down to its seasons
 18000 DOWN       Season 2
 18500 A
 21000 DOWN

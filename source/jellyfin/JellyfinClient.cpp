@@ -1601,6 +1601,7 @@ bool JellyfinClient::getItemDetail(const std::string& serverUrl,
     out.specialFeatures       = jsonGetInt(resp, "SpecialFeatureCount") + jsonGetInt(resp, "LocalTrailerCount");
     out.seriesId              = jsonGetString(resp, "SeriesId");
     out.seasonId              = jsonGetString(resp, "SeasonId");
+    out.seriesName            = jsonGetString(resp, "SeriesName");
 
     // Genres array: ["Action","Comedy",...]
     {

@@ -20,12 +20,63 @@ static int seasonGridX0(int n)
 /* the List + Posters view: the list narrower, the poster on its right */
 static const int SEASON_LW = 384;
 
+/* the series' page: its poster where A plays it from the start */
+static const float SP_X = 40, SP_Y = 62, SP_W = 170, SP_H = 255;
+static const float PAGE_H = 420;   /* the overview over the seasons: one page down */
+
+/* the first episode of its first season (not the specials), played; the
+ * season's others after it */
+bool LibraryView::startSeriesFromStart()
+{
+    std::string sid;
+    for (const JellyfinSeason& se : seasons)
+        if (se.id != SPECIALS_ROW && se.indexNumber > 0) { sid = se.id; break; }
+    if (sid.empty())
+        for (const JellyfinSeason& se : seasons) if (se.id != SPECIALS_ROW) { sid = se.id; break; }
+    if (sid.empty()) return false;
+    std::vector<JellyfinEpisode> eps;
+    bool ok = false;
+    std::string err;
+    freeDetail();
+    runWithLoading([&]() {
+        ok = client.getEpisodes(serverUrl, auth, currentSeriesId, sid, eps);
+        if (ok && !eps.empty()) ok = client.getItemDetail(serverUrl, auth, eps[0].id, detail);
+        if (!ok) err = client.lastError();
+    });
+    if (!ok) { errMsg = err; state = State::Error; return false; }
+    if (eps.empty()) return false;
+    SYS_Report("[Series] from the start: %s\n", eps[0].name.c_str());
+    detailItemId    = eps[0].id;
+    detailIsEpisode = true;
+    preparePlay(0LL, &eps);
+    return true;
+}
+
 bool LibraryView::updateSeasons(ir_t& ir, bool aPressed) {
     int n = (int)seasons.size();
     if (Input::isBackPressed()) {
         freeSeasonPosters();
         state = seasonsCallerState;
         return false;
+    }
+    seriesScrollK = Ui::approach(seriesScrollK, seriesTop ? 0.0f : 1.0f, 0.22f);
+    if (seriesTop) {
+        /* the overview: A on the poster plays the series from the start,
+         * Down (or the pointer low) to the seasons */
+        const bool onPoster = ir.valid && ir.x >= SP_X && ir.x < SP_X + SP_W && ir.y >= SP_Y && ir.y < SP_Y + SP_H;
+        if (Input::isDownPressed() || (aPressed && ir.valid && ir.y > PAGE_H - 40)) { seriesTop = false; irMode = false; return false; }
+        if (Input::is2Pressed() && n > 0) return startShuffle("");
+        if (Input::is1Pressed()) toggleFavorite(currentSeriesId, seriesFavorite);
+        if (aPressed && (!ir.valid || onPoster) && n > 0) return startSeriesFromStart();
+        return false;
+    }
+    /* back up to the overview: Up from the first row, or A on the header */
+    {
+        const bool firstRow = seasonGrid() ? seasonSel < SG_COLS : seasonSel == 0;
+        if ((Input::isUpPressed() && firstRow) || (aPressed && ir.valid && ir.y < 46)) {
+            seriesTop = true;
+            return false;
+        }
     }
     if (seasonGrid()) {
         const bool moved = Input::isLeftPressed() || Input::isRightPressed() ||
@@ -112,13 +163,114 @@ bool LibraryView::updateEpisodes(ir_t& ir, bool aPressed) {
     return false;
 }
 
+/* the series' page: its poster (A plays it from the start), its name,
+ * year, rating and seasons, genres, overview, cast; the seasons below */
+void LibraryView::drawSeriesOverview(ir_t& ir)
+{
+    const Ui::Palette& p = Ui::pal();
+    const JellyfinItemDetail& d = seriesDetail;
+    /* the poster, focused: a play mark over it */
+    const bool hover = ir.valid && ir.x >= SP_X && ir.x < SP_X + SP_W && ir.y >= SP_Y && ir.y < SP_Y + SP_H;
+    const float f = seriesTop ? (ir.valid && !hover ? 0.35f : Ui::pulse()) : 0.0f;
+    drawThumb(seriesPosterTex, SP_X, SP_Y, SP_W, SP_H, f, -1.0f, seriesPosterTex ? nullptr : currentSeriesName.c_str());
+    if (seriesTop) {
+        const float cx = SP_X + SP_W / 2, cy = SP_Y + SP_H / 2;
+        Ui::circle(cx, cy, 30, Ui::alpha(0x000000FF, 0.55f));
+        Ui::triangle(cx - 9, cy - 14, cx - 9, cy + 14, cx + 15, cy, 0xFFFFFFFF);
+    }
+    /* TRANSLATORS: under the series' poster: A on it plays the first episode */
+    Ui::textCentered(SP_X + SP_W / 2, SP_Y + SP_H + 10, tr("Play from the start"), 14,
+                     seriesTop ? p.accentDark : p.textDim);
+    /* its facts */
+    const float X = SP_X + SP_W + 26, W = 600 - X;
+    float y = SP_Y - 2;
+    for (const std::string& line : wrapText(filterDejaVu(currentSeriesName, 200), 24, W, 2)) {
+        Ui::text(X, y, line.c_str(), 24, p.text);
+        y += 30;
+    }
+    {
+        std::string meta;
+        auto add = [&](const std::string& part) { if (!part.empty()) meta += (meta.empty() ? "" : "  \xc2\xb7  ") + part; };
+        if (d.year > 0) add(std::to_string(d.year));
+        add(d.officialRating);
+        int real = 0;
+        for (const JellyfinSeason& se : seasons) real += se.id != SPECIALS_ROW;
+        char ns[48];
+        /* TRANSLATORS: how many seasons a series has */
+        snprintf(ns, sizeof ns, real == 1 ? tr("%d season") : tr("%d seasons"), real);
+        if (real > 0) add(ns);
+        Ui::text(X, y + 2, fitText(font, meta, 15, (int)W).c_str(), 15, p.textDim);
+        y += 24;
+    }
+    if (!d.genres.empty()) {
+        std::string g;
+        for (size_t i = 0; i < d.genres.size(); i++) g += (i ? "  \xc2\xb7  " : "") + d.genres[i];
+        Ui::text(X, y, fitText(font, g, 14, (int)W).c_str(), 14, p.accentDark);
+        y += 22;
+    }
+    y += 4;
+    for (const std::string& line : seriesLines) {
+        Ui::text(X, y, line.c_str(), 14, Ui::mix(p.text, p.textDim, 0.2f));
+        y += 18;
+    }
+    /* the cast: its actors, the first few */
+    std::string cast;
+    int shown = 0;
+    for (const JellyfinPerson& pp : d.people) {
+        if (pp.role != "Actor" || shown >= 5) continue;
+        cast += (shown++ ? ", " : "") + pp.name;
+    }
+    if (!cast.empty()) {
+        y += 8;
+        /* TRANSLATORS: before the series' actors' names */
+        const std::string with = std::string(tr("With")) + "  ";
+        Ui::text(X, y, with.c_str(), 14, p.accentDark);
+        Ui::text(X + Ui::textWidth(with.c_str(), 14), y,
+                 fitText(font, filterDejaVu(cast, 200), 14, (int)(W - Ui::textWidth(with.c_str(), 14))).c_str(), 14, p.text);
+    }
+    /* the seasons, below: Down */
+    const float cy = PAGE_H - 22;
+    /* TRANSLATORS: at the bottom of a series' page: Down shows its seasons */
+    const char* down = tr("Seasons");
+    const float w = Ui::textWidth(down, 16);
+    Ui::text(320 - w / 2 - 10, cy - 9, down, 16, p.accentDark);
+    Ui::triangle(320 + w / 2 - 2, cy - 4, 320 + w / 2 + 12, cy - 4, 320 + w / 2 + 5, cy + 4, p.accentDark);
+}
+
 // Season list
 void LibraryView::renderSeasons(ir_t& ir) {
-    const Ui::Palette& p = Ui::pal();
     drawBreadcrumb(currentSeriesName, 20, seriesFavorite ? 480 : 580);
     if (seriesFavorite) Ui::textRight(620, 16, (std::string("\xe2\x99\xa5 ") + tr("Favorite")).c_str(), 16, 0xE8455AFF);
     headerLine(46);
+    /* the overview over the seasons, one sliding under the other */
+    const float k = seriesScrollK * seriesScrollK * (3 - 2 * seriesScrollK);
+    const bool sliding = k > 0.001f && k < 0.999f;
+    if (sliding) Ui::clip(Ui::screenLeft(), 48, Ui::screenWidth(), PAGE_H - 48 + 10);   /* under the header */
+    if (k < 0.999f) {
+        Ui::pushOffset(0, -k * PAGE_H);
+        drawSeriesOverview(ir);
+        Ui::popOffset();
+    }
+    if (k > 0.001f) {
+        Ui::pushOffset(0, (1 - k) * PAGE_H);
+        drawSeasonsBody(ir);
+        Ui::popOffset();
+    }
+    if (sliding) Ui::clipReset();
+    if (seriesTop) {
+        const Ui::Hint l[] = { { "A", N_("Play") }, { "2", N_("Shuffle") }, { "B", N_("Back") } };
+        const Ui::Hint r[] = { { "UD", N_("Seasons") }, { "1", seriesFavorite ? N_("Unfavorite") : N_("Favorite") } };
+        Ui::footer(l, 3, r, 2);
+        return;
+    }
+    const Ui::Hint l[] = { { "A", N_("Select") }, { "2", N_("Shuffle") }, { "B", N_("Back") } };
+    const Ui::Hint r[] = { { "1", seriesFavorite ? N_("Unfavorite") : N_("Favorite") } };
+    Ui::footer(l, 3, r, 1);
+}
 
+/* the seasons themselves: posters, or a list */
+void LibraryView::drawSeasonsBody(ir_t& ir) {
+    const Ui::Palette& p = Ui::pal();
     int n = (int)seasons.size();
     if (seasonGrid()) {
         const int x0 = seasonGridX0(n);
@@ -167,9 +319,6 @@ void LibraryView::renderSeasons(ir_t& ir) {
             Ui::text(PX, PY + PH + 10, name.c_str(), 15, p.text);
         }
     }
-    const Ui::Hint l[] = { { "A", N_("Select") }, { "2", N_("Shuffle") }, { "B", N_("Back") } };
-    const Ui::Hint r[] = { { "1", seriesFavorite ? N_("Unfavorite") : N_("Favorite") } };
-    Ui::footer(l, 3, r, 1);
 }
 
 // Episode list

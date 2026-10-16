@@ -1,0 +1,14 @@
+# From an episode opened in Continue Watching, 2 opens its series' seasons,
+# its own season selected (Shuffle Show S02E02: season 2); A there lists
+# that season's episodes; B goes back to the home screen.
+server http://127.0.0.1:18096
+positions-reset
+position "Shuffle Show S02E02" 4
+6000  A          Connect To Jellyfin
+9000  A          the profile
+12000 PLUS       Activity: Continue Watching
+14000 A          Shuffle Show S02E02: its page
+17000 2          its series seasons
+20000 A          season 2 (selected): its episodes
+23000 END
+expect logorder "[Detail] its series' seasons" "in season 2"

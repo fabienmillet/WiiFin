@@ -15,6 +15,7 @@ position "Shuffle Show S01E01" 0
 26000 RIGHT      Shows
 26500 A
 29000 A          Shuffle Show
+31500 DOWN       the series page: down to its seasons
 32000 A          Season 1
 35000 PLUS       S01E01 watched, from the list
 37000 A          its page

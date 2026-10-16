@@ -25,6 +25,7 @@ cfg music_enabled=1
 20000 RIGHT
 20500 A          Shows
 23000 A
+25500 DOWN       the series page: down to its seasons
 26000 A
 27000 DOWN
 27400 DOWN
