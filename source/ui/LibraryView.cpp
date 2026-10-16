@@ -1133,6 +1133,11 @@ void LibraryView::loadMusicTracks() {
                                           [](const JellyfinAudioItem& a) { return a.video; });
     SYS_Report("[Music] %s: %d song(s), %d video(s)\n", musicIsPlaylist ? "playlist" : "album",
                (int)musicTracks.size() - videos, videos);
+    /* an album of one song: that song at once */
+    if (!musicIsPlaylist && musicTracks.size() == 1 && !musicTracks[0].video) {
+        SYS_Report("[Music] one song: played at once\n");
+        musicAutoPlay = true;
+    }
     musicTrackSel = 0; musicTrackTop = 0; state = State::MusicTracksReady;
 }
 

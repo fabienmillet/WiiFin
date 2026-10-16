@@ -11,6 +11,19 @@ using namespace LibDraw;
 
 bool LibraryView::updateMusicTracks(ir_t& ir, bool aPressed) {
     int n = (int)musicTracks.size();
+    if (musicAutoPlay) {   /* an album of one song: as A on it */
+        musicAutoPlay = false;
+        musicAutoBack = true;
+        musicTrackSel = 0;
+        aPressed = true;
+        ir.valid = false;
+    } else if (musicAutoBack) {   /* back from it: the albums, as B */
+        musicAutoBack = false;
+        if (tracksFromHome) { tracksFromHome = false; state = State::LibsReady; }
+        else if (musicTab == 1) state = State::MusicSuggestionsReady;
+        else state = posterMode ? State::PostersReady : State::ItemsReady;
+        return false;
+    }
     if (Input::isBackPressed()) {
         if (tracksFromHome) {
             tracksFromHome = false;
