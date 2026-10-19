@@ -312,9 +312,9 @@ bool JellyfinClient::jf_getItemImageBytes(const std::string& serverUrl,
     snprintf(qs, sizeof(qs),
         "/Items/%s/Images/Primary?fillWidth=%d&fillHeight=%d&maxWidth=%d&maxHeight=%d&quality=82&format=Jpg",
         itemId.c_str(), maxWidth, maxHeight, maxWidth, maxHeight);
-    std::string url = serverUrl + qs;
-    int status = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
-    return status == 200;
+    char key[96];
+    snprintf(key, sizeof(key), "primary_%s_%dx%d.jpg", itemId.c_str(), maxWidth, maxHeight);
+    return fetchImageCached(serverUrl, key, serverUrl + qs, auth.accessToken, outBytes);
 }
 
 bool JellyfinClient::jf_getPhotoBytes(const std::string& serverUrl, const JellyfinAuth& auth,
@@ -340,25 +340,23 @@ bool JellyfinClient::jf_getItemBackdropBytes(const std::string& serverUrl,
     snprintf(sizeqs, sizeof(sizeqs),
              "?maxWidth=%d&maxHeight=%d&quality=82&format=Jpg", maxWidth, maxHeight);
 
+    /* tries one image, through the cache */
+    auto tryImage = [&](const char* kind, const std::string& id, const char* path) {
+        char key[96];
+        snprintf(key, sizeof(key), "%s_%s_%dx%d.jpg", kind, id.c_str(), maxWidth, maxHeight);
+        if (fetchImageCached(serverUrl, key, serverUrl + "/Items/" + id + path + sizeqs, auth.accessToken, outBytes) &&
+            !outBytes.empty())
+            return true;
+        outBytes.clear();
+        return false;
+    };
     if (item.type == "Episode") {
-        // Episode still (Thumb)
-        std::string url = serverUrl + "/Items/" + item.id + "/Images/Thumb" + sizeqs;
-        int st = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
-        if (st == 200 && !outBytes.empty()) return true;
-        outBytes.clear();
-        // Series backdrop
-        if (!item.seriesId.empty()) {
-            url = serverUrl + "/Items/" + item.seriesId + "/Images/Backdrop/0" + sizeqs;
-            st  = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
-            if (st == 200 && !outBytes.empty()) return true;
-            outBytes.clear();
-        }
-    } else {
-        // Movie / Series backdrop
-        std::string url = serverUrl + "/Items/" + item.id + "/Images/Backdrop/0" + sizeqs;
-        int st = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
-        if (st == 200 && !outBytes.empty()) return true;
-        outBytes.clear();
+        // Episode still, then series backdrop
+        if (tryImage("thumb", item.id, "/Images/Thumb")) return true;
+        if (!item.seriesId.empty() &&
+            tryImage("backdrop", item.seriesId, "/Images/Backdrop/0")) return true;
+    } else if (tryImage("backdrop", item.id, "/Images/Backdrop/0")) {
+        return true;
     }
 
     // Fallback: Primary portrait image
