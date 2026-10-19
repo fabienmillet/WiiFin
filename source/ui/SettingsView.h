@@ -48,6 +48,9 @@ private:
     /* the Sign-In row's choice, applied on leaving its section (a new
      * passcode asked then) */
     int    signInWant = -1;
+    /* images the Image Cache row removed this visit, -1 not yet */
+    int    cacheCleared = -1;
+    void   clearCache();
     bool   leaveSignIn();
     /* a new passcode, typed twice */
     PinPad pin;
