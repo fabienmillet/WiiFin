@@ -305,6 +305,7 @@ void App::init(const char* argv0) {
         }
     }
     loadSettings();
+    jellyfinClient.initImageCache(settingsPath);
     /* DHCP takes a few seconds: get it going while the menus show */
     jellyfinClient.startNetwork();
     /* the SD card's sounds/ folder, next to wiifin.cfg, may replace the

@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <functional>
 
 struct JellyfinLibrary {
     std::string id;
@@ -659,6 +660,18 @@ public:
     int effectiveQuality() const { return videoQuality < linkCap ? videoQuality : linkCap; }
     void measureLink(const std::string& serverUrl, const JellyfinAuth& auth);
 
+    // SD card, using the app's directory name from wiifin.cfg.
+    // Empty when disabled or unavailable.
+    std::string cacheDir;
+    // Keep OFF's saved value; the removed USB value (1) falls back to SD.
+    enum CacheLocation { CacheSD = 0, CacheOff = 2 };
+    int imageCacheLocation = CacheSD;
+    void initImageCache(const std::string& settingsPath);
+    void setImageCacheLocation(int location);
+    // Progress runs before each deletion (count so far, filename); false stops.
+    // Returns how many were removed, or -1 if the cache cannot be opened.
+    int clearImageCache(std::function<bool(int, const char*)> progress = {});
+
 private:
     int         linkCap = VIDEO_QUALITY_COUNT - 1;
     int         linkKbps = 0;            // measured, 0 = not yet
@@ -673,6 +686,14 @@ private:
     void bringUpNetwork();
     static void* netThreadMain(void* self);
     std::string errMsg;
+    std::string cacheAppDir = "/apps/WiiFin/";
+    std::string imageCacheKey(const std::string& serverUrl, const std::string& key);
+    // GET url through the image cache, in a folder named for the server address.
+    // A hit is read from disk, a miss fetched and saved. A 404 is an empty file, so a
+    // missing image (an episode without a Thumb) isn't asked for again.
+    bool fetchImageCached(const std::string& serverUrl, const std::string& key, const std::string& url,
+                          const std::string& authToken, std::string& outBytes);
+    bool readCachedImage(const std::string& key, std::string& outBytes);
     std::string localIp_;   // set by initNetwork, used by discoverServers
     std::string localMask_;
 

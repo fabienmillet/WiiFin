@@ -36,6 +36,10 @@ void App::loadSettings() {
 
         if (strcmp(key, "ssl_verify") == 0) {
             jellyfinClient.sslVerify = atoi(val) != 0;
+        } else if (strcmp(key, "image_cache_location") == 0) {
+            int location = atoi(val);
+            jellyfinClient.imageCacheLocation = location == JellyfinClient::CacheOff
+                ? JellyfinClient::CacheOff : JellyfinClient::CacheSD;
         } else if (strcmp(key, "music_enabled") == 0) {
             musicEnabled = atoi(val) != 0;
         } else if (strcmp(key, "ui_sounds") == 0) {
@@ -189,6 +193,7 @@ void App::saveSettings() {
     FILE* f = fopen(settingsPath.c_str(), "w");
     if (!f) return;
     fprintf(f, "ssl_verify=%d\n",      jellyfinClient.sslVerify ? 1 : 0);
+    fprintf(f, "image_cache_location=%d\n", jellyfinClient.imageCacheLocation);
     fprintf(f, "music_enabled=%d\n",    musicEnabled ? 1 : 0);
     fprintf(f, "ui_sounds=%d\n",        SoundFX::enabled() ? 1 : 0);
     fprintf(f, "video_quality=%d\n",    jellyfinClient.videoQuality);

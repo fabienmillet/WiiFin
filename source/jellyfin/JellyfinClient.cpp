@@ -15,7 +15,11 @@
 #include <map>
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <sys/iosupport.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <vector>
@@ -26,6 +30,7 @@
 #include <mbedtls/error.h>
 #include <mbedtls/net_sockets.h>
 #include <mbedtls/x509_crt.h>
+#include <mbedtls/sha256.h>
 
 extern unsigned char data_cacert_pem[];
 extern unsigned int  data_cacert_pem_len;
@@ -1456,6 +1461,156 @@ bool JellyfinClient::getAlbumsByArtist(const std::string& serverUrl,
 }
 
 // ---------------------------------------------------------------------------
+// Image cache: one file per image under cacheDir, kept until Settings clears it
+// ---------------------------------------------------------------------------
+void JellyfinClient::initImageCache(const std::string& settingsPath) {
+    size_t first = settingsPath.find('/'), last = settingsPath.rfind('/');
+    if (first != std::string::npos && last > first)
+        cacheAppDir = settingsPath.substr(first, last - first + 1);
+    setImageCacheLocation(imageCacheLocation);
+}
+
+void JellyfinClient::setImageCacheLocation(int location) {
+    imageCacheLocation = location == CacheOff ? CacheOff : CacheSD;
+    cacheDir.clear();
+    if (imageCacheLocation == CacheOff) return;
+    bool mounted = false;
+    for (int i = 0; i < STD_MAX; ++i) {
+        const devoptab_t* dev = devoptab_list[i];
+        if (dev && dev->name && dev->mkdir_r && dev->open_r && strcmp(dev->name, "sd") == 0)
+            mounted = true;
+    }
+    if (!mounted) { SYS_Report("[Cache] no mounted SD card\n"); return; }
+
+    std::string dir = "sd:" + cacheAppDir + "cache/";
+    for (size_t slash = dir.find('/') + 1; slash < dir.size(); ++slash)
+        if (dir[slash] == '/') mkdir(dir.substr(0, slash).c_str(), 0777);
+    /* A mounted card can still be read-only or full. */
+    std::string probe = dir + ".write-test";
+    FILE* f = fopen(probe.c_str(), "wb");
+    if (!f) {
+        SYS_Report("[Cache] cannot open SD write probe (errno %d)\n", errno);
+        return;
+    }
+    bool writable = fputc(0, f) != EOF;
+    if (fclose(f) != 0) writable = false;
+    int error = errno;
+    unlink(probe.c_str());
+    if (writable) cacheDir = dir;
+    else SYS_Report("[Cache] SD write probe failed (errno %d)\n", error);
+}
+
+/* Percent-escape anything unsafe or ambiguous on FAT. Base paths are case
+ * sensitive on the server, so uppercase letters are escaped there too. */
+static std::string cacheNamePart(const std::string& value, bool domain) {
+    std::string out;
+    for (unsigned char ch : value) {
+        if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-' || (domain && ch == '.'))
+            out += (char)ch;
+        else {
+            char escaped[4];
+            snprintf(escaped, sizeof(escaped), "%%%02X", ch);
+            out += escaped;
+        }
+    }
+    return out;
+}
+
+std::string JellyfinClient::imageCacheKey(const std::string& serverUrl, const std::string& key) {
+    if (key.empty() || key.find_first_of("/\\:") != std::string::npos) return "";
+    std::string host, path;
+    int port;
+    bool https;
+    if (!parseUrl(serverUrl, host, port, path, https)) return "";
+    if (host.empty() || port <= 0 || port > 65535) return "";
+    for (char& ch : host) ch = (char)tolower((unsigned char)ch);
+    std::string folder = (https ? "https_" : "http_") + cacheNamePart(host, true);
+    if (path != "/") folder += "__" + cacheNamePart(path.substr(1), false);
+    folder += "_" + std::to_string(port);
+    /* Keep long hostnames/base paths inside FAT's filename limit without
+     * letting two truncated names share a cache. Normal names need no hash. */
+    if (folder.size() > 180) {
+        unsigned char digest[32];
+        if (mbedtls_sha256((const unsigned char*)folder.data(), folder.size(), digest, 0) != 0) return "";
+        char suffix[65];
+        for (int i = 0; i < 32; ++i) snprintf(suffix + i * 2, 3, "%02x", digest[i]);
+        folder = folder.substr(0, 112) + "__" + suffix;
+    }
+    return folder + "/" + key;
+}
+
+bool JellyfinClient::readCachedImage(const std::string& key, std::string& outBytes) {
+    if (cacheDir.empty()) return false;
+    std::string path = cacheDir + key;
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) return false;
+    outBytes.clear();
+    if (st.st_size == 0) return true;   /* a remembered 404 */
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) return false;
+    outBytes.resize((size_t)st.st_size);
+    bool ok = fread(&outBytes[0], 1, outBytes.size(), f) == outBytes.size();
+    fclose(f);
+    if (!ok) outBytes.clear();
+    return ok;
+}
+
+bool JellyfinClient::fetchImageCached(const std::string& serverUrl, const std::string& key, const std::string& url,
+                                     const std::string& authToken, std::string& outBytes) {
+    std::string scopedKey = cacheDir.empty() ? "" : imageCacheKey(serverUrl, key);
+    if (!scopedKey.empty() && readCachedImage(scopedKey, outBytes)) return !outBytes.empty();
+    int status = httpRequest(url, "GET", "", "", authToken, outBytes);
+    if (cacheDir.empty() || scopedKey.empty() || (status != 200 && status != 404)) return status == 200;
+    if (status == 200 && outBytes.empty()) return false;
+    std::string folder = cacheDir + scopedKey.substr(0, scopedKey.find('/'));
+    mkdir(folder.c_str(), 0777);   /* EEXIST is fine */
+    /* written beside it, then renamed: the loader threads may read or write
+     * the same image at once, and must never see half a file */
+    char tmp[32];
+    snprintf(tmp, sizeof(tmp), ".%08x.tmp", (unsigned)LWP_GetSelf());
+    std::string path = cacheDir + scopedKey, part = path + tmp;
+    FILE* f = fopen(part.c_str(), "wb");
+    if (f) {
+        bool ok = status == 404 || fwrite(outBytes.data(), 1, outBytes.size(), f) == outBytes.size();
+        fclose(f);
+        if (!ok || rename(part.c_str(), path.c_str()) != 0) unlink(part.c_str());
+    }
+    return status == 200;
+}
+
+int JellyfinClient::clearImageCache(std::function<bool(int, const char*)> progress) {
+    if (cacheDir.empty()) return -1;
+    DIR* dir = opendir(cacheDir.c_str());
+    if (!dir) return -1;
+    int removed = 0;
+    /* The root can also contain files from the older, flat cache layout. */
+    std::function<bool(DIR*, const std::string&)> clearDirectory;
+    clearDirectory = [&](DIR* current, const std::string& relative) {
+        bool complete = true;
+        while (struct dirent* e = readdir(current)) {
+            if (strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0) continue;
+            std::string name = relative + e->d_name, path = cacheDir + name;
+            struct stat st;
+            if (stat(path.c_str(), &st) != 0) continue;
+            if (S_ISDIR(st.st_mode)) {
+                DIR* child = opendir(path.c_str());
+                if (!child) continue;
+                if (!clearDirectory(child, name + "/")) { complete = false; break; }
+                rmdir(path.c_str());
+            } else {
+                if (progress && !progress(removed, name.c_str())) { complete = false; break; }
+                if (unlink(path.c_str()) == 0) removed++;
+            }
+        }
+        closedir(current);
+        return complete;
+    };
+    clearDirectory(dir, "");
+    SYS_Report("[Cache] cleared %d image(s) from %s\n", removed, cacheDir.c_str());
+    return removed;
+}
+
+// ---------------------------------------------------------------------------
 // Fetch raw bytes for an item's primary image (JPEG)
 // ---------------------------------------------------------------------------
 bool JellyfinClient::getItemImageBytes(const std::string& serverUrl,
@@ -1469,9 +1624,9 @@ bool JellyfinClient::getItemImageBytes(const std::string& serverUrl,
     snprintf(qs, sizeof(qs),
         "/Items/%s/Images/Primary?fillWidth=%d&fillHeight=%d&maxWidth=%d&maxHeight=%d&quality=82&format=Jpg",
         itemId.c_str(), maxWidth, maxHeight, maxWidth, maxHeight);
-    std::string url = serverUrl + qs;
-    int status = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
-    return status == 200;
+    char key[96];
+    snprintf(key, sizeof(key), "primary_%s_%dx%d.jpg", itemId.c_str(), maxWidth, maxHeight);
+    return fetchImageCached(serverUrl, key, serverUrl + qs, auth.accessToken, outBytes);
 }
 
 bool JellyfinClient::getPhotoBytes(const std::string& serverUrl, const JellyfinAuth& auth,
@@ -1496,26 +1651,24 @@ bool JellyfinClient::getItemBackdropBytes(const std::string& serverUrl,
     char sizeqs[128];
     snprintf(sizeqs, sizeof(sizeqs),
              "?maxWidth=%d&maxHeight=%d&quality=82&format=Jpg", maxWidth, maxHeight);
+    /* tries one image, through the cache */
+    auto tryImage = [&](const char* kind, const std::string& id, const char* path) {
+        char key[96];
+        snprintf(key, sizeof(key), "%s_%s_%dx%d.jpg", kind, id.c_str(), maxWidth, maxHeight);
+        if (fetchImageCached(serverUrl, key, serverUrl + "/Items/" + id + path + sizeqs, auth.accessToken, outBytes) &&
+            !outBytes.empty())
+            return true;
+        outBytes.clear();
+        return false;
+    };
 
     if (item.type == "Episode") {
-        // Episode still (Thumb)
-        std::string url = serverUrl + "/Items/" + item.id + "/Images/Thumb" + sizeqs;
-        int st = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
-        if (st == 200 && !outBytes.empty()) return true;
-        outBytes.clear();
-        // Series backdrop
-        if (!item.seriesId.empty()) {
-            url = serverUrl + "/Items/" + item.seriesId + "/Images/Backdrop/0" + sizeqs;
-            st  = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
-            if (st == 200 && !outBytes.empty()) return true;
-            outBytes.clear();
-        }
-    } else {
-        // Movie / Series backdrop
-        std::string url = serverUrl + "/Items/" + item.id + "/Images/Backdrop/0" + sizeqs;
-        int st = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
-        if (st == 200 && !outBytes.empty()) return true;
-        outBytes.clear();
+        // Episode still, then series backdrop
+        if (tryImage("thumb", item.id, "/Images/Thumb")) return true;
+        if (!item.seriesId.empty() &&
+            tryImage("backdrop", item.seriesId, "/Images/Backdrop/0")) return true;
+    } else if (tryImage("backdrop", item.id, "/Images/Backdrop/0")) {
+        return true;
     }
 
     // Fallback: Primary portrait image
