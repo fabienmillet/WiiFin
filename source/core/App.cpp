@@ -217,9 +217,7 @@ void App::init(const char* argv0) {
     // the devoptab entry for "sd" with a stub that has open_r=NULL → errno=88.
     // fatInitDefault() alone correctly registers "sd" with a working FAT driver.
 
-    WPAD_Init();
-    WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR);
-    WPAD_SetVRes(WPAD_CHAN_0, 640, 480);
+    Input::init();   // every controller, the USB keyboard, mouse and tablets
 
     // Try argv0, all known prefixes, and NO-prefix (default libfat device)
     if (argv0 && argv0[0]) {
@@ -374,7 +372,7 @@ void App::offerScreenCalibration(ir_t& ir) {
     const Ui::Palette& p = Ui::pal();
     auto drawPointer = [&]() {
         if (ir.valid && cursorPointerTex) {
-            orient_t orient; WPAD_Orientation(WPAD_CHAN_0, &orient);
+            orient_t orient; orient.roll = Input::pointerRoll();
             GRRLIB_DrawImg((int)ir.x - 20, (int)ir.y - 4, cursorPointerTex, orient.roll, 1, 1, 0xFFFFFFFF);
         }
     };
@@ -765,7 +763,7 @@ void App::loop() {
         // --- IR Cursor: rendered last ---
         if (ir.valid && cursorPointerTex) {
             orient_t orient;
-            WPAD_Orientation(WPAD_CHAN_0, &orient);
+            orient.roll = Input::pointerRoll();
             GRRLIB_DrawImg(
                 (int)ir.x - 20,
                 (int)ir.y - 4,
@@ -795,8 +793,7 @@ void App::loop() {
     for (GRRLIB_ttfFont* f : sdFonts) GRRLIB_FreeTTF(f);
     for (void* d : sdFontData) free(d);
     GRRLIB_Exit();
-    ConnectView::shutdownUsbKeyboard();
-    WPAD_Shutdown();
+    Input::shutdown();
     /* launched by a loader (the Homebrew Channel's stub, where exit() goes
      * back): not the WAD's channel */
     const bool loader = memcmp((const void*)0x80001804, "STUBHAXX", 8) == 0;

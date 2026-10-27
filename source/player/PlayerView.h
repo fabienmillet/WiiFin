@@ -39,7 +39,7 @@ struct PlayerViewContext {
  * PlayerView — the in-player UI, drawn with GRRLIB over the video.
  *
  * Main loop, once per frame:
- *     Input::update(); WPAD_IR(...);
+ *     Input::update(); Input::readIR(ir);
  *     Action a = view.update(Input::rawDown(), ir);
  *     view.render(ir);
  *     GRRLIB_Render();
