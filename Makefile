@@ -78,12 +78,37 @@ LDFLAGS     := -g $(MACHDEP) -Wl,-Map,$(TARGET).map -T $(CURDIR)/tools/wii_wiifi
                -Wl,--wrap=LWP_JoinThread \
                -Wl,--wrap=SYS_Report \
                -Wl,--wrap=CONF_GetIdleLedMode \
-               -Wl,--wrap=GRRLIB_Render -Wl,--wrap=iosFree   # see source/core/LwpJoinFix.cpp, Log.cpp, WiiPlayer.cpp, RenderHook.cpp, player/OgcCompat.c
+               -Wl,--wrap=GRRLIB_Render -Wl,--wrap=iosFree \
+               -Wl,--wrap=wiiuse_init_cmd_queue \
+               -Wl,--wrap=classic_ctrl_handshake -Wl,--wrap=parse_event \
+               -Wl,--wrap=USB_GetDeviceList   # see source/core/LwpJoinFix.cpp, Log.cpp, WiiPlayer.cpp, RenderHook.cpp, player/OgcCompat.c, input/WpadQueue.c, UDraw.c, Tablet.c
 LIBPATHS    := -L$(LIBOGC_LIB) -L/opt/devkitpro/portlibs/wii/lib -L/opt/devkitpro/portlibs/ppc/lib \
                -L$(CURDIR)/libs/mbedtls/lib
 
 LIBS        := -lgrrlib -lpngu `$(PKG_CONFIG) freetype2 libpng libjpeg --libs` -lbrotlidec -lbrotlicommon -lwiikeyboard -lfat -lwiiuse -lbte -lmad -lasnd -logc -lm -lz \
                -lmbedtls -lmbedx509 -lmbedcrypto
+
+# The controller libraries, each linked when tools/controllers/build.sh
+# has built it (see source/input/Input.h)
+CONTROLLERS := $(CURDIR)/libs/controllers
+ifneq ($(wildcard $(CONTROLLERS)/lib/libwupc.a),)
+CFLAGS      += -DHAVE_WUPC
+LDFLAGS     += -Wl,--wrap=wiiuse_accept
+LIBS        := -lwupc $(LIBS)
+endif
+ifneq ($(wildcard $(CONTROLLERS)/lib/libwiidrc.a),)
+CFLAGS      += -DHAVE_WIIDRC
+LIBS        := -lwiidrc $(LIBS)
+endif
+ifneq ($(wildcard $(CONTROLLERS)/lib/libsicksaxis.a),)
+CFLAGS      += -DHAVE_SICKSAXIS
+LIBS        := -lsicksaxis $(LIBS)
+endif
+ifneq ($(wildcard $(CONTROLLERS)/lib/*.a),)
+CFLAGS      += -I$(CONTROLLERS)/include
+LIBPATHS    += -L$(CONTROLLERS)/lib
+endif
+CXXFLAGS    := $(CFLAGS)
 
 # Link against mplayer-ce when available (see MPLAYER_CE_BUILD.md)
 ifneq ($(wildcard $(CURDIR)/libs/mplayer-ce-build/libmplayer.a),)
@@ -115,6 +140,9 @@ $(BUILD)/%.o: source/core/%.cpp
 
 $(BUILD)/%.o: source/input/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(BUILD)/%.o: source/input/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/%.o: source/ui/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@

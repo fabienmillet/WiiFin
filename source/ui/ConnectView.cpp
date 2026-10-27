@@ -5,7 +5,6 @@
 #include "../input/Input.h"
 #include "../core/SoundFX.h"
 #include "../core/Lang.h"
-#include <wiikeyboard/keyboard.h>
 #include <ogc/lwp.h>
 #include <string.h>
 #include <stdio.h>
@@ -152,7 +151,6 @@ ConnectView::ConnectView(GRRLIB_texImg* btn, GRRLIB_texImg* cursor,
     fields[0] = "";
     fields[1] = "";
     fields[2] = "";
-    initUsbKeyboard();
 }
 
 void ConnectView::setFields(const std::string& url, const std::string& uname) {
@@ -162,27 +160,6 @@ void ConnectView::setFields(const std::string& url, const std::string& uname) {
         fields[0].pop_back();
     fields[1] = uname;
     serverUrl  = fields[0];
-}
-
-/* USB keyboard: started once for the whole run, stopped before leaving.
- * KEYBOARD_Init queues USB requests again on every call, and its thread
- * keeps polling USB: started at each visit of this screen and never
- * stopped, a request still in flight when IOS shut down for power-off or
- * exit completed into freed memory (DSI in __usbv0_messageCB). */
-static int s_usbKb = 0;            /* 0 not tried, 1 running, -1 failed */
-
-void ConnectView::initUsbKeyboard() {
-    /* no callback: with one, libwiikeyboard starts a thread that empties the
-     * event queue every 10 ms into a stdin buffer (the callback only runs
-     * when stdin is read, which WiiFin never does), and most keys went
-     * there instead of to KEYBOARD_GetEvent below (#19) */
-    if (s_usbKb == 0) s_usbKb = KEYBOARD_Init(nullptr) >= 0 ? 1 : -1;
-    usbKbInited = s_usbKb > 0;
-}
-
-void ConnectView::shutdownUsbKeyboard() {
-    if (s_usbKb > 0) KEYBOARD_Deinit();
-    s_usbKb = 0;
 }
 
 void ConnectView::setStatus(const std::string& msg, bool isError) {
@@ -195,23 +172,11 @@ void ConnectView::setStatus(const std::string& msg, bool isError) {
 // Main update loop
 // ---------------------------------------------------------------
 ConnectResult ConnectView::update(ir_t& ir) {
-    // USB keyboard input
-    if (usbKbInited) {
-        keyboard_event ev;
-        while (KEYBOARD_GetEvent(&ev) > 0) {
-            if (ev.type == KEYBOARD_PRESSED && ev.symbol) {
-                char c = (char)ev.symbol;
-                int fi = (int)focusedField;
-                if (fi <= 2) {
-                    if (c == '\b' || c == 127) {
-                        if (!fields[fi].empty()) fields[fi].pop_back();
-                    } else if (c >= 32 && c < 127) {
-                        fields[fi] += c;
-                    }
-                }
-            }
-        }
-    }
+    // USB keyboard: types into the highlighted field (the on-screen
+    // keyboard takes it while it is open); Enter goes to the next one
+    if (activeTab == Tab::Credentials && !kbActive && (int)focusedField <= 2 && busy == Busy::None &&
+        Input::typeInto(fields[(int)focusedField], 255) == Input::Typed::Enter)
+        focusedField = (Field)((int)focusedField + 1);
 
     // Status timer
     if (statusTimer > 0) statusTimer--;
@@ -670,7 +635,7 @@ void ConnectView::renderQuickConnect(ir_t& ir) {
 void ConnectView::renderCursor(ir_t& ir) {
     if (ir.valid && cursorTex) {
         orient_t orient;
-        WPAD_Orientation(WPAD_CHAN_0, &orient);
+        orient.roll = Input::pointerRoll();
         GRRLIB_DrawImg((int)ir.x - 20, (int)ir.y - 4,
                        cursorTex, orient.roll, 1, 1, 0xFFFFFFFF);
     }

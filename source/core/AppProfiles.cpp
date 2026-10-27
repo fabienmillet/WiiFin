@@ -17,7 +17,7 @@ extern volatile bool g_app_reset;
 
 static void drawPointer(const ir_t& ir, GRRLIB_texImg* tex) {
     if (ir.valid && tex) {
-        orient_t orient; WPAD_Orientation(WPAD_CHAN_0, &orient);
+        orient_t orient; orient.roll = Input::pointerRoll();
         GRRLIB_DrawImg((int)ir.x - 20, (int)ir.y - 4, tex, orient.roll, 1, 1, 0xFFFFFFFF);
     }
 }
