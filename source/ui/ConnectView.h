@@ -58,12 +58,7 @@ private:
     // --- Virtual keyboard ---
     bool kbActive = false;
     Keyboard kb;                 // on-screen keyboard (shared with search)
-    // USB keyboard support
-    bool usbKbInited = false;
-    void initUsbKeyboard();
 public:
-    /* Before the app leaves (IOS shuts USB down): stops the USB keyboard. */
-    static void shutdownUsbKeyboard();
     struct Job;                  /* a background request, see ConnectView.cpp */
 private:
     Job* job = nullptr;

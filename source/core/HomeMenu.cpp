@@ -71,7 +71,7 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
     while (true) {
         Input::update();
         Input::readIR(ir);
-        orient_t orient; WPAD_Orientation(WPAD_CHAN_0, &orient);
+        orient_t orient; orient.roll = Input::pointerRoll();
         if (g_app_powerOff || g_app_reset) return true;
 
         float irX = ir.valid ? ir.x : -1.f;
