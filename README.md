@@ -55,7 +55,7 @@ Then sign in to your Jellyfin server with your username and password, or with Qu
 - **Photos** with a slideshow, and playlists of videos
 - **Profiles**: several accounts and servers, a passcode if you want, each its own theme
 - **Remote control** from Jellyfin's dashboard and apps: Play on... Nintendo Wii
-- The **Wii's ten languages**; Wii Remote, Classic Controller, GameCube controller or Wii U GamePad, no sensor bar needed
+- The **Wii's ten languages**; Wii Remote, Classic Controller, GameCube controller (also through the Wii U adapter), Wii U Pro Controller, Wii U GamePad, DualShock 3, USB keyboard and mouse, pen tablets and the uDraw GameTablet; no sensor bar needed
 
 Everything it does, the controls, the settings and custom sounds: the **[user guide](docs/USER_GUIDE.md)**.
 

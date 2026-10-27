@@ -7,11 +7,12 @@ How to build WiiFin from source and run it while working on it. To install a rel
 - [devkitPro](https://devkitpro.org) with `devkitPPC`, `libogc`, and `wii-dev` portlibs
 - Graphics: `GRRLIB`, `libpngu`, `freetype`, `libjpeg`
 - mbedTLS (bundled under `libs/`, cross-compiled by `setup.sh`)
+- The controller libraries [libwupc](https://github.com/FIX94/libwupc) (Wii U Pro Controller), [libwiidrc](https://github.com/FIX94/libwiidrc) (Wii U GamePad) and [libsicksaxis](https://github.com/xerpi/libsicksaxis) (DualShock 3): built into `libs/controllers` by `tools/controllers/build.sh` (`setup.sh` runs it). Without them WiiFin still compiles, without those controllers.
 - MPlayer CE as `libmplayer.a`, for playback: prebuilt in `libs/mplayer-ce-build`, rebuilt from source by `tools/mplayer/build.sh` (see [MPLAYER_CE_BUILD.md](../MPLAYER_CE_BUILD.md)). Without it, WiiFin still compiles but cannot play.
 
 ## Building
 
-On a fresh machine, `./setup.sh` installs devkitPro and the portlibs, builds GRRLIB and mbedTLS, then compiles WiiFin (Arch-based distros, or any host with `dkp-pacman`).
+On a fresh machine, `./setup.sh` installs devkitPro and the portlibs, builds GRRLIB, mbedTLS and the controller libraries, then compiles WiiFin (Arch-based distros, or any host with `dkp-pacman`).
 
 ```bash
 ./build.sh          # WiiFin.dol
@@ -38,7 +39,7 @@ To test against a local Jellyfin in Docker, with scripted button presses and fra
 WiiFin/
 ├── source/
 │   ├── core/        # App, settings, playback sessions, sounds and music, text drawing, log
-│   ├── input/       # Wii Remote, Classic Controller and GameCube controller
+│   ├── input/       # every controller, read as a Wii Remote: Wii Remote, Classic, GameCube (and its Wii U adapter), Wii U Pro and GamePad, DualShock 3, USB keyboard, mouse and tablets, uDraw
 │   ├── jellyfin/    # Jellyfin API client (HTTPS via mbedTLS), remote control (WebSocket)
 │   ├── player/      # MPlayer CE integration, video output, player overlay, subtitles, thumbnails
 │   └── ui/          # The screens: connection, profiles, home, libraries, details, music, settings
