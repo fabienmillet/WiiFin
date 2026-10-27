@@ -6,7 +6,8 @@
 #   1. devkitPro pacman repositories + devkitPPC / libogc / portlibs
 #   2. GRRLIB + libpngu (built from source, installed into portlibs/wii)
 #   3. mbedTLS (cross-compiled with libs/mbedtls/include/mbedtls/mbedtls_config.h)
-#   4. Builds WiiFin (skip with --no-build)
+#   4. The controller libraries (libwupc, libwiidrc, libsicksaxis) into libs/controllers
+#   5. Builds WiiFin (skip with --no-build)
 #
 # Supported hosts: Arch-based distros (pacman), or any host where devkitPro's
 # dkp-pacman is already installed (Debian/Ubuntu/macOS).
@@ -37,7 +38,7 @@ DO_BUILD=1
 for arg in "$@"; do
 	case "$arg" in
 		--no-build) DO_BUILD=0 ;;
-		-h|--help) sed -n '3,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+		-h|--help) sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
 		*) echo "Unknown option: $arg" >&2; exit 1 ;;
 	esac
 done
@@ -184,7 +185,24 @@ else
 fi
 
 #---------------------------------------------------------------------------------
-# 4. libWiiPy, for `make wad` (in tools/.venv: no system-wide pip install)
+# 4. Controller libraries: the Wii U Pro Controller, the Wii U GamePad and a
+#    DualShock 3 (tools/controllers/build.sh, each at a fixed commit)
+#---------------------------------------------------------------------------------
+CONTROLLERS_OUT="$REPO_DIR/libs/controllers/lib"
+CONTROLLERS_STAMP="$CONTROLLERS_OUT/.build.sha256"   # rebuild when build.sh changes
+CONTROLLERS_HASH="$(sha256sum "$REPO_DIR/tools/controllers/build.sh" | cut -d' ' -f1)"
+if [ -f "$CONTROLLERS_OUT/libwupc.a" ] && [ -f "$CONTROLLERS_OUT/libwiidrc.a" ] && [ -f "$CONTROLLERS_OUT/libsicksaxis.a" ] &&
+   [ "$(cat "$CONTROLLERS_STAMP" 2>/dev/null)" = "$CONTROLLERS_HASH" ]; then
+	ok "Controller libraries already built"
+else
+	info "Building the controller libraries"
+	"$REPO_DIR/tools/controllers/build.sh"
+	echo "$CONTROLLERS_HASH" > "$CONTROLLERS_STAMP"
+	ok "Controller libraries installed into libs/controllers"
+fi
+
+#---------------------------------------------------------------------------------
+# 5. libWiiPy, for `make wad` (in tools/.venv: no system-wide pip install)
 #---------------------------------------------------------------------------------
 WAD_VENV="$REPO_DIR/tools/.venv"
 if [ -x "$WAD_VENV/bin/python" ] && "$WAD_VENV/bin/python" -c "import libWiiPy" 2>/dev/null; then
@@ -197,7 +215,7 @@ else
 fi
 
 #---------------------------------------------------------------------------------
-# 5. Sanity checks
+# 6. Sanity checks
 #---------------------------------------------------------------------------------
 info "Checking portlibs"
 PKG_CONFIG_LIBDIR="$DEVKITPRO/portlibs/ppc/lib/pkgconfig" pkg-config --exists freetype2 libpng libjpeg \
@@ -211,7 +229,7 @@ else
 fi
 
 #---------------------------------------------------------------------------------
-# 6. Build
+# 7. Build
 #---------------------------------------------------------------------------------
 if [ "$DO_BUILD" -eq 1 ]; then
 	info "Building WiiFin"

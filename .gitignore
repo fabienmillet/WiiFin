@@ -11,6 +11,8 @@ tools/test/media/
 tools/test/out/
 # tools/mplayer: MPlayer CE source, build and libraries (build.sh)
 tools/mplayer/out/
+# tools/controllers: controller library sources (build.sh)
+tools/controllers/out/
 *.su
 GRRLIB_core.o
 
@@ -36,3 +38,4 @@ Thumbs.db
 # Bundled third-party static libs (built locally; not committed to source control)
 libs/mbedtls/lib/
 libs/mplayer-ce-build/
+libs/controllers/
