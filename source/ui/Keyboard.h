@@ -15,7 +15,8 @@
  * Pointer: the highlight follows it and A types the key under it (A over
  * empty space does nothing).  D-pad: moves the highlight, A types it.
  * B deletes a character (leaves when the text is empty), - is Shift (press
- * twice for caps lock), + presses the action key.
+ * twice for caps lock), + presses the action key.  A USB keyboard types
+ * straight in (Enter is the action key, Esc is B).
  * ----------------------------------------------------------------------- */
 class Keyboard {
 public:

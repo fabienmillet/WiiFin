@@ -103,6 +103,12 @@ Keyboard::Result Keyboard::press(const Key& k, std::string& text, size_t maxLen)
 
 Keyboard::Result Keyboard::update(const ir_t& ir, std::string& text, size_t maxLen)
 {
+    /* USB keyboard: typed straight in, Enter is the action key */
+    const size_t before = text.size();
+    if (Input::typeInto(text, maxLen) == Input::Typed::Enter) return Result::Enter;
+    if (text.size() > before)      SoundFX::play(SoundFX::FX::PressKey);
+    else if (text.size() < before) SoundFX::play(SoundFX::FX::Backspace);
+
     /* Pointer: the highlight follows it */
     int pr, pc;
     bool overKey = keyUnder(ir, pr, pc);
