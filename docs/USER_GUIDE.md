@@ -63,7 +63,7 @@ WiiFin keeps its settings, profiles and log (`wiifin.log`, to join to a bug repo
 
 **And also**
 - The interface in the **Wii's ten languages**: English, French, German, Spanish, Italian, Dutch, Japanese, Korean, Simplified and Traditional Chinese, the Wii's own by default (French reviewed, the others waiting for native speakers: see [lang/README.md](../lang/README.md))
-- **Wii Remote** pointer, **Classic Controller**, **Wii U GamePad** (Virtual Console injects) and **GameCube controller**: everything works with the D-pad, no sensor bar needed (see [Controls](#-controls))
+- **Wii Remote** pointer (up to four), **Classic Controller**, **GameCube controller** (also through the GameCube adapter for Wii U), **Wii U Pro Controller**, **Wii U GamePad** (Virtual Console injects), **DualShock 3** (USB cable), **USB keyboard and mouse**, **USB pen tablets** and the **uDraw GameTablet**: everything works with the D-pad, no sensor bar needed (see [Controls](#-controls))
 - **Interface sounds** and **background music**, both replaceable with your own files (see [Custom sounds](#-custom-sounds))
 - On-screen keyboard; screen area calibration for TVs that crop the picture; the disc slot light can stay off
 - Ships as a ready-to-use `.dol`, an installable `.wad` (Wii / vWii) and a Homebrew Channel package
@@ -72,17 +72,23 @@ WiiFin keeps its settings, profiles and log (`wiifin.log`, to join to a bug repo
 
 The pointer is optional: every screen works with the D-pad.
 
-| Wii Remote | Classic Controller / Wii U GamePad | GameCube controller | Action |
-|---|---|---|---|
-| A / B | A / B | A / B | Select / Back |
-| D-pad | D-pad or left stick | D-pad or stick | Move (hold to repeat); left / right: A-Z in lists, −10 / +10 s in the player (held: on seeking) |
-| − / + | − / + or L / R | L / R | Tabs, pages, previous / next episode or track; + : watched / not watched (a film, an episode); − : the whole synopsis (a page) |
-| 1 | Y | Y | Search (home), favourite (a film, a series), audio track (player), Up Next (music) |
-| 2 | X | X | Sort & filter (lists, music albums), special features (a film), shuffle (series, music), subtitles (player) |
-| HOME | HOME | START | HOME menu |
-| pointer | ZL / ZR | Z | Video zoom (fit / fill); in the menus, what + does on its own: watched / not watched, the browse page, the keyboard's Enter |
+| Wii Remote | Classic / Pro Controller / Wii U GamePad | GameCube controller | DualShock 3 | Action |
+|---|---|---|---|---|
+| A / B | A / B | A / B | Cross / Circle | Select / Back |
+| D-pad | D-pad or left stick | D-pad or stick | D-pad or left stick | Move (hold to repeat); left / right: A-Z in lists, −10 / +10 s in the player (held: on seeking) |
+| − / + | − / + or L / R | L / R | Select / Start or L1 / R1 | Tabs, pages, previous / next episode or track; + : watched / not watched (a film, an episode); − : the whole synopsis (a page) |
+| 1 | Y | Y | Square | Search (home), favourite (a film, a series), audio track (player), Up Next (music) |
+| 2 | X | X | Triangle | Sort & filter (lists, music albums), special features (a film), shuffle (series, music), subtitles (player) |
+| HOME | HOME | START | PS | HOME menu |
+| pointer | ZL / ZR | Z | L2 / R2 | Video zoom (fit / fill); in the menus, what + does on its own: watched / not watched, the browse page, the keyboard's Enter |
 
 On-screen hints show the buttons of the controller used last (GameCube: A green, B red, L / R, Z, START).
+
+**USB keyboard**: the arrows move, Enter selects, Backspace goes back, X and Y are 1 and 2, Delete or Page Up is −, Page Down is +, Esc or Home opens the HOME menu. In a text field (sign-in, search, the on-screen keyboard) it types instead, Enter confirms and Esc goes back.
+
+**USB mouse**: the pointer; left button selects, right goes back, middle zooms the video, the wheel scrolls.
+
+**Pen tablet / uDraw GameTablet**: the pointer while the pen hovers; the tip selects, the side switch goes back.
 
 ## ⚙️ Settings
 
