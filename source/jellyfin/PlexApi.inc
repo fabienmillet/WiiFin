@@ -1138,6 +1138,8 @@ const char* PROFILE_EXTRA =
     "+add-transcode-target(type=musicProfile&context=streaming&protocol=http&container=mp3&audioCodec=mp3)";
 
 unsigned s_session = 0;
+/* each item's duration (ms), for the timeline reports */
+std::map<std::string, long long> s_durationMs;
 } // namespace
 
 /* the X-Plex-* parameters MPlayer's requests carry in their URL */
@@ -1166,6 +1168,7 @@ bool JellyfinClient::getDirectPlayUrl(const std::string& serverUrl, const Jellyf
     }
     std::string part = nthObject(media, "Part", 0);
     if (part.empty()) { out.reasons = "no file"; return false; }
+    s_durationMs[itemId] = jsonGetLongLong(o, "duration");
     out.container  = jsonGetString(media, "container");
     out.videoCodec = plexCodec(jsonGetString(media, "videoCodec"));
     out.audioCodec = jsonGetString(media, "audioCodec");
@@ -1270,6 +1273,7 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl, const Jelly
         if (m.empty()) break;
         if (std::to_string(jsonGetInt(m, "id")) == mediaSourceId) { mediaIndex = i; media = m; }
     }
+    s_durationMs[itemId] = jsonGetLongLong(o, "duration");
     std::string partId = std::to_string(jsonGetInt(nthObject(media, "Part", 0), "id"));
     /* Plex's transcoder takes the tracks selected on the Part */
     {
@@ -1286,7 +1290,7 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl, const Jelly
     long long ms = startTimeTicks / TICKS_PER_MS;
     ms = ms > 3000 ? ms - 3000 : 0;
     char sid[24];
-    snprintf(sid, sizeof(sid), "wii%u%u", (unsigned)nowMs(), ++s_session);
+    snprintf(sid, sizeof(sid), "wiit%u%u", (unsigned)nowMs(), ++s_session);
     outPlaySessionId = sid;
     char q[512];
     snprintf(q, sizeof(q),
@@ -1312,6 +1316,7 @@ bool JellyfinClient::getAudioStreamUrl(const std::string& serverUrl, const Jelly
     std::string o = nthObject(resp, "Metadata", 0);
     std::string media = nthObject(o, "Media", 0);
     std::string part = nthObject(media, "Part", 0);
+    s_durationMs[itemId] = jsonGetLongLong(o, "duration");
     std::string codec = jsonGetString(media, "audioCodec");
     std::string container = jsonGetString(media, "container");
     int channels = jsonGetInt(media, "audioChannels");
@@ -1351,7 +1356,8 @@ bool JellyfinClient::plexTimeline(const std::string& serverUrl, const JellyfinAu
                                   const std::string& session) {
     long long ms = positionTicks / TICKS_PER_MS;
     std::string p = "/:/timeline?ratingKey=" + itemId + "&key=" + urlEncode("/library/metadata/" + itemId) +
-                    "&state=" + state + "&time=" + std::to_string(ms) + "&hasMDE=1" +
+                    "&state=" + state + "&time=" + std::to_string(ms) +
+                    "&duration=" + std::to_string(s_durationMs[itemId]) + "&hasMDE=1" +
                     (session.empty() ? "" : "&X-Plex-Session-Identifier=" + session);
     std::string r;
     int st = httpRequest(serverUrl + p, "GET", "", "", auth.accessToken, r);
@@ -1379,7 +1385,7 @@ bool JellyfinClient::reportPlaybackStopped(const std::string& serverUrl, const J
 
 bool JellyfinClient::deleteActiveEncoding(const std::string& serverUrl, const JellyfinAuth& auth,
                                           const std::string& playSessionId) {
-    if (playSessionId.empty()) return true;
+    if (playSessionId.compare(0, 4, "wiit") != 0) return true;   /* not a transcode */
     std::string r;
     int a = httpRequest(serverUrl + "/video/:/transcode/universal/stop?session=" + playSessionId,
                         "GET", "", "", auth.accessToken, r);
