@@ -1,4 +1,5 @@
 #include "ConnectView.h"
+#include "../third_party/qrcodegen.h"
 #include "../core/ExitZone.h"
 #include "../core/Text.h"
 #include "Ui.h"
@@ -586,6 +587,31 @@ void ConnectView::renderVKB(ir_t& ir) {
     kb.render(ir);
 }
 
+/* A QR code of text, centred on (cx, cy), about side pixels wide, dark on a
+ * white card with its quiet zone (phones read it off a TV that way) */
+static void drawQr(const std::string& text, int cx, int cy, int side) {
+    static std::string last;
+    static uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
+    static bool ok = false;
+    if (text != last) {   /* encoded once */
+        uint8_t tmp[qrcodegen_BUFFER_LEN_MAX];
+        ok = qrcodegen_encodeText(text.c_str(), tmp, qr, qrcodegen_Ecc_LOW, qrcodegen_VERSION_MIN,
+                                  qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+        last = text;
+    }
+    if (!ok) return;
+    int n = qrcodegen_getSize(qr);
+    int m = side / (n + 4);            /* a module, whole pixels */
+    if (m < 1) m = 1;
+    int full = m * (n + 4);
+    int x0 = cx - full / 2, y0 = cy - full / 2;
+    GRRLIB_Rectangle(x0, y0, full, full, 0xFFFFFFFF, true);
+    for (int y = 0; y < n; ++y)
+        for (int x = 0; x < n; ++x)
+            if (qrcodegen_getModule(qr, x, y))
+                GRRLIB_Rectangle(x0 + (x + 2) * m, y0 + (y + 2) * m, m, m, 0x000000FF, true);
+}
+
 void ConnectView::renderQuickConnect(ir_t& ir) {
     const Ui::Palette& p = Ui::pal();
     int cx = 320;
@@ -613,11 +639,17 @@ void ConnectView::renderQuickConnect(ir_t& ir) {
 
         case QCState::Waiting: {
             line(112, tr("Enter this code in Quick Connect or at plex.tv/link:"), 17, p.text);
-            // Big code display on a card
+            /* with a QR code: the code on the left, the QR on the right */
+            bool qr = !qcResult.qrUrl.empty();
+            int ccx = qr ? 210 : 320;
             int cw = Ui::textWidth(qcResult.code.c_str(), 52);
-            Ui::card(320 - cw / 2 - 30, 148, cw + 60, 80, 18, Ui::pulse());
-            Ui::textCentered(320, 160, qcResult.code.c_str(), 52, p.accentDark);
-            line(250, tr("Waiting for approval..."), 17, p.textDim);
+            Ui::card(ccx - cw / 2 - 30, 148, cw + 60, 80, 18, Ui::pulse());
+            Ui::textCentered(ccx, 160, qcResult.code.c_str(), 52, p.accentDark);
+            if (qr) {
+                drawQr(qcResult.qrUrl, 470, 210, 150);
+                Ui::textCentered(470, 292, tr("or scan with your phone"), 14, p.textDim);
+            }
+            line(qr ? 318 : 250, tr("Waiting for approval..."), 17, p.textDim);
             break;
         }
         case QCState::Done:

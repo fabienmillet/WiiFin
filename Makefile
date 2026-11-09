@@ -21,7 +21,7 @@ PKG_CONFIG  := PKG_CONFIG_LIBDIR=/opt/devkitpro/portlibs/ppc/lib/pkgconfig pkg-c
 #---------------------------------------------------------------------------------
 TARGET      := WiiFin
 BUILD       := build
-SOURCES     := source source/core source/input source/ui source/jellyfin source/player
+SOURCES     := source source/core source/input source/ui source/jellyfin source/player source/third_party
 ASSETS      := data textures
 INCLUDES    := $(SOURCES) $(BUILD)
 
@@ -146,6 +146,9 @@ $(BUILD)/%.o: source/player/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD)/%.o: source/player/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/%.o: source/third_party/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Explicit asset rules

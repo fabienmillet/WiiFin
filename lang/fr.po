@@ -2049,3 +2049,6 @@ msgstr "Message"
 
 msgid "The server asks for a Plex account"
 msgstr "Le serveur demande un compte Plex"
+
+msgid "or scan with your phone"
+msgstr "ou scannez-le avec votre téléphone"

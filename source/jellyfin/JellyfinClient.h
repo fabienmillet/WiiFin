@@ -170,6 +170,7 @@ struct QuickConnectResult {
     std::string code;    // 6-char code shown to user
     std::string secret;  // used to poll / authenticate
     bool authenticated;  // true once user approved on another device
+    std::string qrUrl;   // a page to open with the phone's camera, "" none
 };
 
 struct DiscoveredServer {
@@ -668,6 +669,9 @@ public:
 
     // Plex: the JSON helpers, for the parsers of PlexApi.inc
     std::string plexStr(const std::string& o, const char* k);
+    int plexHttp(const std::string& url, const char* method, std::string& resp) {
+        return httpRequest(url, method, "application/x-www-form-urlencoded", "", "", resp);
+    }
     int         plexInt(const std::string& o, const char* k);
     long long   plexLL(const std::string& o, const char* k);
 
@@ -805,6 +809,7 @@ private:
     bool plexAudioList(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& path,
                        std::vector<JellyfinAudioItem>& out);
     std::string plexPathFor(const std::string& jfQuery, std::string& onlyType, bool& none);
+    std::string plexPinToken(const std::string& secret);
     bool plexCheckServer(const std::string& serverUrl, JellyfinAuth& out);
     bool plexImage(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& imagePath,
                    int w, int h, bool crop, std::string& outBytes);
