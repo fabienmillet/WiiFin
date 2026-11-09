@@ -141,11 +141,33 @@ void ProfileView::render(ir_t& ir) {
 
         const char* name = !p.username.empty() ? p.username.c_str()
                          : !p.serverName.empty() ? p.serverName.c_str() : p.serverUrl.c_str();
-        char server[96];
-        if (!p.serverName.empty()) snprintf(server, sizeof(server), "%s  \xe2\x80\xa2  %s", p.serverName.c_str(), p.serverUrl.c_str());
-        else                       snprintf(server, sizeof(server), "%s", p.serverUrl.c_str());
+        /* the address without its scheme; Plex's remote one
+         * (https://1-2-3-4.<id>.plex.direct:32400) as its IP */
+        std::string addr = p.serverUrl;
+        size_t sch = addr.find("://");
+        if (sch != std::string::npos) addr.erase(0, sch + 3);
+        size_t pd = addr.find(".plex.direct");
+        if (pd != std::string::npos) {
+            std::string ip = addr.substr(0, addr.find('.'));
+            for (char& c : ip) if (c == '-') c = '.';
+            addr = ip + addr.substr(pd + 12);   /* ":32400" */
+        }
+        static const char* KINDS[4] = { "", "Jellyfin", "Emby", "Plex" };
+        std::string server;
+        if (p.serverKind > 0 && p.serverKind < 4) server = std::string(KINDS[p.serverKind]) + "  \xe2\x80\xa2  ";
+        if (!p.serverName.empty() && p.serverName != name) server += p.serverName + "  \xe2\x80\xa2  ";
+        server += addr;
+        /* cut to the row, with an ellipsis */
+        const float maxW = w - 68 - 24;
+        if (Ui::textWidth(server.c_str(), 13) > maxW) {
+            while (server.size() > 4 && Ui::textWidth((server + "\xe2\x80\xa6").c_str(), 13) > maxW) {
+                server.pop_back();
+                while (!server.empty() && ((unsigned char)server.back() & 0xC0) == 0x80) server.pop_back();   /* whole UTF-8 characters */
+            }
+            server += "\xe2\x80\xa6";
+        }
         Ui::text(x + 68, y + 9,  name,   20, pal.text);
-        Ui::text(x + 68, y + 34, server, 13, pal.textDim);
+        Ui::text(x + 68, y + 34, server.c_str(), 13, pal.textDim);
     }
 
     /* Delete confirmation */

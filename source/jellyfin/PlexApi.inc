@@ -460,6 +460,17 @@ bool JellyfinClient::plexCheckServer(const std::string& serverUrl, JellyfinAuth&
     return true;
 }
 
+/* the plex.tv account of out.accessToken: its name and id (the profile's) */
+void JellyfinClient::plexAccountUser(JellyfinAuth& out) {
+    std::string resp;
+    if (httpRequest(std::string(PLEX_TV) + "/api/v2/user", "GET", "", "", out.accessToken, resp) != 200) return;
+    std::string name = jsonGetString(resp, "username");
+    if (name.empty()) name = jsonGetString(resp, "title");
+    if (!name.empty()) out.userName = name;
+    std::string uuid = jsonGetString(resp, "uuid");
+    if (!uuid.empty()) out.userId = uuid;
+}
+
 bool JellyfinClient::plex_authenticate(const std::string& serverUrl, const std::string& username,
                                   const std::string& password, JellyfinAuth& out) {
     out = JellyfinAuth();
@@ -472,6 +483,7 @@ bool JellyfinClient::plex_authenticate(const std::string& serverUrl, const std::
     }
     if (username == "token") {
         out.accessToken = password;
+        plexAccountUser(out);   /* a server's own token has no account: then none */
         return plexCheckServer(serverUrl, out);
     }
     std::string body = "user%5Blogin%5D=" + urlEncode(username) + "&user%5Bpassword%5D=" + urlEncode(password);
@@ -488,6 +500,7 @@ bool JellyfinClient::plex_authenticate(const std::string& serverUrl, const std::
     }
     out.accessToken = jsonGetString(resp, "authToken");
     out.userId      = jsonGetString(resp, "uuid");
+    out.userName    = jsonGetString(resp, "username");
     if (out.accessToken.empty()) { errMsg = N_("No token in response"); return false; }
     return plexCheckServer(serverUrl, out);
 }
@@ -558,6 +571,7 @@ bool JellyfinClient::plex_quickConnectAuthenticate(const std::string& serverUrl,
     out = JellyfinAuth();
     out.accessToken = plexPinToken(secret);
     if (out.accessToken.empty()) { errMsg = N_("No token in QC auth response"); return false; }
+    plexAccountUser(out);
     if (serverUrl == "plex.tv") return plexFindServer(out);
     return plexCheckServer(serverUrl, out);
 }

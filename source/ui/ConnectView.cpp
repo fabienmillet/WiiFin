@@ -130,7 +130,7 @@ void ConnectView::startLogin() {
         [this, out, user]() {
             if (!out->ok) { setStatus(out->err, true); return ConnectResult::None; }
             auth = out->auth;
-            username = user;
+            username = !out->auth.userName.empty() ? out->auth.userName : user;   /* Plex: the account's name, not the e-mail */
             return ConnectResult::Success;
         });
 }
@@ -342,7 +342,8 @@ ConnectResult ConnectView::update(ir_t& ir) {
                             *signedIn = client.quickConnectAuthenticate(url, secret, *a);
                             if (!*signedIn) { *err = client.lastError(); return; }
                             std::string sn;
-                            *user = a->serverName;  /* "Name" field = user display name, before overwrite */
+                            *user = !a->userName.empty() ? a->userName      /* Plex: plex.tv's */
+                                                         : a->serverName;   /* "Name" field = user display name, before overwrite */
                             const std::string& at = a->serverUrl.empty() ? url : a->serverUrl;
                             if (client.getServerName(at, *a, sn)) a->serverName = sn;
                         },
