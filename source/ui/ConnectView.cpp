@@ -17,6 +17,9 @@
 // Tab bar (drawn by renderBackground, hit-tested by update): three equal
 // segments, centred
 static const float TAB_W = 180, TAB_X0 = (640 - 3 * TAB_W) / 2, TAB_Y = 52, TAB_H = 30;
+/* the row of server kinds (Credentials), and Connect under it */
+static const float KIND_W = 100, KIND_X0 = 160, KIND_Y = 300, KIND_H = 30;
+static const int SUBMIT_Y = 350;
 
 // USB keyboard callback — appends char to a shared buffer
 
@@ -102,9 +105,15 @@ ConnectResult ConnectView::finishJob() {
     return r;
 }
 
+void ConnectView::applyKind() {
+    if (serverUrl.empty() || serverUrl == "plex.tv") return;
+    client.setBackend(serverUrl, (JellyfinClient::Backend)serverKind);   /* 0: found from the address */
+}
+
 void ConnectView::startLogin() {
     while (fields[0].size() > 1 && fields[0].back() == '/') fields[0].pop_back();
     serverUrl = fields[0];
+    applyKind();
     struct Out { bool ok = false; JellyfinAuth auth; std::string err; };
     auto out = std::make_shared<Out>();
     std::string url = fields[0], user = fields[1], pass = fields[2];
@@ -231,11 +240,15 @@ ConnectResult ConnectView::update(ir_t& ir) {
                     if      (ir.y >= 100 && ir.y <= 145) { focusedField = Field::Server;   kbActive = true; kb.reset(); irFieldHandled = true; irMode = true; }
                     else if (ir.y >= 170 && ir.y <= 215) { focusedField = Field::Username;  kbActive = true; kb.reset(); irFieldHandled = true; irMode = true; }
                     else if (ir.y >= 240 && ir.y <= 285) { focusedField = Field::Password;  kbActive = true; kb.reset(); irFieldHandled = true; irMode = true; }
+                    else if (ir.y >= KIND_Y && ir.y <= KIND_Y + KIND_H && ir.x >= KIND_X0 && ir.x < KIND_X0 + 4 * KIND_W) {
+                        focusedField = Field::Kind; irMode = true; irFieldHandled = true;
+                        serverKind = (int)((ir.x - KIND_X0) / KIND_W);
+                    }
                 }
                 // Connect button: centered at x=320, y=330, 200x48
                 if (!irFieldHandled &&
                     ir.x >= 220 && ir.x <= 420 &&
-                    ir.y >= 330 && ir.y <= 378) {
+                    ir.y >= SUBMIT_Y && ir.y <= SUBMIT_Y + 48) {
                     focusedField = Field::SubmitBtn; irFieldHandled = true; irMode = true;
                     goto doSubmit;
                 }
@@ -246,16 +259,22 @@ ConnectResult ConnectView::update(ir_t& ir) {
             // D-pad navigation
             if (Input::isDownPressed()) {
                 int f = (int)focusedField;
-                focusedField = (Field)((f + 1) % 4);
+                focusedField = (Field)((f + 1) % 5);
                 irMode = false;
             }
             if (Input::isUpPressed()) {
                 int f = (int)focusedField;
-                focusedField = (Field)(((f - 1) + 4) % 4);
+                focusedField = (Field)(((f - 1) + 5) % 5);
                 irMode = false;
             }
+            if (focusedField == Field::Kind) {
+                if (Input::isRightPressed()) { serverKind = (serverKind + 1) % 4; irMode = false; }
+                if (Input::isLeftPressed())  { serverKind = (serverKind + 3) % 4; irMode = false; }
+            }
             // A button: open VKB or submit (only when not in IR mode)
-            if (aPressed && !irMode) {
+            if (aPressed && !irMode && focusedField == Field::Kind) {
+                serverKind = (serverKind + 1) % 4;
+            } else if (aPressed && !irMode) {
                 if (focusedField != Field::SubmitBtn) {
                     kbActive = true; kb.reset();
                 } else {
@@ -283,6 +302,7 @@ ConnectResult ConnectView::update(ir_t& ir) {
                     while (fields[0].size() > 1 && fields[0].back() == '/') fields[0].pop_back();
                     /* no address: a Plex account, which finds its server */
                     serverUrl = fields[0].empty() ? std::string("plex.tv") : fields[0];
+                    applyKind();
                     auto ok = std::make_shared<bool>(false);
                     auto res = std::make_shared<QuickConnectResult>();
                     auto err = std::make_shared<std::string>();
@@ -546,8 +566,28 @@ void ConnectView::renderCredentials(ir_t& ir) {
     drawField(N_("Password"),   fx, 250, fw, fields[2],
               focusedField == Field::Password && !kbActive, true);
 
+    /* the kind of server: found from the address, or chosen */
+    {
+        const Ui::Palette& p = Ui::pal();
+        const char* names[4] = { N_("Auto"), "Jellyfin", "Emby", "Plex" };
+        bool focus = focusedField == Field::Kind && !kbActive;
+        Ui::text(fx, KIND_Y + 7, tr("Server"), 15, p.textDim);
+        const float X0 = KIND_X0, X4 = KIND_X0 + 4 * KIND_W, Y = KIND_Y, H = KIND_H;
+        if (focus) Ui::card(X0 - 6, Y - 5, X4 - X0 + 12, H + 10, (H + 10) * 0.5f, Ui::pulse());
+        Ui::roundRect(X0, Y, X4 - X0, H, H * 0.5f, p.field, Ui::mix(p.field, p.cardBottom, 0.5f));
+        Ui::roundBorder(X0, Y, X4 - X0, H, H * 0.5f, 1.5f, p.fieldBorder);
+        for (int i = 0; i < 4; ++i) {
+            bool on = serverKind == i;
+            float sx = X0 + i * KIND_W;
+            if (on) Ui::roundRect(sx + 2, Y + 2, KIND_W - 4, H - 4, (H - 4) * 0.5f,
+                                  Ui::mix(p.accent, 0xFFFFFFFF, 0.25f), p.accentDark);
+            Ui::textCentered(sx + KIND_W * 0.5f, Y + 7, i == 0 ? tr(names[i]) : names[i], 15,
+                             on ? p.textOnAccent : p.textDim);
+        }
+    }
+
     // Submit button
-    drawButton(320, 330, 200, 48, N_("Connect"),
+    drawButton(320, SUBMIT_Y, 200, 48, N_("Connect"),
                focusedField == Field::SubmitBtn && !kbActive);
 
     if (kbActive) {

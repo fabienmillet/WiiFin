@@ -9,6 +9,7 @@ struct SavedProfile {
     std::string serverName;  /* friendly name retrieved from the server */
     std::string userId;
     std::string accessToken; /* Jellyfin session token — not the password */
+    int serverKind = 0;      /* 0 found from the address, 1 Jellyfin, 2 Emby, 3 Plex */
 
     /* its own look (View Settings), -1: WiiFin's (the start-up one) */
     int theme = -1, homeLayout = -1, libraryStyle = -1, solidColors = -1;

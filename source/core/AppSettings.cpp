@@ -155,6 +155,7 @@ void App::loadSettings() {
             if (strcmp(field, "server_name")   == 0) profiles[idx].serverName  = val;
             if (strcmp(field, "user_id")       == 0) profiles[idx].userId      = val;
             if (strcmp(field, "access_token")  == 0) profiles[idx].accessToken = val;
+            if (strcmp(field, "server_kind")   == 0) profiles[idx].serverKind  = atoi(val);
             if (strcmp(field, "theme")         == 0) profiles[idx].theme        = atoi(val);
             if (strcmp(field, "home_layout")   == 0) profiles[idx].homeLayout   = atoi(val);
             if (strcmp(field, "library_view")  == 0) profiles[idx].libraryStyle = atoi(val);
@@ -280,6 +281,7 @@ void App::saveSettings() {
         /* the password each time: no token kept */
         fprintf(f, "profile.%d.access_token=%s\n", i,
                 p.signIn == SavedProfile::Password ? "" : sanitizeConfigValue(p.accessToken).c_str());
+        if (p.serverKind > 0)    fprintf(f, "profile.%d.server_kind=%d\n",  i, p.serverKind);
         if (p.theme >= 0)        fprintf(f, "profile.%d.theme=%d\n",        i, p.theme);
         if (p.homeLayout >= 0)   fprintf(f, "profile.%d.home_layout=%d\n",  i, p.homeLayout);
         if (p.libraryStyle >= 0) fprintf(f, "profile.%d.library_view=%d\n", i, p.libraryStyle);

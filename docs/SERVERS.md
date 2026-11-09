@@ -1,8 +1,9 @@
 # Jellyfin, Emby and Plex
 
-This branch of WiiFin plays from three kinds of media servers. You do not choose
-one: you type the server's address, and WiiFin works out which kind it is the
-first time it talks to it.
+This branch of WiiFin plays from three kinds of media servers. On the sign-in
+screen, the *Server* row picks Jellyfin, Emby or Plex; left on *Auto*, WiiFin
+works out the kind from the address the first time it talks to it. The choice
+is kept with the profile.
 
 | | Jellyfin | Emby | Plex |
 |---|---|---|---|
