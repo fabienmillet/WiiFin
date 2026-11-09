@@ -32,7 +32,7 @@ extern unsigned int  data_cacert_pem_len;
 
 #include "../version.h"
 /* Sent with every request; one per console, see setDeviceId() */
-static std::string s_deviceId = "wiiplex-wii";
+static std::string s_deviceId = "wiifin-wii";
 
 void JellyfinClient::setDeviceId(const std::string& id) { if (!id.empty()) s_deviceId = id; }
 const std::string& JellyfinClient::deviceId() { return s_deviceId; }
@@ -228,13 +228,19 @@ bool JellyfinClient::discoverServers(std::vector<DiscoveredServer>& out) {
      * into the address as its sa_len, and the console's IOS takes 8 only
      * (EINVAL on each question otherwise; Dolphin takes 16). */
     const socklen_t IOS_ADDR_LEN = 8;
-    const char* msg = "M-SEARCH * HTTP/1.1\r\n\r\n";
+    /* Jellyfin and Emby answer on 7359 (JSON), Plex's GDM on 32414 (text) */
+    struct Ask { u16 port; const char* msg; };
+    const Ask asks[] = { { 7359, "Who is JellyfinServer?" }, { 7359, "who is EmbyServer?" },
+                         { 32414, "M-SEARCH * HTTP/1.1\r\n\r\n" } };
     auto sendBroadcast = [&](int round) {
-        s32 a = net_sendto(sock, msg, (s32)strlen(msg), 0,
-                           (struct sockaddr*)&dest255, IOS_ADDR_LEN);
-        s32 b = haveSubnet ? net_sendto(sock, msg, (s32)strlen(msg), 0,
-                                        (struct sockaddr*)&destSubnet, IOS_ADDR_LEN)
-                           : 0;
+        s32 a = 0, b = 0;
+        for (const Ask& q : asks) {
+            dest255.sin_port = htons(q.port);
+            destSubnet.sin_port = htons(q.port);
+            a = net_sendto(sock, q.msg, (s32)strlen(q.msg), 0, (struct sockaddr*)&dest255, IOS_ADDR_LEN);
+            if (haveSubnet)
+                b = net_sendto(sock, q.msg, (s32)strlen(q.msg), 0, (struct sockaddr*)&destSubnet, IOS_ADDR_LEN);
+        }
         SYS_Report("[Discover] question %d: to all %d, to the subnet %d\n", round, (int)a, (int)b);
     };
     sendBroadcast(1);
@@ -288,6 +294,10 @@ bool JellyfinClient::discoverServers(std::vector<DiscoveredServer>& out) {
             std::string address;
             if (txt.find("plex/media-server") != std::string::npos && !port.empty())
                 address = std::string("http://") + inet_ntoa(from.sin_addr) + ":" + port;
+            else if (!txt.empty() && txt[0] == '{') {   /* Jellyfin, Emby */
+                address = jsonGetString(txt, "Address");
+                name = jsonGetString(txt, "Name");
+            }
             SYS_Report("[Discover] answer of %d bytes: %s\n", n,
                        address.empty() ? "no address in it" : "a server");
             if (address.empty()) continue;
@@ -1088,18 +1098,24 @@ int JellyfinClient::request(bool tls, const std::string& host, int port,
     }
     if (tls && !tlsSharedInit(sslVerify, err)) return fail(err);
 
-    std::string authHdr = authToken.empty() ? "" : ("X-Plex-Token: " + authToken + "\r\n");
+    /* Every server kind's headers: Jellyfin's and Emby's MediaBrowser
+     * authorization (Emby reads X-Emby-Authorization), and Plex's X-Plex-*;
+     * each server ignores the others' */
+    std::string mb = "MediaBrowser Client=\"WiiFin\", Device=\"Nintendo Wii\", DeviceId=\"" + s_deviceId +
+                     "\", Version=\"" WIIFIN_VERSION "\"" + (authToken.empty() ? "" : ", Token=\"" + authToken + "\"");
+    std::string authHdr = "Authorization: " + mb + "\r\nX-Emby-Authorization: " + mb + "\r\n" +
+                          (authToken.empty() ? "" : "X-Plex-Token: " + authToken + "\r\n");
     std::string ctHdr   = contentType.empty() ? "" : ("Content-Type: " + contentType + "\r\n");
     // RFC 7230 §5.4: omit port from Host when it is the default for the scheme.
     std::string hostHdr = host + (port == (tls ? 443 : 80) ? "" : (":" + std::to_string(port)));
-    char req[4096];
+    char req[6144];
     int reqLen = snprintf(req, sizeof(req),
         "%s %s HTTP/1.1\r\n"
         "Host: %s\r\n"
         "Connection: keep-alive\r\n"
         "Accept: application/json\r\n"
         "X-Plex-Client-Identifier: %s\r\n"
-        "X-Plex-Product: WiiPlex\r\nX-Plex-Version: " WIIFIN_VERSION "\r\n"
+        "X-Plex-Product: WiiFin\r\nX-Plex-Version: " WIIFIN_VERSION "\r\n"
         "X-Plex-Platform: Generic\r\nX-Plex-Device: Nintendo Wii\r\nX-Plex-Device-Name: Wii\r\n"
         "%s"
         "%s"
@@ -1176,4 +1192,39 @@ static std::string jsonEscapeString(const std::string& s) {
 }
 
 
+JellyfinClient::Backend JellyfinClient::backendFor(const std::string& serverUrl) {
+    /* a few servers per run: a small table, guarded (pictures load from
+     * another thread) */
+    static mutex_t lock = LWP_MUTEX_NULL;
+    static bool init = false;
+    if (!init) { LWP_MutexInit(&lock, false); init = true; }
+    struct Known { std::string url; Backend kind; };
+    static std::vector<Known> known;
+    LWP_MutexLock(lock);
+    for (const Known& k : known)
+        if (k.url == serverUrl) { Backend b = k.kind; LWP_MutexUnlock(lock); return b; }
+    LWP_MutexUnlock(lock);
+    if (serverUrl.empty()) return Backend::Jellyfin;
+    Backend kind = Backend::Unknown;
+    std::string resp;
+    int st = httpRequest(serverUrl + "/System/Info/Public", "GET", "", "", "", resp);
+    if (st == 200 && resp.find("\"Id\"") != std::string::npos) {
+        /* Jellyfin names itself; Emby does not */
+        kind = resp.find("Jellyfin") != std::string::npos ? Backend::Jellyfin : Backend::Emby;
+    } else if (st >= 0) {
+        resp.clear();
+        if (httpRequest(serverUrl + "/identity", "GET", "", "", "", resp) == 200 &&
+            resp.find("machineIdentifier") != std::string::npos)
+            kind = Backend::Plex;
+    }
+    if (kind == Backend::Unknown) return Backend::Jellyfin;   /* unreachable: ask again next time */
+    SYS_Report("[Server] kind: %s\n", kind == Backend::Plex ? "Plex" : kind == Backend::Emby ? "Emby" : "Jellyfin");
+    LWP_MutexLock(lock);
+    known.push_back({ serverUrl, kind });
+    LWP_MutexUnlock(lock);
+    return kind;
+}
+
+#include "JellyfinApi.inc"
 #include "PlexApi.inc"
+#include "Dispatch.inc"

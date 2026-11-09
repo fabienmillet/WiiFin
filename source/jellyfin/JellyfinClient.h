@@ -659,12 +659,140 @@ public:
     int effectiveQuality() const { return videoQuality < linkCap ? videoQuality : linkCap; }
     void measureLink(const std::string& serverUrl, const JellyfinAuth& auth);
 
+    // The server's kind, found once per address: Plex answers /identity,
+    // Jellyfin and Emby /System/Info/Public (their API is the same)
+    enum class Backend { Unknown, Jellyfin, Emby, Plex };
+    Backend backendFor(const std::string& serverUrl);
+    bool isPlex(const std::string& serverUrl) { return backendFor(serverUrl) == Backend::Plex; }
+    bool isEmby(const std::string& serverUrl) { return backendFor(serverUrl) == Backend::Emby; }
+
     // Plex: the JSON helpers, for the parsers of PlexApi.inc
     std::string plexStr(const std::string& o, const char* k);
     int         plexInt(const std::string& o, const char* k);
     long long   plexLL(const std::string& o, const char* k);
 
 private:
+    // Each call of the API goes to one of these (Dispatch.inc)
+    bool jf_authenticate(const std::string& serverUrl, const std::string& username, const std::string& password, JellyfinAuth& out);
+    bool plex_authenticate(const std::string& serverUrl, const std::string& username, const std::string& password, JellyfinAuth& out);
+    bool jf_deleteActiveEncoding(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& playSessionId);
+    bool plex_deleteActiveEncoding(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& playSessionId);
+    bool jf_getAlbumTracks(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& albumId, std::vector<JellyfinAudioItem>& out);
+    bool plex_getAlbumTracks(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& albumId, std::vector<JellyfinAudioItem>& out);
+    bool jf_getAlbumsByArtist(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& artistId, int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount);
+    bool plex_getAlbumsByArtist(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& artistId, int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount);
+    bool jf_getAudioStreamUrl(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, long long startTimeTicks, std::string& outUrl, std::string& outPlaySessionId, std::string* outPlayMethod, int* outAudioIndex);
+    bool plex_getAudioStreamUrl(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, long long startTimeTicks, std::string& outUrl, std::string& outPlaySessionId, std::string* outPlayMethod, int* outAudioIndex);
+    bool jf_getAudioTrackInfo(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, AudioTrackInfo& out);
+    bool plex_getAudioTrackInfo(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, AudioTrackInfo& out);
+    bool jf_getAutoplayTracks(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& parentId, int limit, std::vector<JellyfinAudioItem>& out);
+    bool plex_getAutoplayTracks(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& parentId, int limit, std::vector<JellyfinAudioItem>& out);
+    bool jf_getChapterImageBytes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, int index, int maxWidth, int maxHeight, std::string& outBytes);
+    bool plex_getChapterImageBytes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, int index, int maxWidth, int maxHeight, std::string& outBytes);
+    bool jf_getChapters(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, std::vector<JellyfinChapter>& out);
+    bool plex_getChapters(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, std::vector<JellyfinChapter>& out);
+    bool jf_getContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth, std::vector<JellyfinItem>& out);
+    bool plex_getContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth, std::vector<JellyfinItem>& out);
+    bool jf_getDirectPlayUrl(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int audioStreamIndex, int subtitleStreamIndex, DirectPlay& out);
+    bool plex_getDirectPlayUrl(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int audioStreamIndex, int subtitleStreamIndex, DirectPlay& out);
+    bool jf_getEpisodes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& seriesId, const std::string& seasonId, std::vector<JellyfinEpisode>& out);
+    bool plex_getEpisodes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& seriesId, const std::string& seasonId, std::vector<JellyfinEpisode>& out);
+    bool jf_getFavoriteMovies(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& parentId, int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount);
+    bool plex_getFavoriteMovies(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& parentId, int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount);
+    bool jf_getGlobalFavorites(const std::string& serverUrl, const JellyfinAuth& auth, int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount);
+    bool plex_getGlobalFavorites(const std::string& serverUrl, const JellyfinAuth& auth, int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount);
+    bool jf_getIntroTimestamps(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& episodeId, IntroInfo& out);
+    bool plex_getIntroTimestamps(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& episodeId, IntroInfo& out);
+    bool jf_getIsFavorite(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, bool& favorite, int* specials);
+    bool plex_getIsFavorite(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, bool& favorite, int* specials);
+    bool jf_getItemBackdropBytes(const std::string& serverUrl, const JellyfinAuth& auth, const JellyfinItem& item, int maxWidth, int maxHeight, std::string& outBytes);
+    bool plex_getItemBackdropBytes(const std::string& serverUrl, const JellyfinAuth& auth, const JellyfinItem& item, int maxWidth, int maxHeight, std::string& outBytes);
+    bool jf_getItemDetail(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, JellyfinItemDetail& out);
+    bool plex_getItemDetail(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, JellyfinItemDetail& out);
+    bool jf_getItemImageBytes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, int maxWidth, int maxHeight, std::string& outBytes);
+    bool plex_getItemImageBytes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, int maxWidth, int maxHeight, std::string& outBytes);
+    bool jf_getItems(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& parentId, int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount, const std::string& extra);
+    bool plex_getItems(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& parentId, int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount, const std::string& extra);
+    bool jf_getItemsByIds(const std::string& serverUrl, const JellyfinAuth& auth, const std::vector<std::string>& ids, std::vector<JellyfinItem>& outItems, std::vector<JellyfinAudioItem>& outAudio);
+    bool plex_getItemsByIds(const std::string& serverUrl, const JellyfinAuth& auth, const std::vector<std::string>& ids, std::vector<JellyfinItem>& outItems, std::vector<JellyfinAudioItem>& outAudio);
+    bool jf_getItemsByQuery(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& pathAndQuery, std::vector<JellyfinItem>& out, int* totalCount);
+    bool plex_getItemsByQuery(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& pathAndQuery, std::vector<JellyfinItem>& out, int* totalCount);
+    bool jf_getLibraries(const std::string& serverUrl, const JellyfinAuth& auth, std::vector<JellyfinLibrary>& out);
+    bool plex_getLibraries(const std::string& serverUrl, const JellyfinAuth& auth, std::vector<JellyfinLibrary>& out);
+    bool jf_getLyrics(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, std::vector<LyricLine>& out);
+    bool plex_getLyrics(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, std::vector<LyricLine>& out);
+    bool jf_getMovieCollections(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& parentId, int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount);
+    bool plex_getMovieCollections(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& parentId, int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount);
+    bool jf_getMovieContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth, std::vector<JellyfinItem>& out);
+    bool plex_getMovieContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth, std::vector<JellyfinItem>& out);
+    bool jf_getMoviesLatest(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& parentId, int limit, std::vector<JellyfinItem>& out);
+    bool plex_getMoviesLatest(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& parentId, int limit, std::vector<JellyfinItem>& out);
+    bool jf_getMusicLatest(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& parentId, int limit, std::vector<JellyfinItem>& out);
+    bool plex_getMusicLatest(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& parentId, int limit, std::vector<JellyfinItem>& out);
+    bool jf_getNextUp(const std::string& serverUrl, const JellyfinAuth& auth, std::vector<JellyfinItem>& out);
+    bool plex_getNextUp(const std::string& serverUrl, const JellyfinAuth& auth, std::vector<JellyfinItem>& out);
+    bool jf_getPhotoBytes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, int maxWidth, int maxHeight, std::string& outBytes);
+    bool plex_getPhotoBytes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, int maxWidth, int maxHeight, std::string& outBytes);
+    bool jf_getPlaybackUrl(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int audioStreamIndex, int subtitleStreamIndex, long long startTimeTicks, std::string& outUrl, std::string& outPlaySessionId, PlaybackChoice& how, bool allowDirect);
+    bool plex_getPlaybackUrl(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int audioStreamIndex, int subtitleStreamIndex, long long startTimeTicks, std::string& outUrl, std::string& outPlaySessionId, PlaybackChoice& how, bool allowDirect);
+    bool jf_getPlaylistTracks(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& playlistId, std::vector<JellyfinAudioItem>& out);
+    bool plex_getPlaylistTracks(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& playlistId, std::vector<JellyfinAudioItem>& out);
+    bool jf_getPlaylists(const std::string& serverUrl, const JellyfinAuth& auth, int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount);
+    bool plex_getPlaylists(const std::string& serverUrl, const JellyfinAuth& auth, int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount);
+    bool jf_getSeasons(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& seriesId, std::vector<JellyfinSeason>& out);
+    bool plex_getSeasons(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& seriesId, std::vector<JellyfinSeason>& out);
+    bool jf_getSeriesEpisodes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& seriesId, std::vector<JellyfinEpisode>& out);
+    bool plex_getSeriesEpisodes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& seriesId, std::vector<JellyfinEpisode>& out);
+    bool jf_getServerName(const std::string& serverUrl, const JellyfinAuth& auth, std::string& outName);
+    bool plex_getServerName(const std::string& serverUrl, const JellyfinAuth& auth, std::string& outName);
+    bool jf_getShuffledEpisodes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& seriesId, const std::string& seasonId, int limit, std::vector<JellyfinEpisode>& out);
+    bool plex_getShuffledEpisodes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& seriesId, const std::string& seasonId, int limit, std::vector<JellyfinEpisode>& out);
+    bool jf_getSpecialFeatures(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, std::vector<JellyfinItem>& out);
+    bool plex_getSpecialFeatures(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, std::vector<JellyfinItem>& out);
+    bool jf_getSubtitleSrt(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int streamIndex, std::string& outSrt);
+    bool plex_getSubtitleSrt(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int streamIndex, std::string& outSrt);
+    bool jf_getTVContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth, std::vector<JellyfinItem>& out);
+    bool plex_getTVContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth, std::vector<JellyfinItem>& out);
+    bool jf_getTVSeriesLatest(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& parentId, int limit, std::vector<JellyfinItem>& out);
+    bool plex_getTVSeriesLatest(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& parentId, int limit, std::vector<JellyfinItem>& out);
+    bool jf_getTVUpcoming(const std::string& serverUrl, const JellyfinAuth& auth, int limit, std::vector<JellyfinItem>& out);
+    bool plex_getTVUpcoming(const std::string& serverUrl, const JellyfinAuth& auth, int limit, std::vector<JellyfinItem>& out);
+    bool jf_getTranscodingUrl(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int audioStreamIndex, int subtitleStreamIndex, long long startTimeTicks, std::string& outUrl, std::string& outPlaySessionId, const std::string& transcodeReasons);
+    bool plex_getTranscodingUrl(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int audioStreamIndex, int subtitleStreamIndex, long long startTimeTicks, std::string& outUrl, std::string& outPlaySessionId, const std::string& transcodeReasons);
+    bool jf_getTrickplayInfo(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, TrickplayInfo& out);
+    bool plex_getTrickplayInfo(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, TrickplayInfo& out);
+    bool jf_getTrickplayTile(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int width, int index, std::string& outBytes);
+    bool plex_getTrickplayTile(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int width, int index, std::string& outBytes);
+    void jf_logServerInfo(const std::string& serverUrl);
+    void plex_logServerInfo(const std::string& serverUrl);
+    void jf_logTranscodeFailure(const std::string& serverUrl, const JellyfinAuth& auth);
+    void plex_logTranscodeFailure(const std::string& serverUrl, const JellyfinAuth& auth);
+    bool jf_postCapabilities(const std::string& serverUrl, const JellyfinAuth& auth);
+    bool plex_postCapabilities(const std::string& serverUrl, const JellyfinAuth& auth);
+    bool jf_quickConnectAuthenticate(const std::string& serverUrl, const std::string& secret, JellyfinAuth& out);
+    bool plex_quickConnectAuthenticate(const std::string& serverUrl, const std::string& secret, JellyfinAuth& out);
+    bool jf_quickConnectCheck(const std::string& serverUrl, const std::string& secret, QuickConnectResult& out);
+    bool plex_quickConnectCheck(const std::string& serverUrl, const std::string& secret, QuickConnectResult& out);
+    bool jf_quickConnectInitiate(const std::string& serverUrl, QuickConnectResult& out);
+    bool plex_quickConnectInitiate(const std::string& serverUrl, QuickConnectResult& out);
+    bool jf_reportPlaybackProgress(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, const std::string& playSessionId, long long positionTicks, bool isPaused, const char* playMethod, int audioStreamIndex, int subtitleStreamIndex);
+    bool plex_reportPlaybackProgress(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, const std::string& playSessionId, long long positionTicks, bool isPaused, const char* playMethod, int audioStreamIndex, int subtitleStreamIndex);
+    bool jf_reportPlaybackStart(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, const std::string& playSessionId, const char* playMethod, int audioStreamIndex, int subtitleStreamIndex);
+    bool plex_reportPlaybackStart(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, const std::string& playSessionId, const char* playMethod, int audioStreamIndex, int subtitleStreamIndex);
+    bool jf_reportPlaybackStopped(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, const std::string& playSessionId, long long positionTicks);
+    bool plex_reportPlaybackStopped(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, const std::string& playSessionId, long long positionTicks);
+    bool jf_searchItems(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& searchTerm, int limit, std::vector<JellyfinItem>& out);
+    bool plex_searchItems(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& searchTerm, int limit, std::vector<JellyfinItem>& out);
+    bool jf_setFavorite(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, bool favorite);
+    bool plex_setFavorite(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, bool favorite);
+    bool jf_setPlayed(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, bool played);
+    bool plex_setPlayed(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, bool played);
+    void jf_measureLink(const std::string& serverUrl, const JellyfinAuth& auth);
+    void plex_measureLink(const std::string& serverUrl, const JellyfinAuth& auth);
+    bool jf_fetchEpisodes(const std::string& url, const JellyfinAuth& auth,
+                          std::vector<JellyfinEpisode>& out, size_t maxResponse = 0);
+    bool plexFetchEpisodes(const std::string& url, const JellyfinAuth& auth,
+                           std::vector<JellyfinEpisode>& out, size_t maxResponse = 0);
     // Plex (PlexApi.inc)
     bool plexGet(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& path,
                  std::string& resp, size_t maxResponse = 0);
@@ -683,9 +811,6 @@ private:
     int         linkCap = VIDEO_QUALITY_COUNT - 1;
     int         linkKbps = 0;            // measured, 0 = not yet
     std::string linkMeasuredFor;
-    // GET an episode list (/Shows/{id}/Episodes...) and parse it
-    bool fetchEpisodes(const std::string& url, const JellyfinAuth& auth,
-                       std::vector<JellyfinEpisode>& out, size_t maxResponse = 0);
     volatile bool networkReady = false;
     volatile bool netRestart = false;   /* the next start: after a loss (net_deinit first) */
     volatile bool netBusy      = false;

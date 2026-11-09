@@ -437,7 +437,7 @@ void App::loop() {
     const int MENU_COUNT = 3;
     float menuFocus[MENU_COUNT] = {};
     const std::string menuItems[] = {
-        N_("Connect To Plex"),
+        N_("Connect To a Server"),
         N_("Settings"),
         N_("Exit")
     };
@@ -515,8 +515,8 @@ void App::loop() {
         lv.setUserName(p.username);
         /* the server's remote control, while this profile is open */
         jellyfinClient.postCapabilities(p.serverUrl, auth);
-        /* Jellyfin's remote control (its WebSocket): Plex has none of it */
-        if (false) Remote::start(p.serverUrl, auth.accessToken, jellyfinClient.sslVerify);
+        /* Jellyfin's and Emby's remote control (their WebSocket): not Plex */
+        if (!jellyfinClient.isPlex(p.serverUrl)) Remote::start(p.serverUrl, auth.accessToken, jellyfinClient.sslVerify);
         struct RemoteOff { ~RemoteOff() { Remote::stop(); } } remoteOff;
         for (;;) {
             while (true) {

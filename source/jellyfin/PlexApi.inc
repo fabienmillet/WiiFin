@@ -11,6 +11,8 @@
 // key ("s4"), so the two can never be confused.
 // ---------------------------------------------------------------------------
 
+static int plexBitrate(int q);   /* below */
+
 namespace {
 
 const long long TICKS_PER_MS = 10000LL;
@@ -336,7 +338,7 @@ std::string JellyfinClient::plexPathFor(const std::string& jf, std::string& only
     return "";
 }
 
-bool JellyfinClient::getItemsByQuery(const std::string& serverUrl,
+bool JellyfinClient::plex_getItemsByQuery(const std::string& serverUrl,
                                      const JellyfinAuth& auth,
                                      const std::string& pathAndQuery,
                                      std::vector<JellyfinItem>& out,
@@ -352,7 +354,7 @@ bool JellyfinClient::getItemsByQuery(const std::string& serverUrl,
     return plexItems(serverUrl, auth, p, out, totalCount, only);
 }
 
-bool JellyfinClient::getItems(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getItems(const std::string& serverUrl, const JellyfinAuth& auth,
                               const std::string& parentId, int startIndex, int limit,
                               std::vector<JellyfinItem>& out, int& totalCount,
                               const std::string& extra) {
@@ -364,7 +366,7 @@ bool JellyfinClient::getItems(const std::string& serverUrl, const JellyfinAuth& 
     return getItemsByQuery(serverUrl, auth, jf, out, &totalCount);
 }
 
-bool JellyfinClient::getAlbumsByArtist(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getAlbumsByArtist(const std::string& serverUrl, const JellyfinAuth& auth,
                                        const std::string& artistId, int startIndex, int limit,
                                        std::vector<JellyfinItem>& out, int& totalCount) {
     char q[200];
@@ -395,7 +397,7 @@ bool JellyfinClient::plexCheckServer(const std::string& serverUrl, JellyfinAuth&
     return true;
 }
 
-bool JellyfinClient::authenticate(const std::string& serverUrl, const std::string& username,
+bool JellyfinClient::plex_authenticate(const std::string& serverUrl, const std::string& username,
                                   const std::string& password, JellyfinAuth& out) {
     out = JellyfinAuth();
     if (username.empty()) {
@@ -427,7 +429,7 @@ bool JellyfinClient::authenticate(const std::string& serverUrl, const std::strin
     return plexCheckServer(serverUrl, out);
 }
 
-bool JellyfinClient::quickConnectInitiate(const std::string&, QuickConnectResult& out) {
+bool JellyfinClient::plex_quickConnectInitiate(const std::string&, QuickConnectResult& out) {
     std::string resp;
     int status = httpRequest(std::string(PLEX_TV) + "/api/v2/pins?strong=false", "POST",
                              "application/x-www-form-urlencoded", "", "", resp);
@@ -446,7 +448,7 @@ bool JellyfinClient::quickConnectInitiate(const std::string&, QuickConnectResult
     return true;
 }
 
-bool JellyfinClient::quickConnectCheck(const std::string&, const std::string& secret,
+bool JellyfinClient::plex_quickConnectCheck(const std::string&, const std::string& secret,
                                        QuickConnectResult& out) {
     std::string resp;
     if (httpRequest(std::string(PLEX_TV) + "/api/v2/pins/" + secret, "GET", "", "", "", resp) != 200)
@@ -456,7 +458,7 @@ bool JellyfinClient::quickConnectCheck(const std::string&, const std::string& se
     return true;
 }
 
-bool JellyfinClient::quickConnectAuthenticate(const std::string& serverUrl, const std::string& secret,
+bool JellyfinClient::plex_quickConnectAuthenticate(const std::string& serverUrl, const std::string& secret,
                                               JellyfinAuth& out) {
     std::string resp;
     if (httpRequest(std::string(PLEX_TV) + "/api/v2/pins/" + secret, "GET", "", "", "", resp) != 200)
@@ -467,7 +469,7 @@ bool JellyfinClient::quickConnectAuthenticate(const std::string& serverUrl, cons
     return plexCheckServer(serverUrl, out);
 }
 
-void JellyfinClient::logServerInfo(const std::string& serverUrl) {
+void JellyfinClient::plex_logServerInfo(const std::string& serverUrl) {
     static std::string logged;
     if (logged == serverUrl) return;
     std::string resp;
@@ -476,11 +478,11 @@ void JellyfinClient::logServerInfo(const std::string& serverUrl) {
     SYS_Report("[Server] Plex Media Server %s\n", jsonGetString(resp, "version").c_str());
 }
 
-void JellyfinClient::logTranscodeFailure(const std::string&, const JellyfinAuth&) {
+void JellyfinClient::plex_logTranscodeFailure(const std::string&, const JellyfinAuth&) {
     SYS_Report("[Server] the transcode failed: see the Plex server's Logs (Plex Transcoder)\n");
 }
 
-bool JellyfinClient::getServerName(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getServerName(const std::string& serverUrl, const JellyfinAuth& auth,
                                    std::string& outName) {
     std::string resp;
     if (!plexGet(serverUrl, auth, "/", resp)) return false;
@@ -488,12 +490,12 @@ bool JellyfinClient::getServerName(const std::string& serverUrl, const JellyfinA
     return !outName.empty();
 }
 
-bool JellyfinClient::postCapabilities(const std::string&, const JellyfinAuth&) { return true; }
+bool JellyfinClient::plex_postCapabilities(const std::string&, const JellyfinAuth&) { return true; }
 
 // ---------------------------------------------------------------------------
 // Libraries
 // ---------------------------------------------------------------------------
-bool JellyfinClient::getLibraries(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getLibraries(const std::string& serverUrl, const JellyfinAuth& auth,
                                   std::vector<JellyfinLibrary>& out) {
     tokenRefused = false;
     std::string resp;
@@ -533,14 +535,14 @@ bool JellyfinClient::plexImage(const std::string& serverUrl, const JellyfinAuth&
            !outBytes.empty();
 }
 
-bool JellyfinClient::getItemImageBytes(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getItemImageBytes(const std::string& serverUrl, const JellyfinAuth& auth,
                                        const std::string& itemId, int maxWidth, int maxHeight,
                                        std::string& outBytes) {
     if (itemId.empty() || isSection(itemId)) return false;
     return plexImage(serverUrl, auth, "/library/metadata/" + itemId + "/thumb", maxWidth, maxHeight, true, outBytes);
 }
 
-bool JellyfinClient::getPhotoBytes(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getPhotoBytes(const std::string& serverUrl, const JellyfinAuth& auth,
                                    const std::string& itemId, int maxWidth, int maxHeight,
                                    std::string& outBytes) {
     /* a photo's file is its Part */
@@ -552,7 +554,7 @@ bool JellyfinClient::getPhotoBytes(const std::string& serverUrl, const JellyfinA
     return plexImage(serverUrl, auth, key, maxWidth, maxHeight, false, outBytes);
 }
 
-bool JellyfinClient::getItemBackdropBytes(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getItemBackdropBytes(const std::string& serverUrl, const JellyfinAuth& auth,
                                           const JellyfinItem& item, int maxWidth, int maxHeight,
                                           std::string& outBytes) {
     if (item.type == "Episode") {
@@ -624,7 +626,7 @@ static void plexChapters(JellyfinClient* c, const std::string& item, std::vector
     }, &ctx);
 }
 
-bool JellyfinClient::getItemDetail(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getItemDetail(const std::string& serverUrl, const JellyfinAuth& auth,
                                    const std::string& itemId, JellyfinItemDetail& out) {
     std::string resp;
     if (!plexGet(serverUrl, auth, "/library/metadata/" + itemId + "?includeChapters=1&includeExtras=1", resp))
@@ -705,7 +707,7 @@ bool JellyfinClient::getItemDetail(const std::string& serverUrl, const JellyfinA
     return true;
 }
 
-bool JellyfinClient::getChapters(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getChapters(const std::string& serverUrl, const JellyfinAuth& auth,
                                  const std::string& itemId, std::vector<JellyfinChapter>& out) {
     std::string resp;
     if (!plexGet(serverUrl, auth, "/library/metadata/" + itemId + "?includeChapters=1", resp)) return false;
@@ -713,7 +715,7 @@ bool JellyfinClient::getChapters(const std::string& serverUrl, const JellyfinAut
     return true;
 }
 
-bool JellyfinClient::getChapterImageBytes(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getChapterImageBytes(const std::string& serverUrl, const JellyfinAuth& auth,
                                           const std::string& itemId, int index, int maxWidth, int maxHeight,
                                           std::string& outBytes) {
     std::string resp;
@@ -724,7 +726,7 @@ bool JellyfinClient::getChapterImageBytes(const std::string& serverUrl, const Je
     return plexImage(serverUrl, auth, thumb, maxWidth, maxHeight, true, outBytes);
 }
 
-bool JellyfinClient::getIsFavorite(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getIsFavorite(const std::string& serverUrl, const JellyfinAuth& auth,
                                    const std::string& itemId, bool& favorite, int* specials) {
     std::string resp;
     if (!plexGet(serverUrl, auth, "/library/metadata/" + itemId + "?includeExtras=1", resp)) return false;
@@ -737,7 +739,7 @@ bool JellyfinClient::getIsFavorite(const std::string& serverUrl, const JellyfinA
     return true;
 }
 
-bool JellyfinClient::getSpecialFeatures(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getSpecialFeatures(const std::string& serverUrl, const JellyfinAuth& auth,
                                         const std::string& itemId, std::vector<JellyfinItem>& out) {
     if (!plexItems(serverUrl, auth, "/library/metadata/" + itemId + "/extras", out)) return false;
     for (JellyfinItem& it : out) {
@@ -755,7 +757,7 @@ bool JellyfinClient::getSpecialFeatures(const std::string& serverUrl, const Jell
 // ---------------------------------------------------------------------------
 // Series
 // ---------------------------------------------------------------------------
-bool JellyfinClient::getSeasons(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getSeasons(const std::string& serverUrl, const JellyfinAuth& auth,
                                 const std::string& seriesId, std::vector<JellyfinSeason>& out) {
     std::vector<JellyfinItem> items;
     if (!plexItems(serverUrl, auth, "/library/metadata/" + seriesId + "/children", items, nullptr, "Season"))
@@ -770,7 +772,7 @@ bool JellyfinClient::getSeasons(const std::string& serverUrl, const JellyfinAuth
     return true;
 }
 
-bool JellyfinClient::fetchEpisodes(const std::string& path, const JellyfinAuth& auth,
+bool JellyfinClient::plexFetchEpisodes(const std::string& path, const JellyfinAuth& auth,
                                    std::vector<JellyfinEpisode>& out, size_t) {
     /* path here is serverUrl + Plex path */
     std::string resp;
@@ -794,25 +796,25 @@ bool JellyfinClient::fetchEpisodes(const std::string& path, const JellyfinAuth& 
     return true;
 }
 
-bool JellyfinClient::getEpisodes(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getEpisodes(const std::string& serverUrl, const JellyfinAuth& auth,
                                  const std::string& seriesId, const std::string& seasonId,
                                  std::vector<JellyfinEpisode>& out) {
     if (seasonId.empty()) return getSeriesEpisodes(serverUrl, auth, seriesId, out);
-    return fetchEpisodes(serverUrl + "/library/metadata/" + seasonId + "/children", auth, out);
+    return plexFetchEpisodes(serverUrl + "/library/metadata/" + seasonId + "/children", auth, out);
 }
 
-bool JellyfinClient::getSeriesEpisodes(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getSeriesEpisodes(const std::string& serverUrl, const JellyfinAuth& auth,
                                        const std::string& seriesId, std::vector<JellyfinEpisode>& out) {
-    return fetchEpisodes(serverUrl + "/library/metadata/" + seriesId + "/allLeaves", auth, out);
+    return plexFetchEpisodes(serverUrl + "/library/metadata/" + seriesId + "/allLeaves", auth, out);
 }
 
-bool JellyfinClient::getShuffledEpisodes(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getShuffledEpisodes(const std::string& serverUrl, const JellyfinAuth& auth,
                                          const std::string& seriesId, const std::string& seasonId,
                                          int limit, std::vector<JellyfinEpisode>& out) {
     std::vector<JellyfinEpisode> all;
     std::string src = seasonId.empty() ? "/library/metadata/" + seriesId + "/allLeaves"
                                        : "/library/metadata/" + seasonId + "/children";
-    if (!fetchEpisodes(serverUrl + src, auth, all)) return false;
+    if (!plexFetchEpisodes(serverUrl + src, auth, all)) return false;
     for (size_t i = all.size(); i > 1; --i) std::swap(all[i - 1], all[rand() % i]);
     if ((int)all.size() > limit) all.resize(limit);
     out = all;
@@ -822,7 +824,7 @@ bool JellyfinClient::getShuffledEpisodes(const std::string& serverUrl, const Jel
 // ---------------------------------------------------------------------------
 // Home rows
 // ---------------------------------------------------------------------------
-bool JellyfinClient::getContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth,
                                          std::vector<JellyfinItem>& out) {
     if (!plexItems(serverUrl, auth, "/library/onDeck?X-Plex-Container-Start=0&X-Plex-Container-Size=12", out)) return false;
     out.erase(std::remove_if(out.begin(), out.end(), [](const JellyfinItem& i) { return i.playbackPositionTicks <= 0; }), out.end());
@@ -830,7 +832,7 @@ bool JellyfinClient::getContinueWatching(const std::string& serverUrl, const Jel
     return true;
 }
 
-bool JellyfinClient::getNextUp(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getNextUp(const std::string& serverUrl, const JellyfinAuth& auth,
                                std::vector<JellyfinItem>& out) {
     if (!plexItems(serverUrl, auth, "/library/onDeck?X-Plex-Container-Start=0&X-Plex-Container-Size=12", out, nullptr, "Episode"))
         return false;
@@ -839,7 +841,7 @@ bool JellyfinClient::getNextUp(const std::string& serverUrl, const JellyfinAuth&
     return true;
 }
 
-bool JellyfinClient::getMovieContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getMovieContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth,
                                               std::vector<JellyfinItem>& out) {
     if (!plexItems(serverUrl, auth, "/library/onDeck?X-Plex-Container-Start=0&X-Plex-Container-Size=12", out, nullptr, "Movie"))
         return false;
@@ -847,7 +849,7 @@ bool JellyfinClient::getMovieContinueWatching(const std::string& serverUrl, cons
     return true;
 }
 
-bool JellyfinClient::getTVContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getTVContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth,
                                            std::vector<JellyfinItem>& out) {
     if (!plexItems(serverUrl, auth, "/library/onDeck?X-Plex-Container-Start=0&X-Plex-Container-Size=12", out, nullptr, "Episode"))
         return false;
@@ -861,12 +863,12 @@ static std::string recentPath(const std::string& parentId, int limit) {
            "?X-Plex-Container-Start=0&X-Plex-Container-Size=" + std::to_string(limit);
 }
 
-bool JellyfinClient::getMoviesLatest(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getMoviesLatest(const std::string& serverUrl, const JellyfinAuth& auth,
                                      const std::string& parentId, int limit, std::vector<JellyfinItem>& out) {
     return plexItems(serverUrl, auth, recentPath(parentId, limit), out, nullptr, "Movie");
 }
 
-bool JellyfinClient::getTVSeriesLatest(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getTVSeriesLatest(const std::string& serverUrl, const JellyfinAuth& auth,
                                        const std::string& parentId, int limit, std::vector<JellyfinItem>& out) {
     /* Plex lists the new seasons and episodes: their series, once each */
     std::vector<JellyfinItem> got;
@@ -884,16 +886,16 @@ bool JellyfinClient::getTVSeriesLatest(const std::string& serverUrl, const Jelly
     return true;
 }
 
-bool JellyfinClient::getTVUpcoming(const std::string&, const JellyfinAuth&, int, std::vector<JellyfinItem>&) {
+bool JellyfinClient::plex_getTVUpcoming(const std::string&, const JellyfinAuth&, int, std::vector<JellyfinItem>&) {
     return true;   /* Plex's library has no unaired episodes */
 }
 
-bool JellyfinClient::getMusicLatest(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getMusicLatest(const std::string& serverUrl, const JellyfinAuth& auth,
                                     const std::string& parentId, int limit, std::vector<JellyfinItem>& out) {
     return plexItems(serverUrl, auth, recentPath(parentId, limit), out, nullptr, "MusicAlbum");
 }
 
-bool JellyfinClient::getMovieCollections(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getMovieCollections(const std::string& serverUrl, const JellyfinAuth& auth,
                                          const std::string& parentId, int startIndex, int limit,
                                          std::vector<JellyfinItem>& out, int& totalCount) {
     if (!isSection(parentId)) { totalCount = 0; return true; }
@@ -903,7 +905,7 @@ bool JellyfinClient::getMovieCollections(const std::string& serverUrl, const Jel
     return plexItems(serverUrl, auth, q, out, &totalCount);
 }
 
-bool JellyfinClient::getFavoriteMovies(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getFavoriteMovies(const std::string& serverUrl, const JellyfinAuth& auth,
                                        const std::string& parentId, int startIndex, int limit,
                                        std::vector<JellyfinItem>& out, int& totalCount) {
     char q[200];
@@ -912,7 +914,7 @@ bool JellyfinClient::getFavoriteMovies(const std::string& serverUrl, const Jelly
     return getItemsByQuery(serverUrl, auth, q, out, &totalCount);
 }
 
-bool JellyfinClient::getGlobalFavorites(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getGlobalFavorites(const std::string& serverUrl, const JellyfinAuth& auth,
                                         int, int, std::vector<JellyfinItem>& out, int& totalCount) {
     /* each library's items rated 10 */
     std::vector<JellyfinLibrary> libs;
@@ -930,7 +932,7 @@ bool JellyfinClient::getGlobalFavorites(const std::string& serverUrl, const Jell
 // ---------------------------------------------------------------------------
 // Playlists, music
 // ---------------------------------------------------------------------------
-bool JellyfinClient::getPlaylists(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getPlaylists(const std::string& serverUrl, const JellyfinAuth& auth,
                                   int startIndex, int limit, std::vector<JellyfinItem>& out, int& totalCount) {
     char q[160];
     snprintf(q, sizeof(q), "/playlists?X-Plex-Container-Start=%d&X-Plex-Container-Size=%d", startIndex, limit);
@@ -952,17 +954,17 @@ bool JellyfinClient::plexAudioList(const std::string& serverUrl, const JellyfinA
     return true;
 }
 
-bool JellyfinClient::getPlaylistTracks(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getPlaylistTracks(const std::string& serverUrl, const JellyfinAuth& auth,
                                        const std::string& playlistId, std::vector<JellyfinAudioItem>& out) {
     return plexAudioList(serverUrl, auth, "/playlists/" + playlistId + "/items", out);
 }
 
-bool JellyfinClient::getAlbumTracks(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getAlbumTracks(const std::string& serverUrl, const JellyfinAuth& auth,
                                     const std::string& albumId, std::vector<JellyfinAudioItem>& out) {
     return plexAudioList(serverUrl, auth, "/library/metadata/" + albumId + "/children", out);
 }
 
-bool JellyfinClient::getItemsByIds(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getItemsByIds(const std::string& serverUrl, const JellyfinAuth& auth,
                                    const std::vector<std::string>& ids,
                                    std::vector<JellyfinItem>& outItems,
                                    std::vector<JellyfinAudioItem>& outAudio) {
@@ -973,7 +975,7 @@ bool JellyfinClient::getItemsByIds(const std::string& serverUrl, const JellyfinA
     return plexAudioList(serverUrl, auth, "/library/metadata/" + list, outAudio);
 }
 
-bool JellyfinClient::getAudioTrackInfo(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getAudioTrackInfo(const std::string& serverUrl, const JellyfinAuth& auth,
                                        const std::string& itemId, AudioTrackInfo& out) {
     std::string resp;
     if (!plexGet(serverUrl, auth, "/library/metadata/" + itemId, resp)) return false;
@@ -991,12 +993,12 @@ bool JellyfinClient::getAudioTrackInfo(const std::string& serverUrl, const Jelly
     return true;
 }
 
-bool JellyfinClient::getLyrics(const std::string&, const JellyfinAuth&, const std::string&,
+bool JellyfinClient::plex_getLyrics(const std::string&, const JellyfinAuth&, const std::string&,
                                std::vector<LyricLine>&) {
     return false;
 }
 
-bool JellyfinClient::getAutoplayTracks(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getAutoplayTracks(const std::string& serverUrl, const JellyfinAuth& auth,
                                        const std::string& itemId, const std::string& parentId,
                                        int limit, std::vector<JellyfinAudioItem>& out) {
     /* tracks of the same album, shuffled */
@@ -1012,7 +1014,7 @@ bool JellyfinClient::getAutoplayTracks(const std::string& serverUrl, const Jelly
 // ---------------------------------------------------------------------------
 // Watched, favourite (a rating of 10), search
 // ---------------------------------------------------------------------------
-bool JellyfinClient::setPlayed(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_setPlayed(const std::string& serverUrl, const JellyfinAuth& auth,
                                const std::string& itemId, bool played) {
     std::string resp;
     std::string p = std::string(played ? "/:/scrobble" : "/:/unscrobble") +
@@ -1020,7 +1022,7 @@ bool JellyfinClient::setPlayed(const std::string& serverUrl, const JellyfinAuth&
     return plexGet(serverUrl, auth, p, resp);
 }
 
-bool JellyfinClient::setFavorite(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_setFavorite(const std::string& serverUrl, const JellyfinAuth& auth,
                                  const std::string& itemId, bool favorite) {
     std::string resp;
     int status = httpRequest(serverUrl + "/:/rate?identifier=com.plexapp.plugins.library&key=" + itemId +
@@ -1029,7 +1031,7 @@ bool JellyfinClient::setFavorite(const std::string& serverUrl, const JellyfinAut
     return status == 200;
 }
 
-bool JellyfinClient::searchItems(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_searchItems(const std::string& serverUrl, const JellyfinAuth& auth,
                                  const std::string& searchTerm, int limit, std::vector<JellyfinItem>& out) {
     std::string p = "/hubs/search?query=" + urlEncode(searchTerm) + "&limit=" + std::to_string(limit);
     if (!plexItems(serverUrl, auth, p, out, nullptr, "Movie,Series,Episode,MusicAlbum,MusicArtist,Audio"))
@@ -1041,7 +1043,7 @@ bool JellyfinClient::searchItems(const std::string& serverUrl, const JellyfinAut
 // ---------------------------------------------------------------------------
 // Skip intro / credits: Plex's markers
 // ---------------------------------------------------------------------------
-bool JellyfinClient::getIntroTimestamps(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getIntroTimestamps(const std::string& serverUrl, const JellyfinAuth& auth,
                                         const std::string& episodeId, IntroInfo& out) {
     std::string resp;
     if (!plexGet(serverUrl, auth, "/library/metadata/" + episodeId + "?includeMarkers=1", resp)) return false;
@@ -1069,14 +1071,14 @@ bool JellyfinClient::getIntroTimestamps(const std::string& serverUrl, const Jell
 }
 
 /* Plex's video preview thumbnails are BIF files: not read (yet) */
-bool JellyfinClient::getTrickplayInfo(const std::string&, const JellyfinAuth&, const std::string&,
+bool JellyfinClient::plex_getTrickplayInfo(const std::string&, const JellyfinAuth&, const std::string&,
                                       const std::string&, TrickplayInfo&) { return false; }
-bool JellyfinClient::getTrickplayTile(const std::string&, const JellyfinAuth&, const std::string&,
+bool JellyfinClient::plex_getTrickplayTile(const std::string&, const JellyfinAuth&, const std::string&,
                                       const std::string&, int, int, std::string&) { return false; }
 
 /* a text subtitle track: Plex sends a sidecar file as it is, and converts an
  * embedded one (?format=srt) */
-bool JellyfinClient::getSubtitleSrt(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getSubtitleSrt(const std::string& serverUrl, const JellyfinAuth& auth,
                                     const std::string&, const std::string&, int streamIndex,
                                     std::string& outSrt) {
     return httpRequest(serverUrl + "/library/streams/" + std::to_string(streamIndex) + "?format=srt&encoding=utf-8",
@@ -1087,14 +1089,14 @@ bool JellyfinClient::getSubtitleSrt(const std::string& serverUrl, const Jellyfin
 // Playback
 // ---------------------------------------------------------------------------
 namespace {
-struct DirectFormat {
+struct PlexFormat {
     const char* containers;   /* as Plex names them */
     const char* demuxer;      /* MPlayer's own, or FFmpeg's (lavf:<format>) */
     const char* video;
     const char* audio;
 };
 /* What MPlayer CE decodes in real time on the Wii (WiiFin's measurements) */
-const DirectFormat FORMATS[] = {
+const PlexFormat PLEX_FORMATS[] = {
     { "avi",            "avi",         "mpeg4,h264,mpeg1video,mpeg2video",     "mp3,mp2,ac3,aac" },
     { "mkv,webm",       "mkv",         "mpeg4,h264,mpeg1video,mpeg2video,vp8", "mp3,mp2,ac3,aac,vorbis,flac" },
     { "mp4,m4v,mov",    "lavf:mov",    "mpeg4,h264",                           "aac,mp3,ac3" },
@@ -1102,7 +1104,7 @@ const DirectFormat FORMATS[] = {
     { "mpeg,mpg,vob",   "mpegps",      "mpeg1video,mpeg2video",                "mp2,mp3,ac3" },
 };
 
-bool inList(const char* list, const std::string& name) {
+bool plexInList(const char* list, const std::string& name) {
     if (name.empty()) return false;
     for (const char* p = list; *p; ) {
         const char* e = strchr(p, ',');
@@ -1114,9 +1116,9 @@ bool inList(const char* list, const std::string& name) {
     return false;
 }
 
-const DirectFormat* formatOf(const std::string& container) {
-    for (const DirectFormat& f : FORMATS)
-        if (inList(f.containers, container)) return &f;
+const PlexFormat* plexFormatOf(const std::string& container) {
+    for (const PlexFormat& f : PLEX_FORMATS)
+        if (plexInList(f.containers, container)) return &f;
     return nullptr;
 }
 
@@ -1145,13 +1147,13 @@ std::map<std::string, long long> s_durationMs;
 /* the X-Plex-* parameters MPlayer's requests carry in their URL */
 std::string JellyfinClient::plexClientParams(const JellyfinAuth& auth) const {
     std::string p = "X-Plex-Client-Identifier=" + urlEncode(s_deviceId) +
-                    "&X-Plex-Product=WiiPlex&X-Plex-Version=" WIIFIN_VERSION
+                    "&X-Plex-Product=WiiFin&X-Plex-Version=" WIIFIN_VERSION
                     "&X-Plex-Platform=Generic&X-Plex-Device=Nintendo%20Wii&X-Plex-Device-Name=Wii";
     if (!auth.accessToken.empty()) p += "&X-Plex-Token=" + urlEncode(auth.accessToken);
     return p;
 }
 
-bool JellyfinClient::getDirectPlayUrl(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getDirectPlayUrl(const std::string& serverUrl, const JellyfinAuth& auth,
                                       const std::string& itemId, const std::string& mediaSourceId,
                                       int audioStreamIndex, int subtitleStreamIndex, DirectPlay& out) {
     out = DirectPlay();
@@ -1198,15 +1200,15 @@ bool JellyfinClient::getDirectPlayUrl(const std::string& serverUrl, const Jellyf
         if (jsonGetInt(audios[i], "id") == audioStreamIndex) chosen = (int)i;
     std::string audio = chosen >= 0 ? audios[chosen] : (audios.empty() ? "" : audios[0]);
     if (chosen >= 0) out.audioCodec = jsonGetString(audio, "codec");
-    const DirectFormat* fmt = formatOf(out.container);
+    const PlexFormat* fmt = plexFormatOf(out.container);
     if (fmt) out.demuxer = fmt->demuxer;
 
     std::string why;
     auto add = [&](const char* w) { if (!why.empty()) why += ", "; why += w; };
     if (!fmt) add("container");
     else {
-        if (!inList(fmt->video, out.videoCodec)) add("video codec");
-        if (!audio.empty() && !inList(fmt->audio, out.audioCodec)) add("audio codec");
+        if (!plexInList(fmt->video, out.videoCodec)) add("video codec");
+        if (!audio.empty() && !plexInList(fmt->audio, out.audioCodec)) add("audio codec");
     }
     if (out.videoCodec == "h264") {
         if (out.width > 720 || out.height > 480) add("resolution");
@@ -1233,7 +1235,7 @@ bool JellyfinClient::getDirectPlayUrl(const std::string& serverUrl, const Jellyf
     return true;
 }
 
-bool JellyfinClient::getPlaybackUrl(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getPlaybackUrl(const std::string& serverUrl, const JellyfinAuth& auth,
                                     const std::string& itemId, const std::string& mediaSourceId,
                                     int audioStreamIndex, int subtitleStreamIndex, long long startTimeTicks,
                                     std::string& outUrl, std::string& outPlaySessionId,
@@ -1257,7 +1259,7 @@ bool JellyfinClient::getPlaybackUrl(const std::string& serverUrl, const Jellyfin
     return true;
 }
 
-bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getTranscodingUrl(const std::string& serverUrl, const JellyfinAuth& auth,
                                        const std::string& itemId, const std::string& mediaSourceId,
                                        int audioStreamIndex, int subtitleStreamIndex, long long startTimeTicks,
                                        std::string& outUrl, std::string& outPlaySessionId,
@@ -1285,7 +1287,7 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl, const Jelly
         if (st != 200) SYS_Report("[Transcode] track selection: HTTP %d\n", st);
     }
     measureLink(serverUrl, auth);
-    int kbps = videoBitrate() / 1000;
+    int kbps = plexBitrate(effectiveQuality()) / 1000;
     /* a little before the position: the stream opens on a keyframe */
     long long ms = startTimeTicks / TICKS_PER_MS;
     ms = ms > 3000 ? ms - 3000 : 0;
@@ -1307,7 +1309,7 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl, const Jelly
     return true;
 }
 
-bool JellyfinClient::getAudioStreamUrl(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_getAudioStreamUrl(const std::string& serverUrl, const JellyfinAuth& auth,
                                        const std::string& itemId, long long startTimeTicks,
                                        std::string& outUrl, std::string& outPlaySessionId,
                                        std::string* outPlayMethod, int* outAudioIndex) {
@@ -1364,26 +1366,26 @@ bool JellyfinClient::plexTimeline(const std::string& serverUrl, const JellyfinAu
     return st == 200;
 }
 
-bool JellyfinClient::reportPlaybackStart(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_reportPlaybackStart(const std::string& serverUrl, const JellyfinAuth& auth,
                                          const std::string& itemId, const std::string&,
                                          const std::string& playSessionId, const char*, int, int) {
     return plexTimeline(serverUrl, auth, itemId, "playing", 0, playSessionId);
 }
 
-bool JellyfinClient::reportPlaybackProgress(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_reportPlaybackProgress(const std::string& serverUrl, const JellyfinAuth& auth,
                                             const std::string& itemId, const std::string&,
                                             const std::string& playSessionId, long long positionTicks,
                                             bool isPaused, const char*, int, int) {
     return plexTimeline(serverUrl, auth, itemId, isPaused ? "paused" : "playing", positionTicks, playSessionId);
 }
 
-bool JellyfinClient::reportPlaybackStopped(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_reportPlaybackStopped(const std::string& serverUrl, const JellyfinAuth& auth,
                                            const std::string& itemId, const std::string&,
                                            const std::string& playSessionId, long long positionTicks) {
     return plexTimeline(serverUrl, auth, itemId, "stopped", positionTicks, playSessionId);
 }
 
-bool JellyfinClient::deleteActiveEncoding(const std::string& serverUrl, const JellyfinAuth& auth,
+bool JellyfinClient::plex_deleteActiveEncoding(const std::string& serverUrl, const JellyfinAuth& auth,
                                           const std::string& playSessionId) {
     if (playSessionId.compare(0, 4, "wiit") != 0) return true;   /* not a transcode */
     std::string r;
@@ -1395,19 +1397,11 @@ bool JellyfinClient::deleteActiveEncoding(const std::string& serverUrl, const Je
 // ---------------------------------------------------------------------------
 // Link speed: Plex has no bitrate test; the quality setting is used as it is
 // ---------------------------------------------------------------------------
-void JellyfinClient::measureLink(const std::string&, const JellyfinAuth&) {}
+void JellyfinClient::plex_measureLink(const std::string&, const JellyfinAuth&) {}
 
-const char* JellyfinClient::videoQualityName(int q) {
-    /* TRANSLATORS: video quality levels (Settings) */
-    static const char* names[VIDEO_QUALITY_COUNT] = { N_("Low"), N_("Normal"), N_("High"), N_("Max") };
-    return (q >= 0 && q < VIDEO_QUALITY_COUNT) ? names[q] : names[1];
-}
-
-int JellyfinClient::videoBitrate() const { return qualityBitrate(effectiveQuality()); }
-
-int JellyfinClient::qualityBitrate(int q) {
-    /* H.264 at 640 px: the Wii decodes it at these rates (WiiFin's direct
-     * play limit for H.264 is 2.5 Mb/s) */
-    static const int bitrates[VIDEO_QUALITY_COUNT] = { 1000000, 1500000, 2000000, 2500000 };
-    return bitrates[(q >= 0 && q < VIDEO_QUALITY_COUNT) ? q : 1];
+/* H.264 at 640 px: the Wii decodes it at these rates (WiiFin's direct play
+ * limit for H.264 is 2.5 Mb/s) */
+static int plexBitrate(int q) {
+    static const int bitrates[JellyfinClient::VIDEO_QUALITY_COUNT] = { 1000000, 1500000, 2000000, 2500000 };
+    return bitrates[(q >= 0 && q < JellyfinClient::VIDEO_QUALITY_COUNT) ? q : 1];
 }
