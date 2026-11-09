@@ -27,9 +27,9 @@ wait_for() { for _ in $(seq 120); do curl -s "$1" | grep -q "$2" && return 0; sl
 # Plex
 P=http://127.0.0.1:32400
 wait_for $P/identity machineIdentifier || exit 1
-sleep 5
-plex_add() { curl -s -o /dev/null -X POST -G "$P/library/sections" --data-urlencode "name=$1" --data-urlencode "type=$2" \
-    --data-urlencode "agent=$3" --data-urlencode "scanner=$4" --data-urlencode "language=en-US" --data-urlencode "location=$5"; }
+# Plex takes a library once it has started its plugins: asked until it does
+plex_add() { for _ in $(seq 30); do curl -s -o /dev/null -w '%{http_code}' -X POST -G "$P/library/sections" --data-urlencode "name=$1" --data-urlencode "type=$2" \
+    --data-urlencode "agent=$3" --data-urlencode "scanner=$4" --data-urlencode "language=en-US" --data-urlencode "location=$5" | grep -q 201 && return; sleep 2; done; echo "Plex: $1 not added"; }
 plex_add Films movie tv.plex.agents.movie "Plex Movie" /data/Movies
 plex_add Series show tv.plex.agents.series "Plex TV Series" /data/TV
 plex_add Music artist tv.plex.agents.music "Plex Music" /data/Music
