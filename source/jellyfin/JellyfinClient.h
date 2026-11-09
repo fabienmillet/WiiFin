@@ -669,6 +669,10 @@ public:
     // The kind chosen for that address (a profile's, the sign-in screen's):
     // no detection then.  Unknown goes back to finding it.
     void setBackend(const std::string& serverUrl, Backend kind);
+    // Plex: the name of the account a token belongs to (plex.tv), "" none
+    std::string plexAccountName(const std::string& token) {
+        JellyfinAuth a; a.accessToken = token; plexAccountUser(a); return a.userName;
+    }
     bool isPlex(const std::string& serverUrl) { return backendFor(serverUrl) == Backend::Plex; }
     bool isEmby(const std::string& serverUrl) { return backendFor(serverUrl) == Backend::Emby; }
 
