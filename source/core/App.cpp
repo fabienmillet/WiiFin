@@ -499,6 +499,13 @@ void App::loop() {
         auth.serverName  = p.serverName;
         /* the kind of server the profile was made for, when chosen */
         if (p.serverKind > 0) jellyfinClient.setBackend(p.serverUrl, (JellyfinClient::Backend)p.serverKind);
+        /* a Plex profile named after its server (made before WiiFin asked
+         * plex.tv for the account's name): its account's name now */
+        if (!p.accessToken.empty() && (p.username.empty() || p.username == p.serverName) &&
+            jellyfinClient.isPlex(p.serverUrl)) {
+            std::string n = jellyfinClient.plexAccountName(p.accessToken);
+            if (!n.empty()) { p.username = n; saveSettings(); SYS_Report("[Profile] named after its Plex account\n"); }
+        }
         {
             /* server kind only: the log may be posted publicly */
             const std::string& u = p.serverUrl;
@@ -606,6 +613,7 @@ void App::loop() {
             p.userId      = cv.auth.userId;
             p.accessToken = cv.auth.accessToken;
             p.serverKind  = cv.serverKind;
+            SYS_Report("[Profile] name: %s\n", p.username.empty() ? "none" : p.username == p.serverName ? "the server's" : "the account's");
             /* Update existing profile if same userId (token refresh/re-auth), otherwise append.
              * Only deduplicate when both sides have a known userId — if userId is empty
              * (should never happen) always append to avoid silently overwriting profiles. */

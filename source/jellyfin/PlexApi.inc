@@ -463,7 +463,9 @@ bool JellyfinClient::plexCheckServer(const std::string& serverUrl, JellyfinAuth&
 /* the plex.tv account of out.accessToken: its name and id (the profile's) */
 void JellyfinClient::plexAccountUser(JellyfinAuth& out) {
     std::string resp;
-    if (httpRequest(std::string(PLEX_TV) + "/api/v2/user", "GET", "", "", out.accessToken, resp) != 200) return;
+    int st = httpRequest(std::string(PLEX_TV) + "/api/v2/user", "GET", "", "", out.accessToken, resp);
+    SYS_Report("[Plex] account: HTTP %d, %s\n", st, jsonGetString(resp, "username").empty() ? "no name" : "its name");
+    if (st != 200) return;
     std::string name = jsonGetString(resp, "username");
     if (name.empty()) name = jsonGetString(resp, "title");
     if (!name.empty()) out.userName = name;
