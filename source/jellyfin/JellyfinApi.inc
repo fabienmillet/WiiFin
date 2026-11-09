@@ -40,6 +40,8 @@ bool JellyfinClient::jf_quickConnectInitiate(const std::string& serverUrl, Quick
     out.code   = jsonGetString(resp, "Code");
     out.secret = jsonGetString(resp, "Secret");
     out.authenticated = false;
+    /* the web page where it is approved, for the phone's camera */
+    out.qrUrl = addScheme(serverUrl) + "/web/#/quickconnect";
     if (out.code.empty()) { errMsg = N_("No code in QC response"); return false; }
     return true;
 }

@@ -38,7 +38,7 @@ if [ -z "$NOPROFILE" ]; then
 fi
 B=$T/out/build
 rm -rf "$B"; mkdir -p "$B"
-rsync -a --exclude /build --exclude .git --exclude /tools/test/out --exclude /tools/test/media \
+rsync -a --exclude /build --exclude .git --exclude /tools/test/out --exclude /tools/test/media --exclude /tools/test/multi/out --exclude /tools/test/multi/media \
     --exclude /tools/.venv --exclude '*.elf' --exclude '*.dol' --exclude '*.wad' --exclude '*.map' \
     "$REPO/" "$B/" && cd "$B" || exit 1
 

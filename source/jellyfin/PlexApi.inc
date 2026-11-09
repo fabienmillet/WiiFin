@@ -224,8 +224,14 @@ bool JellyfinClient::plexGet(const std::string& serverUrl, const JellyfinAuth& a
 bool JellyfinClient::plexItems(const std::string& serverUrl, const JellyfinAuth& auth,
                                const std::string& path, std::vector<JellyfinItem>& out,
                                int* totalCount, const std::string& onlyType) {
+    /* a list needs none of the files, people and long texts Plex sends
+     * with each item: half the size (a big library's page went past the
+     * 256 KB a response may take) */
+    std::string p = path + (path.find('?') == std::string::npos ? "?" : "&") +
+        "excludeElements=Media,Genre,Role,Director,Writer,Producer,Country,Similar,Image,UltraBlurColors,Guid,Rating,Collection,Label"
+        "&excludeFields=summary,tagline,file";
     std::string resp;
-    if (!plexGet(serverUrl, auth, path, resp)) return false;
+    if (!plexGet(serverUrl, auth, p, resp, 1u << 20)) return false;
     struct Ctx { JellyfinClient* self; std::vector<JellyfinItem>* out; const std::string* only; };
     Ctx ctx{ this, &out, &onlyType };
     auto cb = [](const std::string& o, void* v) {
@@ -429,11 +435,15 @@ bool JellyfinClient::plex_authenticate(const std::string& serverUrl, const std::
     return plexCheckServer(serverUrl, out);
 }
 
+/* Two PINs: a short code to type at plex.tv/link, and a strong one the QR
+ * code opens in Plex's sign-in page (which takes only those); either one
+ * approved signs in.  secret: "<short id>,<strong id>" */
+static bool plexNewPin(JellyfinClient* c, bool strong, std::string& id, std::string& code, int& status);
+
 bool JellyfinClient::plex_quickConnectInitiate(const std::string&, QuickConnectResult& out) {
-    std::string resp;
-    int status = httpRequest(std::string(PLEX_TV) + "/api/v2/pins?strong=false", "POST",
-                             "application/x-www-form-urlencoded", "", "", resp);
-    if (status != 201 && status != 200) {
+    std::string id, code, sid, scode;
+    int status = 0;
+    if (!plexNewPin(this, false, id, code, status)) {
         if (status >= 0) {
             char buf[128];
             snprintf(buf, sizeof(buf), tr("QuickConnect initiate failed (HTTP %d)"), status);
@@ -441,30 +451,55 @@ bool JellyfinClient::plex_quickConnectInitiate(const std::string&, QuickConnectR
         }
         return false;
     }
-    out.code   = jsonGetString(resp, "code");
-    out.secret = std::to_string(jsonGetLongLong(resp, "id"));
+    out.code = code;
+    out.secret = id;
     out.authenticated = false;
-    if (out.code.empty()) { errMsg = N_("No code in QC response"); return false; }
+    out.qrUrl.clear();
+    if (plexNewPin(this, true, sid, scode, status)) {
+        out.secret += "," + sid;
+        out.qrUrl = "https://app.plex.tv/auth#?clientID=" + urlEncode(s_deviceId) + "&code=" + scode +
+                    "&context%5Bdevice%5D%5Bproduct%5D=WiiFin";
+    }
     return true;
 }
 
-bool JellyfinClient::plex_quickConnectCheck(const std::string&, const std::string& secret,
-                                       QuickConnectResult& out) {
+static bool plexNewPin(JellyfinClient* c, bool strong, std::string& id, std::string& code, int& status) {
     std::string resp;
-    if (httpRequest(std::string(PLEX_TV) + "/api/v2/pins/" + secret, "GET", "", "", "", resp) != 200)
-        return false;
-    out.authenticated = !jsonGetString(resp, "authToken").empty();
+    status = c->plexHttp(std::string(PLEX_TV) + "/api/v2/pins?strong=" + (strong ? "true" : "false"), "POST", resp);
+    if (status != 201 && status != 200) return false;
+    id = std::to_string(c->plexLL(resp, "id"));
+    code = c->plexStr(resp, "code");
+    return !code.empty();
+}
+
+/* the token of whichever PIN was approved, "" none yet */
+std::string JellyfinClient::plexPinToken(const std::string& secret) {
+    size_t b = 0;
+    while (b <= secret.size()) {
+        size_t e = secret.find(',', b);
+        std::string id = secret.substr(b, e == std::string::npos ? std::string::npos : e - b);
+        std::string resp;
+        if (!id.empty() && httpRequest(std::string(PLEX_TV) + "/api/v2/pins/" + id, "GET", "", "", "", resp) == 200) {
+            std::string t = jsonGetString(resp, "authToken");
+            if (!t.empty()) return t;
+        }
+        if (e == std::string::npos) break;
+        b = e + 1;
+    }
+    return "";
+}
+
+bool JellyfinClient::plex_quickConnectCheck(const std::string&, const std::string& secret,
+                                            QuickConnectResult& out) {
+    out.authenticated = !plexPinToken(secret).empty();
     out.secret = secret;
     return true;
 }
 
 bool JellyfinClient::plex_quickConnectAuthenticate(const std::string& serverUrl, const std::string& secret,
-                                              JellyfinAuth& out) {
-    std::string resp;
-    if (httpRequest(std::string(PLEX_TV) + "/api/v2/pins/" + secret, "GET", "", "", "", resp) != 200)
-        return false;
+                                                   JellyfinAuth& out) {
     out = JellyfinAuth();
-    out.accessToken = jsonGetString(resp, "authToken");
+    out.accessToken = plexPinToken(secret);
     if (out.accessToken.empty()) { errMsg = N_("No token in QC auth response"); return false; }
     return plexCheckServer(serverUrl, out);
 }
