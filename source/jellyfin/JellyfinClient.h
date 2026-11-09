@@ -138,6 +138,7 @@ struct JellyfinAuth {
     std::string userId;
     std::string accessToken;
     std::string serverName;
+    std::string serverUrl;     // the server found from a Plex account (sign-in without an address)
 };
 
 /* Intro / credits segment timestamps (from Jellyfin Intro Skipper API) */
@@ -810,6 +811,7 @@ private:
                        std::vector<JellyfinAudioItem>& out);
     std::string plexPathFor(const std::string& jfQuery, std::string& onlyType, bool& none);
     std::string plexPinToken(const std::string& secret);
+    bool plexFindServer(JellyfinAuth& out);
     bool plexCheckServer(const std::string& serverUrl, JellyfinAuth& out);
     bool plexImage(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& imagePath,
                    int w, int h, bool crop, std::string& outBytes);

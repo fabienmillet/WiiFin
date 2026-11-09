@@ -2052,3 +2052,12 @@ msgstr "Le serveur demande un compte Plex"
 
 msgid "or scan with your phone"
 msgstr "ou scannez-le avec votre téléphone"
+
+msgid "No server address: for a Plex account, WiiFin finds its server."
+msgstr "Sans adresse de serveur : avec un compte Plex, WiiFin trouve son serveur."
+
+msgid "No Plex server on this account"
+msgstr "Aucun serveur Plex sur ce compte"
+
+msgid "No Plex server answers"
+msgstr "Aucun serveur Plex ne répond"

@@ -387,6 +387,63 @@ bool JellyfinClient::plex_getAlbumsByArtist(const std::string& serverUrl, const 
 // ---------------------------------------------------------------------------
 static const char* PLEX_TV = "https://plex.tv";
 
+/* The account's server (its own first, then one shared with it) and the
+ * address the Wii reaches it at: a local one on the Wii's own network, else
+ * the remote one (https://<ip>.<id>.plex.direct:32400).  The token is the
+ * server's own (a shared server takes no other).  Addresses on other
+ * networks (Docker's...) are not tried: each would wait out a timeout. */
+bool JellyfinClient::plexFindServer(JellyfinAuth& out) {
+    std::string resp;
+    int st = httpRequest(std::string(PLEX_TV) + "/api/v2/resources?includeHttps=1&includeRelay=0", "GET", "", "",
+                         out.accessToken, resp, 1u << 20);
+    if (st != 200) { errMsg = "plex.tv resources: HTTP " + std::to_string(st); return false; }
+    std::string net = localIp_.substr(0, localIp_.rfind('.') + 1);   /* "192.168.1." */
+    struct Server { std::string name, token; bool owned; std::vector<std::string> local, remote; };
+    struct Ctx { JellyfinClient* self; std::vector<Server>* list; const std::string* net; };
+    std::vector<Server> list;
+    Ctx ctx{ this, &list, &net };
+    size_t p = resp.find('[');
+    if (p != std::string::npos)
+        forEachArrayObject(resp, p, [](const std::string& r, void* v) {
+            Ctx* c = static_cast<Ctx*>(v);
+            if (c->self->plexStr(r, "provides").find("server") == std::string::npos) return;
+            Server s;
+            s.name  = c->self->plexStr(r, "name");
+            s.token = c->self->plexStr(r, "accessToken");
+            s.owned = r.find("\"owned\":true") != std::string::npos;
+            struct C2 { Server* s; JellyfinClient* self; const std::string* net; };
+            C2 c2{ &s, c->self, c->net };
+            size_t q = r.find("\"connections\":[");
+            if (q != std::string::npos)
+                forEachArrayObject(r, q + 14, [](const std::string& k, void* v2) {
+                    C2* x = static_cast<C2*>(v2);
+                    std::string uri = x->self->plexStr(k, "uri"), addr = x->self->plexStr(k, "address");
+                    if (uri.empty() || k.find("\"relay\":true") != std::string::npos) return;
+                    if (k.find("\"local\":true") != std::string::npos) {
+                        if (!x->net->empty() && addr.compare(0, x->net->size(), *x->net) == 0) x->s->local.push_back(uri);
+                    } else x->s->remote.push_back(uri);
+                }, &c2);
+            c->list->push_back(s);
+        }, &ctx);
+    std::stable_sort(list.begin(), list.end(), [](const Server& a, const Server& b) { return a.owned > b.owned; });
+    for (const Server& s : list) {
+        std::vector<std::string> tries = s.local;
+        tries.insert(tries.end(), s.remote.begin(), s.remote.end());
+        for (const std::string& uri : tries) {
+            JellyfinAuth a = out;
+            if (!s.token.empty()) a.accessToken = s.token;
+            SYS_Report("[Plex] trying %s (%s)\n", s.name.c_str(), uri.find("plex.direct") != std::string::npos ? "plex.direct" : "local");
+            if (plexCheckServer(uri, a)) {
+                a.serverUrl = uri;
+                out = a;
+                return true;
+            }
+        }
+    }
+    errMsg = list.empty() ? N_("No Plex server on this account") : N_("No Plex server answers");
+    return false;
+}
+
 bool JellyfinClient::plexCheckServer(const std::string& serverUrl, JellyfinAuth& out) {
     std::string resp;
     int status = httpRequest(serverUrl + "/library/sections", "GET", "", "", out.accessToken, resp);
@@ -501,6 +558,7 @@ bool JellyfinClient::plex_quickConnectAuthenticate(const std::string& serverUrl,
     out = JellyfinAuth();
     out.accessToken = plexPinToken(secret);
     if (out.accessToken.empty()) { errMsg = N_("No token in QC auth response"); return false; }
+    if (serverUrl == "plex.tv") return plexFindServer(out);
     return plexCheckServer(serverUrl, out);
 }
 
