@@ -78,9 +78,9 @@ msgstr "Plus tard"
 msgid "Select"
 msgstr "Choisir"
 
-#: source/core/App.cpp:442
-msgid "Connect To Jellyfin"
-msgstr "Se connecter à Jellyfin"
+#: source/core/App.cpp:438
+msgid "Connect To a Server"
+msgstr "Se connecter à un serveur"
 
 #: source/core/App.cpp:443 source/ui/LibraryHome.cpp:436
 #: source/ui/SettingsView.cpp:106 source/ui/SettingsView.cpp:359
@@ -762,8 +762,8 @@ msgid "Next"
 msgstr "Suivant"
 
 #: source/ui/ConnectView.cpp:517
-msgid "Connect to Jellyfin"
-msgstr "Connexion à Jellyfin"
+msgid "Connect to Jellyfin, Emby or Plex"
+msgstr "Connexion à Jellyfin, Emby ou Plex"
 
 #: source/ui/ConnectView.cpp:523
 msgid "Credentials"
@@ -823,12 +823,12 @@ msgid "Tabs"
 msgstr "Onglets"
 
 #: source/ui/ConnectView.cpp:630
-msgid "Quick Connect lets you sign in by approving"
-msgstr "La connexion rapide vous connecte en approuvant"
+msgid "Sign in with a code: Quick Connect on"
+msgstr "Connexion par code : la connexion rapide de"
 
 #: source/ui/ConnectView.cpp:631
-msgid "a code in the Jellyfin web interface."
-msgstr "un code dans l'interface web de Jellyfin."
+msgid "Jellyfin, or plex.tv/link for Plex."
+msgstr "Jellyfin, ou plex.tv/link pour Plex."
 
 #: source/ui/ConnectView.cpp:635
 msgid "Go to Credentials tab and enter the Server URL first."
@@ -840,12 +840,12 @@ msgid "Server: %s"
 msgstr "Serveur : %s"
 
 #: source/ui/ConnectView.cpp:645
-msgid "Start Quick Connect"
+msgid "Get a code"
 msgstr "Obtenir un code"
 
 #: source/ui/ConnectView.cpp:650
-msgid "Enter this code on your Jellyfin server:"
-msgstr "Entrez ce code sur votre serveur Jellyfin :"
+msgid "Enter this code in Quick Connect or at plex.tv/link:"
+msgstr "Saisissez ce code dans la connexion rapide ou sur plex.tv/link :"
 
 #: source/ui/ConnectView.cpp:655
 msgid "Waiting for approval..."
@@ -865,8 +865,8 @@ msgid "Cancel"
 msgstr "Annuler"
 
 #: source/ui/ConnectView.cpp:685
-msgid "Find Jellyfin servers on your local network."
-msgstr "Trouvez les serveurs Jellyfin de votre réseau local."
+msgid "Find Jellyfin, Emby and Plex servers on your network."
+msgstr "Trouvez les serveurs Jellyfin, Emby et Plex de votre réseau."
 
 #: source/ui/ConnectView.cpp:686
 msgid "The Wii must be on the same network as the server."
@@ -1106,9 +1106,9 @@ msgstr "Aucun favori"
 msgid "Detail"
 msgstr "Détails"
 
-#: source/ui/LibraryHome.cpp:436
-msgid "Back to Jellyfin"
-msgstr "Retour à Jellyfin"
+#: source/ui/LibraryHome.cpp:435
+msgid "Back to the Library"
+msgstr "Retour à la médiathèque"
 
 #: source/ui/LibraryHome.cpp:436
 msgid "Now Playing"
@@ -1670,9 +1670,9 @@ msgstr "Paramètres système"
 msgid "View Settings"
 msgstr "Paramètres d'affichage"
 
-#: source/ui/SettingsView.cpp:114
-msgid "Made with ❤ for Jellyfin"
-msgstr "Fait avec ❤ pour Jellyfin"
+#: source/ui/SettingsView.cpp:112
+msgid "Made with ❤ for Jellyfin, Emby and Plex"
+msgstr "Fait avec ❤ pour Jellyfin, Emby et Plex"
 
 #: source/ui/SettingsView.cpp:230 source/ui/SettingsView.cpp:441
 msgid "Screen Area"
@@ -2046,3 +2046,6 @@ msgstr "PM"
 #: source/ui/Ui.cpp:1004
 msgid "Message"
 msgstr "Message"
+
+msgid "The server asks for a Plex account"
+msgstr "Le serveur demande un compte Plex"
