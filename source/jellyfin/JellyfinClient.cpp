@@ -206,11 +206,11 @@ bool JellyfinClient::discoverServers(std::vector<DiscoveredServer>& out) {
     memset(&destSubnet, 0, sizeof(destSubnet));
 
     dest255.sin_family      = AF_INET;
-    dest255.sin_port        = htons(7359);
+    dest255.sin_port        = htons(32414);   /* Plex GDM */
     dest255.sin_addr.s_addr = 0xFFFFFFFFu;
 
     destSubnet.sin_family = AF_INET;
-    destSubnet.sin_port   = htons(7359);
+    destSubnet.sin_port   = htons(32414);
     // Compute (ip & mask) | ~mask — fall back gracefully if IP unknown
     bool haveSubnet = false;
     if (!localIp_.empty() && !localMask_.empty()) {
@@ -228,7 +228,7 @@ bool JellyfinClient::discoverServers(std::vector<DiscoveredServer>& out) {
      * into the address as its sa_len, and the console's IOS takes 8 only
      * (EINVAL on each question otherwise; Dolphin takes 16). */
     const socklen_t IOS_ADDR_LEN = 8;
-    const char* msg = "Who is JellyfinServer?";
+    const char* msg = "M-SEARCH * HTTP/1.1\r\n\r\n";
     auto sendBroadcast = [&](int round) {
         s32 a = net_sendto(sock, msg, (s32)strlen(msg), 0,
                            (struct sockaddr*)&dest255, IOS_ADDR_LEN);
@@ -273,9 +273,21 @@ bool JellyfinClient::discoverServers(std::vector<DiscoveredServer>& out) {
             if (n <= 0) break;
             buf[n] = '\0';
 
-            std::string json(buf, n);
-            std::string address = jsonGetString(json, "Address");
-            std::string name    = jsonGetString(json, "Name");
+            /* GDM's answer: "HTTP/1.0 200 OK\r\nName: ...\r\nPort: 32400\r\n..." */
+            std::string txt(buf, n);
+            auto field = [&](const char* k) {
+                std::string key = std::string("\n") + k + ": ";
+                size_t a = txt.find(key);
+                if (a == std::string::npos) return std::string();
+                a += key.size();
+                size_t e = txt.find_first_of("\r\n", a);
+                return txt.substr(a, e == std::string::npos ? std::string::npos : e - a);
+            };
+            std::string name = field("Name");
+            std::string port = field("Port");
+            std::string address;
+            if (txt.find("plex/media-server") != std::string::npos && !port.empty())
+                address = std::string("http://") + inet_ntoa(from.sin_addr) + ":" + port;
             SYS_Report("[Discover] answer of %d bytes: %s\n", n,
                        address.empty() ? "no address in it" : "a server");
             if (address.empty()) continue;

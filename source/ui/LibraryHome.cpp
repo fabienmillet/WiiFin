@@ -433,7 +433,7 @@ void LibraryView::renderGlobalFavorites(ir_t& ir) {
  * the settings (signed in still), or WiiFin's own menu
  * --------------------------------------------------------------- */
 static const char* const PROFILE_MENU[5] = {
-    N_("Now Playing"), N_("Back to Jellyfin"), N_("Switch Profile"), N_("Settings"), N_("WiiFin Menu")
+    N_("Now Playing"), N_("Back to Plex"), N_("Switch Profile"), N_("Settings"), N_("WiiPlex Menu")
 };
 /* Now Playing, first, while a music session plays */
 static int pmFirst() { return MusicSession::active() ? 0 : 1; }
