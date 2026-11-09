@@ -593,7 +593,10 @@ static void plexStreams(JellyfinClient* c, const std::string& media, std::vector
         if (m.displayTitle.empty()) m.displayTitle = pp.s(o, "displayTitle");
         m.language = pp.s(o, "languageCode");
         m.codec = pp.s(o, "codec");
-        m.isText = st == 3 && (m.codec == "srt" || m.codec == "subrip" || m.codec == "ass" ||
+        /* drawn by WiiFin: a text track Plex serves as a file (a sidecar,
+         * its "key"); an embedded one is burned in by the transcoder (Plex
+         * answers 501 to converting it) */
+        m.isText = st == 3 && !pp.s(o, "key").empty() && (m.codec == "srt" || m.codec == "subrip" || m.codec == "ass" ||
                                m.codec == "ssa" || m.codec == "webvtt" || m.codec == "mov_text");
         bool sel = o.find("\"selected\":true") != std::string::npos;
         if (st == 2) { x->a->push_back(m); if (sel || *x->da < 0) *x->da = m.index; }
