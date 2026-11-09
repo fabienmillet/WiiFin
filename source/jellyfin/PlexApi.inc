@@ -1334,14 +1334,29 @@ bool JellyfinClient::plex_getTranscodingUrl(const std::string& serverUrl, const 
     outPlaySessionId = sid;
     char q[512];
     snprintf(q, sizeof(q),
-             "/video/:/transcode/universal/start?path=%s&mediaIndex=%d&partIndex=0&protocol=http"
+             "path=%s&mediaIndex=%d&partIndex=0&protocol=http"
              "&directPlay=0&directStream=%d&directStreamAudio=0&fastSeek=1&videoResolution=640x480"
-             "&maxVideoBitrate=%d&videoQuality=80&offset=%lld.%03lld&session=%s&subtitles=%s&copyts=1&",
+             "&maxVideoBitrate=%d&videoQuality=80&offset=%lld.%03lld&session=%s&subtitles=%s&copyts=%d&",
              urlEncode("/library/metadata/" + itemId).c_str(), mediaIndex, forceReencode ? 0 : 1, kbps,
-             ms / 1000, ms % 1000, sid, subtitleStreamIndex >= 0 ? "burn" : "none");
-    outUrl = addScheme(serverUrl) + q + plexClientParams(auth) +
-             "&X-Plex-Client-Profile-Extra=" + urlEncode(PROFILE_EXTRA) +
-             "&X-Plex-Session-Identifier=" + sid;
+             ms / 1000, ms % 1000, sid, subtitleStreamIndex >= 0 ? "burn" : "none",
+             /* as WiiFin's player takes Jellyfin's: times from the stream's
+              * start, or the item's own with burned-in subtitles (see
+              * PlaySession's itemTimestamps) */
+             subtitleStreamIndex >= 0 ? 1 : 0);
+    std::string query = std::string(q) + plexClientParams(auth) +
+                        "&X-Plex-Client-Profile-Extra=" + urlEncode(PROFILE_EXTRA) +
+                        "&X-Plex-Session-Identifier=" + sid;
+    /* Plex starts a session's transcode only after its decision ("session
+     * lacking decision": 400), asked with the same parameters */
+    {
+        std::string r;
+        int st = httpRequest(serverUrl + "/video/:/transcode/universal/decision?" + query, "GET", "", "",
+                             auth.accessToken, r);
+        std::string why = jsonGetString(r, "generalDecisionText");
+        SYS_Report("[Transcode] decision: HTTP %d, %s\n", st, why.c_str());
+        if (st != 200) { errMsg = "Plex decision HTTP " + std::to_string(st); return false; }
+    }
+    outUrl = addScheme(serverUrl) + "/video/:/transcode/universal/start?" + query;
     SYS_Report("[Transcode] %s, %d kb/s, from %lld ms (%s)\n", itemId.c_str(), kbps, ms,
                transcodeReasons.empty() ? "asked" : transcodeReasons.c_str());
     return true;
@@ -1378,11 +1393,18 @@ bool JellyfinClient::plex_getAudioStreamUrl(const std::string& serverUrl, const 
     long long ms = startTimeTicks / TICKS_PER_MS;
     char q[400];
     snprintf(q, sizeof(q),
-             "/music/:/transcode/universal/start.mp3?path=%s&mediaIndex=0&partIndex=0&protocol=http"
+             "path=%s&mediaIndex=0&partIndex=0&protocol=http"
              "&directPlay=0&directStream=0&musicBitrate=192&offset=%lld.%03lld&session=%s&",
              urlEncode("/library/metadata/" + itemId).c_str(), ms / 1000, ms % 1000, sid);
-    outUrl = addScheme(serverUrl) + q + plexClientParams(auth) +
-             "&X-Plex-Client-Profile-Extra=" + urlEncode(PROFILE_EXTRA) + "&X-Plex-Session-Identifier=" + sid;
+    std::string query = std::string(q) + plexClientParams(auth) +
+                        "&X-Plex-Client-Profile-Extra=" + urlEncode(PROFILE_EXTRA) + "&X-Plex-Session-Identifier=" + sid;
+    {   /* the decision first, as for a video */
+        std::string r;
+        int st = httpRequest(serverUrl + "/music/:/transcode/universal/decision?" + query, "GET", "", "",
+                             auth.accessToken, r);
+        if (st != 200) SYS_Report("[Audio] decision: HTTP %d\n", st);
+    }
+    outUrl = addScheme(serverUrl) + "/music/:/transcode/universal/start.mp3?" + query;
     if (outPlayMethod) *outPlayMethod = "Transcode";
     SYS_Report("[Audio] %s %s %d Hz %d ch: transcoded to MP3\n", container.c_str(), codec.c_str(), rate, channels);
     return true;
