@@ -1192,14 +1192,33 @@ static std::string jsonEscapeString(const std::string& s) {
 }
 
 
-JellyfinClient::Backend JellyfinClient::backendFor(const std::string& serverUrl) {
-    /* a few servers per run: a small table, guarded (pictures load from
-     * another thread) */
-    static mutex_t lock = LWP_MUTEX_NULL;
+/* a few servers per run: a small table, guarded (pictures load from another
+ * thread) */
+namespace {
+struct Known { std::string url; JellyfinClient::Backend kind; };
+std::vector<Known> s_known;
+mutex_t s_knownLock = LWP_MUTEX_NULL;
+void knownInit() {
     static bool init = false;
-    if (!init) { LWP_MutexInit(&lock, false); init = true; }
-    struct Known { std::string url; Backend kind; };
-    static std::vector<Known> known;
+    if (!init) { LWP_MutexInit(&s_knownLock, false); init = true; }
+}
+} // namespace
+
+void JellyfinClient::setBackend(const std::string& serverUrl, Backend kind) {
+    knownInit();
+    LWP_MutexLock(s_knownLock);
+    for (size_t i = 0; i < s_known.size(); ++i)
+        if (s_known[i].url == serverUrl) { s_known.erase(s_known.begin() + i); break; }
+    if (kind != Backend::Unknown) s_known.push_back({ serverUrl, kind });
+    LWP_MutexUnlock(s_knownLock);
+    if (kind != Backend::Unknown)
+        SYS_Report("[Server] kind chosen: %s\n", kind == Backend::Plex ? "Plex" : kind == Backend::Emby ? "Emby" : "Jellyfin");
+}
+
+JellyfinClient::Backend JellyfinClient::backendFor(const std::string& serverUrl) {
+    knownInit();
+    std::vector<Known>& known = s_known;
+    mutex_t& lock = s_knownLock;
     LWP_MutexLock(lock);
     for (const Known& k : known)
         if (k.url == serverUrl) { Backend b = k.kind; LWP_MutexUnlock(lock); return b; }

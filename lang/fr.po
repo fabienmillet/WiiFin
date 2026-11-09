@@ -2061,3 +2061,6 @@ msgstr "Aucun serveur Plex sur ce compte"
 
 msgid "No Plex server answers"
 msgstr "Aucun serveur Plex ne répond"
+
+msgid "Server"
+msgstr "Serveur"

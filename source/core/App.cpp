@@ -497,6 +497,8 @@ void App::loop() {
         auth.userId      = p.userId;
         auth.accessToken = p.accessToken;
         auth.serverName  = p.serverName;
+        /* the kind of server the profile was made for, when chosen */
+        if (p.serverKind > 0) jellyfinClient.setBackend(p.serverUrl, (JellyfinClient::Backend)p.serverKind);
         {
             /* server kind only: the log may be posted publicly */
             const std::string& u = p.serverUrl;
@@ -585,7 +587,7 @@ void App::loop() {
     /* ---- Helper: open ConnectView, on success add/update profile + library ---- */
     auto runConnect = [&](const SavedProfile* again = nullptr) {
         ConnectView cv(btnTex, cursorPointerTex, font, jellyfinClient);
-        if (again) cv.setFields(again->serverUrl, again->username);   /* its password, each time */
+        if (again) { cv.setFields(again->serverUrl, again->username); cv.serverKind = again->serverKind; }   /* its password, each time */
         ConnectResult res = ConnectResult::None;
         while (res == ConnectResult::None && running) {
             Input::update();
@@ -603,6 +605,7 @@ void App::loop() {
             p.serverName  = cv.auth.serverName;
             p.userId      = cv.auth.userId;
             p.accessToken = cv.auth.accessToken;
+            p.serverKind  = cv.serverKind;
             /* Update existing profile if same userId (token refresh/re-auth), otherwise append.
              * Only deduplicate when both sides have a known userId — if userId is empty
              * (should never happen) always append to avoid silently overwriting profiles. */
@@ -614,6 +617,7 @@ void App::loop() {
                         /* the same account signed in again: its own settings stay */
                         existing.serverUrl = p.serverUrl; existing.username = p.username;
                         existing.serverName = p.serverName; existing.accessToken = p.accessToken;
+                        existing.serverKind = p.serverKind;
                         found = i; break;
                     }
                 }

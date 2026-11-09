@@ -665,6 +665,9 @@ public:
     // Jellyfin and Emby /System/Info/Public (their API is the same)
     enum class Backend { Unknown, Jellyfin, Emby, Plex };
     Backend backendFor(const std::string& serverUrl);
+    // The kind chosen for that address (a profile's, the sign-in screen's):
+    // no detection then.  Unknown goes back to finding it.
+    void setBackend(const std::string& serverUrl, Backend kind);
     bool isPlex(const std::string& serverUrl) { return backendFor(serverUrl) == Backend::Plex; }
     bool isEmby(const std::string& serverUrl) { return backendFor(serverUrl) == Backend::Emby; }
 

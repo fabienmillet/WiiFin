@@ -30,6 +30,7 @@ public:
     // Filled on Success
     JellyfinAuth auth;
     std::string  serverUrl;
+    int          serverKind = 0;   /* 0 found from the address, 1 Jellyfin, 2 Emby, 3 Plex */
     std::string  username;   // username used to authenticate (empty for QuickConnect)
 
 private:
@@ -43,7 +44,8 @@ private:
     Tab activeTab = Tab::Credentials;
 
     // --- Fields (Credentials tab) ---
-    enum class Field { Server, Username, Password, SubmitBtn };
+    enum class Field { Server, Username, Password, Kind, SubmitBtn };
+    void applyKind();   /* tells the client the kind chosen for the address */
     Field focusedField = Field::Server;
     std::string fields[3]; // Server, Username, Password
     bool showPassword = false;
