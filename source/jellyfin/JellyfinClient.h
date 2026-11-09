@@ -659,7 +659,27 @@ public:
     int effectiveQuality() const { return videoQuality < linkCap ? videoQuality : linkCap; }
     void measureLink(const std::string& serverUrl, const JellyfinAuth& auth);
 
+    // Plex: the JSON helpers, for the parsers of PlexApi.inc
+    std::string plexStr(const std::string& o, const char* k);
+    int         plexInt(const std::string& o, const char* k);
+    long long   plexLL(const std::string& o, const char* k);
+
 private:
+    // Plex (PlexApi.inc)
+    bool plexGet(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& path,
+                 std::string& resp, size_t maxResponse = 0);
+    bool plexItems(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& path,
+                   std::vector<JellyfinItem>& out, int* totalCount = nullptr,
+                   const std::string& onlyType = "");
+    bool plexAudioList(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& path,
+                       std::vector<JellyfinAudioItem>& out);
+    std::string plexPathFor(const std::string& jfQuery, std::string& onlyType, bool& none);
+    bool plexCheckServer(const std::string& serverUrl, JellyfinAuth& out);
+    bool plexImage(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& imagePath,
+                   int w, int h, bool crop, std::string& outBytes);
+    std::string plexClientParams(const JellyfinAuth& auth) const;
+    bool plexTimeline(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId,
+                      const char* state, long long positionTicks, const std::string& session);
     int         linkCap = VIDEO_QUALITY_COUNT - 1;
     int         linkKbps = 0;            // measured, 0 = not yet
     std::string linkMeasuredFor;
