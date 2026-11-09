@@ -793,6 +793,9 @@ private:
                           std::vector<JellyfinEpisode>& out, size_t maxResponse = 0);
     bool plexFetchEpisodes(const std::string& url, const JellyfinAuth& auth,
                            std::vector<JellyfinEpisode>& out, size_t maxResponse = 0);
+    std::string embySource(const std::string& serverUrl, const std::string& itemId,
+                           const std::string& mediaSourceId);
+    std::string itemPath(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId);
     // Plex (PlexApi.inc)
     bool plexGet(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& path,
                  std::string& resp, size_t maxResponse = 0);

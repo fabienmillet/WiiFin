@@ -399,10 +399,26 @@ void JellyfinClient::parseChapters(const std::string& resp, std::vector<Jellyfin
     }
 }
 
+/* an item's own path: /Items/{id} (Jellyfin), /Users/{user}/Items/{id} (Emby,
+ * which has no other) */
+std::string JellyfinClient::itemPath(const std::string& serverUrl, const JellyfinAuth& auth,
+                                     const std::string& itemId) {
+    return isEmby(serverUrl) ? "/Users/" + auth.userId + "/Items/" + itemId : "/Items/" + itemId;
+}
+
+/* Emby names a file "mediasource_<item id>", Jellyfin by the item's id */
+std::string JellyfinClient::embySource(const std::string& serverUrl, const std::string& itemId,
+                                       const std::string& mediaSourceId) {
+    if (!isEmby(serverUrl)) return mediaSourceId;
+    if (mediaSourceId.empty() || mediaSourceId == itemId) return "mediasource_" + itemId;
+    return mediaSourceId;
+}
+
 bool JellyfinClient::jf_getChapters(const std::string& serverUrl, const JellyfinAuth& auth,
                                  const std::string& itemId, std::vector<JellyfinChapter>& out) {
     std::string resp;
-    int status = httpRequest(serverUrl + "/Items/" + itemId + "?Fields=Chapters", "GET", "", "",
+    /* Emby has an item only under its user: /Users/{id}/Items/{id} */
+    int status = httpRequest(serverUrl + itemPath(serverUrl, auth, itemId) + "?Fields=Chapters", "GET", "", "",
                              auth.accessToken, resp);
     if (status != 200) return false;
     parseChapters(resp, out);
@@ -422,7 +438,7 @@ bool JellyfinClient::jf_getItemDetail(const std::string& serverUrl,
                                     const JellyfinAuth& auth,
                                     const std::string& itemId,
                                     JellyfinItemDetail& out) {
-    std::string url = serverUrl + "/Items/" + itemId
+    std::string url = serverUrl + itemPath(serverUrl, auth, itemId)
         + "?Fields=Overview,Genres,OfficialRating,RunTimeTicks,MediaStreams,MediaSources,UserData,Chapters";
     std::string resp;
     int status = httpRequest(url, "GET", "", "", auth.accessToken, resp);
