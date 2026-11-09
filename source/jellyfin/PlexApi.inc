@@ -152,7 +152,7 @@ static void plexToItem(JellyfinClient* c, const std::string& o, JellyfinItem& it
     PlexParse p{ c };
     std::string t = p.s(o, "type");
     it.id   = p.s(o, "ratingKey");
-    if (it.id.empty() && t.empty()) {   /* a Directory (genre...) */
+    if (it.id.empty() && (t.empty() || t == "genre")) {   /* a Directory: a genre, its key */
         it.id = p.s(o, "key");
         it.type = "Genre";
     } else {
@@ -573,7 +573,11 @@ bool JellyfinClient::plexImage(const std::string& serverUrl, const JellyfinAuth&
 bool JellyfinClient::plex_getItemImageBytes(const std::string& serverUrl, const JellyfinAuth& auth,
                                        const std::string& itemId, int maxWidth, int maxHeight,
                                        std::string& outBytes) {
-    if (itemId.empty() || isSection(itemId)) return false;
+    if (itemId.empty()) return false;
+    /* a library: Plex's collage of its titles */
+    if (isSection(itemId))
+        return plexImage(serverUrl, auth, "/library/sections/" + sectionKey(itemId) + "/composite/1",
+                         maxWidth, maxHeight, true, outBytes);
     return plexImage(serverUrl, auth, "/library/metadata/" + itemId + "/thumb", maxWidth, maxHeight, true, outBytes);
 }
 
