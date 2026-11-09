@@ -171,7 +171,7 @@ void App::runOnboarding(SavedProfile& p) {
     static const char* const YESNO[2] = { N_("Yes"), N_("No") };
     /* how it signs in */
     int a = askChoice(ir, cursorPointerTex, N_("Sign in automatically on this Wii?"),
-                      N_("Anyone who opens WiiPlex can then open this profile"), YESNO, 2, nullptr, 0);
+                      N_("Anyone who opens WiiFin can then open this profile"), YESNO, 2, nullptr, 0);
     if (!running || g_app_powerOff || g_app_reset) return;
     if (a == 1) {
         int b = askChoice(ir, cursorPointerTex, N_("Protect this profile with a passcode?"),

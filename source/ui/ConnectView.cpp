@@ -479,13 +479,13 @@ static void line(int y, const char* s, int size, u32 col) {
 void ConnectView::renderBackground() {
     const Ui::Palette& p = Ui::pal();
     Ui::background();
-    Ui::text(28, 12, tr("Connect to Plex"), 22, p.text);
+    Ui::text(28, 12, tr("Connect to Jellyfin, Emby or Plex"), 22, p.text);
 
     // Tabs: one pill split into the segments update() hit-tests
     {
         const float X0 = TAB_X0, X3 = TAB_X0 + 3 * TAB_W, Y = TAB_Y, H = TAB_H;
         const float seg[4] = { X0, X0 + TAB_W, X0 + 2 * TAB_W, X3 };
-        const char* names[3] = { N_("Credentials"), N_("Plex Link"), N_("Discover") };
+        const char* names[3] = { N_("Credentials"), N_("Quick Connect"), N_("Discover") };
         Ui::shadow(X0, Y + 1, X3 - X0, H, H * 0.5f, 4.0f, p.shadow);
         Ui::roundRect(X0, Y, X3 - X0, H, H * 0.5f, p.field, Ui::mix(p.field, p.cardBottom, 0.5f));
         Ui::roundBorder(X0, Y, X3 - X0, H, H * 0.5f, 1.5f, p.fieldBorder);
@@ -592,8 +592,8 @@ void ConnectView::renderQuickConnect(ir_t& ir) {
     switch (qcState) {
         case QCState::Idle: {
             Ui::card(70, 96, 500, 108, 16, 0.0f);
-            line(112, tr("Sign in with your Plex account: go to"), 17, p.text);
-            line(136, tr("plex.tv/link on a phone or a computer."), 17, p.text);
+            line(112, tr("Sign in with a code: Quick Connect on"), 17, p.text);
+            line(136, tr("Jellyfin, or plex.tv/link for Plex."), 17, p.text);
 
             /* Show current server URL or a warning if not set */
             if (fields[0].empty()) {
@@ -612,7 +612,7 @@ void ConnectView::renderQuickConnect(ir_t& ir) {
         }
 
         case QCState::Waiting: {
-            line(112, tr("Enter this code at plex.tv/link:"), 17, p.text);
+            line(112, tr("Enter this code in Quick Connect or at plex.tv/link:"), 17, p.text);
             // Big code display on a card
             int cw = Ui::textWidth(qcResult.code.c_str(), 52);
             Ui::card(320 - cw / 2 - 30, 148, cw + 60, 80, 18, Ui::pulse());
@@ -647,7 +647,7 @@ void ConnectView::renderDiscover(ir_t& ir) {
     switch (discoverState) {
         case DiscoverState::Idle:
             Ui::card(70, 96, 500, 84, 16, 0.0f);
-            line(114, tr("Find Plex servers on your local network."), 17, p.text);
+            line(114, tr("Find Jellyfin, Emby and Plex servers on your network."), 17, p.text);
             line(142, tr("The Wii must be on the same network as the server."), 14, p.textDim);
             {
                 bool btnFocus = ir.valid &&
