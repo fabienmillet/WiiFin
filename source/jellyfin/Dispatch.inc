@@ -41,7 +41,7 @@ bool JellyfinClient::getContinueWatching(const std::string& serverUrl, const Jel
 }
 
 bool JellyfinClient::getDirectPlayUrl(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int audioStreamIndex, int subtitleStreamIndex, DirectPlay& out) {
-    return isPlex(serverUrl) ? plex_getDirectPlayUrl(serverUrl, auth, itemId, mediaSourceId, audioStreamIndex, subtitleStreamIndex, out) : jf_getDirectPlayUrl(serverUrl, auth, itemId, mediaSourceId, audioStreamIndex, subtitleStreamIndex, out);
+    return isPlex(serverUrl) ? plex_getDirectPlayUrl(serverUrl, auth, itemId, mediaSourceId, audioStreamIndex, subtitleStreamIndex, out) : jf_getDirectPlayUrl(serverUrl, auth, itemId, embySource(serverUrl, itemId, mediaSourceId), audioStreamIndex, subtitleStreamIndex, out);
 }
 
 bool JellyfinClient::getEpisodes(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& seriesId, const std::string& seasonId, std::vector<JellyfinEpisode>& out) {
@@ -121,7 +121,7 @@ bool JellyfinClient::getPhotoBytes(const std::string& serverUrl, const JellyfinA
 }
 
 bool JellyfinClient::getPlaybackUrl(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int audioStreamIndex, int subtitleStreamIndex, long long startTimeTicks, std::string& outUrl, std::string& outPlaySessionId, PlaybackChoice& how, bool allowDirect) {
-    return isPlex(serverUrl) ? plex_getPlaybackUrl(serverUrl, auth, itemId, mediaSourceId, audioStreamIndex, subtitleStreamIndex, startTimeTicks, outUrl, outPlaySessionId, how, allowDirect) : jf_getPlaybackUrl(serverUrl, auth, itemId, mediaSourceId, audioStreamIndex, subtitleStreamIndex, startTimeTicks, outUrl, outPlaySessionId, how, allowDirect);
+    return isPlex(serverUrl) ? plex_getPlaybackUrl(serverUrl, auth, itemId, mediaSourceId, audioStreamIndex, subtitleStreamIndex, startTimeTicks, outUrl, outPlaySessionId, how, allowDirect) : jf_getPlaybackUrl(serverUrl, auth, itemId, embySource(serverUrl, itemId, mediaSourceId), audioStreamIndex, subtitleStreamIndex, startTimeTicks, outUrl, outPlaySessionId, how, allowDirect);
 }
 
 bool JellyfinClient::getPlaylistTracks(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& playlistId, std::vector<JellyfinAudioItem>& out) {
@@ -153,7 +153,7 @@ bool JellyfinClient::getSpecialFeatures(const std::string& serverUrl, const Jell
 }
 
 bool JellyfinClient::getSubtitleSrt(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int streamIndex, std::string& outSrt) {
-    return isPlex(serverUrl) ? plex_getSubtitleSrt(serverUrl, auth, itemId, mediaSourceId, streamIndex, outSrt) : jf_getSubtitleSrt(serverUrl, auth, itemId, mediaSourceId, streamIndex, outSrt);
+    return isPlex(serverUrl) ? plex_getSubtitleSrt(serverUrl, auth, itemId, mediaSourceId, streamIndex, outSrt) : jf_getSubtitleSrt(serverUrl, auth, itemId, embySource(serverUrl, itemId, mediaSourceId), streamIndex, outSrt);
 }
 
 bool JellyfinClient::getTVContinueWatching(const std::string& serverUrl, const JellyfinAuth& auth, std::vector<JellyfinItem>& out) {
@@ -169,15 +169,15 @@ bool JellyfinClient::getTVUpcoming(const std::string& serverUrl, const JellyfinA
 }
 
 bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int audioStreamIndex, int subtitleStreamIndex, long long startTimeTicks, std::string& outUrl, std::string& outPlaySessionId, const std::string& transcodeReasons) {
-    return isPlex(serverUrl) ? plex_getTranscodingUrl(serverUrl, auth, itemId, mediaSourceId, audioStreamIndex, subtitleStreamIndex, startTimeTicks, outUrl, outPlaySessionId, transcodeReasons) : jf_getTranscodingUrl(serverUrl, auth, itemId, mediaSourceId, audioStreamIndex, subtitleStreamIndex, startTimeTicks, outUrl, outPlaySessionId, transcodeReasons);
+    return isPlex(serverUrl) ? plex_getTranscodingUrl(serverUrl, auth, itemId, mediaSourceId, audioStreamIndex, subtitleStreamIndex, startTimeTicks, outUrl, outPlaySessionId, transcodeReasons) : jf_getTranscodingUrl(serverUrl, auth, itemId, embySource(serverUrl, itemId, mediaSourceId), audioStreamIndex, subtitleStreamIndex, startTimeTicks, outUrl, outPlaySessionId, transcodeReasons);
 }
 
 bool JellyfinClient::getTrickplayInfo(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, TrickplayInfo& out) {
-    return isPlex(serverUrl) ? plex_getTrickplayInfo(serverUrl, auth, itemId, mediaSourceId, out) : jf_getTrickplayInfo(serverUrl, auth, itemId, mediaSourceId, out);
+    return isPlex(serverUrl) ? plex_getTrickplayInfo(serverUrl, auth, itemId, mediaSourceId, out) : jf_getTrickplayInfo(serverUrl, auth, itemId, embySource(serverUrl, itemId, mediaSourceId), out);
 }
 
 bool JellyfinClient::getTrickplayTile(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, int width, int index, std::string& outBytes) {
-    return isPlex(serverUrl) ? plex_getTrickplayTile(serverUrl, auth, itemId, mediaSourceId, width, index, outBytes) : jf_getTrickplayTile(serverUrl, auth, itemId, mediaSourceId, width, index, outBytes);
+    return isPlex(serverUrl) ? plex_getTrickplayTile(serverUrl, auth, itemId, mediaSourceId, width, index, outBytes) : jf_getTrickplayTile(serverUrl, auth, itemId, embySource(serverUrl, itemId, mediaSourceId), width, index, outBytes);
 }
 
 void JellyfinClient::logServerInfo(const std::string& serverUrl) {
@@ -205,15 +205,15 @@ bool JellyfinClient::quickConnectInitiate(const std::string& serverUrl, QuickCon
 }
 
 bool JellyfinClient::reportPlaybackProgress(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, const std::string& playSessionId, long long positionTicks, bool isPaused, const char* playMethod, int audioStreamIndex, int subtitleStreamIndex) {
-    return isPlex(serverUrl) ? plex_reportPlaybackProgress(serverUrl, auth, itemId, mediaSourceId, playSessionId, positionTicks, isPaused, playMethod, audioStreamIndex, subtitleStreamIndex) : jf_reportPlaybackProgress(serverUrl, auth, itemId, mediaSourceId, playSessionId, positionTicks, isPaused, playMethod, audioStreamIndex, subtitleStreamIndex);
+    return isPlex(serverUrl) ? plex_reportPlaybackProgress(serverUrl, auth, itemId, mediaSourceId, playSessionId, positionTicks, isPaused, playMethod, audioStreamIndex, subtitleStreamIndex) : jf_reportPlaybackProgress(serverUrl, auth, itemId, embySource(serverUrl, itemId, mediaSourceId), playSessionId, positionTicks, isPaused, playMethod, audioStreamIndex, subtitleStreamIndex);
 }
 
 bool JellyfinClient::reportPlaybackStart(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, const std::string& playSessionId, const char* playMethod, int audioStreamIndex, int subtitleStreamIndex) {
-    return isPlex(serverUrl) ? plex_reportPlaybackStart(serverUrl, auth, itemId, mediaSourceId, playSessionId, playMethod, audioStreamIndex, subtitleStreamIndex) : jf_reportPlaybackStart(serverUrl, auth, itemId, mediaSourceId, playSessionId, playMethod, audioStreamIndex, subtitleStreamIndex);
+    return isPlex(serverUrl) ? plex_reportPlaybackStart(serverUrl, auth, itemId, mediaSourceId, playSessionId, playMethod, audioStreamIndex, subtitleStreamIndex) : jf_reportPlaybackStart(serverUrl, auth, itemId, embySource(serverUrl, itemId, mediaSourceId), playSessionId, playMethod, audioStreamIndex, subtitleStreamIndex);
 }
 
 bool JellyfinClient::reportPlaybackStopped(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& itemId, const std::string& mediaSourceId, const std::string& playSessionId, long long positionTicks) {
-    return isPlex(serverUrl) ? plex_reportPlaybackStopped(serverUrl, auth, itemId, mediaSourceId, playSessionId, positionTicks) : jf_reportPlaybackStopped(serverUrl, auth, itemId, mediaSourceId, playSessionId, positionTicks);
+    return isPlex(serverUrl) ? plex_reportPlaybackStopped(serverUrl, auth, itemId, mediaSourceId, playSessionId, positionTicks) : jf_reportPlaybackStopped(serverUrl, auth, itemId, embySource(serverUrl, itemId, mediaSourceId), playSessionId, positionTicks);
 }
 
 bool JellyfinClient::searchItems(const std::string& serverUrl, const JellyfinAuth& auth, const std::string& searchTerm, int limit, std::vector<JellyfinItem>& out) {
