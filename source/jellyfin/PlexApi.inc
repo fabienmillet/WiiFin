@@ -1360,6 +1360,11 @@ bool JellyfinClient::plexTimeline(const std::string& serverUrl, const JellyfinAu
                                   const std::string& itemId, const char* state, long long positionTicks,
                                   const std::string& session) {
     long long ms = positionTicks / TICKS_PER_MS;
+    /* Plex refuses a time past the duration (400): a transcode's times run a
+     * little past the file's end */
+    long long dur = s_durationMs[itemId];
+    if (dur > 0 && ms > dur) ms = dur;
+    if (ms < 0) ms = 0;
     std::string p = "/:/timeline?ratingKey=" + itemId + "&key=" + urlEncode("/library/metadata/" + itemId) +
                     "&state=" + state + "&time=" + std::to_string(ms) +
                     "&duration=" + std::to_string(s_durationMs[itemId]) + "&hasMDE=1" +
