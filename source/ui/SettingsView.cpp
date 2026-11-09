@@ -112,7 +112,7 @@ void SettingsView::renderMenu(ir_t& ir) {
                    SECTIONS[sectionAt(i, profile)], 20, menuFocus[i]);
     }
     const char* version = "WiiFin v" WIIFIN_VERSION;
-    std::string credits = std::string(tr("Made with \xe2\x9d\xa4 for Jellyfin")) + "  \xe2\x80\xa2  github.com/fabienmillet/WiiFin";
+    std::string credits = std::string(tr("Made with \xe2\x9d\xa4 for Plex, from WiiFin")) + "  \xe2\x80\xa2  github.com/fabienmillet/WiiFin";
     Ui::textCentered(320, 348, version, 15, p.accentDark);
     Ui::textCentered(320, 370, credits.c_str(), 12, p.textDim);
     static const Ui::Hint left[]  = { { "UD", N_("Choose") }, { "A", N_("Open") } };
