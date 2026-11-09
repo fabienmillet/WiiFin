@@ -7,7 +7,7 @@ first time it talks to it.
 | | Jellyfin | Emby | Plex |
 |---|---|---|---|
 | Find on the network (Discover) | yes | yes | yes (GDM) |
-| Sign in | user + password, Quick Connect | user + password | see below |
+| Sign in | user + password, Quick Connect (code, QR) | user + password | see below |
 | Home rows, libraries, sort, search | yes | yes | yes |
 | Film / series / music pages | yes | yes | yes |
 | Direct play | yes | yes | yes |
@@ -27,7 +27,9 @@ first time it talks to it.
   (`192.168.1.0/24`...). Then leave the user name empty on the Wii.
 * **Your Plex account**: type your plex.tv e-mail (or user name) and password.
 * **A code**: the *Quick Connect* tab shows a code to type at
-  [plex.tv/link](https://plex.tv/link) on a phone or a computer.
+  [plex.tv/link](https://plex.tv/link) on a phone or a computer, and a QR
+  code that opens Plex's sign-in page with it already filled in. (With
+  Jellyfin, the same QR code opens the server's Quick Connect page.)
 * **A token**: user name `token`, and the token as the password.
 
 The server's address is its local one, such as `http://192.168.1.10:32400`.
