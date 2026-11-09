@@ -1,6 +1,6 @@
 <p align="center">
   <img src="https://raw.githubusercontent.com/fabienmillet/WiiFin/refs/heads/main/assets/logo_wiifin_banner.png" alt="WiiFin logo" width="600"/><br>
-  <em>Jellyfin client for the Nintendo Wii</em>
+  <em>Jellyfin, Emby and Plex client for the Nintendo Wii</em>
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 ---
 
 <p align="center">
-<strong>WiiFin</strong> is an experimental homebrew client for <a href="https://jellyfin.org">Jellyfin</a>, built specifically for the Nintendo Wii.<br>
+<strong>WiiFin</strong> is an experimental homebrew client for <a href="https://jellyfin.org">Jellyfin</a>, <a href="https://emby.media">Emby</a> and <a href="https://www.plex.tv">Plex</a>, built specifically for the Nintendo Wii (see <a href="docs/SERVERS.md">what each server can do</a>).<br>
 It browses and plays your films, series and music on the console itself, written in C++ with <a href="https://github.com/GRRLIB/GRRLIB">GRRLIB</a> and <a href="https://github.com/extremscorner/mplayer-ce">MPlayer CE</a>.
 </p>
 
