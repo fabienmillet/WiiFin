@@ -1205,6 +1205,8 @@ JellyfinClient::Backend JellyfinClient::backendFor(const std::string& serverUrl)
         if (k.url == serverUrl) { Backend b = k.kind; LWP_MutexUnlock(lock); return b; }
     LWP_MutexUnlock(lock);
     if (serverUrl.empty()) return Backend::Jellyfin;
+    /* no address yet: signing in to a Plex account, which finds the server */
+    if (serverUrl == "plex.tv") return Backend::Plex;
     Backend kind = Backend::Unknown;
     std::string resp;
     int st = httpRequest(serverUrl + "/System/Info/Public", "GET", "", "", "", resp);

@@ -279,13 +279,10 @@ ConnectResult ConnectView::update(ir_t& ir) {
                 if (qcBtnHit) irMode = true;
                 if ((aPressed && (qcBtnHit || (!ir.valid && !irMode))) || autoQuickConnect) {
                     autoQuickConnect = false;
-                    if (fields[0].empty()) {
-                        setStatus(N_("Set the Server URL in the Credentials tab first."), true);
-                        break;
-                    }
                     if (!needNetwork(AfterNet::QuickConnect)) break;
                     while (fields[0].size() > 1 && fields[0].back() == '/') fields[0].pop_back();
-                    serverUrl = fields[0];
+                    /* no address: a Plex account, which finds its server */
+                    serverUrl = fields[0].empty() ? std::string("plex.tv") : fields[0];
                     auto ok = std::make_shared<bool>(false);
                     auto res = std::make_shared<QuickConnectResult>();
                     auto err = std::make_shared<std::string>();
@@ -326,7 +323,8 @@ ConnectResult ConnectView::update(ir_t& ir) {
                             if (!*signedIn) { *err = client.lastError(); return; }
                             std::string sn;
                             *user = a->serverName;  /* "Name" field = user display name, before overwrite */
-                            if (client.getServerName(url, *a, sn)) a->serverName = sn;
+                            const std::string& at = a->serverUrl.empty() ? url : a->serverUrl;
+                            if (client.getServerName(at, *a, sn)) a->serverName = sn;
                         },
                         [this, approved, signedIn, a, err, user]() {
                             if (qcState != QCState::Waiting || !*approved) return ConnectResult::None;
@@ -337,6 +335,7 @@ ConnectResult ConnectView::update(ir_t& ir) {
                             }
                             qcState  = QCState::Done;
                             auth     = *a;
+                            if (!a->serverUrl.empty()) { serverUrl = a->serverUrl; fields[0] = serverUrl; }
                             username = *user;
                             return ConnectResult::Success;
                         });
@@ -623,7 +622,7 @@ void ConnectView::renderQuickConnect(ir_t& ir) {
 
             /* Show current server URL or a warning if not set */
             if (fields[0].empty()) {
-                line(174, tr("Go to Credentials tab and enter the Server URL first."), 14, p.danger);
+                line(174, tr("No server address: for a Plex account, WiiFin finds its server."), 14, p.textDim);
             } else {
                 char sbuf[128];
                 snprintf(sbuf, sizeof(sbuf), tr("Server: %s"), fields[0].c_str());
