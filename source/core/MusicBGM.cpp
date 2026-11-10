@@ -99,6 +99,7 @@ static void* decoderMain(void*)
     mad_frame_init(&s_frame);
     mad_synth_init(&s_synth);
     mad_stream_buffer(&s_stream, data, len);
+    SYS_Report("[BGM] playing %lu bytes\n", len);
     int filled = 0, errors = 0;   /* frames in the block being filled */
     bool started = false;
     u64 startedAt = 0;
@@ -113,7 +114,7 @@ static void* decoderMain(void*)
                 continue;
             }
             if (MAD_RECOVERABLE(s_stream.error) && ++errors < 100000) continue;
-            SYS_Report("[Sound] the music cannot be decoded (%s)\n", mad_stream_errorstr(&s_stream));
+            SYS_Report("[BGM] cannot be decoded (%s)\n", mad_stream_errorstr(&s_stream));
             break;
         }
         errors = 0;
@@ -135,7 +136,7 @@ static void* decoderMain(void*)
             const u64 now = gettime();
             if (!started ? s_wr - s_rd >= (u32)START_BLOCKS
                          : diff_msec(startedAt, now) > 300 && ASND_StatusVoice(MUSIC_VOICE) == SND_UNUSED) {
-                if (started) SYS_Report("[Sound] the music ran dry, started again\n");
+                if (started) SYS_Report("[BGM] ran dry, started again\n");
                 started = true;
                 startedAt = now;
                 startVoice();
@@ -162,7 +163,7 @@ static void startMusic()
     if (LWP_CreateThread(&s_thread, decoderMain, nullptr, s_stack, sizeof(s_stack), DECODER_PRIO) < 0) {
         s_thread = LWP_THREAD_NULL;
         s_running = false;
-        SYS_Report("[Sound] the music thread could not start\n");
+        SYS_Report("[BGM] the thread could not start\n");
     }
 }
 
@@ -172,6 +173,7 @@ static void stopMusicPlayer()
     if (s_thread != LWP_THREAD_NULL) {
         LWP_JoinThread(s_thread, nullptr);
         s_thread = LWP_THREAD_NULL;
+        SYS_Report("[BGM] stopped\n");
     }
     s_voiceOn = false;
     if (s_asndRunning) ASND_StopVoice(MUSIC_VOICE);
@@ -184,6 +186,7 @@ static void asndOn()
     ASND_Init();
     ASND_Pause(0);
     s_asndRunning = true;
+    SYS_Report("[BGM] audio on\n");
 }
 
 /* the music and ASND off, for MPlayer's audio (ao_gekko takes the DMA) */
@@ -194,11 +197,12 @@ static void asndOff()
         SoundFX::fadeOut();
         ASND_End();   /* never twice: that corrupts the DSP interrupt handler */
         s_asndRunning = false;
+        SYS_Report("[BGM] audio off\n");
     }
 }
 
 void MusicBGM::init(bool startPlaying) {
-    SYS_Report("[Sound] init, music %d\n", (int)startPlaying);
+    SYS_Report("[BGM] init, music %d\n", (int)startPlaying);
     asndOn();
     if (startPlaying) startMusic();
 }
@@ -208,6 +212,7 @@ void MusicBGM::pause() { asndOff(); }
 
 void MusicBGM::resume() {
     if (MusicSession::active()) return;   /* the audio is MPlayer's: ASND stays off */
+    SYS_Report("[BGM] resume\n");
     stopMusicPlayer();
     asndOn();
     startMusic();

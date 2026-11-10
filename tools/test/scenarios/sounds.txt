@@ -28,7 +28,7 @@ expect streams 1
 expect log [Sound] move.wav from the SD card
 expect log [Sound] bgm.mp3 from the SD card
 # the music loop plays it again and again (3 s): its length, not the 1.1 MB built-in one
-expect logre 'musicLoop: PlayBuffer buf=\S+ len=[1-9]\d{4}$'
+expect logre '^\[BGM\] playing [1-9]\d{4} bytes$'
 expect logre '^\[Sound\] move$'
 expect logre '^\[Sound\] open$'
 expect logre '^\[Sound\] back$'
