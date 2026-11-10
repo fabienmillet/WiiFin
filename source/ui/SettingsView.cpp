@@ -8,13 +8,50 @@
 #include "../core/Lang.h"
 #include "../input/Input.h"
 #include "../core/SavedProfile.h"
+#include "../core/ExitZone.h"
 #include "../version.h"
 #include <stdio.h>
 #include <ogc/lwp_watchdog.h>
+#include <ogc/lwp.h>
+#include <ogc/mutex.h>
+
+extern volatile bool g_app_powerOff;
+extern volatile bool g_app_reset;
+
+namespace {
+
+struct CacheClearJob {
+    JellyfinClient* client;
+    mutex_t lock;
+    bool done = false, stop = false;
+    int removed = 0, result = -1;
+    std::string filename;
+};
+
+static u8 s_cacheClearStack[16 * 1024] DEAD_AT_EXIT __attribute__((aligned(32)));
+
+void* clearCacheWorker(void* arg) {
+    CacheClearJob& job = *static_cast<CacheClearJob*>(arg);
+    int result = job.client->clearImageCache([&](int removed, const char* filename) {
+        LWP_MutexLock(job.lock);
+        job.removed = removed;
+        job.filename = filename;
+        bool keepGoing = !job.stop;
+        LWP_MutexUnlock(job.lock);
+        return keepGoing;
+    });
+    LWP_MutexLock(job.lock);
+    job.result = result;
+    job.done = true;
+    LWP_MutexUnlock(job.lock);
+    return nullptr;
+}
+
+} // namespace
 
 /* The rows, by what they set (drawRow and activate take these) */
 enum Row { R_SSL, R_MUSIC, R_SOUNDS, R_QUALITY, R_DIRECT, R_SMOOTH, R_THEME, R_HOME, R_VIEW,
-           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN };
+           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_CACHE, R_CACHE_LOCATION };
 
 /* the sections: a profile's own look (WiiFin's menu: the start-up one,
  * theme and backgrounds only), what every profile shares, how a profile
@@ -58,9 +95,10 @@ void SettingsView::openSection(int s) {
     if (s == 0) rows = profile ? std::vector<int>{ R_THEME, R_BACKGROUNDS, R_HOME, R_VIEW }
                                : std::vector<int>{ R_THEME, R_BACKGROUNDS };
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE, R_AREA,
-                              R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT };
+                              R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT, R_CACHE_LOCATION, R_CACHE };
     else rows = { R_SIGNIN };
     signInWant = profile ? profile->signIn : -1;
+    cacheCleared = -1;
 }
 
 /* B in the Sign-In section: its choice applied; a passcode new to the
@@ -165,11 +203,77 @@ void SettingsView::activate(int index) {
         case 13:   /* the Wii's, then each language in turn */
             Lang::choose(Lang::next(Lang::choice()));
             break;
+        case R_CACHE:    /* once per visit: "Cleared N" stays until the section is reopened */
+            if (cacheCleared < 0 && !client.cacheDir.empty()) clearCache();
+            break;
+        case R_CACHE_LOCATION:
+            client.setImageCacheLocation(client.imageCacheLocation == JellyfinClient::CacheSD
+                ? JellyfinClient::CacheOff : JellyfinClient::CacheSD);
+            cacheCleared = -1;
+            break;
         case R_SIGNIN:   /* at once, a passcode, the password: chosen, applied on leaving */
             if (!profile) break;
             signInWant = (signInWant + 1) % 3;
             break;
     }
+}
+
+void SettingsView::clearCache() {
+    CacheClearJob job;
+    job.client = &client;
+    cacheCleared = -2;
+    if (LWP_MutexInit(&job.lock, false) < 0) return;
+    lwp_t thread;
+    if (LWP_CreateThread(&thread, clearCacheWorker, &job,
+                         s_cacheClearStack, sizeof(s_cacheClearStack), 64) < 0) {
+        LWP_MutexDestroy(job.lock);
+        return;
+    }
+    SoundFX::play(SoundFX::FX::Loading);
+    const Ui::Palette& p = Ui::pal();
+    for (;;) {
+        Input::update();
+        LWP_MutexLock(job.lock);
+        if (g_app_powerOff || g_app_reset) job.stop = true;
+        bool done = job.done;
+        int removed = job.removed;
+        std::string filename = job.filename;
+        LWP_MutexUnlock(job.lock);
+        if (done) break;
+
+        Ui::background();
+        Ui::header(tr("Settings"), tr("Image Cache"));
+        Ui::card(80, 145, 480, 180, 18, Ui::pulse());
+        Ui::textCentered(320, 168, tr("Clearing image cache..."), 22, p.text);
+        char count[96];
+        snprintf(count, sizeof(count), tr("Removed %d image(s)"), removed);
+        Ui::textCentered(320, 212, count, 18, p.accent);
+        size_t slash = filename.rfind('/');
+        std::string server;
+        if (slash != std::string::npos) {
+            server = filename.substr(0, slash);
+            filename = filename.substr(slash + 1);
+        }
+        /* Server folders and image names are ASCII; keep both in the card. */
+        auto fit = [](std::string text) {
+            bool shortened = false;
+            while (!text.empty() && Ui::textWidth((text + "...").c_str(), 12) > 420) {
+                text.pop_back();
+                shortened = true;
+            }
+            return shortened ? text + "..." : text;
+        };
+        Ui::textCentered(320, 244, fit(server).c_str(), 12, p.textDim);
+        Ui::textCentered(320, 266, fit(filename).c_str(), 12, p.textDim);
+        int active = (ticks_to_millisecs(gettime()) / 200) % 3;
+        for (int i = 0; i < 3; ++i)
+            Ui::circle(300 + i * 20, 292, 4, Ui::alpha(p.accent, i == active ? 1.0f : 0.25f));
+        GRRLIB_Render();
+    }
+    LWP_JoinThread(thread, nullptr);
+    SoundFX::stopLoading();
+    cacheCleared = job.result >= 0 ? job.result : -2;
+    LWP_MutexDestroy(job.lock);
 }
 
 /* ---------------------------------------------------------------
@@ -442,6 +546,31 @@ void SettingsView::render(ir_t& ir) {
     drawRow(13, N_("Language"),
             Lang::choice() < 0 ? N_("The Wii's language, as set in the Wii Settings") : N_("Chosen here, whatever the Wii's language"),
             Lang::name(Lang::current()), Lang::choice() < 0 ? 0x8A9099FF : p.accent);
+    {
+        const char* desc = client.imageCacheLocation == JellyfinClient::CacheOff
+            ? N_("Download artwork without saving it")
+            : client.cacheDir.empty() ? N_("Selected drive is unavailable or not writable")
+                                      : N_("Save artwork here for faster browsing");
+        drawRow(R_CACHE_LOCATION, N_("Image Cache"), desc,
+                client.imageCacheLocation == JellyfinClient::CacheSD ? N_("SD") : N_("OFF"),
+                client.cacheDir.empty() ? 0x8A9099FF : p.accent);
+    }
+    {
+        char desc[96];
+        if (client.imageCacheLocation == JellyfinClient::CacheOff)
+            snprintf(desc, sizeof(desc), "%s", tr("Choose SD to clear saved artwork"));
+        else if (client.cacheDir.empty())
+            snprintf(desc, sizeof(desc), "%s", tr("Selected drive is unavailable or not writable"));
+        else if (cacheCleared == -2)
+            snprintf(desc, sizeof(desc), "%s", tr("Could not clear image cache. Try again"));
+        else if (cacheCleared >= 0)
+            snprintf(desc, sizeof(desc), tr("Removed %d image(s)"), cacheCleared);
+        else
+            snprintf(desc, sizeof(desc), "%s", tr("Clear saved artwork to refresh it or free space"));
+        const char* val = client.cacheDir.empty() ? N_("OFF") : cacheCleared >= 0 ? N_("Cleared") : N_("Clear");
+        drawRow(R_CACHE, N_("Clear Image Cache"), desc, val,
+                cacheCleared < 0 && !client.cacheDir.empty() ? p.accent : 0x8A9099FF);
+    }
     if (profile) {
         static const char* const how[3]  = { N_("Automatic"), N_("Passcode"), N_("Password") };
         static const char* const desc[3] = {
