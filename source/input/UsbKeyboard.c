@@ -1,3 +1,5 @@
+/* SPDX-FileCopyrightText: 2026 quatric and the libwiiinput contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* USB keyboard, from libwiiinput (github.com/quatric/libwiiinput): a
  * thread keeps it connected and scanned (hot-plug safe), the frame loop
  * takes a snapshot of the keys once a frame.  See UsbKeyboard.h. */

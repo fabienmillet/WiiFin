@@ -1,3 +1,5 @@
+/* SPDX-FileCopyrightText: 2026 quatric and the libwiiinput contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* USB pen tablet driver for libogc homebrew.  See Tablet.h. */
 
 #include <malloc.h>
@@ -715,6 +717,12 @@ static s32 open_tablet(void)
 
 		if ((vid == 0 && pid == 0) || (vid == 0x057E && pid == 0x0308) ||
 		    listed(tb_others, tb_nothers, vid, pid))
+			continue;
+		/* On USBV5 (IOS58) closing a device tells every driver holding it
+		 * that it was unplugged, so opening a mouse or keyboard just to
+		 * read its descriptors makes it drop out.  There, only the devices
+		 * of tablet makers are opened; any other tablet is not found. */
+		if (!oh0 && !tablet_vendor(vid))
 			continue;
 
 		tb_unplugged = false;
