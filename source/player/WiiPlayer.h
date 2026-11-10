@@ -73,6 +73,9 @@ extern float g_wiifin_loading_start_pos;
  * MPlayer state — written by the patched mplayer.c main loop.
  * ------------------------------------------------------------------ */
 extern volatile float g_mplayer_time_pos;  /* current PTS (seconds, from stream start) */
+/* music: the position of what is heard, from MPlayer's status line
+ * ("A:  12.3 (12.3) of 180.0 ..."), 0 until the first one */
+extern volatile float g_wiifin_audio_pos;
 extern volatile float g_mplayer_duration;  /* stream duration (seconds)              */
 extern volatile int   g_mplayer_paused;    /* 1 while MPlayer is paused              */
 

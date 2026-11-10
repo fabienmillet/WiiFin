@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include "Lang.h"
 #include "SoundFX.h"
+#include "MusicSession.h"
 #include "../player/VideoSurface.h"
 #include "../player/vo_wiifin.h"
 #include "../player/WiiPlayer.h"
@@ -78,6 +79,8 @@ void App::loadSettings() {
             jellyfinClient.sslVerify = atoi(val) != 0;
         } else if (strcmp(key, "music_enabled") == 0) {
             musicEnabled = atoi(val) != 0;
+        } else if (strcmp(key, "music_autoplay") == 0) {
+            MusicSession::setAutoplay(atoi(val) != 0);
         } else if (strcmp(key, "ui_sounds") == 0) {
             SoundFX::setEnabled(atoi(val) != 0);
         } else if (strcmp(key, "test_freeze_at") == 0) {
@@ -240,6 +243,7 @@ void App::saveSettings() {
     fprintf(f, "ssl_verify=%d\n",      jellyfinClient.sslVerify ? 1 : 0);
     fprintf(f, "music_enabled=%d\n",    musicEnabled ? 1 : 0);
     fprintf(f, "ui_sounds=%d\n",        SoundFX::enabled() ? 1 : 0);
+    fprintf(f, "music_autoplay=%d\n",   MusicSession::autoplay() ? 1 : 0);
     fprintf(f, "video_quality=%d\n",    jellyfinClient.videoQuality);
     fprintf(f, "direct_play=%d\n",      jellyfinClient.directPlay ? 1 : 0);
     /* WiiFin's own look: not the one of the profile open */

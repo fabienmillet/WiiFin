@@ -64,6 +64,7 @@ extern "C" {
  * ----------------------------------------------------------------------- */
 extern "C" {
     volatile float g_mplayer_time_pos  = 0.0f;
+    volatile float g_wiifin_audio_pos  = 0.0f;   /* Log.cpp, from the status line */
     volatile float g_mplayer_duration  = 0.0f;
     volatile int   g_mplayer_paused    = 0;
 
@@ -151,6 +152,7 @@ static void resetControlState()
     async_quit_request   = 0;
     g_player_stop_reason = PLAYER_STOP_EOF;
     g_mplayer_time_pos   = 0.0f;
+    g_wiifin_audio_pos   = 0.0f;
     s_streamStart        = -1.0f;
     s_ssMissed           = false;
     g_mplayer_duration   = 0.0f;

@@ -125,8 +125,10 @@ struct Session {
     GRRLIB_texImg* art      = nullptr;
     u32            artA = 0, artB = 0;          /* placeholder gradient */
 
-    /* position: MPlayer gives none for audio streams, so wall clock */
+    /* position: the audio MPlayer plays (g_wiifin_audio_pos); a clock from
+     * the start or the last seek until it has one */
     u64   startTick = 0;
+    u64   seekAt    = 0;     /* the last seek, while MPlayer gets there */
     float seekBase  = 0.0f;
     bool  wasPaused = false;
     u64   pausedAt  = 0;
@@ -185,6 +187,7 @@ volatile long long s_progressTicks = 0;
 volatile bool s_progressPaused = false;
 volatile int  s_jobFavorite  = 0;       /* 1 mark, 2 unmark */
 volatile bool s_jobAutoplay  = false;
+bool          s_autoplayOn   = false;   /* Settings: Music Autoplay */
 volatile bool s_autoplayReady = false;
 std::vector<JellyfinAudioItem> s_autoplay;
 /* "Play next" / "Add to queue" from the server: fetched by the jobs thread,
@@ -333,6 +336,19 @@ float position()
     if (s.wasPaused && s.pausedAt >= s.startTick)
         paused += ticks_to_millisecs(now - s.pausedAt) / 1000.0f;
     float p = s.seekBase + ticks_to_millisecs(now - s.startTick) / 1000.0f - paused;
+    /* what is heard, once MPlayer has a time: the clock drifted from it
+     * (lyrics late), and a seek it could not do exactly showed the asked
+     * time while the song went on elsewhere, then ended early.  Just
+     * after a seek the asked time stays until MPlayer is there (1.5 s) */
+    const float heard = g_wiifin_audio_pos;
+    if (heard > 0.05f &&
+        !(s.seekAt && diff_msec(s.seekAt, now) < 1500 && fabsf(heard - p) > 1.5f)) {
+        if (s.seekAt) {   /* once per seek: where it really went */
+            SYS_Report("[Music] heard at %.1f s after the seek to %.1f s\n", (double)heard, (double)s.seekBase);
+            s.seekAt = 0;
+        }
+        p = heard;
+    }
     float d = duration();
     if (p < 0.0f) p = 0.0f;
     if (d > 0.0f && p > d) p = d;
@@ -346,7 +362,9 @@ void seekTo(float t)
     if (t < 0.0f) t = 0.0f;
     if (d > 0.0f && t > d - 1.0f) t = d - 1.0f;
     wii_player_seek_abs(t);
+    SYS_Report("[Music] seek to %.1f s\n", (double)t);
     s.startTick = gettime();
+    s.seekAt = s.startTick;
     s.seekBase = t;
     s.pausedSecs = 0.0f;
     s.timing = true;
@@ -816,8 +834,10 @@ void drawPanel()
                 Ui::roundRect(tx + b * 4.5f, ty + 16 - bh, 3, bh, 1.5f, c);
             }
         } else {
-            char num[8];
-            snprintf(num, sizeof(num), "%d", k - s.pos);
+            char num[12];
+            /* its place in the queue, as "6 of 21" says: not how far from
+             * the song playing (1, 2... and -1, -2... moved with each song) */
+            snprintf(num, sizeof(num), "%d", k + 1);
             Ui::textCentered(tx + 6, ty + 2, num, 12, dim);
         }
         int maxW = (int)(PANEL_W - 64);
@@ -1042,7 +1062,7 @@ void tick(int paused)
         requestTrack(Req::Ended);
 
     /* last track of the queue: fetch what follows while it plays */
-    if (!s.autoplayAsked && s.repeat == 0 && s.pos == (int)s.order.size() - 1 && position() > 5) {
+    if (s_autoplayOn && !s.autoplayAsked && s.repeat == 0 && s.pos == (int)s.order.size() - 1 && position() > 5) {
         s.autoplayAsked = true;
         s_jobAutoplay = true;
     }
@@ -1360,6 +1380,7 @@ void* sessionMain(void*)
             s.jumpTo = -1;
             s.renderOn = false;
             s.timing = false;
+            s.seekAt = 0;
             s.wasPaused = false;
             s.pausedSecs = 0;
             s.lastFrame = 0;
@@ -1380,6 +1401,8 @@ void* sessionMain(void*)
         g_wiifin_known_duration = duration();
         u64 t0 = nowMs();
         wii_player_play_audio(url.c_str());
+        /* where it stopped: a song that ends well before its length shows here */
+        SYS_Report("[Music] track stopped at %.1f of %.1f s\n", (double)g_wiifin_audio_pos, (double)duration());
         wii_player_set_music_tick(nullptr);
         g_wiifin_known_duration = 0.0f;
         g_stream_opened_cb = nullptr;
@@ -1410,7 +1433,7 @@ void* sessionMain(void*)
         }
         if (failures >= 3 || g_app_powerOff || g_app_reset || r == Req::Leave) break;
         /* the queue ran out: similar tracks follow */
-        if (needMore && s_autoplay.empty())
+        if (needMore && s_autoplayOn && s_autoplay.empty())
             client.getAutoplayTracks(s.serverUrl, s.auth, id, s.info.parentId, AUTOPLAY, s_autoplay);
 
         Guard g;
@@ -1638,4 +1661,9 @@ bool MusicPlayerView::run()
     }
     SYS_Report("[Music] session: %d track(s), from track %d\n", (int)s.order.size(), s.pos + 1);
     return showPage();
+}
+
+namespace MusicSession {
+void setAutoplay(bool on) { s_autoplayOn = on; }
+bool autoplay()           { return s_autoplayOn; }
 }
