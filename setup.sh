@@ -6,7 +6,7 @@
 #   1. devkitPro pacman repositories + devkitPPC / libogc / portlibs
 #   2. GRRLIB + libpngu (built from source, installed into portlibs/wii)
 #   3. mbedTLS (cross-compiled with libs/mbedtls/include/mbedtls/mbedtls_config.h)
-#   4. The controller libraries (libwupc, libwiidrc, libsicksaxis) into libs/controllers
+#   4. The controller library (libwiidrc) into libs/controllers
 #   5. Builds WiiFin (skip with --no-build)
 #
 # Supported hosts: Arch-based distros (pacman), or any host where devkitPro's
@@ -185,13 +185,13 @@ else
 fi
 
 #---------------------------------------------------------------------------------
-# 4. Controller libraries: the Wii U Pro Controller, the Wii U GamePad and a
-#    DualShock 3 (tools/controllers/build.sh, each at a fixed commit)
+# 4. Controller library: the Wii U GamePad (tools/controllers/build.sh, at a
+#    fixed commit)
 #---------------------------------------------------------------------------------
 CONTROLLERS_OUT="$REPO_DIR/libs/controllers/lib"
 CONTROLLERS_STAMP="$CONTROLLERS_OUT/.build.sha256"   # rebuild when build.sh changes
 CONTROLLERS_HASH="$(sha256sum "$REPO_DIR/tools/controllers/build.sh" | cut -d' ' -f1)"
-if [ -f "$CONTROLLERS_OUT/libwupc.a" ] && [ -f "$CONTROLLERS_OUT/libwiidrc.a" ] && [ -f "$CONTROLLERS_OUT/libsicksaxis.a" ] &&
+if [ -f "$CONTROLLERS_OUT/libwiidrc.a" ] &&
    [ "$(cat "$CONTROLLERS_STAMP" 2>/dev/null)" = "$CONTROLLERS_HASH" ]; then
 	ok "Controller libraries already built"
 else

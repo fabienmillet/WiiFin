@@ -88,21 +88,13 @@ LIBPATHS    := -L$(LIBOGC_LIB) -L/opt/devkitpro/portlibs/wii/lib -L/opt/devkitpr
 LIBS        := -lgrrlib -lpngu `$(PKG_CONFIG) freetype2 libpng libjpeg --libs` -lbrotlidec -lbrotlicommon -lwiikeyboard -lfat -lwiiuse -lbte -lmad -lasnd -logc -lm -lz \
                -lmbedtls -lmbedx509 -lmbedcrypto
 
-# The controller libraries, each linked when tools/controllers/build.sh
-# has built it (see source/input/Input.h)
+# The controller library, linked when tools/controllers/build.sh has built
+# it (see source/input/Input.h). libwupc and libsicksaxis are not linked:
+# they have no license, so builds can't ship them.
 CONTROLLERS := $(CURDIR)/libs/controllers
-ifneq ($(wildcard $(CONTROLLERS)/lib/libwupc.a),)
-CFLAGS      += -DHAVE_WUPC
-LDFLAGS     += -Wl,--wrap=wiiuse_accept
-LIBS        := -lwupc $(LIBS)
-endif
 ifneq ($(wildcard $(CONTROLLERS)/lib/libwiidrc.a),)
 CFLAGS      += -DHAVE_WIIDRC
 LIBS        := -lwiidrc $(LIBS)
-endif
-ifneq ($(wildcard $(CONTROLLERS)/lib/libsicksaxis.a),)
-CFLAGS      += -DHAVE_SICKSAXIS
-LIBS        := -lsicksaxis $(LIBS)
 endif
 ifneq ($(wildcard $(CONTROLLERS)/lib/*.a),)
 CFLAGS      += -I$(CONTROLLERS)/include
