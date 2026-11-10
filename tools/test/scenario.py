@@ -145,7 +145,8 @@ def write_sd(sc, sd, sess):
     d = os.path.join(sd, 'apps', 'WiiFin')
     os.makedirs(d, exist_ok=True)
     # device_id: the tests' own, apart from a Dolphin of the user's on the same server
-    cfg = ['music_enabled=0', 'home_layout=0', 'library_view=2', 'screen_area_asked=1',
+    # christmas=0: the same look whatever the date
+    cfg = ['music_enabled=0', 'christmas=0', 'home_layout=0', 'library_view=2', 'screen_area_asked=1',
            'device_id=wiifin-test-dolphin'] + sc['cfg'] + [
         'profile_count=1', 'profile.0.server_url=' + sc['server'], 'profile.0.username=wii',
         'profile.0.server_name=Jellyfin Test', 'profile.0.user_id=' + user, 'profile.0.access_token=' + token]
