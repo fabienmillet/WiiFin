@@ -200,6 +200,7 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
             currentSeriesId    = sel.id;
             currentSeriesName  = sel.name;
             seasonsCallerState = State::ItemsReady;
+            seasonsBackToEpisode.clear();
             seasons.clear(); seasonSel = 0; seasonTop = 0;
             state = State::SeasonsLoad;
         } else if (sel.type == "Photo") {
@@ -416,6 +417,7 @@ bool LibraryView::updatePosterGrid(ir_t& ir, bool aPressed) {
                 currentSeriesId    = items[posterSel].id;
                 currentSeriesName  = items[posterSel].name;
                 seasonsCallerState = State::PostersReady;
+                seasonsBackToEpisode.clear();
                 seasons.clear(); seasonSel = 0; seasonTop = 0;
                 state = State::SeasonsLoad;
             } else if (items[posterSel].type == "Playlist") {
