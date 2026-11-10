@@ -76,3 +76,5 @@ The remaining differences, out of 457 objects:
 | `gx_supp`, `vo_gx` | Changed in the reference, not linked by WiiFin. |
 | `ehcmodule.elf`, `stream_http(s)_wii` | In the reference only; not linked by WiiFin. |
 | `utils`, `opt`, `options`, `audioconvert` | Same-name objects in a different order. |
+
+**Not equivalent yet:** with the rebuilt library, a song that ends by itself (music, a file played as it is) hangs MPlayer at its exit: `Cache not responding!` in the log, the cache thread never answers the stop request (`cache_uninit`), and the music player stays on that song (seen with `music-formats` and `music-shuffle`, Nov 2026). The library in the repository ends it normally. Until the difference is found, keep the repository's library.

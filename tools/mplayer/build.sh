@@ -18,7 +18,7 @@
 # devkitPPC of this machine instead.
 set -e
 T=$(dirname "$(realpath "$0")"); REPO=$(realpath "$T/../..")
-IMAGE=devkitpro/devkitppc:20260221
+IMAGE=docker.io/devkitpro/devkitppc:20260221
 COMMIT=9ea3e57627727be964f98102daa8d17778b22979   # 2011-07-07, the last one
 OUT=$T/out
 SRC=$OUT/src
@@ -60,7 +60,10 @@ if [ -z "$INSIDE" ]; then
     python3 "$T/configure.py" "$SRC/mplayer"
     (cd "$SRC" && patch -s -p1 < "$T/wiifin.patch")
     if [ -z "$NATIVE" ]; then
-        docker run --rm -v "$REPO:$REPO" -w "$REPO" -e INSIDE=1 -e HOST_UID="$(id -u):$(id -g)" \
+        # Docker writes as root: the files are given back to the user.  Rootless
+        # Podman already writes as the user (a chown would map them away).
+        owner="$(id -u):$(id -g)"; docker --version 2>/dev/null | grep -qi podman && owner=
+        docker run --rm -v "$REPO:$REPO" -w "$REPO" -e INSIDE=1 -e HOST_UID="$owner" \
             "$IMAGE" "$T/build.sh" "$@"
         exit
     fi
