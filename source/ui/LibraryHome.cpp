@@ -259,6 +259,7 @@ bool LibraryView::updateGlobalFavorites(ir_t& ir, bool aPressed) {
                 currentSeriesId    = items[posterSel].id;
                 currentSeriesName  = items[posterSel].name;
                 seasonsCallerState = State::GlobalFavoritesReady;
+                seasonsBackToEpisode.clear();
                 seasons.clear(); seasonSel = 0; seasonTop = 0;
                 state = State::SeasonsLoad;
             } else {

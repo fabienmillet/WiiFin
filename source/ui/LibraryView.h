@@ -305,6 +305,10 @@ private:
     int         tvTab   = 0;    // 0=Series, 1=Suggestions, 2=Upcoming
     std::string tvLibId;         // root tvshows library id
     State       seasonsCallerState = State::PostersReady; // where B goes from season list
+    /* the seasons opened with 2 from an episode's page: B goes back to that
+     * page (its id, and where that page itself goes back to); "" otherwise */
+    std::string seasonsBackToEpisode;
+    State       seasonsBackEpisodeReturn = State::LibsReady;
     std::string seasonWant;   // the season to select once they are loaded (an episode's)
     /* an album of one song: played at once, not listed; back from it, the
      * albums again (not a list of one) */

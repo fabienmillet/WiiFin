@@ -1313,6 +1313,7 @@ void LibraryView::openItem(const JellyfinItem& it, State returnState) {
         currentSeriesId    = it.id;
         currentSeriesName  = it.name;
         seasonsCallerState = returnState;
+        seasonsBackToEpisode.clear();
         seasons.clear(); seasonSel = 0; seasonTop = 0;
         state = State::SeasonsLoad;
     } else if (it.type == "Season" && !it.seriesId.empty()) {

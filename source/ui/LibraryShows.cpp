@@ -56,6 +56,15 @@ bool LibraryView::updateSeasons(ir_t& ir, bool aPressed) {
     int n = (int)seasons.size();
     if (Input::isBackPressed()) {
         freeSeasonPosters();
+        if (!seasonsBackToEpisode.empty()) {
+            /* opened with 2 from an episode's page: back to that page */
+            detailItemId        = seasonsBackToEpisode;
+            detailReturnState   = seasonsBackEpisodeReturn;
+            detailIsEpisodeHint = true;
+            seasonsBackToEpisode.clear();
+            state = State::DetailLoad;
+            return false;
+        }
         state = seasonsCallerState;
         return false;
     }

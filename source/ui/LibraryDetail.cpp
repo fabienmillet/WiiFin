@@ -71,6 +71,8 @@ bool LibraryView::updateDetail(ir_t& ir, bool aPressed) {
         currentSeriesName  = detail.seriesName;
         seasonWant         = detail.seasonId;
         seasonsCallerState = detailReturnState;
+        seasonsBackToEpisode     = detailItemId;        /* B there: back to this page */
+        seasonsBackEpisodeReturn = detailReturnState;
         SYS_Report("[Detail] its series' seasons\n");
         freeDetail();
         seasons.clear(); seasonSel = 0; seasonTop = 0;
@@ -444,7 +446,9 @@ void LibraryView::drawDetailView(ir_t& ir) {
                            /* TRANSLATORS: an episode's page: 2 opens its series' seasons */
                            { "2", detail.seriesId.empty() ? N_("Extras") : N_("Seasons") } };   /* short: 5 hints + Focus, Change */
     const Ui::Hint r[] = { { "UD", N_("Focus") }, { "LR", N_("Change") } };
-    const bool full = detail.specialFeatures > 0;   /* no room left for Focus */
+    /* 2 has something to do (an episode's seasons, a title's extras): its
+     * hint shown, no room left for Focus */
+    const bool full = detail.specialFeatures > 0 || !detail.seriesId.empty();
     Ui::footer(l, full ? 5 : 4, full ? r + 1 : r, (hasAudio || hasSub || hasVersions || hasScenes) ? (full ? 1 : 2) : 0);
     if (overviewPanel) renderOverviewPanel();
 }
