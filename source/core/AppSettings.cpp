@@ -7,9 +7,37 @@
 #include "../player/VideoSurface.h"
 #include "../player/vo_wiifin.h"
 #include "../player/WiiPlayer.h"
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+
+/* wiifin.cfg is never left half-written (#46): saveSettings writes
+ * wiifin.cfg.tmp, keeps the previous file as wiifin.cfg.bak, then renames
+ * the new one into place.  loadSettings reads the first of the three that
+ * is whole, so a power cut or a crash during a save loses nothing. */
+namespace {
+
+/* A file saveSettings finished: it starts with wiifin_cfg=2 and ends with
+ * end=1.  One from before this format (no wiifin_cfg line) counts when it
+ * holds a setting at all. */
+bool cfgWhole(const std::string& path) {
+    FILE* f = fopen(path.c_str(), "r");
+    if (!f) return false;
+    char line[512];
+    bool first = true, framed = false, any = false, ended = false;
+    while (fgets(line, sizeof(line), f)) {
+        if (first) framed = strncmp(line, "wiifin_cfg=", 11) == 0;
+        first = false;
+        if (strchr(line, '=')) any = true;
+        ended = strncmp(line, "end=1", 5) == 0;
+    }
+    fclose(f);
+    return framed ? ended : any;
+}
+
+} // namespace
 
 void App::loadSettings() {
     /* the clock as the console's region writes it, unless wiifin.cfg says */
@@ -17,7 +45,19 @@ void App::loadSettings() {
     Lang::choose(-1);   /* the Wii's language, unless wiifin.cfg says */
     startView = currentView();
     if (settingsPath.empty()) return;
-    FILE* f = fopen(settingsPath.c_str(), "r");
+    /* the saved file, else the one before it, else a save that stopped
+     * before its rename */
+    std::string from;
+    for (const std::string& p : { settingsPath, settingsPath + ".bak", settingsPath + ".tmp" })
+        if (cfgWhole(p)) { from = p; break; }
+    if (from.empty()) {
+        SYS_Report("[Settings] none saved yet in %s\n", settingsPath.c_str());
+        return;
+    }
+    if (from != settingsPath)
+        SYS_Report("[Settings] %s is empty or cut short: read %s instead\n",
+                   settingsPath.c_str(), from.c_str());
+    FILE* f = fopen(from.c_str(), "r");
     if (!f) return;
 
     profiles.clear();
@@ -186,8 +226,13 @@ void App::logSettings() {
 
 void App::saveSettings() {
     if (settingsPath.empty()) return;
-    FILE* f = fopen(settingsPath.c_str(), "w");
-    if (!f) return;
+    const std::string tmp = settingsPath + ".tmp", bak = settingsPath + ".bak";
+    FILE* f = fopen(tmp.c_str(), "w");
+    if (!f) {
+        SYS_Report("[Settings] cannot write %s: %s\n", tmp.c_str(), strerror(errno));
+        return;
+    }
+    fprintf(f, "wiifin_cfg=2\n");
     fprintf(f, "ssl_verify=%d\n",      jellyfinClient.sslVerify ? 1 : 0);
     fprintf(f, "music_enabled=%d\n",    musicEnabled ? 1 : 0);
     fprintf(f, "ui_sounds=%d\n",        SoundFX::enabled() ? 1 : 0);
@@ -229,6 +274,26 @@ void App::saveSettings() {
             fprintf(f, "profile.%d.pass_hash=%s\n", i, sanitizeConfigValue(p.passHash).c_str());
         }
     }
-    fflush(f);
-    fclose(f);
+    fprintf(f, "end=1\n");
+    /* all of it on the card before it replaces the saved file */
+    bool ok = fflush(f) == 0 && !ferror(f);
+    if (ok && fsync(fileno(f)) != 0) ok = false;
+    int err = errno;
+    if (fclose(f) != 0) { ok = false; err = errno; }
+    if (!ok) {
+        SYS_Report("[Settings] writing %s failed (%s): the saved settings are kept\n",
+                   tmp.c_str(), strerror(err));
+        remove(tmp.c_str());
+        return;
+    }
+    /* the saved file becomes the backup, the new one takes its place
+     * (FAT's rename does not replace an existing file) */
+    if (cfgWhole(settingsPath)) {
+        remove(bak.c_str());
+        if (rename(settingsPath.c_str(), bak.c_str()) != 0)
+            SYS_Report("[Settings] no backup of %s: %s\n", settingsPath.c_str(), strerror(errno));
+    }
+    remove(settingsPath.c_str());
+    if (rename(tmp.c_str(), settingsPath.c_str()) != 0)
+        SYS_Report("[Settings] cannot rename %s: %s (it is read from there)\n", tmp.c_str(), strerror(errno));
 }
