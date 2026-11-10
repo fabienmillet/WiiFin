@@ -21,8 +21,8 @@ namespace Ui {
  * row-of-carousels home screen of the old Wii video channels.  Luhu: black,
  * silver and green; Sushi: dark grey and orange (two more of those
  * channels' colours). */
-enum class Theme { Light = 0, Dark = 1, Flix = 2, Luhu = 3, Sushi = 4 };
-static const int THEME_COUNT = 5;
+enum class Theme { Light = 0, Dark = 1, Flix = 2, Luhu = 3, Sushi = 4, Christmas = 5 };
+static const int THEME_COUNT = 5;   /* the ones to choose; Christmas comes by itself */
 
 struct Palette {
     u32 bgTop, bgBottom, stripe;          /* screen background               */
@@ -38,7 +38,13 @@ struct Palette {
 
 void        setTheme(Theme t);
 Theme       nextTheme(Theme t);
+/* The look drawn: Christmas (pine green, red and falling snow) from
+ * December 1 to January 6 while festive() is on, the chosen one otherwise */
 Theme       theme();
+Theme       chosenTheme();   /* the one picked in the settings (saved) */
+void        setFestive(bool on);
+bool        festive();
+void        forceFestive(bool on);   /* tests: Christmas whatever the date */
 const char* themeName(Theme t);
 const Palette& pal();
 /* Solid colours instead of gradients (no banding on 480i TVs) */
