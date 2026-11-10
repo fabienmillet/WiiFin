@@ -292,6 +292,9 @@ void App::init(const char* argv0) {
                WiiUtils::widescreen ? "16:9" : "4:3",
                (unsigned)(SYS_GetArena1Size() / 1024), (unsigned)(SYS_GetArena2Size() / 1024),
                settingsPath.empty() ? "(none)" : settingsPath.c_str());
+    /* where the loader started WiiFin from: a launcher that changes it
+     * between runs reads another wiifin.cfg each time (#46) */
+    SYS_Report("[Settings] started as %s\n", (argv0 && argv0[0]) ? argv0 : "(no path: a channel or a forwarder)");
     /* One DeviceId per console (a hash of its id: the log is public);
      * wiifin.cfg's device_id, read by loadSettings, overrides it */
     {
