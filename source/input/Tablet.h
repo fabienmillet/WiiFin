@@ -1,3 +1,5 @@
+/* SPDX-FileCopyrightText: 2026 quatric and the libwiiinput contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* USB pen tablets and the uDraw GameTablet, from libwiiinput.
  *
  * Works from the tablet's own HID report descriptor, so any tablet that

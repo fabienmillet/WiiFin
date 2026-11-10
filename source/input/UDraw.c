@@ -1,3 +1,5 @@
+/* SPDX-FileCopyrightText: 2026 quatric and the libwiiinput contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* THQ uDraw GameTablet, a Wii Remote extension.  See Tablet.h.
  *
  * libogc's wiiuse has no uDraw: an extension it does not know goes
@@ -110,13 +112,21 @@ int __wrap_classic_ctrl_handshake(struct wiimote_t *wm, struct classic_ctrl_t *c
  * (lp_acl_write).  wiiuse sends one command at a time and waits for its
  * answer with no timeout, so a dropped one stops every command after it:
  * an extension's handshake then never ends, and a uDraw (or a Nunchuk) is
- * never seen.  A command that has had no answer for this long goes again. */
-#define RESEND_MS 300
-#define WIIMOTES  6
+ * never seen.  A command that has had no answer for this long goes again.
+ *
+ * Only a uDraw's remote is touched: one whose extension has just been
+ * plugged in and is not yet identified (the handshake, for at most
+ * HANDSHAKE_MS after the status report that announced it), or one that
+ * already has a uDraw.  Every other command on every other remote is left
+ * to wiiuse. */
+#define RESEND_MS     300
+#define HANDSHAKE_MS  8000
+#define WIIMOTES      6
 
 static struct {
 	const struct cmd_blk_t *cmd;
 	u32 since;
+	u32 ext_since; /* the status report that said an extension is plugged in, or 0 */
 } ud_sent[WIIMOTES];
 
 static void resend_stalled(struct wiimote_t *wm)
@@ -126,6 +136,12 @@ static void resend_stalled(struct wiimote_t *wm)
 
 	if (i < 0 || i >= WIIMOTES)
 		return;
+	if (wm->exp.type != EXP_UDRAW &&
+	    !(wm->exp.type == EXP_NONE && ud_sent[i].ext_since &&
+	      now_ms() - ud_sent[i].ext_since <= HANDSHAKE_MS)) {
+		ud_sent[i].cmd = NULL;
+		return;
+	}
 	if (!cmd || cmd->state != CMD_SENT) {
 		ud_sent[i].cmd = NULL;
 		return;
@@ -177,6 +193,8 @@ void __wrap_parse_event(struct wiimote_t *wm)
 			_CPU_ISR_Restore(level);
 		}
 	}
+	if (chan >= 0 && chan < WIIMOTES && wm->event_buf[0] == 0x20) /* status: bit 1 = extension */
+		ud_sent[chan].ext_since = (wm->event_buf[3] & 0x02) ? (now_ms() | 1) : 0;
 	__real_parse_event(wm);
 	resend_stalled(wm);
 	/* unplugged: wiiuse has put the expansion type back to none */

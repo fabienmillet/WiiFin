@@ -1,3 +1,5 @@
+/* SPDX-FileCopyrightText: 2026 quatric and the libwiiinput contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* The device drivers taken from libwiiinput (github.com/quatric/libwiiinput)
  * that Input calls into, and what they share. */
 #ifndef WIIFIN_INPUTDRIVERS_H
