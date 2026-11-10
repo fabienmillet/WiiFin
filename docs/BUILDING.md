@@ -7,7 +7,7 @@ How to build WiiFin from source and run it while working on it. To install a rel
 - [devkitPro](https://devkitpro.org) with `devkitPPC`, `libogc`, and `wii-dev` portlibs
 - Graphics: `GRRLIB`, `libpngu`, `freetype`, `libjpeg`
 - mbedTLS (bundled under `libs/`, cross-compiled by `setup.sh`)
-- The controller libraries [libwupc](https://github.com/FIX94/libwupc) (Wii U Pro Controller), [libwiidrc](https://github.com/FIX94/libwiidrc) (Wii U GamePad) and [libsicksaxis](https://github.com/xerpi/libsicksaxis) (DualShock 3): built into `libs/controllers` by `tools/controllers/build.sh` (`setup.sh` runs it). Without them WiiFin still compiles, without those controllers.
+- [libwiidrc](https://github.com/FIX94/libwiidrc) (Wii U GamePad, MIT): built into `libs/controllers` by `tools/controllers/build.sh` (`setup.sh` runs it). Without it WiiFin still compiles, without the GamePad.
 - MPlayer CE as `libmplayer.a`, for playback: prebuilt in `libs/mplayer-ce-build`, rebuilt from source by `tools/mplayer/build.sh` (see [MPLAYER_CE_BUILD.md](../MPLAYER_CE_BUILD.md)). Without it, WiiFin still compiles but cannot play.
 
 ## Building
