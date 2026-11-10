@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WiiFin\n"
 "Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
-"POT-Creation-Date: 2026-10-16 19:15+0200\n"
+"POT-Creation-Date: 2026-11-10 13:21+0100\n"
 "PO-Revision-Date: 2026-10-11 02:59+0200\n"
 "Last-Translator: WiiFin\n"
 "Language-Team: Korean\n"
@@ -17,97 +17,97 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: source/core/App.cpp:92
+#: source/core/App.cpp:93
 msgid "Retry"
 msgstr "다시 시도"
 
-#: source/core/App.cpp:93 source/core/App.cpp:467
+#: source/core/App.cpp:94 source/core/App.cpp:471
 #: source/player/PlayerView.cpp:579 source/ui/ConnectView.cpp:595
 #: source/ui/ConnectView.cpp:666 source/ui/ConnectView.cpp:727
-#: source/ui/LibraryDetail.cpp:441 source/ui/LibraryHome.cpp:383
-#: source/ui/LibraryHome.cpp:425 source/ui/LibraryHome.cpp:492
-#: source/ui/LibraryItems.cpp:577 source/ui/LibraryItems.cpp:650
-#: source/ui/LibraryItems.cpp:662 source/ui/LibraryMusic.cpp:135
+#: source/ui/LibraryDetail.cpp:443 source/ui/LibraryHome.cpp:384
+#: source/ui/LibraryHome.cpp:426 source/ui/LibraryHome.cpp:493
+#: source/ui/LibraryItems.cpp:579 source/ui/LibraryItems.cpp:652
+#: source/ui/LibraryItems.cpp:664 source/ui/LibraryMusic.cpp:135
 #: source/ui/LibraryPhotos.cpp:226 source/ui/LibraryScenes.cpp:113
 #: source/ui/LibrarySearch.cpp:194 source/ui/LibrarySearch.cpp:264
-#: source/ui/LibraryShows.cpp:261 source/ui/LibraryShows.cpp:266
-#: source/ui/LibraryShows.cpp:364 source/ui/LibrarySpecials.cpp:185
+#: source/ui/LibraryShows.cpp:270 source/ui/LibraryShows.cpp:275
+#: source/ui/LibraryShows.cpp:373 source/ui/LibrarySpecials.cpp:185
 #: source/ui/LibrarySuggestions.cpp:333 source/ui/LibrarySuggestions.cpp:360
 #: source/ui/LibrarySuggestions.cpp:379 source/ui/LibrarySuggestions.cpp:428
-#: source/ui/LibraryView.cpp:1510 source/ui/MusicPlayerView.cpp:907
+#: source/ui/LibraryView.cpp:1511 source/ui/MusicPlayerView.cpp:907
 #: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:166
-#: source/ui/SettingsView.cpp:116 source/ui/SettingsView.cpp:468
+#: source/ui/SettingsView.cpp:116 source/ui/SettingsView.cpp:475
 msgid "Back"
 msgstr "뒤로"
 
-#: source/core/App.cpp:96 source/core/AppProfiles.cpp:210
+#: source/core/App.cpp:97 source/core/AppProfiles.cpp:210
 msgid "OK"
 msgstr "확인"
 
-#: source/core/App.cpp:414
+#: source/core/App.cpp:418
 msgid "Does the whole picture fit your TV?"
 msgstr "화면 전체가 TV에 다 보입니까?"
 
-#: source/core/App.cpp:415
+#: source/core/App.cpp:419
 msgid "Older TVs (CRT) often cut the edges of the picture."
 msgstr "오래된 TV(CRT)는 화면 가장자리가 잘리곤 합니다."
 
 #. TRANSLATORS: one sentence on two lines, the second one naming the menu
-#: source/core/App.cpp:417
+#: source/core/App.cpp:421
 msgid "You can shrink it to fit now, or later in"
 msgstr "지금 화면을 줄이거나, 나중에 다음에서 줄일 수 있습니다:"
 
-#: source/core/App.cpp:418
+#: source/core/App.cpp:422
 msgid "Settings > Screen Area."
 msgstr "설정 > 화면 영역"
 
-#: source/core/App.cpp:419
+#: source/core/App.cpp:423
 msgid "Adjust"
 msgstr "조정"
 
-#: source/core/App.cpp:420 source/core/App.cpp:422
+#: source/core/App.cpp:424 source/core/App.cpp:426
 msgid "Not now"
 msgstr "나중에"
 
-#: source/core/App.cpp:421 source/core/App.cpp:759
+#: source/core/App.cpp:425 source/core/App.cpp:763
 #: source/core/AppProfiles.cpp:162 source/ui/ConnectView.cpp:594
 #: source/ui/ConnectView.cpp:665 source/ui/ConnectView.cpp:726
-#: source/ui/LibraryDetail.cpp:187 source/ui/LibraryHome.cpp:491
-#: source/ui/LibraryShows.cpp:266 source/ui/LibrarySuggestions.cpp:360
+#: source/ui/LibraryDetail.cpp:189 source/ui/LibraryHome.cpp:492
+#: source/ui/LibraryShows.cpp:275 source/ui/LibrarySuggestions.cpp:360
 #: source/ui/MusicPlayerView.cpp:906
 msgid "Select"
 msgstr "선택"
 
-#: source/core/App.cpp:438
+#: source/core/App.cpp:442
 msgid "Connect To Jellyfin"
 msgstr "Jellyfin에 연결"
 
-#: source/core/App.cpp:439 source/ui/LibraryHome.cpp:435
-#: source/ui/SettingsView.cpp:104 source/ui/SettingsView.cpp:351
+#: source/core/App.cpp:443 source/ui/LibraryHome.cpp:436
+#: source/ui/SettingsView.cpp:104 source/ui/SettingsView.cpp:352
 msgid "Settings"
 msgstr "설정"
 
-#: source/core/App.cpp:440
+#: source/core/App.cpp:444
 msgid "Exit"
 msgstr "종료"
 
-#: source/core/App.cpp:464
+#: source/core/App.cpp:468
 msgid "Connecting to the network..."
 msgstr "네트워크에 연결 중..."
 
-#: source/core/App.cpp:466
+#: source/core/App.cpp:470
 msgid "This is taking long: the Wii's network may need a restart."
 msgstr "오래 걸립니다: Wii 네트워크를 다시 시작해야 할 수 있습니다."
 
-#: source/core/App.cpp:472
+#: source/core/App.cpp:476
 msgid "No network connection"
 msgstr "네트워크 연결 없음"
 
-#: source/core/App.cpp:473
+#: source/core/App.cpp:477
 msgid "Check the Wii's Internet settings, then try again."
 msgstr "Wii 본체 설정의 인터넷 설정을 확인한 후 다시 시도하세요."
 
-#: source/core/App.cpp:760 source/ui/LibraryHome.cpp:329
+#: source/core/App.cpp:764 source/ui/LibraryHome.cpp:330
 msgid "Menu"
 msgstr "메뉴"
 
@@ -120,7 +120,7 @@ msgid "This profile is locked"
 msgstr "잠긴 프로필입니다"
 
 #: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:115
-#: source/ui/SettingsView.cpp:467
+#: source/ui/SettingsView.cpp:474
 msgid "Choose"
 msgstr "고르기"
 
@@ -149,7 +149,7 @@ msgid "Four digits, asked each time it opens"
 msgstr "4자리 숫자, 열 때마다 묻습니다"
 
 #: source/core/AppProfiles.cpp:181 source/core/AppProfiles.cpp:194
-#: source/ui/SettingsView.cpp:73 source/ui/SettingsView.cpp:269
+#: source/ui/SettingsView.cpp:73 source/ui/SettingsView.cpp:270
 msgid "Choose a passcode"
 msgstr "PIN을 정하세요"
 
@@ -157,11 +157,11 @@ msgstr "PIN을 정하세요"
 msgid "Four digits, asked when this profile opens"
 msgstr "4자리 숫자, 프로필을 열 때 묻습니다"
 
-#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:266
+#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:267
 msgid "Enter it again"
 msgstr "한 번 더 입력하세요"
 
-#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:269
+#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:270
 msgid "The two didn't match: once more"
 msgstr "일치하지 않습니다. 다시 입력하세요"
 
@@ -173,11 +173,11 @@ msgstr "그럼 매번 비밀번호를 입력합니다"
 msgid "Or Quick Connect: this profile keeps no sign-in on the Wii"
 msgstr "또는 빠른 연결. 이 Wii에 로그인 정보를 남기지 않습니다"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:411
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:414
 msgid "Grid"
 msgstr "그리드"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:411
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:414
 msgid "Rows"
 msgstr "가로줄"
 
@@ -189,15 +189,15 @@ msgstr "나중에 설정에서 바꿀 수 있습니다"
 msgid "Which home screen?"
 msgstr "홈 화면 선택"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:414
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:417
 msgid "List"
 msgstr "목록"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:414
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:417
 msgid "List + Posters"
 msgstr "목록 + 포스터"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:414
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:417
 msgid "Posters"
 msgstr "포스터"
 
@@ -209,16 +209,16 @@ msgstr "라이브러리 보기 선택"
 msgid "HOME Menu"
 msgstr "HOME 메뉴"
 
-#: source/core/HomeMenu.cpp:183 source/ui/LibraryDetail.cpp:187
+#: source/core/HomeMenu.cpp:183 source/ui/LibraryDetail.cpp:189
 msgid "Confirm"
 msgstr "확인"
 
-#: source/core/HomeMenu.cpp:184 source/ui/LibraryDetail.cpp:473
+#: source/core/HomeMenu.cpp:184 source/ui/LibraryDetail.cpp:477
 #: source/ui/MusicPlayerView.cpp:903
 msgid "Close"
 msgstr "닫기"
 
-#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:230
+#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:231
 msgid "Reset"
 msgstr "리셋"
 
@@ -261,7 +261,7 @@ msgstr "자막 불러오는 중..."
 
 #: source/core/PlaySession.cpp:218 source/core/PlaySession.cpp:248
 #: source/core/PlaySession.cpp:707 source/player/PlayerView.cpp:562
-#: source/ui/LibraryView.cpp:1474 source/ui/MusicPlayerView.cpp:887
+#: source/ui/LibraryView.cpp:1475 source/ui/MusicPlayerView.cpp:887
 msgid "Loading..."
 msgstr "불러오는 중..."
 
@@ -296,7 +296,7 @@ msgid "Loading next episode..."
 msgstr "다음 에피소드 불러오는 중..."
 
 #: source/core/PlaySession.cpp:540 source/player/PlayerView.cpp:448
-#: source/player/PlayerView.cpp:480 source/ui/LibraryHome.cpp:379
+#: source/player/PlayerView.cpp:480 source/ui/LibraryHome.cpp:380
 msgid "No next episode"
 msgstr "다음 에피소드 없음"
 
@@ -532,7 +532,7 @@ msgstr "크레딧 건너뛰기"
 msgid "Skip intro"
 msgstr "인트로 건너뛰기"
 
-#: source/player/PlayerView.cpp:279 source/ui/LibraryDetail.cpp:429
+#: source/player/PlayerView.cpp:279 source/ui/LibraryDetail.cpp:431
 msgid "Off"
 msgstr "없음"
 
@@ -565,12 +565,12 @@ msgstr "버퍼링 중..."
 msgid "Zoom"
 msgstr "줌"
 
-#: source/player/PlayerView.cpp:579 source/ui/LibraryDetail.cpp:420
+#: source/player/PlayerView.cpp:579 source/ui/LibraryDetail.cpp:422
 msgid "Audio"
 msgstr "오디오"
 
 #: source/player/PlayerView.cpp:579 source/player/PlayerView.cpp:715
-#: source/ui/LibraryDetail.cpp:420
+#: source/ui/LibraryDetail.cpp:422
 msgid "Subtitles"
 msgstr "자막"
 
@@ -664,13 +664,13 @@ msgid "%d episodes"
 msgstr "총 %d화"
 
 #. TRANSLATORS: how many seasons a series has
-#: source/ui/BrowseHome.cpp:742 source/ui/LibraryShows.cpp:200
+#: source/ui/BrowseHome.cpp:742 source/ui/LibraryShows.cpp:209
 #, c-format
 msgid "%d season"
 msgstr "%d개 시즌"
 
-#: source/ui/BrowseHome.cpp:742 source/ui/LibraryItems.cpp:545
-#: source/ui/LibraryShows.cpp:200
+#: source/ui/BrowseHome.cpp:742 source/ui/LibraryItems.cpp:547
+#: source/ui/LibraryShows.cpp:209
 #, c-format
 msgid "%d seasons"
 msgstr "%d개 시즌"
@@ -699,15 +699,15 @@ msgid "Browse"
 msgstr "둘러보기"
 
 #: source/ui/BrowseHome.cpp:886 source/ui/BrowseHome.cpp:887
-#: source/ui/LibraryHome.cpp:329 source/ui/LibraryHome.cpp:382
-#: source/ui/LibraryItems.cpp:577 source/ui/LibrarySearch.cpp:263
+#: source/ui/LibraryHome.cpp:330 source/ui/LibraryHome.cpp:383
+#: source/ui/LibraryItems.cpp:579 source/ui/LibrarySearch.cpp:263
 #: source/ui/LibrarySpecials.cpp:185 source/ui/LibrarySuggestions.cpp:428
 #: source/ui/ProfileView.cpp:165 source/ui/SettingsView.cpp:115
 msgid "Open"
 msgstr "열기"
 
 #: source/ui/BrowseHome.cpp:886 source/ui/BrowseHome.cpp:887
-#: source/ui/LibraryHome.cpp:329 source/ui/LibrarySearch.cpp:15
+#: source/ui/LibraryHome.cpp:330 source/ui/LibrarySearch.cpp:15
 #: source/ui/LibrarySearch.cpp:169 source/ui/LibrarySearch.cpp:195
 msgid "Search"
 msgstr "검색"
@@ -753,7 +753,7 @@ msgid "Server URL set. Enter your credentials."
 msgstr "서버 URL을 설정했습니다. 계정 정보를 입력하세요."
 
 #: source/ui/ConnectView.cpp:476 source/ui/ConnectView.cpp:591
-#: source/ui/SettingsView.cpp:231
+#: source/ui/SettingsView.cpp:232
 msgid "Done"
 msgstr "완료"
 
@@ -790,7 +790,7 @@ msgid "Username"
 msgstr "사용자 이름"
 
 #: source/ui/ConnectView.cpp:581 source/ui/ConnectView.cpp:610
-#: source/ui/SettingsView.cpp:446
+#: source/ui/SettingsView.cpp:453
 msgid "Password"
 msgstr "비밀번호"
 
@@ -813,7 +813,7 @@ msgstr "입력"
 msgid "Shift"
 msgstr "시프트"
 
-#: source/ui/ConnectView.cpp:594 source/ui/SettingsView.cpp:230
+#: source/ui/ConnectView.cpp:594 source/ui/SettingsView.cpp:231
 msgid "Move"
 msgstr "이동"
 
@@ -859,7 +859,7 @@ msgstr "승인됨! 로그인 중..."
 msgid "Error. Press A to retry."
 msgstr "오류. A를 눌러 다시 시도하세요."
 
-#: source/ui/ConnectView.cpp:666 source/ui/LibraryDetail.cpp:187
+#: source/ui/ConnectView.cpp:666 source/ui/LibraryDetail.cpp:189
 #: source/ui/ProfileView.cpp:158 source/ui/ProfileView.cpp:162
 msgid "Cancel"
 msgstr "취소"
@@ -913,116 +913,116 @@ msgstr "스페이스"
 msgid "← Delete"
 msgstr "← 삭제"
 
-#: source/ui/LibraryDetail.cpp:165
+#: source/ui/LibraryDetail.cpp:167
 msgid "Resume playback?"
 msgstr "이어서 재생하시겠습니까?"
 
 #. TRANSLATORS: under "Resume playback?": where it stopped, h:mm:ss or m:ss
-#: source/ui/LibraryDetail.cpp:171
+#: source/ui/LibraryDetail.cpp:173
 #, c-format
 msgid "at %d:%02d:%02d"
 msgstr "%d:%02d:%02d부터"
 
-#: source/ui/LibraryDetail.cpp:172
+#: source/ui/LibraryDetail.cpp:174
 #, c-format
 msgid "at %d:%02d"
 msgstr "%d:%02d부터"
 
-#: source/ui/LibraryDetail.cpp:177
+#: source/ui/LibraryDetail.cpp:179
 msgid "Continue"
 msgstr "이어서 재생"
 
-#: source/ui/LibraryDetail.cpp:177
+#: source/ui/LibraryDetail.cpp:179
 msgid "From Start"
 msgstr "처음부터"
 
-#: source/ui/LibraryDetail.cpp:232 source/ui/LibraryDetail.cpp:441
+#: source/ui/LibraryDetail.cpp:234 source/ui/LibraryDetail.cpp:443
 #: source/ui/LibraryMusic.cpp:135 source/ui/LibraryScenes.cpp:113
-#: source/ui/LibraryShows.cpp:261 source/ui/MusicPlayerView.cpp:902
+#: source/ui/LibraryShows.cpp:270 source/ui/MusicPlayerView.cpp:902
 msgid "Play"
 msgstr "재생"
 
-#: source/ui/LibraryDetail.cpp:259
+#: source/ui/LibraryDetail.cpp:261
 #, c-format
 msgid "%ds"
 msgstr "%d초"
 
-#: source/ui/LibraryDetail.cpp:265 source/ui/LibraryDetail.cpp:443
-#: source/ui/LibraryShows.cpp:365 source/ui/LibrarySort.cpp:15
+#: source/ui/LibraryDetail.cpp:267 source/ui/LibraryDetail.cpp:445
+#: source/ui/LibraryShows.cpp:374 source/ui/LibrarySort.cpp:15
 msgid "Watched"
 msgstr "시청함"
 
 #. TRANSLATORS: hours and minutes into the video, then how much of it is watched
-#: source/ui/LibraryDetail.cpp:285
+#: source/ui/LibraryDetail.cpp:287
 #, c-format
 msgid "Resume at %dh%02d (%d%%)"
 msgstr "%d시간 %02d분부터 재개 (%d%%)"
 
-#: source/ui/LibraryDetail.cpp:286
+#: source/ui/LibraryDetail.cpp:288
 #, c-format
 msgid "Resume at %dmin (%d%%)"
 msgstr "%d분부터 재개 (%d%%)"
 
-#: source/ui/LibraryDetail.cpp:315
+#: source/ui/LibraryDetail.cpp:317
 msgid "Read more"
 msgstr "더 보기"
 
-#: source/ui/LibraryDetail.cpp:325
+#: source/ui/LibraryDetail.cpp:327
 msgid "Cast & crew"
 msgstr "출연진 및 제작진"
 
-#: source/ui/LibraryDetail.cpp:339
+#: source/ui/LibraryDetail.cpp:341
 msgid "(director)"
 msgstr "(감독)"
 
-#: source/ui/LibraryDetail.cpp:404
+#: source/ui/LibraryDetail.cpp:406
 #, c-format
 msgid "%d chapters"
 msgstr "%d개 챕터"
 
-#: source/ui/LibraryDetail.cpp:406 source/ui/LibraryDetail.cpp:441
+#: source/ui/LibraryDetail.cpp:408 source/ui/LibraryDetail.cpp:443
 #: source/ui/LibraryScenes.cpp:79 source/ui/LibrarySpecials.cpp:25
 msgid "Scenes"
 msgstr "장면"
 
-#: source/ui/LibraryDetail.cpp:420
+#: source/ui/LibraryDetail.cpp:422
 msgid "Version"
 msgstr "버전"
 
-#: source/ui/LibraryDetail.cpp:442 source/ui/LibraryShows.cpp:243
-#: source/ui/LibraryShows.cpp:262 source/ui/LibraryShows.cpp:267
+#: source/ui/LibraryDetail.cpp:444 source/ui/LibraryShows.cpp:252
+#: source/ui/LibraryShows.cpp:271 source/ui/LibraryShows.cpp:276
 msgid "Favorite"
 msgstr "즐겨찾기"
 
-#: source/ui/LibraryDetail.cpp:442 source/ui/LibraryShows.cpp:262
-#: source/ui/LibraryShows.cpp:267
+#: source/ui/LibraryDetail.cpp:444 source/ui/LibraryShows.cpp:271
+#: source/ui/LibraryShows.cpp:276
 msgid "Unfavorite"
 msgstr "즐겨찾기 해제"
 
-#: source/ui/LibraryDetail.cpp:443 source/ui/LibraryShows.cpp:365
+#: source/ui/LibraryDetail.cpp:445 source/ui/LibraryShows.cpp:374
 msgid "Unwatched"
 msgstr "미시청"
 
 #. TRANSLATORS: an episode's page: 2 opens its series' seasons
-#: source/ui/LibraryDetail.cpp:445 source/ui/LibrarySpecials.cpp:43
+#: source/ui/LibraryDetail.cpp:447 source/ui/LibrarySpecials.cpp:43
 msgid "Extras"
 msgstr "부가 영상"
 
 #. TRANSLATORS: at the bottom of a series' page: Down shows its seasons
-#: source/ui/LibraryDetail.cpp:445 source/ui/LibraryShows.cpp:234
-#: source/ui/LibraryShows.cpp:262
+#: source/ui/LibraryDetail.cpp:447 source/ui/LibraryShows.cpp:243
+#: source/ui/LibraryShows.cpp:271
 msgid "Seasons"
 msgstr "시즌"
 
-#: source/ui/LibraryDetail.cpp:446 source/ui/SettingsView.cpp:467
+#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:474
 msgid "Change"
 msgstr "변경"
 
-#: source/ui/LibraryDetail.cpp:446
+#: source/ui/LibraryDetail.cpp:448
 msgid "Focus"
 msgstr "이동"
 
-#: source/ui/LibraryDetail.cpp:473
+#: source/ui/LibraryDetail.cpp:477
 msgid "Scroll"
 msgstr "스크롤"
 
@@ -1072,99 +1072,99 @@ msgstr "노래"
 msgid "Activity"
 msgstr "활동"
 
-#: source/ui/LibraryHome.cpp:330 source/ui/LibraryHome.cpp:383
-#: source/ui/LibraryHome.cpp:425 source/ui/LibraryItems.cpp:582
-#: source/ui/LibraryItems.cpp:664 source/ui/LibrarySuggestions.cpp:334
+#: source/ui/LibraryHome.cpp:331 source/ui/LibraryHome.cpp:384
+#: source/ui/LibraryHome.cpp:426 source/ui/LibraryItems.cpp:584
+#: source/ui/LibraryItems.cpp:666 source/ui/LibrarySuggestions.cpp:334
 #: source/ui/LibrarySuggestions.cpp:361 source/ui/LibrarySuggestions.cpp:380
 #: source/ui/LibrarySuggestions.cpp:429
 msgid "Tab"
 msgstr "탭"
 
-#: source/ui/LibraryHome.cpp:361 source/ui/LibrarySuggestions.cpp:319
+#: source/ui/LibraryHome.cpp:362 source/ui/LibrarySuggestions.cpp:319
 #: source/ui/LibrarySuggestions.cpp:346
 msgid "IN PROGRESS"
 msgstr "시청 중"
 
-#: source/ui/LibraryHome.cpp:368
+#: source/ui/LibraryHome.cpp:369
 msgid "Nothing in progress"
 msgstr "시청 중인 항목 없음"
 
-#: source/ui/LibraryHome.cpp:372
+#: source/ui/LibraryHome.cpp:373
 msgid "NEXT UP"
 msgstr "다음 볼 항목"
 
-#: source/ui/LibraryHome.cpp:382
+#: source/ui/LibraryHome.cpp:383
 msgid "Row"
 msgstr "줄"
 
-#: source/ui/LibraryHome.cpp:397
+#: source/ui/LibraryHome.cpp:398
 msgid "No favorites"
 msgstr "즐겨찾기 없음"
 
-#: source/ui/LibraryHome.cpp:424 source/ui/LibrarySuggestions.cpp:333
+#: source/ui/LibraryHome.cpp:425 source/ui/LibrarySuggestions.cpp:333
 #: source/ui/LibrarySuggestions.cpp:379
 msgid "Detail"
 msgstr "상세"
 
-#: source/ui/LibraryHome.cpp:435
+#: source/ui/LibraryHome.cpp:436
 msgid "Back to Jellyfin"
 msgstr "Jellyfin으로 돌아가기"
 
-#: source/ui/LibraryHome.cpp:435
+#: source/ui/LibraryHome.cpp:436
 msgid "Now Playing"
 msgstr "재생 중"
 
-#: source/ui/LibraryHome.cpp:435
+#: source/ui/LibraryHome.cpp:436
 msgid "Switch Profile"
 msgstr "프로필 전환"
 
-#: source/ui/LibraryHome.cpp:435
+#: source/ui/LibraryHome.cpp:436
 msgid "WiiFin Menu"
 msgstr "WiiFin 메뉴"
 
-#: source/ui/LibraryItems.cpp:477
+#: source/ui/LibraryItems.cpp:479
 msgid "This library is empty"
 msgstr "이 라이브러리는 비어 있습니다"
 
-#: source/ui/LibraryItems.cpp:510
+#: source/ui/LibraryItems.cpp:512
 msgid "COLLECTION"
 msgstr "컬렉션"
 
-#: source/ui/LibraryItems.cpp:510 source/ui/LibrarySearch.cpp:234
+#: source/ui/LibraryItems.cpp:512 source/ui/LibrarySearch.cpp:234
 #: source/ui/LibraryView.cpp:106
 msgid "SERIES"
 msgstr "시리즈"
 
-#: source/ui/LibraryItems.cpp:511
+#: source/ui/LibraryItems.cpp:513
 msgid "FOLDER"
 msgstr "폴더"
 
-#: source/ui/LibraryItems.cpp:543
+#: source/ui/LibraryItems.cpp:545
 msgid "1 season"
 msgstr "1개 시즌"
 
-#: source/ui/LibraryItems.cpp:578 source/ui/LibraryItems.cpp:663
-#: source/ui/LibraryMusic.cpp:135 source/ui/LibraryShows.cpp:261
-#: source/ui/LibraryShows.cpp:266 source/ui/LibraryShows.cpp:364
+#: source/ui/LibraryItems.cpp:580 source/ui/LibraryItems.cpp:665
+#: source/ui/LibraryMusic.cpp:135 source/ui/LibraryShows.cpp:270
+#: source/ui/LibraryShows.cpp:275 source/ui/LibraryShows.cpp:373
 #: source/ui/MusicPlayerView.cpp:902
 msgid "Shuffle"
 msgstr "셔플"
 
-#: source/ui/LibraryItems.cpp:578 source/ui/LibraryItems.cpp:650
-#: source/ui/LibraryItems.cpp:663
+#: source/ui/LibraryItems.cpp:580 source/ui/LibraryItems.cpp:652
+#: source/ui/LibraryItems.cpp:665
 msgid "Sort"
 msgstr "정렬"
 
-#: source/ui/LibraryItems.cpp:582 source/ui/LibraryItems.cpp:588
+#: source/ui/LibraryItems.cpp:584 source/ui/LibraryItems.cpp:590
 msgid "A-Z"
 msgstr "A-Z"
 
-#: source/ui/LibraryItems.cpp:585 source/ui/LibraryItems.cpp:588
-#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:467
+#: source/ui/LibraryItems.cpp:587 source/ui/LibraryItems.cpp:590
+#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:474
 msgid "Page"
 msgstr "페이지"
 
-#: source/ui/LibraryItems.cpp:652
+#: source/ui/LibraryItems.cpp:654
 #, c-format
 msgid "Page %d / %d"
 msgstr "%d / %d 페이지"
@@ -1250,22 +1250,22 @@ msgid "New search"
 msgstr "새 검색"
 
 #. TRANSLATORS: under the series' poster: A on it plays the first episode
-#: source/ui/LibraryShows.cpp:182
+#: source/ui/LibraryShows.cpp:191
 msgid "Play from the start"
 msgstr "처음부터 재생"
 
 #. TRANSLATORS: before the series' actors' names
-#: source/ui/LibraryShows.cpp:226
+#: source/ui/LibraryShows.cpp:235
 msgid "With"
 msgstr "출연"
 
 #. TRANSLATORS: E = episode, its number in the season
-#: source/ui/LibraryShows.cpp:349
+#: source/ui/LibraryShows.cpp:358
 #, c-format
 msgid "E%02d"
 msgstr "E%02d"
 
-#: source/ui/LibraryShows.cpp:364 source/ui/LibrarySpecials.cpp:185
+#: source/ui/LibraryShows.cpp:373 source/ui/LibrarySpecials.cpp:185
 msgid "Details"
 msgstr "상세 정보"
 
@@ -1524,7 +1524,7 @@ msgstr "컬렉션을 사용할 수 없습니다"
 msgid "Favorites unavailable"
 msgstr "즐겨찾기를 사용할 수 없습니다"
 
-#: source/ui/LibraryView.cpp:1506
+#: source/ui/LibraryView.cpp:1507
 msgid "Error"
 msgstr "오류"
 
@@ -1674,325 +1674,342 @@ msgstr "화면 설정"
 msgid "Made with ❤ for Jellyfin"
 msgstr "Jellyfin을 위해 ❤을 담아 만들었습니다"
 
-#: source/ui/SettingsView.cpp:222 source/ui/SettingsView.cpp:431
+#: source/ui/SettingsView.cpp:223 source/ui/SettingsView.cpp:434
 msgid "Screen Area"
 msgstr "화면 영역"
 
-#: source/ui/SettingsView.cpp:223
+#: source/ui/SettingsView.cpp:224
 msgid "Move each arrow until its tip sits right in"
 msgstr "각 화살표의 끝이 TV 화면의 모서리에"
 
-#: source/ui/SettingsView.cpp:224
+#: source/ui/SettingsView.cpp:225
 msgid "the corner of your TV screen."
 msgstr "딱 맞을 때까지 움직이세요."
 
-#: source/ui/SettingsView.cpp:226
+#: source/ui/SettingsView.cpp:227
 #, c-format
 msgid "Left %d   ·   Top %d   ·   Right %d   ·   Bottom %d"
 msgstr "왼쪽 %d   ·   위 %d   ·   오른쪽 %d   ·   아래 %d"
 
-#: source/ui/SettingsView.cpp:230
+#: source/ui/SettingsView.cpp:231
 msgid "Switch"
 msgstr "전환"
 
-#: source/ui/SettingsView.cpp:354
+#: source/ui/SettingsView.cpp:355
 msgid "SSL Verification"
 msgstr "SSL 검증"
 
-#: source/ui/SettingsView.cpp:355
+#: source/ui/SettingsView.cpp:356
 msgid "Validate the server HTTPS certificate (disable for self-signed certs)"
 msgstr "서버 HTTPS 인증서 검증 (자체 서명이면 끄기)"
 
-#: source/ui/SettingsView.cpp:356 source/ui/SettingsView.cpp:358
-#: source/ui/SettingsView.cpp:362 source/ui/SettingsView.cpp:390
-#: source/ui/SettingsView.cpp:394 source/ui/SettingsView.cpp:426
+#: source/ui/SettingsView.cpp:357 source/ui/SettingsView.cpp:359
+#: source/ui/SettingsView.cpp:363 source/ui/SettingsView.cpp:391
+#: source/ui/SettingsView.cpp:395 source/ui/SettingsView.cpp:429
+#: source/ui/SettingsView.cpp:451
 msgid "OFF"
 msgstr "끔"
 
-#: source/ui/SettingsView.cpp:356 source/ui/SettingsView.cpp:358
-#: source/ui/SettingsView.cpp:362 source/ui/SettingsView.cpp:394
-#: source/ui/SettingsView.cpp:426
+#: source/ui/SettingsView.cpp:357 source/ui/SettingsView.cpp:359
+#: source/ui/SettingsView.cpp:363 source/ui/SettingsView.cpp:395
+#: source/ui/SettingsView.cpp:429
 msgid "ON"
 msgstr "켬"
 
-#: source/ui/SettingsView.cpp:357
+#: source/ui/SettingsView.cpp:358
 msgid "Background Music"
 msgstr "배경 음악"
 
-#: source/ui/SettingsView.cpp:357
+#: source/ui/SettingsView.cpp:358
 msgid "Play background music in menus"
 msgstr "메뉴에서 배경 음악을 재생합니다"
 
-#: source/ui/SettingsView.cpp:359
+#: source/ui/SettingsView.cpp:360
 msgid "Interface Sounds"
 msgstr "효과음"
 
-#: source/ui/SettingsView.cpp:360
+#: source/ui/SettingsView.cpp:361
 msgid "Sounds in the menus; your own in sounds/ on the SD card"
 msgstr "메뉴 효과음. SD 카드의 sounds/에 직접 넣을 수 있습니다"
 
-#: source/ui/SettingsView.cpp:361
+#: source/ui/SettingsView.cpp:362
 msgid "The menus stay silent"
 msgstr "메뉴에서 소리를 내지 않습니다"
 
-#: source/ui/SettingsView.cpp:372
+#: source/ui/SettingsView.cpp:373
 #, c-format
 msgid "%.1f Mb/s; your connection (%.1f Mb/s measured) holds videos to %.1f"
 msgstr "%.1f Mb/s. 연결 속도(측정 %.1f Mb/s)로 최대 %.1f"
 
-#: source/ui/SettingsView.cpp:377
+#: source/ui/SettingsView.cpp:378
 #, c-format
 msgid "%.1f Mb/s: sharpest, for a wired adapter. Lower it if videos stutter"
 msgstr "%.1f Mb/s: 최고 화질, 유선 어댑터용. 끊기면 낮추세요"
 
-#: source/ui/SettingsView.cpp:381
+#: source/ui/SettingsView.cpp:382
 #, c-format
 msgid "Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering"
 msgstr "비트레이트: %.1f Mb/s. 버퍼링이 계속되면 낮추세요"
 
-#: source/ui/SettingsView.cpp:383
+#: source/ui/SettingsView.cpp:384
 msgid "Video Quality"
 msgstr "화질"
 
-#: source/ui/SettingsView.cpp:387
+#: source/ui/SettingsView.cpp:388
 msgid "Direct Play"
 msgstr "다이렉트 재생"
 
-#: source/ui/SettingsView.cpp:388
+#: source/ui/SettingsView.cpp:389
 msgid "Files the Wii can decode play as they are (SD DivX, DVD...): no server work"
 msgstr "Wii가 재생 가능한 파일(SD DivX, DVD...)은 그대로 재생: 서버 부담 없음"
 
-#: source/ui/SettingsView.cpp:389
+#: source/ui/SettingsView.cpp:390
 msgid "Every video is converted by the server"
 msgstr "모든 영상을 서버에서 변환합니다"
 
-#: source/ui/SettingsView.cpp:390
+#: source/ui/SettingsView.cpp:391 source/ui/SettingsView.cpp:451
 msgid "Auto"
 msgstr "자동"
 
-#: source/ui/SettingsView.cpp:391
+#: source/ui/SettingsView.cpp:392
 msgid "Smooth Motion"
 msgstr "부드러운 움직임"
 
-#: source/ui/SettingsView.cpp:392
+#: source/ui/SettingsView.cpp:393
 msgid "Blends frames on picture changes: films move evenly on 60 Hz TVs"
 msgstr "프레임을 섞어 60 Hz TV에서도 영화가 고르게 움직입니다"
 
-#: source/ui/SettingsView.cpp:393
+#: source/ui/SettingsView.cpp:394
 msgid "Each frame shown as is (24 fps films judder slightly on 60 Hz)"
 msgstr "프레임을 그대로 표시 (24 fps 영화는 60 Hz에서 약간 떨림)"
 
-#: source/ui/SettingsView.cpp:397
+#: source/ui/SettingsView.cpp:398
 msgid "Light, like the Wii Menu"
 msgstr "Wii 메뉴 같은 밝은 테마"
 
-#: source/ui/SettingsView.cpp:398
+#: source/ui/SettingsView.cpp:399
 msgid "Dark, for movie nights"
 msgstr "영화 보는 밤을 위한 어두운 테마"
 
-#: source/ui/SettingsView.cpp:399
+#: source/ui/SettingsView.cpp:400
 msgid "Red and charcoal, browse in rows like the old video channels"
 msgstr "빨강과 차콜, 옛 비디오 채널처럼 줄로 탐색"
 
-#: source/ui/SettingsView.cpp:400
+#: source/ui/SettingsView.cpp:401
 msgid "Black, silver and green"
 msgstr "검정, 은색, 초록"
 
-#: source/ui/SettingsView.cpp:401
+#: source/ui/SettingsView.cpp:402
 msgid "Dark grey and orange"
 msgstr "진한 회색, 주황"
 
-#: source/ui/SettingsView.cpp:405
+#: source/ui/SettingsView.cpp:406
+msgid "Christmas for now, until January 6"
+msgstr "1월 6일까지는 크리스마스"
+
+#: source/ui/SettingsView.cpp:406
 msgid "Theme"
 msgstr "테마"
 
-#: source/ui/SettingsView.cpp:409
+#: source/ui/SettingsView.cpp:412
 msgid "Home Screen"
 msgstr "홈 화면"
 
-#: source/ui/SettingsView.cpp:409
+#: source/ui/SettingsView.cpp:412
 msgid "Rows of posters to browse, like the old video channels"
 msgstr "옛 비디오 채널처럼 포스터를 줄로 표시"
 
-#: source/ui/SettingsView.cpp:410
+#: source/ui/SettingsView.cpp:413
 msgid "A grid of your libraries"
 msgstr "라이브러리를 그리드로 표시"
 
-#: source/ui/SettingsView.cpp:416
+#: source/ui/SettingsView.cpp:419
 msgid "Browse libraries with their artwork"
 msgstr "라이브러리를 포스터와 함께 표시"
 
-#: source/ui/SettingsView.cpp:417
+#: source/ui/SettingsView.cpp:420
 msgid "Libraries as text lists: quickest to browse big ones"
 msgstr "텍스트 목록: 큰 라이브러리도 빠르게 탐색"
 
-#: source/ui/SettingsView.cpp:418
+#: source/ui/SettingsView.cpp:421
 msgid "Text lists, with the cover of the selected title"
 msgstr "목록과 선택한 작품의 포스터"
 
-#: source/ui/SettingsView.cpp:421
+#: source/ui/SettingsView.cpp:424
 msgid "Library View"
 msgstr "라이브러리 보기"
 
-#: source/ui/SettingsView.cpp:423
+#: source/ui/SettingsView.cpp:426
 msgid "Disc Slot Light"
 msgstr "디스크 슬롯 조명"
 
-#: source/ui/SettingsView.cpp:424
+#: source/ui/SettingsView.cpp:427
 msgid "Pulses with the sound, as bright as the Wii Settings say"
 msgstr "소리에 맞춰 빛납니다 (밝기는 Wii 본체 설정대로)"
 
-#: source/ui/SettingsView.cpp:425
+#: source/ui/SettingsView.cpp:428
 msgid "Stays dark during playback"
 msgstr "재생 중에는 꺼져 있습니다"
 
-#: source/ui/SettingsView.cpp:431
+#: source/ui/SettingsView.cpp:434
 msgid "Shrink the interface if your TV crops the edges (overscan)"
 msgstr "TV에서 가장자리가 잘리면 화면을 줄입니다 (오버스캔)"
 
-#: source/ui/SettingsView.cpp:432
+#: source/ui/SettingsView.cpp:435
 msgid "Adjusted"
 msgstr "조정됨"
 
-#: source/ui/SettingsView.cpp:432
+#: source/ui/SettingsView.cpp:435
 msgid "Full"
 msgstr "전체"
 
-#: source/ui/SettingsView.cpp:434
+#: source/ui/SettingsView.cpp:437
 msgid "Backgrounds"
 msgstr "배경"
 
-#: source/ui/SettingsView.cpp:435
+#: source/ui/SettingsView.cpp:438
 msgid "Solid colours: no bands on TVs that show them in gradients"
 msgstr "단색: 그라데이션에 줄무늬가 생기는 TV용"
 
-#: source/ui/SettingsView.cpp:436
+#: source/ui/SettingsView.cpp:439
 msgid "Soft gradients, like the Wii Menu"
 msgstr "Wii 메뉴 같은 부드러운 그라데이션"
 
-#: source/ui/SettingsView.cpp:437
+#: source/ui/SettingsView.cpp:440
 msgid "Gradient"
 msgstr "그라데이션"
 
-#: source/ui/SettingsView.cpp:437
+#: source/ui/SettingsView.cpp:440
 msgid "Solid"
 msgstr "단색"
 
-#: source/ui/SettingsView.cpp:438
+#: source/ui/SettingsView.cpp:441
 msgid "Clock"
 msgstr "시계"
 
-#: source/ui/SettingsView.cpp:439
+#: source/ui/SettingsView.cpp:442
 msgid "13:30, the date as day/month"
 msgstr "13:30, 날짜는 일/월"
 
-#: source/ui/SettingsView.cpp:439
+#: source/ui/SettingsView.cpp:442
 msgid "1:30 PM, the date as month/day"
 msgstr "오후 1:30, 날짜는 월/일"
 
-#: source/ui/SettingsView.cpp:440
+#: source/ui/SettingsView.cpp:443
 msgid "12-hour"
 msgstr "12시간"
 
-#: source/ui/SettingsView.cpp:440
+#: source/ui/SettingsView.cpp:443
 msgid "24-hour"
 msgstr "24시간"
 
-#: source/ui/SettingsView.cpp:442
+#: source/ui/SettingsView.cpp:445
 msgid "Language"
 msgstr "언어"
 
-#: source/ui/SettingsView.cpp:443
+#: source/ui/SettingsView.cpp:446
 msgid "Chosen here, whatever the Wii's language"
 msgstr "Wii 언어와 관계없이 여기서 선택합니다"
 
-#: source/ui/SettingsView.cpp:443
+#: source/ui/SettingsView.cpp:446
 msgid "The Wii's language, as set in the Wii Settings"
 msgstr "Wii 본체 설정의 언어를 사용합니다"
 
-#: source/ui/SettingsView.cpp:446
+#: source/ui/SettingsView.cpp:448 source/ui/Ui.cpp:135
+msgid "Christmas"
+msgstr "크리스마스"
+
+#: source/ui/SettingsView.cpp:449
+msgid "Snow and Christmas colours from December 1 to January 6"
+msgstr "12월 1일부터 1월 6일까지 눈과 크리스마스 색상"
+
+#: source/ui/SettingsView.cpp:450
+msgid "The chosen theme all year round"
+msgstr "선택한 테마를 일 년 내내"
+
+#: source/ui/SettingsView.cpp:453
 msgid "Automatic"
 msgstr "자동"
 
-#: source/ui/SettingsView.cpp:446
+#: source/ui/SettingsView.cpp:453
 msgid "Passcode"
 msgstr "PIN"
 
-#: source/ui/SettingsView.cpp:448
+#: source/ui/SettingsView.cpp:455
 msgid "Opens at once on this Wii"
 msgstr "이 Wii에서 바로 열립니다"
 
-#: source/ui/SettingsView.cpp:449
+#: source/ui/SettingsView.cpp:456
 msgid "Asks the profile's four-digit passcode first"
 msgstr "먼저 프로필의 4자리 PIN을 묻습니다"
 
-#: source/ui/SettingsView.cpp:450
+#: source/ui/SettingsView.cpp:457
 msgid "Asks the password (or Quick Connect) each time"
 msgstr "매번 비밀번호(또는 빠른 연결)를 묻습니다"
 
-#: source/ui/SettingsView.cpp:453
+#: source/ui/SettingsView.cpp:460
 msgid "Sign-In"
 msgstr "로그인"
 
-#: source/ui/Ui.cpp:96
+#: source/ui/Ui.cpp:131
 msgid "Dark"
 msgstr "다크"
 
-#: source/ui/Ui.cpp:97
+#: source/ui/Ui.cpp:132
 msgid "Flix"
 msgstr "Flix"
 
-#: source/ui/Ui.cpp:98
+#: source/ui/Ui.cpp:133
 msgid "Luhu"
 msgstr "Luhu"
 
-#: source/ui/Ui.cpp:99
+#: source/ui/Ui.cpp:134
 msgid "Sushi"
 msgstr "Sushi"
 
-#: source/ui/Ui.cpp:100
+#: source/ui/Ui.cpp:136
 msgid "Light"
 msgstr "라이트"
 
-#: source/ui/Ui.cpp:614
+#: source/ui/Ui.cpp:672
 msgid "Mon"
 msgstr "월"
 
 #. TRANSLATORS: days of the week, abbreviated (the date under the clock)
-#: source/ui/Ui.cpp:614
+#: source/ui/Ui.cpp:672
 msgid "Sun"
 msgstr "일"
 
-#: source/ui/Ui.cpp:614
+#: source/ui/Ui.cpp:672
 msgid "Tue"
 msgstr "화"
 
-#: source/ui/Ui.cpp:614
+#: source/ui/Ui.cpp:672
 msgid "Wed"
 msgstr "수"
 
-#: source/ui/Ui.cpp:615
+#: source/ui/Ui.cpp:673
 msgid "Fri"
 msgstr "금"
 
-#: source/ui/Ui.cpp:615
+#: source/ui/Ui.cpp:673
 msgid "Sat"
 msgstr "토"
 
-#: source/ui/Ui.cpp:615
+#: source/ui/Ui.cpp:673
 msgid "Thu"
 msgstr "목"
 
 #. TRANSLATORS: after the time on the 12-hour clock, keep it short
-#: source/ui/Ui.cpp:621
+#: source/ui/Ui.cpp:679
 msgid "AM"
 msgstr "오전"
 
-#: source/ui/Ui.cpp:621
+#: source/ui/Ui.cpp:679
 msgid "PM"
 msgstr "오후"
 
 #. TRANSLATORS: heading of a message sent from the server's dashboard without one
-#: source/ui/Ui.cpp:946
+#: source/ui/Ui.cpp:1004
 msgid "Message"
 msgstr "메시지"

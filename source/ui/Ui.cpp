@@ -78,6 +78,18 @@ static const Palette SUSHI = {
     /* dim */                            0x000000B8,
 };
 
+static const Palette CHRISTMAS = {
+    /* bgTop, bgBottom, stripe */        0x1B3D2FFF, 0x091A12FF, 0xFFFFFF05,
+    /* cardTop, cardBottom, cardBorder */0x2D4D3EFF, 0x213B2FFF, 0x456B58FF,
+    /* text, textDim, textOnAccent */    0xF4F1E8FF, 0xA7B9ADFF, 0xFFFFFFFF,
+    /* accent, accentDark, glow */       0xD8343AFF, 0xFF8A8DFF, 0xF2C14E78,
+    /* shadow */                         0x00000080,
+    /* barTop, barBottom, barBorder */   0x284838FF, 0x152B21FF, 0x3D5F4EFF,
+    /* field, fieldBorder */             0x0F2219FF, 0x3D5F4EFF,
+    /* danger, ok */                     0xF0605AFF, 0x5BD17AFF,
+    /* dim */                            0x000000B8,
+};
+
 static Theme           s_theme = Theme::Dark;
 static HomeLayout      s_layout = HomeLayout::Rows;
 void       setHomeLayout(HomeLayout l) { s_layout = l; }
@@ -88,7 +100,30 @@ HomeLayout homeLayout()                { return s_layout; }
 static GRRLIB_ttfFont* s_font  = nullptr;
 
 void        setTheme(Theme t)   { s_theme = t; }
-Theme       theme()             { return s_theme; }
+Theme       chosenTheme()       { return s_theme; }
+
+static bool s_festive = true, s_forceFestive = false;
+void setFestive(bool on)   { s_festive = on; }
+bool festive()             { return s_festive; }
+void forceFestive(bool on) { s_forceFestive = on; }
+/* December 1 to January 6, by the Wii's clock (looked at once a minute) */
+static bool christmasTime()
+{
+    static time_t checked = 0;
+    static bool   is = false;
+    time_t now = time(nullptr);
+    if (now / 60 != checked / 60 || checked == 0) {
+        struct tm lt;
+        localtime_r(&now, &lt);
+        is = lt.tm_mon == 11 || (lt.tm_mon == 0 && lt.tm_mday <= 6);
+        checked = now;
+    }
+    return is;
+}
+Theme theme()
+{
+    return s_festive && (s_forceFestive || christmasTime()) ? Theme::Christmas : s_theme;
+}
 Theme       nextTheme(Theme t)  { return (Theme)(((int)t + 1) % THEME_COUNT); }
 const char* themeName(Theme t)
 {
@@ -97,13 +132,15 @@ const char* themeName(Theme t)
     case Theme::Flix: return N_("Flix");
     case Theme::Luhu: return N_("Luhu");
     case Theme::Sushi: return N_("Sushi");
+    case Theme::Christmas: return N_("Christmas");
     default:          return N_("Light");
     }
 }
 static const Palette& themePal()
 {
-    switch (s_theme) {
+    switch (theme()) {
     case Theme::Dark: return DARK;
+    case Theme::Christmas: return CHRISTMAS;
     case Theme::Flix: return FLIX;
     case Theme::Luhu: return LUHU;
     case Theme::Sushi: return SUSHI;
@@ -123,13 +160,14 @@ const Palette& pal()
     if (!s_solid) return themePal();
     static Palette flat;
     static int     flatFor = -1;
-    if (flatFor != (int)s_theme) {
+    const int shown = (int)theme();
+    if (flatFor != shown) {
         flat = themePal();
         flat.bgTop  = flat.bgBottom   = mix(flat.bgTop,   flat.bgBottom,   0.5f);
         flat.cardTop = flat.cardBottom = mix(flat.cardTop, flat.cardBottom, 0.5f);
         flat.barTop = flat.barBottom  = mix(flat.barTop,  flat.barBottom,  0.5f);
         flat.stripe = 0;
-        flatFor = (int)s_theme;
+        flatFor = shown;
     }
     return flat;
 }
@@ -407,6 +445,25 @@ void clipReset() { GRRLIB_ClipReset(); }
 
 /* ---- Components --------------------------------------------------------- */
 
+/* Snow falling slowly over the background, each flake swaying a little */
+static void snow()
+{
+    static const int FLAKES = 56;
+    const float t = (float)ticks_to_millisecs(gettime()) * 0.001f;
+    const float L = screenLeft(), W = screenRight() - L;
+    u32 seed = 12345;
+    for (int i = 0; i < FLAKES; ++i) {
+        seed = seed * 1103515245u + 12345u; const float a = (seed >> 8 & 0xFFFF) / 65535.0f;
+        seed = seed * 1103515245u + 12345u; const float b = (seed >> 8 & 0xFFFF) / 65535.0f;
+        seed = seed * 1103515245u + 12345u; const float c = (seed >> 8 & 0xFFFF) / 65535.0f;
+        const float size  = 1.0f + 2.0f * c;          /* the bigger, the nearer: */
+        const float speed = 12.0f + 14.0f * size;     /* faster and brighter */
+        const float y = fmodf(b * 500.0f + t * speed, 500.0f) - 10.0f;
+        const float x = L + a * W + 7.0f * sinf(t * (0.6f + b) + a * 6.28f);
+        circle(x, y, size, alpha(0xFFFFFFFF, 0.25f + 0.2f * size));
+    }
+}
+
 void background(bool withBand)
 {
     const Palette& p = pal();
@@ -423,10 +480,11 @@ void background(bool withBand)
         }
         GX_End();
     }
+    if (theme() == Theme::Christmas) snow();
     if (withBand) drawHeaderBand();
 }
 
-float headerBand() { return s_theme == Theme::Flix ? 44.0f : 0.0f; }
+float headerBand() { return theme() == Theme::Flix ? 44.0f : 0.0f; }
 
 void drawHeaderBand()
 {
