@@ -40,7 +40,7 @@ cfg clock_12h=0
 21500 B          the sections
 22500 B          leave
 24000 END
-expect logorder "musicLoop: exiting" "[Sound] move"
-expect nologafter "musicLoop: exiting" "ASND_End"
+expect logorder "[BGM] stopped" "[Sound] move"
+expect nologafter "[BGM] stopped" "[BGM] audio off"
 expect nologafter "[TOUR] t=8" "[Sound]"
 expect log [Settings] ssl 0, music 0, sounds 0, quality High, direct 0, smooth 0, theme Flix, home rows, view 2, light 0, area 1,0,0,0, solid 1, clock 12h
