@@ -88,7 +88,7 @@ On-screen hints show the buttons of the controller used last (GameCube: A green,
 
 **USB mouse**: the pointer; left button selects, right goes back, middle zooms the video, the wheel scrolls.
 
-**Pen tablet / uDraw GameTablet**: the pointer while the pen hovers; the tip selects, the side switch goes back.
+**Pen tablet / uDraw GameTablet**: the pointer while the pen hovers; the tip selects, the side switch goes back. On IOS58 only tablets from Wacom, Huion, Gaomon, XP-Pen, UGEE, Veikk, UC-Logic and Waltop are looked for, so that a plugged-in mouse or keyboard is never opened.
 
 ## ⚙️ Settings
 

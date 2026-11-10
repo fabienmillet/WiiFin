@@ -1,3 +1,5 @@
+/* SPDX-FileCopyrightText: 2026 quatric and the libwiiinput contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* A small HID report descriptor parser, enough to find a pen tablet's fields.
  *
  * Kept free of libogc so it can be built and tested on a computer.  Every
