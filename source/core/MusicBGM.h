@@ -4,7 +4,7 @@
  * MusicBGM — background music playback manager.
  *
  * Plays data/sounds/bgm.mp3 (or the SD card's sounds/bgm.mp3) in a loop via
- * ASND/libmad everywhere in the app except while MPlayer plays (ao_gekko
+ * libmad and ASND everywhere in the app except while MPlayer plays (ao_gekko
  * needs the DSP).  Call pause() before the player starts and resume() once
  * it has stopped.
  */
