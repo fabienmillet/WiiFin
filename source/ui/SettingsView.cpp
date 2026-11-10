@@ -4,6 +4,7 @@
 #include "../player/WiiPlayer.h"
 #include "../core/SoundFX.h"
 #include "../core/MusicBGM.h"
+#include "../core/MusicSession.h"
 #include "../core/Text.h"
 #include "../core/Lang.h"
 #include "../input/Input.h"
@@ -14,7 +15,7 @@
 
 /* The rows, by what they set (drawRow and activate take these) */
 enum Row { R_SSL, R_MUSIC, R_SOUNDS, R_QUALITY, R_DIRECT, R_SMOOTH, R_THEME, R_HOME, R_VIEW,
-           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_CHRISTMAS };
+           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_CHRISTMAS, R_AUTOPLAY };
 
 /* the sections: a profile's own look (WiiFin's menu: the start-up one,
  * theme and backgrounds only), what every profile shares, how a profile
@@ -58,7 +59,7 @@ void SettingsView::openSection(int s) {
     if (s == 0) rows = profile ? std::vector<int>{ R_THEME, R_BACKGROUNDS, R_HOME, R_VIEW }
                                : std::vector<int>{ R_THEME, R_BACKGROUNDS };
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE, R_AREA,
-                              R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT, R_CHRISTMAS };
+                              R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT, R_CHRISTMAS, R_AUTOPLAY };
     else rows = { R_SIGNIN };
     signInWant = profile ? profile->signIn : -1;
 }
@@ -166,6 +167,7 @@ void SettingsView::activate(int index) {
             Lang::choose(Lang::next(Lang::choice()));
             break;
         case R_CHRISTMAS: Ui::setFestive(!Ui::festive()); break;
+        case R_AUTOPLAY: MusicSession::setAutoplay(!MusicSession::autoplay()); break;
         case R_SIGNIN:   /* at once, a passcode, the password: chosen, applied on leaving */
             if (!profile) break;
             signInWant = (signInWant + 1) % 3;
@@ -449,6 +451,10 @@ void SettingsView::render(ir_t& ir) {
             Ui::festive() ? N_("Snow and Christmas colours from December 1 to January 6")
                           : N_("The chosen theme all year round"),
             Ui::festive() ? N_("Auto") : N_("OFF"), Ui::festive() ? 0xD8343AFF : 0x8A9099FF);
+    drawRow(R_AUTOPLAY, N_("Music Autoplay"),
+            MusicSession::autoplay() ? N_("When an album or a playlist ends, similar songs follow")
+                                     : N_("The music stops at the end of the album or playlist"),
+            MusicSession::autoplay() ? N_("ON") : N_("OFF"), MusicSession::autoplay() ? p.ok : 0x8A9099FF);
     if (profile) {
         static const char* const how[3]  = { N_("Automatic"), N_("Passcode"), N_("Password") };
         static const char* const desc[3] = {

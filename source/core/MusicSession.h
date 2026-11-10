@@ -17,5 +17,9 @@ bool stop(bool restoreAudio);
 /* each frame, on the main thread (RenderHook): the queue over by itself,
  * the session ended and the menu's audio back */
 void pump();
+/* When the queue ends (an album, a playlist): similar songs from Jellyfin
+ * follow (an Instant Mix), or the music stops (the default) */
+void setAutoplay(bool on);
+bool autoplay();
 
 } // namespace MusicSession

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <vector>
 #include <ogc/mutex.h>
@@ -132,6 +133,19 @@ static bool keepLine(const char* buf, unsigned long long ms)
     return true;
 }
 
+/* An audio-only status line ("A:  12.3 (12.3) of 180.0 (03:00.0) ...")
+ * gives the position of what is heard: the music player's clock */
+extern "C" volatile float g_wiifin_audio_pos;
+static void readAudioStatus(const char* buf)
+{
+    const char* p = buf;
+    while (*p == ' ' || *p == '\r' || *p == '\n') ++p;
+    if (p[0] != 'A' || p[1] != ':' || !strstr(p, " of ") || strstr(p, " V:")) return;
+    char* end = nullptr;
+    float a = strtof(p + 2, &end);
+    if (end != p + 2 && a >= 0.0f && a < 1e7f) g_wiifin_audio_pos = a;
+}
+
 extern "C" void __wrap_SYS_Report(char const* const fmt, ...)
 {
     char buf[1024];
@@ -140,6 +154,7 @@ extern "C" void __wrap_SYS_Report(char const* const fmt, ...)
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
     __real_SYS_Report("%s", buf);
+    readAudioStatus(buf);
 
     if (s_lock == LWP_MUTEX_NULL) return;
     unsigned long long ms = ticks_to_millisecs(gettime()) - s_t0;

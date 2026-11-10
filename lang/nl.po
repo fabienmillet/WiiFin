@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WiiFin\n"
 "Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
-"POT-Creation-Date: 2026-11-10 13:21+0100\n"
+"POT-Creation-Date: 2026-11-11 18:05+0100\n"
 "PO-Revision-Date: 2026-10-11 02:59+0200\n"
 "Last-Translator: WiiFin\n"
 "Language-Team: Dutch\n"
@@ -34,9 +34,9 @@ msgstr "Opnieuw proberen"
 #: source/ui/LibraryShows.cpp:373 source/ui/LibrarySpecials.cpp:185
 #: source/ui/LibrarySuggestions.cpp:333 source/ui/LibrarySuggestions.cpp:360
 #: source/ui/LibrarySuggestions.cpp:379 source/ui/LibrarySuggestions.cpp:428
-#: source/ui/LibraryView.cpp:1511 source/ui/MusicPlayerView.cpp:907
+#: source/ui/LibraryView.cpp:1511 source/ui/MusicPlayerView.cpp:927
 #: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:166
-#: source/ui/SettingsView.cpp:116 source/ui/SettingsView.cpp:475
+#: source/ui/SettingsView.cpp:117 source/ui/SettingsView.cpp:481
 msgid "Back"
 msgstr "Terug"
 
@@ -74,7 +74,7 @@ msgstr "Later"
 #: source/ui/ConnectView.cpp:665 source/ui/ConnectView.cpp:726
 #: source/ui/LibraryDetail.cpp:189 source/ui/LibraryHome.cpp:492
 #: source/ui/LibraryShows.cpp:275 source/ui/LibrarySuggestions.cpp:360
-#: source/ui/MusicPlayerView.cpp:906
+#: source/ui/MusicPlayerView.cpp:926
 msgid "Select"
 msgstr "Selecteren"
 
@@ -83,7 +83,7 @@ msgid "Connect To Jellyfin"
 msgstr "Verbinden met Jellyfin"
 
 #: source/core/App.cpp:443 source/ui/LibraryHome.cpp:436
-#: source/ui/SettingsView.cpp:104 source/ui/SettingsView.cpp:352
+#: source/ui/SettingsView.cpp:105 source/ui/SettingsView.cpp:354
 msgid "Settings"
 msgstr "Instellingen"
 
@@ -119,8 +119,8 @@ msgstr "Voer de pincode in"
 msgid "This profile is locked"
 msgstr "Dit profiel is vergrendeld"
 
-#: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:115
-#: source/ui/SettingsView.cpp:474
+#: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:116
+#: source/ui/SettingsView.cpp:480
 msgid "Choose"
 msgstr "Kiezen"
 
@@ -149,19 +149,19 @@ msgid "Four digits, asked each time it opens"
 msgstr "Vier cijfers, telkens gevraagd bij het openen"
 
 #: source/core/AppProfiles.cpp:181 source/core/AppProfiles.cpp:194
-#: source/ui/SettingsView.cpp:73 source/ui/SettingsView.cpp:270
+#: source/ui/SettingsView.cpp:74 source/ui/SettingsView.cpp:272
 msgid "Choose a passcode"
 msgstr "Kies een pincode"
 
-#: source/core/AppProfiles.cpp:181 source/ui/SettingsView.cpp:73
+#: source/core/AppProfiles.cpp:181 source/ui/SettingsView.cpp:74
 msgid "Four digits, asked when this profile opens"
 msgstr "Vier cijfers, gevraagd als dit profiel opent"
 
-#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:267
+#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:269
 msgid "Enter it again"
 msgstr "Nog een keer invoeren"
 
-#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:270
+#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:272
 msgid "The two didn't match: once more"
 msgstr "Ze komen niet overeen: nog een keer"
 
@@ -173,11 +173,11 @@ msgstr "Dan elke keer het wachtwoord"
 msgid "Or Quick Connect: this profile keeps no sign-in on the Wii"
 msgstr "Of Snel verbinden: dit profiel bewaart geen login op de Wii"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:414
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:416
 msgid "Grid"
 msgstr "Raster"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:414
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:416
 msgid "Rows"
 msgstr "Rijen"
 
@@ -189,15 +189,15 @@ msgstr "Later te wijzigen in Instellingen"
 msgid "Which home screen?"
 msgstr "Welk startscherm?"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:417
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:419
 msgid "List"
 msgstr "Lijst"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:417
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:419
 msgid "List + Posters"
 msgstr "Lijst + posters"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:417
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:419
 msgid "Posters"
 msgstr "Posters"
 
@@ -214,11 +214,11 @@ msgid "Confirm"
 msgstr "Bevestigen"
 
 #: source/core/HomeMenu.cpp:184 source/ui/LibraryDetail.cpp:477
-#: source/ui/MusicPlayerView.cpp:903
+#: source/ui/MusicPlayerView.cpp:923
 msgid "Close"
 msgstr "Sluiten"
 
-#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:231
+#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:233
 msgid "Reset"
 msgstr "Reset"
 
@@ -261,7 +261,7 @@ msgstr "Ondertiteling laden..."
 
 #: source/core/PlaySession.cpp:218 source/core/PlaySession.cpp:248
 #: source/core/PlaySession.cpp:707 source/player/PlayerView.cpp:562
-#: source/ui/LibraryView.cpp:1475 source/ui/MusicPlayerView.cpp:887
+#: source/ui/LibraryView.cpp:1475 source/ui/MusicPlayerView.cpp:907
 msgid "Loading..."
 msgstr "Laden..."
 
@@ -310,12 +310,12 @@ msgid "No previous episode"
 msgstr "Geen vorige aflevering"
 
 #: source/core/PlaySession.cpp:546 source/player/PlayerView.cpp:477
-#: source/ui/MusicPlayerView.cpp:1067
+#: source/ui/MusicPlayerView.cpp:1087
 msgid "Volume +"
 msgstr "Volume +"
 
 #: source/core/PlaySession.cpp:547 source/player/PlayerView.cpp:478
-#: source/ui/MusicPlayerView.cpp:1068
+#: source/ui/MusicPlayerView.cpp:1088
 msgid "Volume -"
 msgstr "Volume -"
 
@@ -325,12 +325,12 @@ msgid "Volume %d"
 msgstr "Volume %d"
 
 #: source/core/PlaySession.cpp:555 source/core/PlaySession.cpp:559
-#: source/ui/MusicPlayerView.cpp:1070 source/ui/MusicPlayerView.cpp:1074
+#: source/ui/MusicPlayerView.cpp:1090 source/ui/MusicPlayerView.cpp:1094
 msgid "Sound off"
 msgstr "Geluid uit"
 
 #: source/core/PlaySession.cpp:556 source/core/PlaySession.cpp:559
-#: source/ui/MusicPlayerView.cpp:1071 source/ui/MusicPlayerView.cpp:1074
+#: source/ui/MusicPlayerView.cpp:1091 source/ui/MusicPlayerView.cpp:1094
 msgid "Sound on"
 msgstr "Geluid aan"
 
@@ -702,7 +702,7 @@ msgstr "Bladeren"
 #: source/ui/LibraryHome.cpp:330 source/ui/LibraryHome.cpp:383
 #: source/ui/LibraryItems.cpp:579 source/ui/LibrarySearch.cpp:263
 #: source/ui/LibrarySpecials.cpp:185 source/ui/LibrarySuggestions.cpp:428
-#: source/ui/ProfileView.cpp:165 source/ui/SettingsView.cpp:115
+#: source/ui/ProfileView.cpp:165 source/ui/SettingsView.cpp:116
 msgid "Open"
 msgstr "Openen"
 
@@ -753,7 +753,7 @@ msgid "Server URL set. Enter your credentials."
 msgstr "Server-URL ingesteld. Vul je inloggegevens in."
 
 #: source/ui/ConnectView.cpp:476 source/ui/ConnectView.cpp:591
-#: source/ui/SettingsView.cpp:232
+#: source/ui/SettingsView.cpp:234
 msgid "Done"
 msgstr "Klaar"
 
@@ -790,7 +790,7 @@ msgid "Username"
 msgstr "Gebruikersnaam"
 
 #: source/ui/ConnectView.cpp:581 source/ui/ConnectView.cpp:610
-#: source/ui/SettingsView.cpp:453
+#: source/ui/SettingsView.cpp:459
 msgid "Password"
 msgstr "Wachtwoord"
 
@@ -813,7 +813,7 @@ msgstr "Typen"
 msgid "Shift"
 msgstr "Shift"
 
-#: source/ui/ConnectView.cpp:594 source/ui/SettingsView.cpp:231
+#: source/ui/ConnectView.cpp:594 source/ui/SettingsView.cpp:233
 msgid "Move"
 msgstr "Bewegen"
 
@@ -938,7 +938,7 @@ msgstr "Vanaf begin"
 
 #: source/ui/LibraryDetail.cpp:234 source/ui/LibraryDetail.cpp:443
 #: source/ui/LibraryMusic.cpp:135 source/ui/LibraryScenes.cpp:113
-#: source/ui/LibraryShows.cpp:270 source/ui/MusicPlayerView.cpp:902
+#: source/ui/LibraryShows.cpp:270 source/ui/MusicPlayerView.cpp:922
 msgid "Play"
 msgstr "Afspelen"
 
@@ -1014,7 +1014,7 @@ msgstr "Extra's"
 msgid "Seasons"
 msgstr "Seizoenen"
 
-#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:474
+#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:480
 msgid "Change"
 msgstr "Wijzigen"
 
@@ -1146,7 +1146,7 @@ msgstr "1 seizoen"
 #: source/ui/LibraryItems.cpp:580 source/ui/LibraryItems.cpp:665
 #: source/ui/LibraryMusic.cpp:135 source/ui/LibraryShows.cpp:270
 #: source/ui/LibraryShows.cpp:275 source/ui/LibraryShows.cpp:373
-#: source/ui/MusicPlayerView.cpp:902
+#: source/ui/MusicPlayerView.cpp:922
 msgid "Shuffle"
 msgstr "Willekeurig"
 
@@ -1160,7 +1160,7 @@ msgid "A-Z"
 msgstr "A-Z"
 
 #: source/ui/LibraryItems.cpp:587 source/ui/LibraryItems.cpp:590
-#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:474
+#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:480
 msgid "Page"
 msgstr "Pagina"
 
@@ -1174,7 +1174,7 @@ msgid "This photo can't be shown"
 msgstr "Deze foto kan niet worden getoond"
 
 #. TRANSLATORS: the photo's place in its folder
-#: source/ui/LibraryPhotos.cpp:223 source/ui/MusicPlayerView.cpp:857
+#: source/ui/LibraryPhotos.cpp:223 source/ui/MusicPlayerView.cpp:877
 #, c-format
 msgid "%d of %d"
 msgstr "%d van %d"
@@ -1553,84 +1553,84 @@ msgstr "Golf"
 msgid "Lyrics"
 msgstr "Songtekst"
 
-#: source/ui/MusicPlayerView.cpp:283
+#: source/ui/MusicPlayerView.cpp:286
 msgid "Added to the queue"
 msgstr "Aan wachtrij toegevoegd"
 
-#: source/ui/MusicPlayerView.cpp:283
+#: source/ui/MusicPlayerView.cpp:286
 msgid "Playing next"
 msgstr "Wordt hierna afgespeeld"
 
-#: source/ui/MusicPlayerView.cpp:664
+#: source/ui/MusicPlayerView.cpp:682
 msgid "No lyrics for this song"
 msgstr "Geen songtekst voor dit nummer"
 
-#: source/ui/MusicPlayerView.cpp:788 source/ui/MusicPlayerView.cpp:907
+#: source/ui/MusicPlayerView.cpp:806 source/ui/MusicPlayerView.cpp:927
 msgid "Up Next"
 msgstr "Hierna"
 
-#: source/ui/MusicPlayerView.cpp:790 source/ui/MusicPlayerView.cpp:993
+#: source/ui/MusicPlayerView.cpp:808 source/ui/MusicPlayerView.cpp:1013
 msgid "Shuffle off"
 msgstr "Willekeurig uit"
 
-#: source/ui/MusicPlayerView.cpp:790 source/ui/MusicPlayerView.cpp:993
+#: source/ui/MusicPlayerView.cpp:808 source/ui/MusicPlayerView.cpp:1013
 msgid "Shuffle on"
 msgstr "Willekeurig aan"
 
-#: source/ui/MusicPlayerView.cpp:791 source/ui/MusicPlayerView.cpp:1000
+#: source/ui/MusicPlayerView.cpp:809 source/ui/MusicPlayerView.cpp:1020
 msgid "Repeat all"
 msgstr "Alles herhalen"
 
-#: source/ui/MusicPlayerView.cpp:791 source/ui/MusicPlayerView.cpp:1000
+#: source/ui/MusicPlayerView.cpp:809 source/ui/MusicPlayerView.cpp:1020
 msgid "Repeat off"
 msgstr "Herhalen uit"
 
-#: source/ui/MusicPlayerView.cpp:791
+#: source/ui/MusicPlayerView.cpp:809
 msgid "Repeat one"
 msgstr "Nummer herhalen"
 
-#: source/ui/MusicPlayerView.cpp:853
+#: source/ui/MusicPlayerView.cpp:873
 msgid "NOW PLAYING"
 msgstr "NU AAN HET AFSPELEN"
 
 #. TRANSLATORS: the track's place in the queue; Shuffle: shuffle is on
-#: source/ui/MusicPlayerView.cpp:857
+#: source/ui/MusicPlayerView.cpp:877
 #, c-format
 msgid "%d of %d  ·  Shuffle"
 msgstr "%d van %d  ·  Willekeurig"
 
 #. TRANSLATORS: the track after this one: its title (and its artist)
-#: source/ui/MusicPlayerView.cpp:896
+#: source/ui/MusicPlayerView.cpp:916
 #, c-format
 msgid "Next:  %s"
 msgstr "Volgende:  %s"
 
-#: source/ui/MusicPlayerView.cpp:897
+#: source/ui/MusicPlayerView.cpp:917
 #, c-format
 msgid "Next:  %s  —  %s"
 msgstr "Volgende:  %s  —  %s"
 
-#: source/ui/MusicPlayerView.cpp:906
+#: source/ui/MusicPlayerView.cpp:926
 msgid "Track"
 msgstr "Nummer"
 
-#: source/ui/MusicPlayerView.cpp:906
+#: source/ui/MusicPlayerView.cpp:926
 msgid "Visualizer"
 msgstr "Visualisatie"
 
-#: source/ui/MusicPlayerView.cpp:989
+#: source/ui/MusicPlayerView.cpp:1009
 msgid "Added to favorites"
 msgstr "Toegevoegd aan favorieten"
 
-#: source/ui/MusicPlayerView.cpp:989
+#: source/ui/MusicPlayerView.cpp:1009
 msgid "Removed from favorites"
 msgstr "Verwijderd uit favorieten"
 
-#: source/ui/MusicPlayerView.cpp:1000
+#: source/ui/MusicPlayerView.cpp:1020
 msgid "Repeat this track"
 msgstr "Dit nummer herhalen"
 
-#: source/ui/MusicPlayerView.cpp:1069
+#: source/ui/MusicPlayerView.cpp:1089
 msgid "Volume"
 msgstr "Volume"
 
@@ -1658,296 +1658,308 @@ msgstr "Dit profiel verwijderen?"
 msgid "Its saved sign-in will be forgotten."
 msgstr "De opgeslagen login wordt vergeten."
 
-#: source/ui/SettingsView.cpp:22
+#: source/ui/SettingsView.cpp:23
 msgid "Sign-In Settings"
 msgstr "Inloginstellingen"
 
-#: source/ui/SettingsView.cpp:22
+#: source/ui/SettingsView.cpp:23
 msgid "System Settings"
 msgstr "Systeeminstellingen"
 
-#: source/ui/SettingsView.cpp:22
+#: source/ui/SettingsView.cpp:23
 msgid "View Settings"
 msgstr "Weergave-instellingen"
 
-#: source/ui/SettingsView.cpp:112
+#: source/ui/SettingsView.cpp:113
 msgid "Made with ❤ for Jellyfin"
 msgstr "Met ❤ gemaakt voor Jellyfin"
 
-#: source/ui/SettingsView.cpp:223 source/ui/SettingsView.cpp:434
+#: source/ui/SettingsView.cpp:225 source/ui/SettingsView.cpp:436
 msgid "Screen Area"
 msgstr "Beeldgebied"
 
-#: source/ui/SettingsView.cpp:224
+#: source/ui/SettingsView.cpp:226
 msgid "Move each arrow until its tip sits right in"
 msgstr "Verplaats elke pijl tot de punt precies in"
 
-#: source/ui/SettingsView.cpp:225
+#: source/ui/SettingsView.cpp:227
 msgid "the corner of your TV screen."
 msgstr "de hoek van je tv-scherm staat."
 
-#: source/ui/SettingsView.cpp:227
+#: source/ui/SettingsView.cpp:229
 #, c-format
 msgid "Left %d   ·   Top %d   ·   Right %d   ·   Bottom %d"
 msgstr "Links %d   ·   Boven %d   ·   Rechts %d   ·   Onder %d"
 
-#: source/ui/SettingsView.cpp:231
+#: source/ui/SettingsView.cpp:233
 msgid "Switch"
 msgstr "Wisselen"
 
-#: source/ui/SettingsView.cpp:355
+#: source/ui/SettingsView.cpp:357
 msgid "SSL Verification"
 msgstr "SSL-verificatie"
 
-#: source/ui/SettingsView.cpp:356
+#: source/ui/SettingsView.cpp:358
 msgid "Validate the server HTTPS certificate (disable for self-signed certs)"
 msgstr "Controleert het HTTPS-certificaat (uit voor zelfondertekende)"
 
-#: source/ui/SettingsView.cpp:357 source/ui/SettingsView.cpp:359
-#: source/ui/SettingsView.cpp:363 source/ui/SettingsView.cpp:391
-#: source/ui/SettingsView.cpp:395 source/ui/SettingsView.cpp:429
-#: source/ui/SettingsView.cpp:451
+#: source/ui/SettingsView.cpp:359 source/ui/SettingsView.cpp:361
+#: source/ui/SettingsView.cpp:365 source/ui/SettingsView.cpp:393
+#: source/ui/SettingsView.cpp:397 source/ui/SettingsView.cpp:431
+#: source/ui/SettingsView.cpp:453 source/ui/SettingsView.cpp:457
 msgid "OFF"
 msgstr "UIT"
 
-#: source/ui/SettingsView.cpp:357 source/ui/SettingsView.cpp:359
-#: source/ui/SettingsView.cpp:363 source/ui/SettingsView.cpp:395
-#: source/ui/SettingsView.cpp:429
+#: source/ui/SettingsView.cpp:359 source/ui/SettingsView.cpp:361
+#: source/ui/SettingsView.cpp:365 source/ui/SettingsView.cpp:397
+#: source/ui/SettingsView.cpp:431 source/ui/SettingsView.cpp:457
 msgid "ON"
 msgstr "AAN"
 
-#: source/ui/SettingsView.cpp:358
+#: source/ui/SettingsView.cpp:360
 msgid "Background Music"
 msgstr "Achtergrondmuziek"
 
-#: source/ui/SettingsView.cpp:358
+#: source/ui/SettingsView.cpp:360
 msgid "Play background music in menus"
 msgstr "Muziek in de menu's"
 
-#: source/ui/SettingsView.cpp:360
+#: source/ui/SettingsView.cpp:362
 msgid "Interface Sounds"
 msgstr "Interfacegeluiden"
 
-#: source/ui/SettingsView.cpp:361
+#: source/ui/SettingsView.cpp:363
 msgid "Sounds in the menus; your own in sounds/ on the SD card"
 msgstr "Geluiden in de menu's; eigen geluiden in sounds/ op de SD-kaart"
 
-#: source/ui/SettingsView.cpp:362
+#: source/ui/SettingsView.cpp:364
 msgid "The menus stay silent"
 msgstr "De menu's blijven stil"
 
-#: source/ui/SettingsView.cpp:373
+#: source/ui/SettingsView.cpp:375
 #, c-format
 msgid "%.1f Mb/s; your connection (%.1f Mb/s measured) holds videos to %.1f"
 msgstr "%.1f Mb/s; je verbinding (%.1f Mb/s gemeten) beperkt video's tot %.1f"
 
-#: source/ui/SettingsView.cpp:378
+#: source/ui/SettingsView.cpp:380
 #, c-format
 msgid "%.1f Mb/s: sharpest, for a wired adapter. Lower it if videos stutter"
 msgstr "%.1f Mb/s: het scherpst, voor een bekabelde adapter. Verlaag bij haperen"
 
-#: source/ui/SettingsView.cpp:382
+#: source/ui/SettingsView.cpp:384
 #, c-format
 msgid "Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering"
 msgstr "Videobitrate: %.1f Mb/s. Verlaag als het afspelen blijft bufferen"
 
-#: source/ui/SettingsView.cpp:384
+#: source/ui/SettingsView.cpp:386
 msgid "Video Quality"
 msgstr "Videokwaliteit"
 
-#: source/ui/SettingsView.cpp:388
+#: source/ui/SettingsView.cpp:390
 msgid "Direct Play"
 msgstr "Direct afspelen"
 
-#: source/ui/SettingsView.cpp:389
+#: source/ui/SettingsView.cpp:391
 msgid "Files the Wii can decode play as they are (SD DivX, DVD...): no server work"
 msgstr "Wat de Wii aankan, speelt direct af (SD DivX, dvd...): server rust"
 
-#: source/ui/SettingsView.cpp:390
+#: source/ui/SettingsView.cpp:392
 msgid "Every video is converted by the server"
 msgstr "Elke video wordt door de server omgezet"
 
-#: source/ui/SettingsView.cpp:391 source/ui/SettingsView.cpp:451
+#: source/ui/SettingsView.cpp:393 source/ui/SettingsView.cpp:453
 msgid "Auto"
 msgstr "Auto"
 
-#: source/ui/SettingsView.cpp:392
+#: source/ui/SettingsView.cpp:394
 msgid "Smooth Motion"
 msgstr "Vloeiende beweging"
 
-#: source/ui/SettingsView.cpp:393
+#: source/ui/SettingsView.cpp:395
 msgid "Blends frames on picture changes: films move evenly on 60 Hz TVs"
 msgstr "Mengt beelden bij wissels: films lopen vloeiend op 60Hz-tv's"
 
-#: source/ui/SettingsView.cpp:394
+#: source/ui/SettingsView.cpp:396
 msgid "Each frame shown as is (24 fps films judder slightly on 60 Hz)"
 msgstr "Elk beeld zoals het is (24 fps-films haperen licht op 60 Hz)"
 
-#: source/ui/SettingsView.cpp:398
+#: source/ui/SettingsView.cpp:400
 msgid "Light, like the Wii Menu"
 msgstr "Licht, zoals het Wii-menu"
 
-#: source/ui/SettingsView.cpp:399
+#: source/ui/SettingsView.cpp:401
 msgid "Dark, for movie nights"
 msgstr "Donker, voor filmavonden"
 
-#: source/ui/SettingsView.cpp:400
+#: source/ui/SettingsView.cpp:402
 msgid "Red and charcoal, browse in rows like the old video channels"
 msgstr "Rood en antraciet, in rijen zoals de oude videokanalen"
 
-#: source/ui/SettingsView.cpp:401
+#: source/ui/SettingsView.cpp:403
 msgid "Black, silver and green"
 msgstr "Zwart, zilver en groen"
 
-#: source/ui/SettingsView.cpp:402
+#: source/ui/SettingsView.cpp:404
 msgid "Dark grey and orange"
 msgstr "Donkergrijs en oranje"
 
-#: source/ui/SettingsView.cpp:406
+#: source/ui/SettingsView.cpp:408
 msgid "Christmas for now, until January 6"
 msgstr "Nu even Kerst, tot 6 januari"
 
-#: source/ui/SettingsView.cpp:406
+#: source/ui/SettingsView.cpp:408
 msgid "Theme"
 msgstr "Thema"
 
-#: source/ui/SettingsView.cpp:412
+#: source/ui/SettingsView.cpp:414
 msgid "Home Screen"
 msgstr "Startscherm"
 
-#: source/ui/SettingsView.cpp:412
+#: source/ui/SettingsView.cpp:414
 msgid "Rows of posters to browse, like the old video channels"
 msgstr "Rijen posters, zoals de oude videokanalen"
 
-#: source/ui/SettingsView.cpp:413
+#: source/ui/SettingsView.cpp:415
 msgid "A grid of your libraries"
 msgstr "Een raster van je bibliotheken"
 
-#: source/ui/SettingsView.cpp:419
+#: source/ui/SettingsView.cpp:421
 msgid "Browse libraries with their artwork"
 msgstr "Bibliotheken met hun afbeeldingen"
 
-#: source/ui/SettingsView.cpp:420
+#: source/ui/SettingsView.cpp:422
 msgid "Libraries as text lists: quickest to browse big ones"
 msgstr "Bibliotheken als tekstlijsten: het snelst voor grote"
 
-#: source/ui/SettingsView.cpp:421
+#: source/ui/SettingsView.cpp:423
 msgid "Text lists, with the cover of the selected title"
 msgstr "Tekstlijsten, met de hoes van de gekozen titel"
 
-#: source/ui/SettingsView.cpp:424
+#: source/ui/SettingsView.cpp:426
 msgid "Library View"
 msgstr "Bibliotheekweergave"
 
-#: source/ui/SettingsView.cpp:426
+#: source/ui/SettingsView.cpp:428
 msgid "Disc Slot Light"
 msgstr "Lampje disc-sleuf"
 
-#: source/ui/SettingsView.cpp:427
+#: source/ui/SettingsView.cpp:429
 msgid "Pulses with the sound, as bright as the Wii Settings say"
 msgstr "Pulseert met het geluid, zo fel als in de Wii-instellingen"
 
-#: source/ui/SettingsView.cpp:428
+#: source/ui/SettingsView.cpp:430
 msgid "Stays dark during playback"
 msgstr "Blijft uit tijdens het afspelen"
 
-#: source/ui/SettingsView.cpp:434
+#: source/ui/SettingsView.cpp:436
 msgid "Shrink the interface if your TV crops the edges (overscan)"
 msgstr "Verkleint de interface als je tv de randen afsnijdt (overscan)"
 
-#: source/ui/SettingsView.cpp:435
+#: source/ui/SettingsView.cpp:437
 msgid "Adjusted"
 msgstr "Aangepast"
 
-#: source/ui/SettingsView.cpp:435
+#: source/ui/SettingsView.cpp:437
 msgid "Full"
 msgstr "Volledig"
 
-#: source/ui/SettingsView.cpp:437
+#: source/ui/SettingsView.cpp:439
 msgid "Backgrounds"
 msgstr "Achtergronden"
 
-#: source/ui/SettingsView.cpp:438
+#: source/ui/SettingsView.cpp:440
 msgid "Solid colours: no bands on TVs that show them in gradients"
 msgstr "Effen kleuren: geen banden op tv's die ze in verlopen tonen"
 
-#: source/ui/SettingsView.cpp:439
+#: source/ui/SettingsView.cpp:441
 msgid "Soft gradients, like the Wii Menu"
 msgstr "Zachte verlopen, zoals het Wii-menu"
 
-#: source/ui/SettingsView.cpp:440
+#: source/ui/SettingsView.cpp:442
 msgid "Gradient"
 msgstr "Verloop"
 
-#: source/ui/SettingsView.cpp:440
+#: source/ui/SettingsView.cpp:442
 msgid "Solid"
 msgstr "Effen"
 
-#: source/ui/SettingsView.cpp:441
+#: source/ui/SettingsView.cpp:443
 msgid "Clock"
 msgstr "Klok"
 
-#: source/ui/SettingsView.cpp:442
+#: source/ui/SettingsView.cpp:444
 msgid "13:30, the date as day/month"
 msgstr "13:30, datum als dag/maand"
 
-#: source/ui/SettingsView.cpp:442
+#: source/ui/SettingsView.cpp:444
 msgid "1:30 PM, the date as month/day"
 msgstr "1:30 PM, datum als maand/dag"
 
-#: source/ui/SettingsView.cpp:443
+#: source/ui/SettingsView.cpp:445
 msgid "12-hour"
 msgstr "12 uur"
 
-#: source/ui/SettingsView.cpp:443
+#: source/ui/SettingsView.cpp:445
 msgid "24-hour"
 msgstr "24 uur"
 
-#: source/ui/SettingsView.cpp:445
+#: source/ui/SettingsView.cpp:447
 msgid "Language"
 msgstr "Taal"
 
-#: source/ui/SettingsView.cpp:446
+#: source/ui/SettingsView.cpp:448
 msgid "Chosen here, whatever the Wii's language"
 msgstr "Hier gekozen, los van de taal van de Wii"
 
-#: source/ui/SettingsView.cpp:446
+#: source/ui/SettingsView.cpp:448
 msgid "The Wii's language, as set in the Wii Settings"
 msgstr "De taal van de Wii, zoals in de Wii-instellingen"
 
-#: source/ui/SettingsView.cpp:448 source/ui/Ui.cpp:135
+#: source/ui/SettingsView.cpp:450 source/ui/Ui.cpp:135
 msgid "Christmas"
 msgstr "Kerst"
 
-#: source/ui/SettingsView.cpp:449
+#: source/ui/SettingsView.cpp:451
 msgid "Snow and Christmas colours from December 1 to January 6"
 msgstr "Sneeuw en kerstkleuren van 1 december tot 6 januari"
 
-#: source/ui/SettingsView.cpp:450
+#: source/ui/SettingsView.cpp:452
 msgid "The chosen theme all year round"
 msgstr "Het gekozen thema het hele jaar"
 
-#: source/ui/SettingsView.cpp:453
+#: source/ui/SettingsView.cpp:454
+msgid "Music Autoplay"
+msgstr "Automatisch afspelen"
+
+#: source/ui/SettingsView.cpp:455
+msgid "When an album or a playlist ends, similar songs follow"
+msgstr "Na een album of afspeellijst volgen vergelijkbare nummers"
+
+#: source/ui/SettingsView.cpp:456
+msgid "The music stops at the end of the album or playlist"
+msgstr "De muziek stopt aan het einde van het album of de afspeellijst"
+
+#: source/ui/SettingsView.cpp:459
 msgid "Automatic"
 msgstr "Automatisch"
 
-#: source/ui/SettingsView.cpp:453
+#: source/ui/SettingsView.cpp:459
 msgid "Passcode"
 msgstr "Pincode"
 
-#: source/ui/SettingsView.cpp:455
+#: source/ui/SettingsView.cpp:461
 msgid "Opens at once on this Wii"
 msgstr "Opent meteen op deze Wii"
 
-#: source/ui/SettingsView.cpp:456
+#: source/ui/SettingsView.cpp:462
 msgid "Asks the profile's four-digit passcode first"
 msgstr "Vraagt eerst de viercijferige pincode van het profiel"
 
-#: source/ui/SettingsView.cpp:457
+#: source/ui/SettingsView.cpp:463
 msgid "Asks the password (or Quick Connect) each time"
 msgstr "Vraagt elke keer het wachtwoord (of Snel verbinden)"
 
-#: source/ui/SettingsView.cpp:460
+#: source/ui/SettingsView.cpp:466
 msgid "Sign-In"
 msgstr "Inloggen"
 
