@@ -58,12 +58,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Host tools
+        timeout-minutes: 15
         run: |
           # a package mirror or a DNS lookup that fails for a moment (it happens
           # on GitHub's runners) is tried again instead of failing the run
-          retry() { for i in 1 2 3 4; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 15)); done; return 1; }
-          retry apt-get update -q -o Acquire::Retries=5
-          retry apt-get install -y --no-install-recommends -o Acquire::Retries=5 \
+          retry() { for i in 1 2 3; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 15)); done; return 1; }
+          retry apt-get update -q -o Acquire::Retries=3
+          retry apt-get install -y --no-install-recommends -o Acquire::Retries=3 \
             git make curl tar bzip2 xxd pkg-config python3 python3-venv imagemagick zip rsync gettext fontconfig
 
       - name: Version
@@ -150,12 +151,16 @@ jobs:
       # Dolphin's Linux build is a Flatpak; its Qt front end needs a display
       # (xvfb-run) and a session bus (dbus-run-session)
       - name: Dolphin
+        timeout-minutes: 15
         run: |
           # a package mirror or a DNS lookup that fails for a moment (it happens
           # on GitHub's runners) is tried again instead of failing the run
-          retry() { for i in 1 2 3 4; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 15)); done; return 1; }
-          retry sudo apt-get update -q -o Acquire::Retries=5
-          retry sudo apt-get install -y --no-install-recommends -o Acquire::Retries=5 flatpak xvfb xauth dbus
+          retry() { for i in 1 2 3; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 15)); done; return 1; }
+          # the runner's Azure mirror of Ubuntu went unreachable for hours
+          # (Nov 2026): Ubuntu's own servers instead
+          [ -f /etc/apt/apt-mirrors.txt ] && sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+          retry sudo apt-get update -q -o Acquire::Retries=3
+          retry sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 flatpak xvfb xauth dbus
           retry sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           retry sudo flatpak install -y --noninteractive flathub org.DolphinEmu.dolphin-emu
 
@@ -187,12 +192,16 @@ jobs:
           name: WiiFin-playback-test
 
       - name: Dolphin and ffmpeg
+        timeout-minutes: 15
         run: |
           # a package mirror or a DNS lookup that fails for a moment (it happens
           # on GitHub's runners) is tried again instead of failing the run
-          retry() { for i in 1 2 3 4; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 15)); done; return 1; }
-          retry sudo apt-get update -q -o Acquire::Retries=5
-          retry sudo apt-get install -y --no-install-recommends -o Acquire::Retries=5 flatpak xvfb xauth dbus ffmpeg fonts-dejavu-core
+          retry() { for i in 1 2 3; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 15)); done; return 1; }
+          # the runner's Azure mirror of Ubuntu went unreachable for hours
+          # (Nov 2026): Ubuntu's own servers instead
+          [ -f /etc/apt/apt-mirrors.txt ] && sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+          retry sudo apt-get update -q -o Acquire::Retries=3
+          retry sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 flatpak xvfb xauth dbus ffmpeg fonts-dejavu-core
           retry sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           retry sudo flatpak install -y --noninteractive flathub org.DolphinEmu.dolphin-emu
 
