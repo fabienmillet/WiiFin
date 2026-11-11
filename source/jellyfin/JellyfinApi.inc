@@ -2455,14 +2455,15 @@ bool JellyfinClient::jf_getAudioStreamUrl(const std::string& serverUrl,
         snprintf(audioUrl, sizeof(audioUrl),
             "%s/Audio/%s/stream?static=true&MediaSourceId=%s&DeviceId=%s&PlaySessionId=%s&ApiKey=%s&api_key=%s",
             schemedSvr.c_str(), itemId.c_str(), itemId.c_str(), s_deviceId.c_str(),
-            outPlaySessionId.c_str(), auth.accessToken.c_str());
+            outPlaySessionId.c_str(), auth.accessToken.c_str(), auth.accessToken.c_str());
     else
         snprintf(audioUrl, sizeof(audioUrl),
             "%s/Audio/%s/stream.mp3?MediaSourceId=%s&DeviceId=%s&PlaySessionId=%s"
             "&AudioCodec=mp3&AudioBitRate=320000&MaxAudioChannels=2&StartTimeTicks=%lld"
             "&TranscodeReasons=%s&ApiKey=%s&api_key=%s",
             schemedSvr.c_str(), itemId.c_str(), itemId.c_str(), s_deviceId.c_str(),
-            outPlaySessionId.c_str(), (long long)startTimeTicks, why.c_str(), auth.accessToken.c_str());
+            outPlaySessionId.c_str(), (long long)startTimeTicks, why.c_str(), auth.accessToken.c_str(),
+            auth.accessToken.c_str());
     outUrl = audioUrl;
 
     SYS_Report("[AudioPlaybackInfo] sessionId=%s\n", outPlaySessionId.c_str());
