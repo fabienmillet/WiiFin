@@ -72,6 +72,7 @@ void PlayerView::setContext(const PlayerViewContext& c)
     pickAudio    = c.currentAudio;
     pickSub      = c.currentSub;
     skippedSegments = 0;
+    dragging = false;
     seekPending  = false;
     seekInFlight = false;
     seekInPlaceSince = false;
@@ -374,6 +375,21 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
 
     hitTest(ir);
 
+    if (dragging) {   /* the handle in hand: on the bar wherever the pointer goes */
+        if (ir.valid) {
+            dragFrac = (ir.x - BAR_X) / (float)BAR_W;
+            if (dragFrac < 0.0f) dragFrac = 0.0f;
+            if (dragFrac > 1.0f) dragFrac = 1.0f;
+        }
+        showControls();
+        if (Input::held() & WPAD_BUTTON_A) return Action::None;
+        dragging = false;
+        if (duration() <= 0.0f) return Action::None;
+        seekInFlight = true;
+        seekTo = dragFrac * duration();
+        return Action::SeekTo;
+    }
+
     /* the video's first picture: the controls, up since the loading
      * started, go a second after it (not 5 s after the start) */
     if (!firstPicture && !g_wiifin_loading_active && wii_player_time_pos() > 0.0f) {
@@ -430,12 +446,11 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
                 act = Action::SeekTo;
             }
         } else if (visible && hoverBar && duration() > 0.0f) {
-            float frac = (ir.x - BAR_X) / (float)BAR_W;
-            if (frac < 0.0f) frac = 0.0f;
-            if (frac > 1.0f) frac = 1.0f;
-            seekInFlight = true;
-            seekTo = frac * duration();
-            act = Action::SeekTo;
+            /* the handle taken: it jumps when A is let go (a click too) */
+            dragFrac = (ir.x - BAR_X) / (float)BAR_W;
+            if (dragFrac < 0.0f) dragFrac = 0.0f;
+            if (dragFrac > 1.0f) dragFrac = 1.0f;
+            dragging = true;
         } else if (visible && hoverButton >= 0) {
             switch (hoverButton) {
             case 0:
@@ -597,17 +612,17 @@ void PlayerView::render(const ir_t& ir)
 
         float dur = duration();
         float pos = displayPosition();
-        float frac = dur > 0.0f ? pos / dur : 0.0f;
+        float frac = dragging ? dragFrac : dur > 0.0f ? pos / dur : 0.0f;
         if (frac > 1.0f) frac = 1.0f;
         if (frac < 0.0f) frac = 0.0f;
-        float barH = hoverBar ? BAR_H + 4 : BAR_H;
+        float barH = hoverBar || dragging ? BAR_H + 4 : BAR_H;
         float barY = BAR_Y - (barH - BAR_H) / 2;
         Ui::roundRect(BAR_X, barY, BAR_W, barH, barH / 2, Ui::alpha(p.cardBorder, 0.6f));
         if (frac > 0.0f)
             Ui::roundRect(BAR_X, barY, BAR_W * frac < barH ? barH : BAR_W * frac, barH, barH / 2,
                           Ui::mix(p.accent, 0xFFFFFFFF, 0.2f), p.accent);
         {
-            float kx = BAR_X + BAR_W * frac, ky = BAR_Y + BAR_H / 2.0f, kr = hoverBar ? 9.0f : 7.0f;
+            float kx = BAR_X + BAR_W * frac, ky = BAR_Y + BAR_H / 2.0f, kr = hoverBar || dragging ? 9.0f : 7.0f;
             Ui::shadow(kx - kr, ky - kr + 1, kr * 2, kr * 2, kr, 4.0f, p.shadow);
             Ui::circle(kx, ky, kr, p.cardTop);
             Ui::roundBorder(kx - kr, ky - kr, kr * 2, kr * 2, kr, 2.0f, p.accent);
@@ -616,7 +631,10 @@ void PlayerView::render(const ir_t& ir)
          * target of the -10s / +10s presses still to be played.  Its time
          * in a bubble, with the trickplay thumbnail above when there is one. */
         float previewAt = -1.0f, px = 0.0f;
-        if (hoverBar && dur > 0.0f) {
+        if (dragging && dur > 0.0f) {
+            previewAt = dragFrac * dur;
+            px = BAR_X + BAR_W * dragFrac;
+        } else if (hoverBar && dur > 0.0f) {
             float f = (ir.x - BAR_X) / (float)BAR_W;
             if (f < 0.0f) f = 0.0f;
             if (f > 1.0f) f = 1.0f;

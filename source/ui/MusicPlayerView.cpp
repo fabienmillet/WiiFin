@@ -148,6 +148,10 @@ struct Session {
     int   hover    = -1;
     bool  hoverBar = false;
     float hoverFrac = 0.0f;
+    /* A held on the seek bar: the handle follows the pointer, the song
+     * jumps there when A is let go */
+    bool  dragging = false;
+    float dragFrac = 0.0f;
     int   hoverRow = -1;
     int   hoverArrow = 0;              /* Up Next arrows: -1 up, +1 down  */
     u64   arrowSince = 0, arrowLast = 0;
@@ -770,7 +774,7 @@ void drawSeekBar(float pos, float dur, bool focused)
 {
     Session& s = *S;
     const Ui::Palette& p = Ui::pal();
-    float frac = dur > 0 ? pos / dur : 0;
+    float frac = s.dragging ? s.dragFrac : dur > 0 ? pos / dur : 0;
     if (frac > 1) frac = 1;
     float h = (s.hoverBar || focused) ? 8 : 6, y = BAR_Y - h / 2;
     Ui::roundRect(BAR_X, y, BAR_W, h, h / 2, Ui::alpha(p.cardBorder, 0.55f));
@@ -1154,7 +1158,7 @@ void buttons(u32 down)
     }
     if (down & WPAD_BUTTON_A) {
         if (s.pointer) {
-            if (s.hoverBar)       seekTo(s.hoverFrac * duration());
+            if (s.hoverBar)       { s.dragging = true; s.dragFrac = s.hoverFrac; }
             else if (s.hover >= 0) activate(s.hover);
             else if (s.hoverViz)  nextViz(1);
             else                  wii_player_pause_toggle();
@@ -1277,6 +1281,17 @@ void frame()
     }
 
     /* resting on an Up Next arrow scrolls, one row at a time */
+    if (s.dragging) {   /* the handle in hand: on the bar wherever the pointer goes */
+        if (ir.valid) s.dragFrac = fminf(fmaxf((ir.x - BAR_X) / BAR_W, 0.0f), 1.0f);
+        s.hoverBar = true;
+        s.hoverFrac = s.dragFrac;
+        s.lastInput = now;
+        if (!(Input::held() & WPAD_BUTTON_A)) {
+            s.dragging = false;
+            seekTo(s.dragFrac * duration());
+        }
+    }
+
     if (arrow != s.hoverArrow) { s.hoverArrow = arrow; s.arrowSince = now; }
     if (arrow && now - s.arrowSince > 400 && now - s.arrowLast > 130) {
         s.arrowLast = now;
