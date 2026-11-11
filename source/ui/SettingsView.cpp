@@ -2,6 +2,7 @@
 #include "Ui.h"
 #include "../player/vo_wiifin.h"
 #include "../player/WiiPlayer.h"
+#include "../player/PlayerView.h"
 #include "../core/SoundFX.h"
 #include "../core/MusicBGM.h"
 #include "../core/MusicSession.h"
@@ -15,7 +16,7 @@
 
 /* The rows, by what they set (drawRow and activate take these) */
 enum Row { R_SSL, R_MUSIC, R_SOUNDS, R_QUALITY, R_DIRECT, R_SMOOTH, R_THEME, R_HOME, R_VIEW,
-           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_CHRISTMAS, R_AUTOPLAY };
+           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_CHRISTMAS, R_AUTOPLAY, R_SKIP };
 
 /* the sections: a profile's own look (WiiFin's menu: the start-up one,
  * theme and backgrounds only), what every profile shares, how a profile
@@ -59,7 +60,7 @@ void SettingsView::openSection(int s) {
     if (s == 0) rows = profile ? std::vector<int>{ R_THEME, R_BACKGROUNDS, R_HOME, R_VIEW }
                                : std::vector<int>{ R_THEME, R_BACKGROUNDS };
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE, R_AREA,
-                              R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT, R_CHRISTMAS, R_AUTOPLAY };
+                              R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT, R_CHRISTMAS, R_AUTOPLAY, R_SKIP };
     else rows = { R_SIGNIN };
     signInWant = profile ? profile->signIn : -1;
 }
@@ -168,6 +169,7 @@ void SettingsView::activate(int index) {
             break;
         case R_CHRISTMAS: Ui::setFestive(!Ui::festive()); break;
         case R_AUTOPLAY: MusicSession::setAutoplay(!MusicSession::autoplay()); break;
+        case R_SKIP: g_wiifin_skip_prompts = !g_wiifin_skip_prompts; break;
         case R_SIGNIN:   /* at once, a passcode, the password: chosen, applied on leaving */
             if (!profile) break;
             signInWant = (signInWant + 1) % 3;
@@ -455,6 +457,10 @@ void SettingsView::render(ir_t& ir) {
             MusicSession::autoplay() ? N_("When an album or a playlist ends, similar songs follow")
                                      : N_("The music stops at the end of the album or playlist"),
             MusicSession::autoplay() ? N_("ON") : N_("OFF"), MusicSession::autoplay() ? p.ok : 0x8A9099FF);
+    drawRow(R_SKIP, N_("Skip Prompts"),
+            g_wiifin_skip_prompts ? N_("\"Skip intro\", \"Skip recap\"... over the parts the server knows")
+                                  : N_("Intros, recaps and credits play without a prompt"),
+            g_wiifin_skip_prompts ? N_("ON") : N_("OFF"), g_wiifin_skip_prompts ? p.ok : 0x8A9099FF);
     if (profile) {
         static const char* const how[3]  = { N_("Automatic"), N_("Passcode"), N_("Password") };
         static const char* const desc[3] = {
