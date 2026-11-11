@@ -59,8 +59,11 @@ jobs:
 
       - name: Host tools
         run: |
-          apt-get update -q
-          apt-get install -y --no-install-recommends \
+          # a package mirror or a DNS lookup that fails for a moment (it happens
+          # on GitHub's runners) is tried again instead of failing the run
+          retry() { for i in 1 2 3 4; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 15)); done; return 1; }
+          retry apt-get update -q -o Acquire::Retries=5
+          retry apt-get install -y --no-install-recommends -o Acquire::Retries=5 \
             git make curl tar bzip2 xxd pkg-config python3 python3-venv imagemagick zip rsync gettext fontconfig
 
       - name: Version
@@ -148,10 +151,13 @@ jobs:
       # (xvfb-run) and a session bus (dbus-run-session)
       - name: Dolphin
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y --no-install-recommends flatpak xvfb xauth dbus
-          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          sudo flatpak install -y --noninteractive flathub org.DolphinEmu.dolphin-emu
+          # a package mirror or a DNS lookup that fails for a moment (it happens
+          # on GitHub's runners) is tried again instead of failing the run
+          retry() { for i in 1 2 3 4; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 15)); done; return 1; }
+          retry sudo apt-get update -q -o Acquire::Retries=5
+          retry sudo apt-get install -y --no-install-recommends -o Acquire::Retries=5 flatpak xvfb xauth dbus
+          retry sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          retry sudo flatpak install -y --noninteractive flathub org.DolphinEmu.dolphin-emu
 
       - name: Boot the WAD
         run: dbus-run-session -- xvfb-run -a tools/test/smoke.sh WiiFin.wad 180
@@ -182,10 +188,13 @@ jobs:
 
       - name: Dolphin and ffmpeg
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y --no-install-recommends flatpak xvfb xauth dbus ffmpeg fonts-dejavu-core
-          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          sudo flatpak install -y --noninteractive flathub org.DolphinEmu.dolphin-emu
+          # a package mirror or a DNS lookup that fails for a moment (it happens
+          # on GitHub's runners) is tried again instead of failing the run
+          retry() { for i in 1 2 3 4; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 15)); done; return 1; }
+          retry sudo apt-get update -q -o Acquire::Retries=5
+          retry sudo apt-get install -y --no-install-recommends -o Acquire::Retries=5 flatpak xvfb xauth dbus ffmpeg fonts-dejavu-core
+          retry sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          retry sudo flatpak install -y --noninteractive flathub org.DolphinEmu.dolphin-emu
 
       # Counter, Subtitle and Xvid Film, the direct play formats (Z1..Z8),
       # Shuffle Show and Test Album (the Singles library); the throttled
