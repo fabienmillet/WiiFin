@@ -125,6 +125,10 @@ private:
     int   panelSel     = 0;
     int   panelTop     = 0;
     u64   controlsUntil = 0;   /* ms timestamp; controls visible until then */
+    /* A held on the bar: the handle follows the pointer, the video jumps
+     * there when A is let go */
+    bool  dragging = false;
+    float dragFrac = 0.0f;
     bool  firstPicture  = false; /* the first picture shown: the controls go soon after */
     u64   holdSince = 0, holdLast = 0;   /* Left / Right held: seeking on */
     float controlsAlpha = 0.0f;
