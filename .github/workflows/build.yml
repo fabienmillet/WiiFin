@@ -81,6 +81,8 @@ jobs:
           else
             [ "$INPUT_RELEASE" = "true" ] && { echo "::error::a release needs a version"; exit 1; }
             v="$(sed -n 's/.*WIIFIN_VERSION "\(.*\)".*/\1/p' source/version.h)-${GITHUB_SHA::7}"
+            # a test build says which commit it is, in the app and its log too
+            sed -i "s|#define WIIFIN_VERSION \".*\"|#define WIIFIN_VERSION \"$v\"|" source/version.h
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "WiiFin $v"
