@@ -1,3 +1,3 @@
 #pragma once
 
-#define WIIFIN_VERSION "1.0.0"
+#define WIIFIN_VERSION "1.1.0"
