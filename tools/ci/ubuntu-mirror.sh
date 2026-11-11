@@ -1,10 +1,16 @@
 #!/bin/bash
-# GitHub's Ubuntu runners: apt through Ubuntu's mirror at kernel.org first.
-# On Nov 11 2026 the runners could not resolve any ubuntu.com name for
-# hours (azure.archive, archive and security.ubuntu.com) while other hosts
-# answered: every job that installs packages failed.  ubuntu.com stays as
-# the fallback.
+# GitHub's Ubuntu runners: apt through Ubuntu's mirror at kernel.org when
+# Ubuntu's own names do not resolve.  On Nov 11 2026 Canonical's DNS went
+# down for hours (status.canonical.com): no ubuntu.com name resolved on the
+# runners, apt could not fall back to another mirror by itself, and every
+# job that installs packages failed or hung.  When ubuntu.com answers,
+# nothing changes.
 set -e
+for i in 1 2 3; do
+    getent hosts archive.ubuntu.com >/dev/null && { echo "ubuntu.com resolves: the runner's mirrors stay"; exit 0; }
+    sleep 5
+done
+echo "ubuntu.com does not resolve: apt through mirrors.edge.kernel.org"
 printf '%s\tpriority:1\n%s\tpriority:2\n' \
     http://mirrors.edge.kernel.org/ubuntu/ http://archive.ubuntu.com/ubuntu/ \
     | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
