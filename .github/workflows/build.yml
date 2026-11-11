@@ -142,7 +142,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: tools/test
+          sparse-checkout: |
+            tools/test
+            tools/ci
 
       - uses: actions/download-artifact@v4
         with:
@@ -156,9 +158,7 @@ jobs:
           # a package mirror or a DNS lookup that fails for a moment (it happens
           # on GitHub's runners) is tried again instead of failing the run
           retry() { for i in 1 2 3; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 15)); done; return 1; }
-          # the runner's Azure mirror of Ubuntu went unreachable for hours
-          # (Nov 2026): Ubuntu's own servers instead
-          [ -f /etc/apt/apt-mirrors.txt ] && sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+          tools/ci/ubuntu-mirror.sh
           retry sudo apt-get update -q -o Acquire::Retries=3
           retry sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 flatpak xvfb xauth dbus
           retry sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
@@ -185,6 +185,7 @@ jobs:
         with:
           sparse-checkout: |
             tools/test
+            tools/ci
             data/fonts/cjk
 
       - uses: actions/download-artifact@v4
@@ -197,9 +198,7 @@ jobs:
           # a package mirror or a DNS lookup that fails for a moment (it happens
           # on GitHub's runners) is tried again instead of failing the run
           retry() { for i in 1 2 3; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 15)); done; return 1; }
-          # the runner's Azure mirror of Ubuntu went unreachable for hours
-          # (Nov 2026): Ubuntu's own servers instead
-          [ -f /etc/apt/apt-mirrors.txt ] && sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+          tools/ci/ubuntu-mirror.sh
           retry sudo apt-get update -q -o Acquire::Retries=3
           retry sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 flatpak xvfb xauth dbus ffmpeg fonts-dejavu-core
           retry sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
