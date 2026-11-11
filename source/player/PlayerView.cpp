@@ -98,9 +98,11 @@ float PlayerView::duration() const
     return 0.0f;
 }
 
+bool g_wiifin_skip_prompts = true;
+
 int PlayerView::activeSegment() const
 {
-    if (!busyMsg.empty()) return -1;
+    if (!busyMsg.empty() || !g_wiifin_skip_prompts) return -1;
     float pos = position();
     const auto& segs = ctx.intro.segments;
     for (int i = 0; i < (int)segs.size() && i < 32; ++i) {

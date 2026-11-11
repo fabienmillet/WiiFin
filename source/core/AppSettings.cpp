@@ -8,6 +8,7 @@
 #include "../player/VideoSurface.h"
 #include "../player/vo_wiifin.h"
 #include "../player/WiiPlayer.h"
+#include "../player/PlayerView.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,6 +80,8 @@ void App::loadSettings() {
             jellyfinClient.sslVerify = atoi(val) != 0;
         } else if (strcmp(key, "music_enabled") == 0) {
             musicEnabled = atoi(val) != 0;
+        } else if (strcmp(key, "skip_prompts") == 0) {
+            g_wiifin_skip_prompts = atoi(val) != 0;
         } else if (strcmp(key, "music_autoplay") == 0) {
             MusicSession::setAutoplay(atoi(val) != 0);
         } else if (strcmp(key, "ui_sounds") == 0) {
@@ -244,6 +247,7 @@ void App::saveSettings() {
     fprintf(f, "music_enabled=%d\n",    musicEnabled ? 1 : 0);
     fprintf(f, "ui_sounds=%d\n",        SoundFX::enabled() ? 1 : 0);
     fprintf(f, "music_autoplay=%d\n",   MusicSession::autoplay() ? 1 : 0);
+    fprintf(f, "skip_prompts=%d\n",     g_wiifin_skip_prompts ? 1 : 0);
     fprintf(f, "video_quality=%d\n",    jellyfinClient.videoQuality);
     fprintf(f, "direct_play=%d\n",      jellyfinClient.directPlay ? 1 : 0);
     /* WiiFin's own look: not the one of the profile open */
