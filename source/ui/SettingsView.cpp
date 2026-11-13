@@ -1,5 +1,6 @@
 #include "SettingsView.h"
 #include "Ui.h"
+#include "LibraryDraw.h"
 #include "../player/vo_wiifin.h"
 #include "../player/WiiPlayer.h"
 #include "../player/PlayerView.h"
@@ -131,10 +132,13 @@ void SettingsView::drawRow(int id, const char* label, const char* desc,
     Ui::card(x, y, ROW_W, ROW_H, 14, focusAnim[i]);
     label = tr(label); desc = tr(desc); valStr = tr(valStr);
     Ui::text(x + 18, y + 8,  label, 18, p.text);
-    Ui::text(x + 18, y + 31, desc,  12, p.textDim);
-
-    // Value pill on the right
+    // Value pill on the right; the description stops short of it (a long
+    // one, in some languages, a size smaller, then cut with "...")
     int pw = Ui::textWidth(valStr, 15) + 28;
+    int room = ROW_W - pw - 16 - 18 - 10, ds = 12;
+    if (Ui::textWidth(desc, ds) > room) ds = 11;
+    Ui::text(x + 18, y + 31, LibDraw::fitText(Ui::font(), desc, ds, room).c_str(), ds, p.textDim);
+
     float px = x + ROW_W - pw - 16, py = y + (ROW_H - 26) * 0.5f;
     Ui::roundRect(px, py, pw, 26, 13, Ui::mix(pillCol, 0xFFFFFFFF, 0.15f), pillCol);
     Ui::textCentered(px + pw * 0.5f, py + 4, valStr, 15, p.textOnAccent);
@@ -169,7 +173,10 @@ void SettingsView::activate(int index) {
             break;
         case R_CHRISTMAS: Ui::setFestive(!Ui::festive()); break;
         case R_AUTOPLAY: MusicSession::setAutoplay(!MusicSession::autoplay()); break;
-        case R_SKIP: g_wiifin_skip_prompts = !g_wiifin_skip_prompts; break;
+        case R_SKIP:   /* All, Recaps only, Off */
+            g_wiifin_skip_prompts = g_wiifin_skip_prompts == SKIP_PROMPTS_ALL ? SKIP_PROMPTS_RECAPS
+                                  : g_wiifin_skip_prompts == SKIP_PROMPTS_RECAPS ? SKIP_PROMPTS_OFF : SKIP_PROMPTS_ALL;
+            break;
         case R_SIGNIN:   /* at once, a passcode, the password: chosen, applied on leaving */
             if (!profile) break;
             signInWant = (signInWant + 1) % 3;
@@ -457,10 +464,15 @@ void SettingsView::render(ir_t& ir) {
             MusicSession::autoplay() ? N_("When an album or a playlist ends, similar songs follow")
                                      : N_("The music stops at the end of the album or playlist"),
             MusicSession::autoplay() ? N_("ON") : N_("OFF"), MusicSession::autoplay() ? p.ok : 0x8A9099FF);
-    drawRow(R_SKIP, N_("Skip Prompts"),
-            g_wiifin_skip_prompts ? N_("\"Skip intro\", \"Skip recap\"... over the parts the server knows")
-                                  : N_("Intros, recaps and credits play without a prompt"),
-            g_wiifin_skip_prompts ? N_("ON") : N_("OFF"), g_wiifin_skip_prompts ? p.ok : 0x8A9099FF);
+    {
+        const int k = g_wiifin_skip_prompts;
+        drawRow(R_SKIP, N_("Skip Prompts"),
+                k == SKIP_PROMPTS_ALL    ? N_("\"Skip intro\", \"Skip recap\"... over the parts the server knows")
+              : k == SKIP_PROMPTS_RECAPS ? N_("\"Skip recap\" only: intros and credits play without a prompt")
+                                         : N_("Intros, recaps and credits play without a prompt"),
+                k == SKIP_PROMPTS_ALL ? N_("All") : k == SKIP_PROMPTS_RECAPS ? N_("Recaps only") : N_("OFF"),
+                k == SKIP_PROMPTS_OFF ? 0x8A9099FF : p.ok);
+    }
     if (profile) {
         static const char* const how[3]  = { N_("Automatic"), N_("Passcode"), N_("Password") };
         static const char* const desc[3] = {

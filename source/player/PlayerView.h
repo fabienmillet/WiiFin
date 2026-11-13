@@ -1,7 +1,9 @@
 #pragma once
 /* Settings > Skip Prompts: the "Skip intro / recap / credits" button over
- * a video's media segments (off: they play, nothing shows) */
-extern bool g_wiifin_skip_prompts;
+ * a video's media segments: for all of them, for recaps only (previews and
+ * ads too: intros and credits play with nothing shown), or none */
+enum SkipPrompts { SKIP_PROMPTS_OFF = 0, SKIP_PROMPTS_ALL = 1, SKIP_PROMPTS_RECAPS = 2 };
+extern int g_wiifin_skip_prompts;
 
 #include <grrlib.h>
 #include <wiiuse/wpad.h>

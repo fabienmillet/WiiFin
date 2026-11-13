@@ -99,15 +99,17 @@ float PlayerView::duration() const
     return 0.0f;
 }
 
-bool g_wiifin_skip_prompts = true;
+int g_wiifin_skip_prompts = SKIP_PROMPTS_ALL;
 
 int PlayerView::activeSegment() const
 {
-    if (!busyMsg.empty() || !g_wiifin_skip_prompts) return -1;
+    if (!busyMsg.empty() || g_wiifin_skip_prompts == SKIP_PROMPTS_OFF) return -1;
     float pos = position();
     const auto& segs = ctx.intro.segments;
     for (int i = 0; i < (int)segs.size() && i < 32; ++i) {
         if (skippedSegments & (1u << i)) continue;
+        if (g_wiifin_skip_prompts == SKIP_PROMPTS_RECAPS &&
+            (segs[i].kind == MediaSegment::Intro || segs[i].kind == MediaSegment::Outro)) continue;
         /* not in its last second: skipping would land about there anyway */
         if (pos >= segs[i].start && pos < segs[i].end - 1.0f) return i;
     }
