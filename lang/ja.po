@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WiiFin\n"
 "Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
-"POT-Creation-Date: 2026-11-11 18:07+0100\n"
+"POT-Creation-Date: 2026-11-11 19:15+0100\n"
 "PO-Revision-Date: 2026-10-11 02:59+0200\n"
 "Last-Translator: WiiFin\n"
 "Language-Team: Japanese\n"
@@ -22,7 +22,7 @@ msgid "Retry"
 msgstr "再試行"
 
 #: source/core/App.cpp:94 source/core/App.cpp:471
-#: source/player/PlayerView.cpp:581 source/ui/ConnectView.cpp:595
+#: source/player/PlayerView.cpp:598 source/ui/ConnectView.cpp:595
 #: source/ui/ConnectView.cpp:666 source/ui/ConnectView.cpp:727
 #: source/ui/LibraryDetail.cpp:443 source/ui/LibraryHome.cpp:384
 #: source/ui/LibraryHome.cpp:426 source/ui/LibraryHome.cpp:493
@@ -34,9 +34,9 @@ msgstr "再試行"
 #: source/ui/LibraryShows.cpp:373 source/ui/LibrarySpecials.cpp:185
 #: source/ui/LibrarySuggestions.cpp:333 source/ui/LibrarySuggestions.cpp:360
 #: source/ui/LibrarySuggestions.cpp:379 source/ui/LibrarySuggestions.cpp:428
-#: source/ui/LibraryView.cpp:1511 source/ui/MusicPlayerView.cpp:927
+#: source/ui/LibraryView.cpp:1511 source/ui/MusicPlayerView.cpp:931
 #: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:166
-#: source/ui/SettingsView.cpp:118 source/ui/SettingsView.cpp:487
+#: source/ui/SettingsView.cpp:118 source/ui/SettingsView.cpp:495
 msgid "Back"
 msgstr "戻る"
 
@@ -74,7 +74,7 @@ msgstr "あとで"
 #: source/ui/ConnectView.cpp:665 source/ui/ConnectView.cpp:726
 #: source/ui/LibraryDetail.cpp:189 source/ui/LibraryHome.cpp:492
 #: source/ui/LibraryShows.cpp:275 source/ui/LibrarySuggestions.cpp:360
-#: source/ui/MusicPlayerView.cpp:926
+#: source/ui/MusicPlayerView.cpp:930
 msgid "Select"
 msgstr "選択"
 
@@ -83,7 +83,7 @@ msgid "Connect To Jellyfin"
 msgstr "Jellyfinに接続"
 
 #: source/core/App.cpp:443 source/ui/LibraryHome.cpp:436
-#: source/ui/SettingsView.cpp:106 source/ui/SettingsView.cpp:356
+#: source/ui/SettingsView.cpp:106 source/ui/SettingsView.cpp:359
 msgid "Settings"
 msgstr "設定"
 
@@ -120,7 +120,7 @@ msgid "This profile is locked"
 msgstr "このプロフィールはロックされています"
 
 #: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:117
-#: source/ui/SettingsView.cpp:486
+#: source/ui/SettingsView.cpp:494
 msgid "Choose"
 msgstr "選ぶ"
 
@@ -149,7 +149,7 @@ msgid "Four digits, asked each time it opens"
 msgstr "4桁の数字。開くたびに入力します"
 
 #: source/core/AppProfiles.cpp:181 source/core/AppProfiles.cpp:194
-#: source/ui/SettingsView.cpp:75 source/ui/SettingsView.cpp:274
+#: source/ui/SettingsView.cpp:75 source/ui/SettingsView.cpp:277
 msgid "Choose a passcode"
 msgstr "暗証番号を決めてください"
 
@@ -157,11 +157,11 @@ msgstr "暗証番号を決めてください"
 msgid "Four digits, asked when this profile opens"
 msgstr "4桁の数字。プロフィールを開くときに入力します"
 
-#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:271
+#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:274
 msgid "Enter it again"
 msgstr "もう一度入力してください"
 
-#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:274
+#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:277
 msgid "The two didn't match: once more"
 msgstr "一致しませんでした。もう一度どうぞ"
 
@@ -173,11 +173,11 @@ msgstr "では、毎回パスワードを入力します"
 msgid "Or Quick Connect: this profile keeps no sign-in on the Wii"
 msgstr "またはクイックコネクト。このWiiにサインイン情報は残りません"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:418
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:421
 msgid "Grid"
 msgstr "グリッド"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:418
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:421
 msgid "Rows"
 msgstr "行表示"
 
@@ -189,15 +189,15 @@ msgstr "あとで設定から変更できます"
 msgid "Which home screen?"
 msgstr "ホーム画面はどれにしますか？"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:421
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:424
 msgid "List"
 msgstr "リスト"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:421
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:424
 msgid "List + Posters"
 msgstr "リスト + ポスター"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:421
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:424
 msgid "Posters"
 msgstr "ポスター"
 
@@ -214,11 +214,11 @@ msgid "Confirm"
 msgstr "決定"
 
 #: source/core/HomeMenu.cpp:184 source/ui/LibraryDetail.cpp:477
-#: source/ui/MusicPlayerView.cpp:923
+#: source/ui/MusicPlayerView.cpp:927
 msgid "Close"
 msgstr "閉じる"
 
-#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:235
+#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:238
 msgid "Reset"
 msgstr "リセット"
 
@@ -260,8 +260,8 @@ msgid "Loading subtitles..."
 msgstr "字幕を読み込み中..."
 
 #: source/core/PlaySession.cpp:218 source/core/PlaySession.cpp:248
-#: source/core/PlaySession.cpp:707 source/player/PlayerView.cpp:564
-#: source/ui/LibraryView.cpp:1475 source/ui/MusicPlayerView.cpp:907
+#: source/core/PlaySession.cpp:707 source/player/PlayerView.cpp:581
+#: source/ui/LibraryView.cpp:1475 source/ui/MusicPlayerView.cpp:911
 msgid "Loading..."
 msgstr "読み込み中..."
 
@@ -295,8 +295,8 @@ msgstr "次に再生 / キューに追加：音楽のみ"
 msgid "Loading next episode..."
 msgstr "次のエピソードを読み込み中..."
 
-#: source/core/PlaySession.cpp:540 source/player/PlayerView.cpp:450
-#: source/player/PlayerView.cpp:482 source/ui/LibraryHome.cpp:380
+#: source/core/PlaySession.cpp:540 source/player/PlayerView.cpp:467
+#: source/player/PlayerView.cpp:499 source/ui/LibraryHome.cpp:380
 msgid "No next episode"
 msgstr "次のエピソードはありません"
 
@@ -304,18 +304,18 @@ msgstr "次のエピソードはありません"
 msgid "Loading previous episode..."
 msgstr "前のエピソードを読み込み中..."
 
-#: source/core/PlaySession.cpp:544 source/player/PlayerView.cpp:443
-#: source/player/PlayerView.cpp:485
+#: source/core/PlaySession.cpp:544 source/player/PlayerView.cpp:460
+#: source/player/PlayerView.cpp:502
 msgid "No previous episode"
 msgstr "前のエピソードはありません"
 
-#: source/core/PlaySession.cpp:546 source/player/PlayerView.cpp:479
-#: source/ui/MusicPlayerView.cpp:1087
+#: source/core/PlaySession.cpp:546 source/player/PlayerView.cpp:496
+#: source/ui/MusicPlayerView.cpp:1091
 msgid "Volume +"
 msgstr "音量 +"
 
-#: source/core/PlaySession.cpp:547 source/player/PlayerView.cpp:480
-#: source/ui/MusicPlayerView.cpp:1088
+#: source/core/PlaySession.cpp:547 source/player/PlayerView.cpp:497
+#: source/ui/MusicPlayerView.cpp:1092
 msgid "Volume -"
 msgstr "音量 -"
 
@@ -325,12 +325,12 @@ msgid "Volume %d"
 msgstr "音量 %d"
 
 #: source/core/PlaySession.cpp:555 source/core/PlaySession.cpp:559
-#: source/ui/MusicPlayerView.cpp:1090 source/ui/MusicPlayerView.cpp:1094
+#: source/ui/MusicPlayerView.cpp:1094 source/ui/MusicPlayerView.cpp:1098
 msgid "Sound off"
 msgstr "消音"
 
 #: source/core/PlaySession.cpp:556 source/core/PlaySession.cpp:559
-#: source/ui/MusicPlayerView.cpp:1091 source/ui/MusicPlayerView.cpp:1094
+#: source/ui/MusicPlayerView.cpp:1095 source/ui/MusicPlayerView.cpp:1098
 msgid "Sound on"
 msgstr "消音解除"
 
@@ -508,77 +508,77 @@ msgstr "AudioPlaybackInfoの応答にPlaySessionIdがありません"
 msgid "Track %d"
 msgstr "トラック %d"
 
-#: source/player/PlayerView.cpp:120
+#: source/player/PlayerView.cpp:123
 msgid "Skip recap"
 msgstr "あらすじをスキップ"
 
-#: source/player/PlayerView.cpp:121
+#: source/player/PlayerView.cpp:124
 msgid "Skip preview"
 msgstr "予告をスキップ"
 
-#: source/player/PlayerView.cpp:122
+#: source/player/PlayerView.cpp:125
 msgid "Skip ad"
 msgstr "広告をスキップ"
 
-#: source/player/PlayerView.cpp:124
+#: source/player/PlayerView.cpp:127
 msgid "Next episode"
 msgstr "次のエピソード"
 
-#: source/player/PlayerView.cpp:124
+#: source/player/PlayerView.cpp:127
 msgid "Skip credits"
 msgstr "クレジットをスキップ"
 
-#: source/player/PlayerView.cpp:125
+#: source/player/PlayerView.cpp:128
 msgid "Skip intro"
 msgstr "イントロをスキップ"
 
-#: source/player/PlayerView.cpp:281 source/ui/LibraryDetail.cpp:431
+#: source/player/PlayerView.cpp:284 source/ui/LibraryDetail.cpp:431
 msgid "Off"
 msgstr "なし"
 
-#: source/player/PlayerView.cpp:336
+#: source/player/PlayerView.cpp:339
 msgid "Zoom: fill the screen"
 msgstr "ズーム：画面いっぱい"
 
-#: source/player/PlayerView.cpp:336
+#: source/player/PlayerView.cpp:339
 msgid "Zoom: whole picture"
 msgstr "ズーム：全体を表示"
 
-#: source/player/PlayerView.cpp:490
+#: source/player/PlayerView.cpp:507
 msgid "No other audio track"
 msgstr "ほかの音声トラックはありません"
 
-#: source/player/PlayerView.cpp:494
+#: source/player/PlayerView.cpp:511
 msgid "No subtitles available"
 msgstr "字幕はありません"
 
-#: source/player/PlayerView.cpp:562
+#: source/player/PlayerView.cpp:579
 #, c-format
 msgid "Buffering... %d%%"
 msgstr "バッファリング中... %d%%"
 
-#: source/player/PlayerView.cpp:563
+#: source/player/PlayerView.cpp:580
 msgid "Buffering..."
 msgstr "バッファリング中..."
 
-#: source/player/PlayerView.cpp:580
+#: source/player/PlayerView.cpp:597
 msgid "Zoom"
 msgstr "ズーム"
 
-#: source/player/PlayerView.cpp:581 source/ui/LibraryDetail.cpp:422
+#: source/player/PlayerView.cpp:598 source/ui/LibraryDetail.cpp:422
 msgid "Audio"
 msgstr "音声"
 
-#: source/player/PlayerView.cpp:581 source/player/PlayerView.cpp:717
+#: source/player/PlayerView.cpp:598 source/player/PlayerView.cpp:737
 #: source/ui/LibraryDetail.cpp:422
 msgid "Subtitles"
 msgstr "字幕"
 
-#: source/player/PlayerView.cpp:717
+#: source/player/PlayerView.cpp:737
 msgid "Audio track"
 msgstr "音声トラック"
 
-#: source/player/PlayerView.cpp:732
+#: source/player/PlayerView.cpp:752
 msgid "✓ Current"
 msgstr "✓ 現在"
 
@@ -753,7 +753,7 @@ msgid "Server URL set. Enter your credentials."
 msgstr "サーバーURLを設定しました。ユーザー名とパスワードを入力してください。"
 
 #: source/ui/ConnectView.cpp:476 source/ui/ConnectView.cpp:591
-#: source/ui/SettingsView.cpp:236
+#: source/ui/SettingsView.cpp:239
 msgid "Done"
 msgstr "完了"
 
@@ -790,7 +790,7 @@ msgid "Username"
 msgstr "ユーザー名"
 
 #: source/ui/ConnectView.cpp:581 source/ui/ConnectView.cpp:610
-#: source/ui/SettingsView.cpp:465
+#: source/ui/SettingsView.cpp:473
 msgid "Password"
 msgstr "パスワード"
 
@@ -813,7 +813,7 @@ msgstr "入力"
 msgid "Shift"
 msgstr "シフト"
 
-#: source/ui/ConnectView.cpp:594 source/ui/SettingsView.cpp:235
+#: source/ui/ConnectView.cpp:594 source/ui/SettingsView.cpp:238
 msgid "Move"
 msgstr "移動"
 
@@ -938,7 +938,7 @@ msgstr "最初から"
 
 #: source/ui/LibraryDetail.cpp:234 source/ui/LibraryDetail.cpp:443
 #: source/ui/LibraryMusic.cpp:135 source/ui/LibraryScenes.cpp:113
-#: source/ui/LibraryShows.cpp:270 source/ui/MusicPlayerView.cpp:922
+#: source/ui/LibraryShows.cpp:270 source/ui/MusicPlayerView.cpp:926
 msgid "Play"
 msgstr "再生"
 
@@ -1014,7 +1014,7 @@ msgstr "特典"
 msgid "Seasons"
 msgstr "シーズン"
 
-#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:486
+#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:494
 msgid "Change"
 msgstr "変更"
 
@@ -1146,7 +1146,7 @@ msgstr "1シーズン"
 #: source/ui/LibraryItems.cpp:580 source/ui/LibraryItems.cpp:665
 #: source/ui/LibraryMusic.cpp:135 source/ui/LibraryShows.cpp:270
 #: source/ui/LibraryShows.cpp:275 source/ui/LibraryShows.cpp:373
-#: source/ui/MusicPlayerView.cpp:922
+#: source/ui/MusicPlayerView.cpp:926
 msgid "Shuffle"
 msgstr "シャッフル"
 
@@ -1160,7 +1160,7 @@ msgid "A-Z"
 msgstr "A-Z"
 
 #: source/ui/LibraryItems.cpp:587 source/ui/LibraryItems.cpp:590
-#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:486
+#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:494
 msgid "Page"
 msgstr "ページ"
 
@@ -1174,7 +1174,7 @@ msgid "This photo can't be shown"
 msgstr "この写真は表示できません"
 
 #. TRANSLATORS: the photo's place in its folder
-#: source/ui/LibraryPhotos.cpp:223 source/ui/MusicPlayerView.cpp:877
+#: source/ui/LibraryPhotos.cpp:223 source/ui/MusicPlayerView.cpp:881
 #, c-format
 msgid "%d of %d"
 msgstr "%d / %d"
@@ -1285,7 +1285,7 @@ msgstr "評価"
 msgid "Year"
 msgstr "公開年"
 
-#: source/ui/LibrarySort.cpp:15
+#: source/ui/LibrarySort.cpp:15 source/ui/SettingsView.cpp:469
 msgid "All"
 msgstr "すべて"
 
@@ -1553,84 +1553,84 @@ msgstr "ウェーブ"
 msgid "Lyrics"
 msgstr "歌詞"
 
-#: source/ui/MusicPlayerView.cpp:286
+#: source/ui/MusicPlayerView.cpp:290
 msgid "Added to the queue"
 msgstr "キューに追加しました"
 
-#: source/ui/MusicPlayerView.cpp:286
+#: source/ui/MusicPlayerView.cpp:290
 msgid "Playing next"
 msgstr "次に再生します"
 
-#: source/ui/MusicPlayerView.cpp:682
+#: source/ui/MusicPlayerView.cpp:686
 msgid "No lyrics for this song"
 msgstr "この曲の歌詞はありません"
 
-#: source/ui/MusicPlayerView.cpp:806 source/ui/MusicPlayerView.cpp:927
+#: source/ui/MusicPlayerView.cpp:810 source/ui/MusicPlayerView.cpp:931
 msgid "Up Next"
 msgstr "次の曲"
 
-#: source/ui/MusicPlayerView.cpp:808 source/ui/MusicPlayerView.cpp:1013
+#: source/ui/MusicPlayerView.cpp:812 source/ui/MusicPlayerView.cpp:1017
 msgid "Shuffle off"
 msgstr "シャッフル：オフ"
 
-#: source/ui/MusicPlayerView.cpp:808 source/ui/MusicPlayerView.cpp:1013
+#: source/ui/MusicPlayerView.cpp:812 source/ui/MusicPlayerView.cpp:1017
 msgid "Shuffle on"
 msgstr "シャッフル：オン"
 
-#: source/ui/MusicPlayerView.cpp:809 source/ui/MusicPlayerView.cpp:1020
+#: source/ui/MusicPlayerView.cpp:813 source/ui/MusicPlayerView.cpp:1024
 msgid "Repeat all"
 msgstr "全曲リピート"
 
-#: source/ui/MusicPlayerView.cpp:809 source/ui/MusicPlayerView.cpp:1020
+#: source/ui/MusicPlayerView.cpp:813 source/ui/MusicPlayerView.cpp:1024
 msgid "Repeat off"
 msgstr "リピート：オフ"
 
-#: source/ui/MusicPlayerView.cpp:809
+#: source/ui/MusicPlayerView.cpp:813
 msgid "Repeat one"
 msgstr "1曲リピート"
 
-#: source/ui/MusicPlayerView.cpp:873
+#: source/ui/MusicPlayerView.cpp:877
 msgid "NOW PLAYING"
 msgstr "再生中"
 
 #. TRANSLATORS: the track's place in the queue; Shuffle: shuffle is on
-#: source/ui/MusicPlayerView.cpp:877
+#: source/ui/MusicPlayerView.cpp:881
 #, c-format
 msgid "%d of %d  ·  Shuffle"
 msgstr "%d / %d  ·  シャッフル"
 
 #. TRANSLATORS: the track after this one: its title (and its artist)
-#: source/ui/MusicPlayerView.cpp:916
+#: source/ui/MusicPlayerView.cpp:920
 #, c-format
 msgid "Next:  %s"
 msgstr "次：  %s"
 
-#: source/ui/MusicPlayerView.cpp:917
+#: source/ui/MusicPlayerView.cpp:921
 #, c-format
 msgid "Next:  %s  —  %s"
 msgstr "次：  %s  —  %s"
 
-#: source/ui/MusicPlayerView.cpp:926
+#: source/ui/MusicPlayerView.cpp:930
 msgid "Track"
 msgstr "曲"
 
-#: source/ui/MusicPlayerView.cpp:926
+#: source/ui/MusicPlayerView.cpp:930
 msgid "Visualizer"
 msgstr "ビジュアライザー"
 
-#: source/ui/MusicPlayerView.cpp:1009
+#: source/ui/MusicPlayerView.cpp:1013
 msgid "Added to favorites"
 msgstr "お気に入りに追加しました"
 
-#: source/ui/MusicPlayerView.cpp:1009
+#: source/ui/MusicPlayerView.cpp:1013
 msgid "Removed from favorites"
 msgstr "お気に入りから外しました"
 
-#: source/ui/MusicPlayerView.cpp:1020
+#: source/ui/MusicPlayerView.cpp:1024
 msgid "Repeat this track"
 msgstr "この曲をリピート"
 
-#: source/ui/MusicPlayerView.cpp:1089
+#: source/ui/MusicPlayerView.cpp:1093
 msgid "Volume"
 msgstr "音量"
 
@@ -1674,306 +1674,313 @@ msgstr "表示設定"
 msgid "Made with ❤ for Jellyfin"
 msgstr "Jellyfinのために ❤ を込めて"
 
-#: source/ui/SettingsView.cpp:227 source/ui/SettingsView.cpp:438
+#: source/ui/SettingsView.cpp:230 source/ui/SettingsView.cpp:441
 msgid "Screen Area"
 msgstr "表示エリア"
 
-#: source/ui/SettingsView.cpp:228
+#: source/ui/SettingsView.cpp:231
 msgid "Move each arrow until its tip sits right in"
 msgstr "それぞれの矢印の先が、テレビ画面の"
 
-#: source/ui/SettingsView.cpp:229
+#: source/ui/SettingsView.cpp:232
 msgid "the corner of your TV screen."
 msgstr "角にぴったり合うように動かしてください。"
 
-#: source/ui/SettingsView.cpp:231
+#: source/ui/SettingsView.cpp:234
 #, c-format
 msgid "Left %d   ·   Top %d   ·   Right %d   ·   Bottom %d"
 msgstr "左 %d   ·   上 %d   ·   右 %d   ·   下 %d"
 
-#: source/ui/SettingsView.cpp:235
+#: source/ui/SettingsView.cpp:238
 msgid "Switch"
 msgstr "切替"
 
-#: source/ui/SettingsView.cpp:359
+#: source/ui/SettingsView.cpp:362
 msgid "SSL Verification"
 msgstr "SSL検証"
 
-#: source/ui/SettingsView.cpp:360
+#: source/ui/SettingsView.cpp:363
 msgid "Validate the server HTTPS certificate (disable for self-signed certs)"
 msgstr "サーバーのHTTPS証明書を検証 (自己署名ならオフに)"
 
-#: source/ui/SettingsView.cpp:361 source/ui/SettingsView.cpp:363
-#: source/ui/SettingsView.cpp:367 source/ui/SettingsView.cpp:395
-#: source/ui/SettingsView.cpp:399 source/ui/SettingsView.cpp:433
-#: source/ui/SettingsView.cpp:455 source/ui/SettingsView.cpp:459
-#: source/ui/SettingsView.cpp:463
+#: source/ui/SettingsView.cpp:364 source/ui/SettingsView.cpp:366
+#: source/ui/SettingsView.cpp:370 source/ui/SettingsView.cpp:398
+#: source/ui/SettingsView.cpp:402 source/ui/SettingsView.cpp:436
+#: source/ui/SettingsView.cpp:458 source/ui/SettingsView.cpp:462
+#: source/ui/SettingsView.cpp:469
 msgid "OFF"
 msgstr "オフ"
 
-#: source/ui/SettingsView.cpp:361 source/ui/SettingsView.cpp:363
-#: source/ui/SettingsView.cpp:367 source/ui/SettingsView.cpp:399
-#: source/ui/SettingsView.cpp:433 source/ui/SettingsView.cpp:459
-#: source/ui/SettingsView.cpp:463
+#: source/ui/SettingsView.cpp:364 source/ui/SettingsView.cpp:366
+#: source/ui/SettingsView.cpp:370 source/ui/SettingsView.cpp:402
+#: source/ui/SettingsView.cpp:436 source/ui/SettingsView.cpp:462
 msgid "ON"
 msgstr "オン"
 
-#: source/ui/SettingsView.cpp:362
+#: source/ui/SettingsView.cpp:365
 msgid "Background Music"
 msgstr "BGM"
 
-#: source/ui/SettingsView.cpp:362
+#: source/ui/SettingsView.cpp:365
 msgid "Play background music in menus"
 msgstr "メニューでBGMを流します"
 
-#: source/ui/SettingsView.cpp:364
+#: source/ui/SettingsView.cpp:367
 msgid "Interface Sounds"
 msgstr "効果音"
 
-#: source/ui/SettingsView.cpp:365
+#: source/ui/SettingsView.cpp:368
 msgid "Sounds in the menus; your own in sounds/ on the SD card"
 msgstr "メニューの効果音。SDカードのsounds/で自作の音も使えます"
 
-#: source/ui/SettingsView.cpp:366
+#: source/ui/SettingsView.cpp:369
 msgid "The menus stay silent"
 msgstr "メニューで音を鳴らしません"
 
-#: source/ui/SettingsView.cpp:377
+#: source/ui/SettingsView.cpp:380
 #, c-format
 msgid "%.1f Mb/s; your connection (%.1f Mb/s measured) holds videos to %.1f"
 msgstr "%.1f Mb/s。回線 (実測 %.1f Mb/s) により上限 %.1f"
 
-#: source/ui/SettingsView.cpp:382
+#: source/ui/SettingsView.cpp:385
 #, c-format
 msgid "%.1f Mb/s: sharpest, for a wired adapter. Lower it if videos stutter"
 msgstr "%.1f Mb/s：最高画質、有線アダプター向け。カクつくなら下げてください"
 
-#: source/ui/SettingsView.cpp:386
+#: source/ui/SettingsView.cpp:389
 #, c-format
 msgid "Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering"
 msgstr "ビットレート：%.1f Mb/s。読み込みが続くなら下げてください"
 
-#: source/ui/SettingsView.cpp:388
+#: source/ui/SettingsView.cpp:391
 msgid "Video Quality"
 msgstr "画質"
 
-#: source/ui/SettingsView.cpp:392
+#: source/ui/SettingsView.cpp:395
 msgid "Direct Play"
 msgstr "ダイレクト再生"
 
-#: source/ui/SettingsView.cpp:393
+#: source/ui/SettingsView.cpp:396
 msgid "Files the Wii can decode play as they are (SD DivX, DVD...): no server work"
 msgstr "Wiiで再生できる形式 (SD DivX、DVD...) はそのまま再生：サーバー負荷なし"
 
-#: source/ui/SettingsView.cpp:394
+#: source/ui/SettingsView.cpp:397
 msgid "Every video is converted by the server"
 msgstr "すべての動画をサーバーで変換します"
 
-#: source/ui/SettingsView.cpp:395 source/ui/SettingsView.cpp:455
+#: source/ui/SettingsView.cpp:398 source/ui/SettingsView.cpp:458
 msgid "Auto"
 msgstr "自動"
 
-#: source/ui/SettingsView.cpp:396
+#: source/ui/SettingsView.cpp:399
 msgid "Smooth Motion"
 msgstr "なめらか表示"
 
-#: source/ui/SettingsView.cpp:397
+#: source/ui/SettingsView.cpp:400
 msgid "Blends frames on picture changes: films move evenly on 60 Hz TVs"
 msgstr "フレームを混ぜて、60 Hzのテレビでも映画がなめらかに動きます"
 
-#: source/ui/SettingsView.cpp:398
+#: source/ui/SettingsView.cpp:401
 msgid "Each frame shown as is (24 fps films judder slightly on 60 Hz)"
 msgstr "フレームをそのまま表示 (24 fpsの映画は60 Hzで少しカクつきます)"
 
-#: source/ui/SettingsView.cpp:402
+#: source/ui/SettingsView.cpp:405
 msgid "Light, like the Wii Menu"
 msgstr "Wiiメニューのような明るい色"
 
-#: source/ui/SettingsView.cpp:403
+#: source/ui/SettingsView.cpp:406
 msgid "Dark, for movie nights"
 msgstr "映画を楽しむ夜に、暗い色"
 
-#: source/ui/SettingsView.cpp:404
+#: source/ui/SettingsView.cpp:407
 msgid "Red and charcoal, browse in rows like the old video channels"
 msgstr "赤とチャコール。昔のビデオチャンネルのように行で表示"
 
-#: source/ui/SettingsView.cpp:405
+#: source/ui/SettingsView.cpp:408
 msgid "Black, silver and green"
 msgstr "黒、シルバー、グリーン"
 
-#: source/ui/SettingsView.cpp:406
+#: source/ui/SettingsView.cpp:409
 msgid "Dark grey and orange"
 msgstr "ダークグレー、オレンジ"
 
-#: source/ui/SettingsView.cpp:410
+#: source/ui/SettingsView.cpp:413
 msgid "Christmas for now, until January 6"
 msgstr "1月6日まではクリスマス"
 
-#: source/ui/SettingsView.cpp:410
+#: source/ui/SettingsView.cpp:413
 msgid "Theme"
 msgstr "テーマ"
 
-#: source/ui/SettingsView.cpp:416
+#: source/ui/SettingsView.cpp:419
 msgid "Home Screen"
 msgstr "ホーム画面"
 
-#: source/ui/SettingsView.cpp:416
+#: source/ui/SettingsView.cpp:419
 msgid "Rows of posters to browse, like the old video channels"
 msgstr "ポスターを行で並べて表示。昔のビデオチャンネル風"
 
-#: source/ui/SettingsView.cpp:417
+#: source/ui/SettingsView.cpp:420
 msgid "A grid of your libraries"
 msgstr "ライブラリをグリッドで表示"
 
-#: source/ui/SettingsView.cpp:423
+#: source/ui/SettingsView.cpp:426
 msgid "Browse libraries with their artwork"
 msgstr "ライブラリをポスター付きで表示"
 
-#: source/ui/SettingsView.cpp:424
+#: source/ui/SettingsView.cpp:427
 msgid "Libraries as text lists: quickest to browse big ones"
 msgstr "テキストのリスト：大きなライブラリも素早く見られます"
 
-#: source/ui/SettingsView.cpp:425
+#: source/ui/SettingsView.cpp:428
 msgid "Text lists, with the cover of the selected title"
 msgstr "リストと、選択中の作品のポスター"
 
-#: source/ui/SettingsView.cpp:428
+#: source/ui/SettingsView.cpp:431
 msgid "Library View"
 msgstr "ライブラリ表示"
 
-#: source/ui/SettingsView.cpp:430
+#: source/ui/SettingsView.cpp:433
 msgid "Disc Slot Light"
 msgstr "ディスクスロットの光"
 
-#: source/ui/SettingsView.cpp:431
+#: source/ui/SettingsView.cpp:434
 msgid "Pulses with the sound, as bright as the Wii Settings say"
 msgstr "音に合わせて光ります (明るさはWii本体設定のとおり)"
 
-#: source/ui/SettingsView.cpp:432
+#: source/ui/SettingsView.cpp:435
 msgid "Stays dark during playback"
 msgstr "再生中は光りません"
 
-#: source/ui/SettingsView.cpp:438
+#: source/ui/SettingsView.cpp:441
 msgid "Shrink the interface if your TV crops the edges (overscan)"
 msgstr "テレビで端が切れる場合に画面を縮小 (オーバースキャン)"
 
-#: source/ui/SettingsView.cpp:439
+#: source/ui/SettingsView.cpp:442
 msgid "Adjusted"
 msgstr "調整済み"
 
-#: source/ui/SettingsView.cpp:439
+#: source/ui/SettingsView.cpp:442
 msgid "Full"
 msgstr "全体"
 
-#: source/ui/SettingsView.cpp:441
+#: source/ui/SettingsView.cpp:444
 msgid "Backgrounds"
 msgstr "背景"
 
-#: source/ui/SettingsView.cpp:442
+#: source/ui/SettingsView.cpp:445
 msgid "Solid colours: no bands on TVs that show them in gradients"
 msgstr "単色：グラデーションに縞が出るテレビ向け"
 
-#: source/ui/SettingsView.cpp:443
+#: source/ui/SettingsView.cpp:446
 msgid "Soft gradients, like the Wii Menu"
 msgstr "Wiiメニューのような柔らかなグラデーション"
 
-#: source/ui/SettingsView.cpp:444
+#: source/ui/SettingsView.cpp:447
 msgid "Gradient"
 msgstr "グラデーション"
 
-#: source/ui/SettingsView.cpp:444
+#: source/ui/SettingsView.cpp:447
 msgid "Solid"
 msgstr "単色"
 
-#: source/ui/SettingsView.cpp:445
+#: source/ui/SettingsView.cpp:448
 msgid "Clock"
 msgstr "時計"
 
-#: source/ui/SettingsView.cpp:446
+#: source/ui/SettingsView.cpp:449
 msgid "13:30, the date as day/month"
 msgstr "13:30、日付は日/月"
 
-#: source/ui/SettingsView.cpp:446
+#: source/ui/SettingsView.cpp:449
 msgid "1:30 PM, the date as month/day"
 msgstr "午後1:30、日付は月/日"
 
-#: source/ui/SettingsView.cpp:447
+#: source/ui/SettingsView.cpp:450
 msgid "12-hour"
 msgstr "12時間"
 
-#: source/ui/SettingsView.cpp:447
+#: source/ui/SettingsView.cpp:450
 msgid "24-hour"
 msgstr "24時間"
 
-#: source/ui/SettingsView.cpp:449
+#: source/ui/SettingsView.cpp:452
 msgid "Language"
 msgstr "言語"
 
-#: source/ui/SettingsView.cpp:450
+#: source/ui/SettingsView.cpp:453
 msgid "Chosen here, whatever the Wii's language"
 msgstr "Wiiの言語に関係なく、ここで選びます"
 
-#: source/ui/SettingsView.cpp:450
+#: source/ui/SettingsView.cpp:453
 msgid "The Wii's language, as set in the Wii Settings"
 msgstr "Wii本体設定の言語を使います"
 
-#: source/ui/SettingsView.cpp:452 source/ui/Ui.cpp:135
+#: source/ui/SettingsView.cpp:455 source/ui/Ui.cpp:135
 msgid "Christmas"
 msgstr "クリスマス"
 
-#: source/ui/SettingsView.cpp:453
+#: source/ui/SettingsView.cpp:456
 msgid "Snow and Christmas colours from December 1 to January 6"
 msgstr "12月1日から1月6日まで雪とクリスマスカラー"
 
-#: source/ui/SettingsView.cpp:454
+#: source/ui/SettingsView.cpp:457
 msgid "The chosen theme all year round"
 msgstr "選んだテーマを一年中"
 
-#: source/ui/SettingsView.cpp:456
+#: source/ui/SettingsView.cpp:459
 msgid "Music Autoplay"
 msgstr "自動再生"
 
-#: source/ui/SettingsView.cpp:457
+#: source/ui/SettingsView.cpp:460
 msgid "When an album or a playlist ends, similar songs follow"
 msgstr "アルバムやプレイリストの後に似た曲を再生"
 
-#: source/ui/SettingsView.cpp:458
+#: source/ui/SettingsView.cpp:461
 msgid "The music stops at the end of the album or playlist"
 msgstr "アルバムやプレイリストの最後で停止"
 
-#: source/ui/SettingsView.cpp:460
+#: source/ui/SettingsView.cpp:465
 msgid "Skip Prompts"
 msgstr "スキップボタン"
 
-#: source/ui/SettingsView.cpp:461
+#: source/ui/SettingsView.cpp:466
 msgid "\"Skip intro\", \"Skip recap\"... over the parts the server knows"
 msgstr "サーバーが認識した部分に「イントロをスキップ」などを表示"
 
-#: source/ui/SettingsView.cpp:462
+#: source/ui/SettingsView.cpp:467
+msgid "\"Skip recap\" only: intros and credits play without a prompt"
+msgstr "「あらすじをスキップ」のみ：イントロとクレジットはそのまま再生"
+
+#: source/ui/SettingsView.cpp:468
 msgid "Intros, recaps and credits play without a prompt"
 msgstr "イントロ・あらすじ・クレジットをボタンなしで再生"
 
-#: source/ui/SettingsView.cpp:465
+#: source/ui/SettingsView.cpp:469
+msgid "Recaps only"
+msgstr "あらすじのみ"
+
+#: source/ui/SettingsView.cpp:473
 msgid "Automatic"
 msgstr "自動"
 
-#: source/ui/SettingsView.cpp:465
+#: source/ui/SettingsView.cpp:473
 msgid "Passcode"
 msgstr "暗証番号"
 
-#: source/ui/SettingsView.cpp:467
+#: source/ui/SettingsView.cpp:475
 msgid "Opens at once on this Wii"
 msgstr "このWiiですぐに開きます"
 
-#: source/ui/SettingsView.cpp:468
+#: source/ui/SettingsView.cpp:476
 msgid "Asks the profile's four-digit passcode first"
 msgstr "最初にプロフィールの4桁の暗証番号を聞きます"
 
-#: source/ui/SettingsView.cpp:469
+#: source/ui/SettingsView.cpp:477
 msgid "Asks the password (or Quick Connect) each time"
 msgstr "毎回パスワード (またはクイックコネクト) を求めます"
 
-#: source/ui/SettingsView.cpp:472
+#: source/ui/SettingsView.cpp:480
 msgid "Sign-In"
 msgstr "サインイン"
 
