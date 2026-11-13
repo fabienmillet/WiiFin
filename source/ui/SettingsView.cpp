@@ -1,5 +1,6 @@
 #include "SettingsView.h"
 #include "Ui.h"
+#include "LibraryDraw.h"
 #include "../player/vo_wiifin.h"
 #include "../player/WiiPlayer.h"
 #include "../player/PlayerView.h"
@@ -131,10 +132,13 @@ void SettingsView::drawRow(int id, const char* label, const char* desc,
     Ui::card(x, y, ROW_W, ROW_H, 14, focusAnim[i]);
     label = tr(label); desc = tr(desc); valStr = tr(valStr);
     Ui::text(x + 18, y + 8,  label, 18, p.text);
-    Ui::text(x + 18, y + 31, desc,  12, p.textDim);
-
-    // Value pill on the right
+    // Value pill on the right; the description stops short of it (a long
+    // one, in some languages, a size smaller, then cut with "...")
     int pw = Ui::textWidth(valStr, 15) + 28;
+    int room = ROW_W - pw - 16 - 18 - 10, ds = 12;
+    if (Ui::textWidth(desc, ds) > room) ds = 11;
+    Ui::text(x + 18, y + 31, LibDraw::fitText(Ui::font(), desc, ds, room).c_str(), ds, p.textDim);
+
     float px = x + ROW_W - pw - 16, py = y + (ROW_H - 26) * 0.5f;
     Ui::roundRect(px, py, pw, 26, 13, Ui::mix(pillCol, 0xFFFFFFFF, 0.15f), pillCol);
     Ui::textCentered(px + pw * 0.5f, py + 4, valStr, 15, p.textOnAccent);
