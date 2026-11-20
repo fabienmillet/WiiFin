@@ -41,6 +41,7 @@ extern "C" float cache_fill_status;           /* MPlayer cache2.c, % ahead */
 
 bool g_wiifin_stream_tls_verify = true;
 volatile unsigned long long g_wiifin_stream_bytes = 0;
+volatile unsigned g_wiifin_stream_cuts = 0;
 
 /* ---- MPlayer ABI — must match libmplayer.a (stream/stream.h) -------------
  * Offsets verified against stream_https_wii.o: fill_buffer @0, seek @8,
@@ -452,6 +453,7 @@ int fillBuffer(mp_stream* s, char* buffer, int max_len) {
                 break;
             const long long at = st->total - st->remaining;
             SYS_Report("[stream] cut at %lld of %lld bytes, going on from there\n", at, st->total);
+            g_wiifin_stream_cuts = g_wiifin_stream_cuts + 1;
             if (!seekStream(s, at)) break;
             continue;
         }

@@ -13,3 +13,7 @@ extern char g_wiifin_stream_fail_body[160];
  * PlaySession tells a dead connection from a picture stuck while the data
  * comes in. */
 extern volatile unsigned long long g_wiifin_stream_bytes;
+
+/* Times a stream was cut and picked up again from the byte it stopped at:
+ * with no data since, the connection is down, not the picture. */
+extern volatile unsigned g_wiifin_stream_cuts;

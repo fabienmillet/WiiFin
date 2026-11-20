@@ -233,6 +233,7 @@ bool runPlaySession(JellyfinClient& client,
     bool introFetched = false;
     int  retries      = 0;
     bool everPlayed   = false;   /* this item showed something */
+    bool reconnecting = false;   /* the next stream picks up a dropped one */
     bool pictureStuck = false;   /* the last stream: data came, the picture did not move */
     int  stuckTries   = 0;       /* streams of this item stuck like that */
     std::string failWhy;         /* set when giving up: shown to the user */
@@ -324,6 +325,7 @@ bool runPlaySession(JellyfinClient& client,
         u64   lastProgressMs = ticks_to_millisecs(gettime());
         float lastTimePos    = -1.0f;
         unsigned long long bytesAtProgress = g_wiifin_stream_bytes;
+        const unsigned cutsAtStart = g_wiifin_stream_cuts;
         u64   stopAtMs       = 0;
         bool  ioAborted      = false;
 
@@ -445,7 +447,10 @@ bool runPlaySession(JellyfinClient& client,
                     /* the data still comes in (or sits in the cache) while
                      * the picture does not move: not the connection */
                     unsigned long long got = g_wiifin_stream_bytes - bytesAtProgress;
-                    pictureStuck = got > 256 * 1024 || cache_fill_status >= 50.0f;
+                    /* this stream was cut (the cache reads ahead: maybe a while
+                     * ago) and nothing comes any more: the connection */
+                    const bool cut = g_wiifin_stream_cuts != cutsAtStart && got == 0;
+                    pictureStuck = !cut && (got > 256 * 1024 || cache_fill_status >= 50.0f);
                     SYS_Report("[runPlay] no progress for 20 s: %llu KB received meanwhile, cache %.0f%%: %s\n",
                                got / 1024, (double)cache_fill_status,
                                pictureStuck ? "the picture is stuck" : "no data");
@@ -639,9 +644,13 @@ bool runPlaySession(JellyfinClient& client,
         /* If nothing played, retry from where this stream was meant to start */
         float startSecs = (float)(startTicks / 10000000.0);
         float restartAt = posSecs > startSecs ? posSecs : startSecs;
+        /* The file played well for a while and then the stream dropped: the
+         * network, not the file. Pick it up again as it was, played as it is. */
+        const bool playedWell = everPlayed && posSecs > startSecs + 20.0f;
         /* The server refused the stream: one retry (re-encoding everything
          * after a 500, see forceReencode), not three slow ones. */
-        if (how.direct && allowDirect && (reason == PLAYER_STOP_ERROR || dropped)) {
+        if (how.direct && allowDirect && (reason == PLAYER_STOP_ERROR || dropped) &&
+            !(playedWell && !pictureStuck)) {
             SYS_Report("[DirectPlay] the file did not play, transcoding instead\n");
             allowDirect = false;
         }
@@ -668,6 +677,7 @@ bool runPlaySession(JellyfinClient& client,
             SYS_Report("[runPlay] giving up: %s\n", why);
         } else if ((reason == PLAYER_STOP_ERROR || dropped) && retries < maxRetries) {
             ++retries;
+            reconnecting = true;
             SYS_Report("[runPlay] stream ended early at %.1f s, retry %d/%d\n",
                        (double)posSecs, retries, maxRetries);
             reason = PLAYER_STOP_SEEK;
@@ -704,12 +714,19 @@ bool runPlaySession(JellyfinClient& client,
             long long fromTicks = (long long)(restartAt * 10000000.0);
             std::string newUrl, newSession;
             bool ok = false;
-            runWithPlayerUI(view, ir, N_("Loading..."), [&]() {
+            /* after a drop the network may take a minute to come back (seen on
+             * a real Wii: no answer at all for over 60 s): ask again for a while */
+            const int tries = reconnecting ? 8 : 1;
+            runWithPlayerUI(view, ir, reconnecting ? N_("Reconnecting...") : N_("Loading..."), [&]() {
                 client.deleteActiveEncoding(serverUrl, auth, playSessionId);
-                ok = client.getPlaybackUrl(serverUrl, auth, itemId, mediaSourceId,
-                                           newAudio, newBurn, fromTicks,
-                                           newUrl, newSession, how, allowDirect);
+                for (int t = 0; t < tries && !ok; t++) {
+                    if (t) { SYS_Report("[runPlay] server not answering, asking again (%d/%d)\n", t + 1, tries); usleep(10 * 1000 * 1000); }
+                    ok = client.getPlaybackUrl(serverUrl, auth, itemId, mediaSourceId,
+                                               newAudio, newBurn, fromTicks,
+                                               newUrl, newSession, how, allowDirect);
+                }
             });
+            reconnecting = false;
             if (ok) {
                 url           = newUrl;
                 playSessionId = newSession;
