@@ -1,4 +1,6 @@
 #include "Subtitles.h"
+
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -111,9 +113,39 @@ bool Subtitles::load(const std::string& srt)
     return !cues.empty();
 }
 
+void Subtitles::setDelay(float d)
+{
+    /* in 0.1 s steps, as set; within an hour either way */
+    d = roundf(d * 10.0f) / 10.0f;
+    if (d >  3600.0f) d =  3600.0f;
+    if (d < -3600.0f) d = -3600.0f;
+    if (fabsf(d) < 0.05f) d = 0.0f;
+    delay_ = d;
+    last = 0;   /* the cues are looked up from scratch */
+}
+
+bool Subtitles::lineDelay(float secs, int dir, float& out) const
+{
+    const float t = secs - delay_;
+    /* the last line started at t (shown, or the one before a gap) */
+    int i = -1;
+    for (size_t k = 0; k < cues.size() && cues[k].from <= t; ++k) i = (int)k;
+    int target;
+    if (dir > 0) {
+        target = i + 1;
+    } else {
+        /* the one before the line shown; between lines, the last one again */
+        target = (i >= 0 && t < cues[i].to) ? i - 1 : i;
+    }
+    if (target < 0 || target >= (int)cues.size()) return false;
+    out = secs - cues[target].from;
+    return true;
+}
+
 const Subtitles::Cue* Subtitles::at(float secs)
 {
     if (cues.empty()) return nullptr;
+    secs -= delay_;
     /* from the previous place when playback just moved on, else a search */
     if (last >= cues.size() || cues[last].from > secs) {
         size_t lo = 0, hi = cues.size();

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WiiFin\n"
 "Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
-"POT-Creation-Date: 2026-11-27 16:33+0100\n"
+"POT-Creation-Date: 2026-11-27 21:38+0100\n"
 "PO-Revision-Date: 2026-10-11 02:59+0200\n"
 "Last-Translator: WiiFin\n"
 "Language-Team: Chinese (Simplified)\n"
@@ -21,7 +21,7 @@ msgid "Retry"
 msgstr "重试"
 
 #: source/core/App.cpp:94 source/core/App.cpp:470
-#: source/player/PlayerView.cpp:598 source/ui/ConnectView.cpp:601
+#: source/player/PlayerView.cpp:694 source/ui/ConnectView.cpp:601
 #: source/ui/ConnectView.cpp:703 source/ui/ConnectView.cpp:764
 #: source/ui/LibraryDetail.cpp:443 source/ui/LibraryHome.cpp:384
 #: source/ui/LibraryHome.cpp:426 source/ui/LibraryHome.cpp:493
@@ -218,7 +218,8 @@ msgstr "确认"
 msgid "Close"
 msgstr "关闭"
 
-#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:346
+#: source/core/HomeMenu.cpp:195 source/player/PlayerView.cpp:885
+#: source/ui/SettingsView.cpp:346
 msgid "Reset"
 msgstr "重置"
 
@@ -260,14 +261,14 @@ msgid "Loading subtitles..."
 msgstr "字幕加载中..."
 
 #: source/core/PlaySession.cpp:218 source/core/PlaySession.cpp:249
-#: source/core/PlaySession.cpp:720 source/player/PlayerView.cpp:581
+#: source/core/PlaySession.cpp:720 source/player/PlayerView.cpp:677
 #: source/ui/LibraryView.cpp:1475 source/ui/MusicPlayerView.cpp:911
 msgid "Loading..."
 msgstr "加载中..."
 
 #: source/core/PlaySession.cpp:366 source/core/PlaySession.cpp:528
 #: source/core/PlaySession.cpp:539 source/core/PlaySession.cpp:574
-#: source/core/PlaySession.cpp:608 source/core/PlaySession.cpp:811
+#: source/core/PlaySession.cpp:608 source/core/PlaySession.cpp:812
 msgid "Stopping..."
 msgstr "正在停止..."
 
@@ -295,8 +296,8 @@ msgstr "下一首播放 / 加入队列：仅限音乐"
 msgid "Loading next episode..."
 msgstr "正在加载下一集..."
 
-#: source/core/PlaySession.cpp:545 source/player/PlayerView.cpp:467
-#: source/player/PlayerView.cpp:499 source/ui/LibraryHome.cpp:380
+#: source/core/PlaySession.cpp:545 source/player/PlayerView.cpp:563
+#: source/player/PlayerView.cpp:595 source/ui/LibraryHome.cpp:380
 msgid "No next episode"
 msgstr "没有下一集"
 
@@ -304,17 +305,17 @@ msgstr "没有下一集"
 msgid "Loading previous episode..."
 msgstr "正在加载上一集..."
 
-#: source/core/PlaySession.cpp:549 source/player/PlayerView.cpp:460
-#: source/player/PlayerView.cpp:502
+#: source/core/PlaySession.cpp:549 source/player/PlayerView.cpp:556
+#: source/player/PlayerView.cpp:598
 msgid "No previous episode"
 msgstr "没有上一集"
 
-#: source/core/PlaySession.cpp:551 source/player/PlayerView.cpp:496
+#: source/core/PlaySession.cpp:551 source/player/PlayerView.cpp:592
 #: source/ui/MusicPlayerView.cpp:1091
 msgid "Volume +"
 msgstr "音量 +"
 
-#: source/core/PlaySession.cpp:552 source/player/PlayerView.cpp:497
+#: source/core/PlaySession.cpp:552 source/player/PlayerView.cpp:593
 #: source/ui/MusicPlayerView.cpp:1092
 msgid "Volume -"
 msgstr "音量 -"
@@ -372,20 +373,20 @@ msgstr "服务器无响应：%s"
 msgid "Loading episode..."
 msgstr "正在加载剧集..."
 
-#: source/core/PlaySession.cpp:821
+#: source/core/PlaySession.cpp:822
 #, c-format
 msgid "Server says: %s"
 msgstr "服务器消息：%s"
 
-#: source/core/PlaySession.cpp:824
+#: source/core/PlaySession.cpp:825
 msgid "Details are in wiifin.log on the SD card."
 msgstr "详情见SD卡上的 wiifin.log。"
 
-#: source/core/PlaySession.cpp:827 source/core/PlaySession.cpp:830
+#: source/core/PlaySession.cpp:828 source/core/PlaySession.cpp:831
 msgid "Can't play this video"
 msgstr "无法播放此视频"
 
-#: source/core/PlaySession.cpp:828
+#: source/core/PlaySession.cpp:829
 msgid "Check the server's FFmpeg log (Dashboard > Logs)."
 msgstr "请查看服务器的 FFmpeg 日志（控制台 > 日志）。"
 
@@ -480,51 +481,79 @@ msgstr "跳过片头"
 msgid "Off"
 msgstr "关闭"
 
-#: source/player/PlayerView.cpp:339
+#: source/player/PlayerView.cpp:315
+msgid "0.1 s"
+msgstr "0.1 秒"
+
+#: source/player/PlayerView.cpp:315
+msgid "Previous line"
+msgstr "上一行"
+
+#: source/player/PlayerView.cpp:316
+msgid "Next line"
+msgstr "下一行"
+
+#: source/player/PlayerView.cpp:350
+msgid "No next line"
+msgstr "没有下一行"
+
+#: source/player/PlayerView.cpp:350
+msgid "No previous line"
+msgstr "没有上一行"
+
+#: source/player/PlayerView.cpp:400
 msgid "Zoom: fill the screen"
 msgstr "缩放：填满屏幕"
 
-#: source/player/PlayerView.cpp:339
+#: source/player/PlayerView.cpp:400
 msgid "Zoom: whole picture"
 msgstr "缩放：完整画面"
 
-#: source/player/PlayerView.cpp:507
+#: source/player/PlayerView.cpp:603
 msgid "No other audio track"
 msgstr "没有其他音轨"
 
-#: source/player/PlayerView.cpp:511
+#: source/player/PlayerView.cpp:607
 msgid "No subtitles available"
 msgstr "没有可用字幕"
 
-#: source/player/PlayerView.cpp:579
+#: source/player/PlayerView.cpp:675
 #, c-format
 msgid "Buffering... %d%%"
 msgstr "缓冲中... %d%%"
 
-#: source/player/PlayerView.cpp:580
+#: source/player/PlayerView.cpp:676
 msgid "Buffering..."
 msgstr "缓冲中..."
 
-#: source/player/PlayerView.cpp:597
+#: source/player/PlayerView.cpp:693
 msgid "Zoom"
 msgstr "缩放"
 
-#: source/player/PlayerView.cpp:598 source/ui/LibraryDetail.cpp:422
+#: source/player/PlayerView.cpp:694 source/ui/LibraryDetail.cpp:422
 msgid "Audio"
 msgstr "音频"
 
-#: source/player/PlayerView.cpp:598 source/player/PlayerView.cpp:737
+#: source/player/PlayerView.cpp:694 source/player/PlayerView.cpp:833
 #: source/ui/LibraryDetail.cpp:422
 msgid "Subtitles"
 msgstr "字幕"
 
-#: source/player/PlayerView.cpp:737
+#: source/player/PlayerView.cpp:833
 msgid "Audio track"
 msgstr "音轨"
 
-#: source/player/PlayerView.cpp:752
+#: source/player/PlayerView.cpp:848
 msgid "✓ Current"
 msgstr "✓ 当前"
+
+#: source/player/PlayerView.cpp:855
+msgid "Picture subtitles: no delay to set"
+msgstr "图片字幕无法调整延迟"
+
+#: source/player/PlayerView.cpp:867 source/player/PlayerView.cpp:868
+msgid "Delay"
+msgstr "字幕延迟"
 
 #: source/ui/BrowseHome.cpp:44
 msgid "browse"

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WiiFin\n"
 "Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
-"POT-Creation-Date: 2026-11-27 16:33+0100\n"
+"POT-Creation-Date: 2026-11-27 21:38+0100\n"
 "PO-Revision-Date: 2026-10-11 02:59+0200\n"
 "Last-Translator: WiiFin\n"
 "Language-Team: Spanish\n"
@@ -22,7 +22,7 @@ msgid "Retry"
 msgstr "Reintentar"
 
 #: source/core/App.cpp:94 source/core/App.cpp:470
-#: source/player/PlayerView.cpp:598 source/ui/ConnectView.cpp:601
+#: source/player/PlayerView.cpp:694 source/ui/ConnectView.cpp:601
 #: source/ui/ConnectView.cpp:703 source/ui/ConnectView.cpp:764
 #: source/ui/LibraryDetail.cpp:443 source/ui/LibraryHome.cpp:384
 #: source/ui/LibraryHome.cpp:426 source/ui/LibraryHome.cpp:493
@@ -219,7 +219,8 @@ msgstr "Confirmar"
 msgid "Close"
 msgstr "Cerrar"
 
-#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:346
+#: source/core/HomeMenu.cpp:195 source/player/PlayerView.cpp:885
+#: source/ui/SettingsView.cpp:346
 msgid "Reset"
 msgstr "Reiniciar"
 
@@ -261,14 +262,14 @@ msgid "Loading subtitles..."
 msgstr "Cargando subtítulos..."
 
 #: source/core/PlaySession.cpp:218 source/core/PlaySession.cpp:249
-#: source/core/PlaySession.cpp:720 source/player/PlayerView.cpp:581
+#: source/core/PlaySession.cpp:720 source/player/PlayerView.cpp:677
 #: source/ui/LibraryView.cpp:1475 source/ui/MusicPlayerView.cpp:911
 msgid "Loading..."
 msgstr "Cargando..."
 
 #: source/core/PlaySession.cpp:366 source/core/PlaySession.cpp:528
 #: source/core/PlaySession.cpp:539 source/core/PlaySession.cpp:574
-#: source/core/PlaySession.cpp:608 source/core/PlaySession.cpp:811
+#: source/core/PlaySession.cpp:608 source/core/PlaySession.cpp:812
 msgid "Stopping..."
 msgstr "Deteniendo..."
 
@@ -296,8 +297,8 @@ msgstr "Reproducir después / Añadir a la cola: solo música"
 msgid "Loading next episode..."
 msgstr "Cargando el episodio siguiente..."
 
-#: source/core/PlaySession.cpp:545 source/player/PlayerView.cpp:467
-#: source/player/PlayerView.cpp:499 source/ui/LibraryHome.cpp:380
+#: source/core/PlaySession.cpp:545 source/player/PlayerView.cpp:563
+#: source/player/PlayerView.cpp:595 source/ui/LibraryHome.cpp:380
 msgid "No next episode"
 msgstr "No hay episodio siguiente"
 
@@ -305,17 +306,17 @@ msgstr "No hay episodio siguiente"
 msgid "Loading previous episode..."
 msgstr "Cargando el episodio anterior..."
 
-#: source/core/PlaySession.cpp:549 source/player/PlayerView.cpp:460
-#: source/player/PlayerView.cpp:502
+#: source/core/PlaySession.cpp:549 source/player/PlayerView.cpp:556
+#: source/player/PlayerView.cpp:598
 msgid "No previous episode"
 msgstr "No hay episodio anterior"
 
-#: source/core/PlaySession.cpp:551 source/player/PlayerView.cpp:496
+#: source/core/PlaySession.cpp:551 source/player/PlayerView.cpp:592
 #: source/ui/MusicPlayerView.cpp:1091
 msgid "Volume +"
 msgstr "Volumen +"
 
-#: source/core/PlaySession.cpp:552 source/player/PlayerView.cpp:497
+#: source/core/PlaySession.cpp:552 source/player/PlayerView.cpp:593
 #: source/ui/MusicPlayerView.cpp:1092
 msgid "Volume -"
 msgstr "Volumen -"
@@ -373,20 +374,20 @@ msgstr "El servidor no respondió: %s"
 msgid "Loading episode..."
 msgstr "Cargando episodio..."
 
-#: source/core/PlaySession.cpp:821
+#: source/core/PlaySession.cpp:822
 #, c-format
 msgid "Server says: %s"
 msgstr "El servidor dice: %s"
 
-#: source/core/PlaySession.cpp:824
+#: source/core/PlaySession.cpp:825
 msgid "Details are in wiifin.log on the SD card."
 msgstr "Detalles en wiifin.log, en la tarjeta SD."
 
-#: source/core/PlaySession.cpp:827 source/core/PlaySession.cpp:830
+#: source/core/PlaySession.cpp:828 source/core/PlaySession.cpp:831
 msgid "Can't play this video"
 msgstr "No se puede reproducir este vídeo"
 
-#: source/core/PlaySession.cpp:828
+#: source/core/PlaySession.cpp:829
 msgid "Check the server's FFmpeg log (Dashboard > Logs)."
 msgstr "Revisa el registro FFmpeg del servidor (Panel de control > Registros)."
 
@@ -481,51 +482,79 @@ msgstr "Saltar intro"
 msgid "Off"
 msgstr "Ninguno"
 
-#: source/player/PlayerView.cpp:339
+#: source/player/PlayerView.cpp:315
+msgid "0.1 s"
+msgstr "0,1 s"
+
+#: source/player/PlayerView.cpp:315
+msgid "Previous line"
+msgstr "Línea anterior"
+
+#: source/player/PlayerView.cpp:316
+msgid "Next line"
+msgstr "Línea siguiente"
+
+#: source/player/PlayerView.cpp:350
+msgid "No next line"
+msgstr "No hay línea siguiente"
+
+#: source/player/PlayerView.cpp:350
+msgid "No previous line"
+msgstr "No hay línea anterior"
+
+#: source/player/PlayerView.cpp:400
 msgid "Zoom: fill the screen"
 msgstr "Zoom: pantalla completa"
 
-#: source/player/PlayerView.cpp:339
+#: source/player/PlayerView.cpp:400
 msgid "Zoom: whole picture"
 msgstr "Zoom: imagen completa"
 
-#: source/player/PlayerView.cpp:507
+#: source/player/PlayerView.cpp:603
 msgid "No other audio track"
 msgstr "No hay otra pista de audio"
 
-#: source/player/PlayerView.cpp:511
+#: source/player/PlayerView.cpp:607
 msgid "No subtitles available"
 msgstr "No hay subtítulos disponibles"
 
-#: source/player/PlayerView.cpp:579
+#: source/player/PlayerView.cpp:675
 #, c-format
 msgid "Buffering... %d%%"
 msgstr "Cargando búfer... %d%%"
 
-#: source/player/PlayerView.cpp:580
+#: source/player/PlayerView.cpp:676
 msgid "Buffering..."
 msgstr "Cargando búfer..."
 
-#: source/player/PlayerView.cpp:597
+#: source/player/PlayerView.cpp:693
 msgid "Zoom"
 msgstr "Zoom"
 
-#: source/player/PlayerView.cpp:598 source/ui/LibraryDetail.cpp:422
+#: source/player/PlayerView.cpp:694 source/ui/LibraryDetail.cpp:422
 msgid "Audio"
 msgstr "Audio"
 
-#: source/player/PlayerView.cpp:598 source/player/PlayerView.cpp:737
+#: source/player/PlayerView.cpp:694 source/player/PlayerView.cpp:833
 #: source/ui/LibraryDetail.cpp:422
 msgid "Subtitles"
 msgstr "Subtítulos"
 
-#: source/player/PlayerView.cpp:737
+#: source/player/PlayerView.cpp:833
 msgid "Audio track"
 msgstr "Pista de audio"
 
-#: source/player/PlayerView.cpp:752
+#: source/player/PlayerView.cpp:848
 msgid "✓ Current"
 msgstr "✓ Actual"
+
+#: source/player/PlayerView.cpp:855
+msgid "Picture subtitles: no delay to set"
+msgstr "Subtítulos de imagen: sin retraso"
+
+#: source/player/PlayerView.cpp:867 source/player/PlayerView.cpp:868
+msgid "Delay"
+msgstr "Retraso"
 
 #: source/ui/BrowseHome.cpp:44
 msgid "browse"

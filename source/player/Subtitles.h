@@ -21,10 +21,19 @@ public:
     void clear() { cues.clear(); last = 0; }
     bool empty() const { return cues.empty(); }
 
-    /* The cue shown at secs, nullptr between cues. */
+    /* The cue shown at secs, nullptr between cues (the delay applied). */
     const Cue* at(float secs);
+
+    /* Delay of the track, s: positive shows the cues later.  Kept when the
+     * cues are replaced (another track of the same video). */
+    float delay() const { return delay_; }
+    void  setDelay(float d);
+    /* The delay that shows the next / previous line at secs now (the one
+     * after or before the line shown there); false when there is none. */
+    bool  lineDelay(float secs, int dir, float& out) const;
 
 private:
     std::vector<Cue> cues;
     size_t last = 0;   /* where the previous lookup ended: playback moves on */
+    float  delay_ = 0.0f;
 };

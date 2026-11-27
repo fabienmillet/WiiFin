@@ -26,7 +26,7 @@ static const int BTN_X0     = (640 - (BTN_COUNT * BTN_W + (BTN_COUNT - 1) * BTN_
 static const int BTN_ZOOM   = BTN_COUNT, ZOOM_W = 48;
 static float zoomX() { return Ui::screenRight() - 24 - ZOOM_W; }
 static const int INTRO_X    = 466, INTRO_Y = 312, INTRO_W = 150, INTRO_H = 40;
-static const int LIST_X     = 150, LIST_W  = 340;
+static const int LIST_X     = 120, LIST_W  = 400;
 static const int LIST_Y     = 112, ROW_H   = 34;
 static const int LIST_ROWS  = 7;
 
@@ -267,7 +267,7 @@ void PlayerView::openPanel(Panel p)
     panelSel = 0;
     for (int i = 0; i < panelCount(); ++i)
         if (panelRowIsCurrent(i)) { panelSel = i; break; }
-    panelTop = panelSel >= LIST_ROWS ? panelSel - LIST_ROWS + 1 : 0;
+    panelTop = panelSel >= listRows() ? panelSel - listRows() + 1 : 0;
     prevHoverRow = -2;   /* first hover after opening counts as a move */
 }
 
@@ -308,19 +308,82 @@ PlayerView::Action PlayerView::activatePanelRow(int row)
     return Action::Sub;
 }
 
+/* ---- Subtitle delay (text subtitles, drawn by WiiFin) ---- */
+static const int DELAY_H = 74, NOTE_H = 34;
+static const int DBTN_W  = 34, DBTN_H = 28, DVAL_W = 64;
+/* Reset: as wide as its word needs */
+static int resetW() { int w = Ui::textWidth(tr("Reset"), 14) + 24; return w < 64 ? 64 : w; }
+/* the buttons for it: -/+ then 1 / 2, on two lines when one is too narrow */
+static const Ui::Hint DELAY_HINTS[] = { { "-/+", N_("0.1 s") }, { "1", N_("Previous line") },
+                                        { "2", N_("Next line") } };
+static bool delayHintsSplit()
+{
+    float w = 0;
+    for (const Ui::Hint& h : DELAY_HINTS) w += Ui::hintWidth(h);
+    return w > LIST_W - 24;
+}
+
+bool PlayerView::delayShown() const { return panel == Panel::Sub && subtitles && !subtitles->empty(); }
+bool PlayerView::delayNote() const  { return panel == Panel::Sub && !delayShown() && ctx.currentSub >= 0; }
+/* the rows shown at once: fewer with the delay under them (on screen still) */
+int  PlayerView::listRows() const { return LIST_ROWS - (delayShown() ? 2 : delayNote() ? 1 : 0); }
+int  PlayerView::panelRowsShown() const
+{
+    int n = panelCount() - panelTop;
+    return n < listRows() ? n : listRows();
+}
+int  PlayerView::delayFooterH() const
+{
+    return delayShown() ? DELAY_H + (delayHintsSplit() ? 22 : 0) : delayNote() ? NOTE_H : 0;
+}
+
+void PlayerView::stepDelay(float d)
+{
+    if (!subtitles) return;
+    subtitles->setDelay(subtitles->delay() + d);
+    SYS_Report("[Subtitles] delay %+.1f s\n", (double)subtitles->delay());
+}
+
+void PlayerView::lineDelay(int dir)
+{
+    float d;
+    if (!subtitles) return;
+    if (!subtitles->lineDelay(position(), dir, d)) {
+        toast(dir > 0 ? tr("No next line") : tr("No previous line"), 1500);
+        return;
+    }
+    /* rounded down to 0.1 s: the line shows at once rather than just after */
+    subtitles->setDelay(floorf(d * 10.0f + 0.001f) / 10.0f);
+    SYS_Report("[Subtitles] %s line: delay %+.1f s\n", dir > 0 ? "next" : "previous",
+               (double)subtitles->delay());
+}
+
+/* where the picker's parts are: its rows, then the delay below them */
+static int delayY(int rows) { return LIST_Y + 44 + rows * ROW_H + 4; }
+static int delayPlusX()  { return LIST_X + LIST_W - 22 - resetW() - 12 - DBTN_W; }
+static int delayMinusX() { return delayPlusX() - DVAL_W - DBTN_W; }
+static int delayResetX() { return LIST_X + LIST_W - 22 - resetW(); }
+
 void PlayerView::hitTest(const ir_t& ir)
 {
     hoverButton = -1;
     hoverBar    = false;
     hoverRow    = -1;
+    hoverDelay  = -1;
     hoverIntro  = introVisible() && inRect(ir, INTRO_X, INTRO_Y, INTRO_W, INTRO_H);
 
     if (panel != Panel::None) {
-        int rows = panelCount() - panelTop;
-        if (rows > LIST_ROWS) rows = LIST_ROWS;
+        int rows = panelRowsShown();
         for (int i = 0; i < rows; ++i)
             if (inRect(ir, LIST_X, LIST_Y + 44 + i * ROW_H, LIST_W, ROW_H))
                 hoverRow = panelTop + i;
+        if (delayShown()) {
+            int y = delayY(rows) + 8;
+            if      (inRect(ir, delayMinusX(), y, DBTN_W, DBTN_H)) hoverDelay = DELAY_MINUS;
+            else if (inRect(ir, delayPlusX(),  y, DBTN_W, DBTN_H)) hoverDelay = DELAY_PLUS;
+            else if (inRect(ir, delayResetX(), y, resetW(), DBTN_H)) hoverDelay = DELAY_RESET;
+            else if (inRect(ir, LIST_X, y - 4, LIST_W, DBTN_H + 8)) hoverDelay = DELAY_ROW;
+        }
         return;
     }
     /* still on screen while they fade out: still clickable */
@@ -416,14 +479,49 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
     /* ---- Track picker ---- */
     if (panel != Panel::None) {
         int n = panelCount();
-        if (hoverRow >= 0 && hoverRow != prevHoverRow) panelSel = hoverRow;
-        prevHoverRow = hoverRow;
+        const bool delay = delayShown();
+        /* the delay row: one past the tracks */
+        const int hovered = hoverDelay >= 0 ? n : hoverRow;
+        if (hovered >= 0 && hovered != prevHoverRow) panelSel = hovered;
+        prevHoverRow = hovered;
+        if (!delay && panelSel >= n) panelSel = n - 1;
         if (down & WPAD_BUTTON_B) { panel = Panel::None; showControls(); return Action::None; }
         if ((down & WPAD_BUTTON_UP)   && panelSel > 0)     --panelSel;
-        if ((down & WPAD_BUTTON_DOWN) && panelSel + 1 < n) ++panelSel;
-        if (panelSel < panelTop) panelTop = panelSel;
-        if (panelSel >= panelTop + LIST_ROWS) panelTop = panelSel - LIST_ROWS + 1;
-        if (down & WPAD_BUTTON_A) return activatePanelRow(panelSel);
+        if ((down & WPAD_BUTTON_DOWN) && panelSel + 1 < n + (delay ? 1 : 0)) ++panelSel;
+        if (panelSel < n) {
+            if (panelSel < panelTop) panelTop = panelSel;
+            if (panelSel >= panelTop + listRows()) panelTop = panelSel - listRows() + 1;
+        }
+        if (delay) {
+            /* -/+ (and Left/Right on the delay row): 0.1 s, on stepping when
+             * held; 1/2: the previous / next line at once */
+            const bool onRow = panelSel == n;
+            const u32 stepBtns = WPAD_BUTTON_MINUS | WPAD_BUTTON_PLUS |
+                                 (onRow ? WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT : 0);
+            const u32 hd = Input::held() & stepBtns;
+            const u64 now = nowMs();
+            if (down & stepBtns) {
+                stepDelay(down & (WPAD_BUTTON_PLUS | WPAD_BUTTON_RIGHT) ? 0.1f : -0.1f);
+                delayHoldSince = delayHoldLast = now;
+            } else if (!hd) {
+                delayHoldSince = 0;
+            } else if (delayHoldSince && now - delayHoldSince > 400 && now - delayHoldLast >= 100) {
+                delayHoldLast = now;
+                stepDelay(hd & (WPAD_BUTTON_PLUS | WPAD_BUTTON_RIGHT) ? 0.1f : -0.1f);
+            }
+            if (down & WPAD_BUTTON_1) lineDelay(-1);
+            if (down & WPAD_BUTTON_2) lineDelay(+1);
+            if ((down & WPAD_BUTTON_A) && (onRow || hoverDelay >= 0)) {
+                if      (hoverDelay == DELAY_MINUS) stepDelay(-0.1f);
+                else if (hoverDelay == DELAY_PLUS)  stepDelay(+0.1f);
+                else if (subtitles->delay() != 0.0f) {
+                    subtitles->setDelay(0.0f);
+                    SYS_Report("[Subtitles] delay reset\n");
+                }
+                return Action::None;
+            }
+        }
+        if ((down & WPAD_BUTTON_A) && panelSel < n) return activatePanelRow(panelSel);
         return Action::None;
     }
 
@@ -521,8 +619,9 @@ std::string PlayerView::fitText(const std::string& s, int size, int maxW)
     if ((int)Text::width(font, s.c_str(), size) <= maxW) return s;
     std::string t = s;
     while (!t.empty()) {
-        t.pop_back();
-        while (!t.empty() && ((unsigned char)t.back() & 0xC0) == 0x80) t.pop_back();  /* UTF-8 */
+        /* a whole UTF-8 character: its continuation bytes, then its first */
+        while (!t.empty() && ((unsigned char)t.back() & 0xC0) == 0x80) t.pop_back();
+        if (!t.empty()) t.pop_back();
         if ((int)Text::width(font, (t + "...").c_str(), size) <= maxW) break;
     }
     return t + "...";
@@ -731,8 +830,8 @@ void PlayerView::render(const ir_t& ir)
     /* ---- Track picker ---- */
     if (panel != Panel::None) {
         int n = panelCount();
-        int rows = n - panelTop < LIST_ROWS ? n - panelTop : LIST_ROWS;
-        int h = 44 + rows * ROW_H + 12;
+        int rows = panelRowsShown();
+        int h = 44 + rows * ROW_H + 12 + delayFooterH();
         Ui::card(LIST_X, LIST_Y, LIST_W, h, 16, 0.0f);
         Ui::text(LIST_X + 18, LIST_Y + 12, panel == Panel::Audio ? tr("Audio track") : tr("Subtitles"),
                  18, p.accentDark);
@@ -751,6 +850,53 @@ void PlayerView::render(const ir_t& ir)
             if (current)
                 Ui::textRight(LIST_X + LIST_W - 22, y + 9, tr("\xe2\x9c\x93 Current"), 13,
                               sel ? p.textOnAccent : p.ok);
+        }
+        if (delayShown() || delayNote()) {
+            int y = delayY(rows);
+            Ui::roundRect(LIST_X + 14, y, LIST_W - 28, 1.5f, 0.75f, Ui::alpha(p.cardBorder, 0.6f));
+            if (delayNote()) {
+                Ui::textCentered(320, y + 9, tr("Picture subtitles: no delay to set"), 13, p.textDim);
+            } else {
+                const bool sel = panelSel == n;
+                const float d = subtitles->delay();
+                int by = y + 8;
+                if (sel)
+                    Ui::roundRect(LIST_X + 8, by - 3, LIST_W - 16, DBTN_H + 6, (DBTN_H + 6) * 0.5f,
+                                  Ui::alpha(p.accent, 0.25f));
+                {
+                    /* the label in what is left of the row, smaller if need be */
+                    const int room = delayMinusX() - 8 - (LIST_X + 22);
+                    int size = 16;
+                    while (size > 12 && Ui::textWidth(tr("Delay"), size) > room) --size;
+                    Ui::text(LIST_X + 22, by + 5 + (16 - size) / 2, fitText(tr("Delay"), size, room).c_str(),
+                             size, p.text);
+                }
+                Ui::button(delayMinusX(), by, DBTN_W, DBTN_H, "", 15,
+                           hoverDelay == DELAY_MINUS ? Ui::pulse() : 0.0f);
+                Ui::roundRect(delayMinusX() + DBTN_W * 0.5f - 5, by + DBTN_H * 0.5f - 1.25f, 10, 2.5f, 1.25f, p.text);
+                char val[16];
+                snprintf(val, sizeof(val), d == 0.0f ? "0.0 s" : "%+.1f s", (double)d);
+                Ui::textCentered(delayMinusX() + DBTN_W + DVAL_W * 0.5f, by + 6, val, 16,
+                                 d == 0.0f ? p.textDim : p.accentDark);
+                Ui::button(delayPlusX(), by, DBTN_W, DBTN_H, "", 15,
+                           hoverDelay == DELAY_PLUS ? Ui::pulse() : 0.0f);
+                {
+                    float cx = delayPlusX() + DBTN_W * 0.5f, cy = by + DBTN_H * 0.5f;
+                    Ui::roundRect(cx - 5, cy - 1.25f, 10, 2.5f, 1.25f, p.text);
+                    Ui::roundRect(cx - 1.25f, cy - 5, 2.5f, 10, 1.25f, p.text);
+                }
+                Ui::button(delayResetX(), by, resetW(), DBTN_H, tr("Reset"), 14,
+                           hoverDelay == DELAY_RESET || (sel && hoverDelay < 0) ? Ui::pulse() : 0.0f);
+                /* the buttons for it, centred: one line, or -/+ then 1 / 2 */
+                const bool split = delayHintsSplit();
+                for (int line = 0; line < (split ? 2 : 1); ++line) {
+                    int from = split && line ? 1 : 0, to = split && !line ? 1 : 3;
+                    float w = 0;
+                    for (int i = from; i < to; ++i) w += Ui::hintWidth(DELAY_HINTS[i]);
+                    float hx = 320 - w * 0.5f;
+                    for (int i = from; i < to; ++i) hx += Ui::hint(hx, by + DBTN_H + 10 + line * 22, DELAY_HINTS[i]);
+                }
+            }
         }
     }
 
