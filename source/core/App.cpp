@@ -792,6 +792,7 @@ void App::loop() {
 
     // --- Cleanup ---
     saveSettings();
+    jellyfinClient.flushImageCache();
     Log::close();        // its writer thread must not touch the card past here
     MusicSession::stop(false);
     MusicBGM::pause();   // stop audio thread/ASND callbacks before tearing down GX
