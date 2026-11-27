@@ -223,7 +223,7 @@ private:
     bool overviewCut   = false;   // the page shows only part of it
     bool overviewPanel = false;
     int  overviewTop   = 0;
-    float detailOvY0 = 0, detailOvY1 = 0;   // where the page draws it (pointer)
+    float detailOvX0 = 240, detailOvY0 = 0, detailOvY1 = 0;   // where the page draws it (pointer)
     std::vector<std::string> wrapText(const std::string& text, int size, float w, int maxLines);
     void renderOverviewPanel();
     int detailAudioSel = 0;  // index into detail.audioStreams
@@ -264,6 +264,16 @@ private:
     std::vector<JellyfinEpisode> episodes;
     int episodeSel = 0;
     int episodeTop = 0;
+    /* the Flix theme's episodes: a row of numbered tiles, the selected
+     * one's card below (its overview wrapped once per selection) */
+    float flixEpScroll = 0.0f;
+    bool  flixEpScrollSet = false;
+    std::vector<std::string> flixEpLines;
+    int   flixEpLinesFor = -1;
+    void  flixEpGeometry(float& base, float& sMin, float& sMax) const;
+    float flixEpTarget() const;
+    void  renderEpisodesFlix(ir_t& ir);
+    bool  updateEpisodesFlix(ir_t& ir, bool aPressed);
 
     // Music track browsing
     std::string                       musicAlbumId;
@@ -406,6 +416,17 @@ private:
     void freeDetail();
     void drawCursor(ir_t& ir);
     void drawDetailView(ir_t& ir);
+    void drawDetailRows(int x, int w, bool showFocus);
+    /* the Flix theme's pages (the old video channels' layout): chosen
+     * theme Flix, Christmas colours or not */
+    static bool flixLayout();
+    void drawDetailFlix(ir_t& ir);
+    int   flixBtn = 0;             /* Flix page: 0 Play, 1 Favorite, -1 the rows */
+    float flixBtnX = 0, flixBtnW = 0, flixPlayY = 0, flixFavY = 0;
+    static const int FLIX_PLAY_H = 40, FLIX_FAV_H = 30;
+    std::vector<std::string> flixOvLines;
+    float flixOvW = -1.0f;
+    int   flixOvN = -1;
     void clampScroll();
     void clampSeasonScroll();
     void clampEpisodeScroll();

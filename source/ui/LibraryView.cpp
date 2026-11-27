@@ -171,6 +171,10 @@ void LibraryView::freeDetail() {
     detailVersionSel = 0;
     detailFocusRow = 0;
     detailIsEpisode = false;
+    flixBtn = 0;
+    flixOvW = -1.0f;
+    flixOvN = -1;
+    flixOvLines.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -1112,6 +1116,8 @@ void LibraryView::loadEpisodes() {
         SYS_Report("[Episodes] %d in season %d\n", (int)episodes.size(),
                    episodes.empty() ? 0 : episodes[0].seasonNumber);
         episodeSel = 0; episodeTop = 0; state = State::EpisodesReady;
+        flixEpScrollSet = false;
+        flixEpLinesFor  = -1;
     }
 }
 
