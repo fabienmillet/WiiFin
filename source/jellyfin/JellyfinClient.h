@@ -690,7 +690,12 @@ public:
     std::string cacheDir;
     // Keep OFF's saved value; the removed USB value (1) falls back to SD.
     enum CacheLocation { CacheSD = 0, CacheOff = 2 };
-    int imageCacheLocation = CacheSD;
+    int imageCacheLocation = CacheOff;      // off until it has been tried on more consoles
+    // Bytes the cache holds (-1 when it is off or unavailable), and its cap:
+    // once full, new pictures are not kept until Settings clears it.
+    long long imageCacheBytes();
+    static long long imageCacheCap();
+    void flushImageCache();                 // writes the byte count (on the way out)
     void initImageCache(const std::string& settingsPath);
     void setImageCacheLocation(int location);
     // Progress runs before each deletion (count so far, filename); false stops.
@@ -857,7 +862,7 @@ private:
     // missing image (an episode without a Thumb) isn't asked for again.
     bool fetchImageCached(const std::string& serverUrl, const std::string& key, const std::string& url,
                           const std::string& authToken, std::string& outBytes);
-    bool readCachedImage(const std::string& key, std::string& outBytes);
+    bool readCachedImage(const std::string& dir, const std::string& key, std::string& outBytes);
     std::string localIp_;   // set by initNetwork, used by discoverServers
     std::string localMask_;
 

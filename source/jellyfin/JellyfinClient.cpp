@@ -1254,6 +1254,59 @@ JellyfinClient::Backend JellyfinClient::backendFor(const std::string& serverUrl)
 // ---------------------------------------------------------------------------
 // Image cache: one file per image under cacheDir, kept until Settings clears it
 // ---------------------------------------------------------------------------
+namespace {
+/* Guards cacheDir and the byte count: the picture loaders run on their own
+ * threads while Settings may switch the cache off or clear it. */
+mutex_t s_cacheLock = LWP_MUTEX_NULL;
+long long s_cacheBytes = 0;          /* what the cache holds, as WiiFin counted it */
+int s_cacheUncounted = 0;            /* saves since the count was last written */
+bool s_cacheFullSaid = false;
+const long long CACHE_CAP = 64LL * 1024 * 1024;
+struct CacheGuard {
+    CacheGuard() {
+        if (s_cacheLock == LWP_MUTEX_NULL) LWP_MutexInit(&s_cacheLock, false);
+        LWP_MutexLock(s_cacheLock);
+    }
+    ~CacheGuard() { LWP_MutexUnlock(s_cacheLock); }
+};
+
+/* the count, in cache/size, so a new start knows how full the card is */
+void writeCacheCount(const std::string& dir) {
+    FILE* f = fopen((dir + "size").c_str(), "wb");
+    if (!f) return;
+    fprintf(f, "%lld\n", s_cacheBytes);
+    fclose(f);
+    s_cacheUncounted = 0;
+}
+
+/* A whole JPEG or PNG: a connection dropped half-way still ends in a 200
+ * with part of the picture, which must not be kept for good. */
+bool wholeImage(const std::string& b) {
+    const size_t n = b.size();
+    const unsigned char* u = (const unsigned char*)b.data();
+    if (n >= 4 && u[0] == 0xFF && u[1] == 0xD8) {
+        /* the end marker, maybe followed by a few bytes of padding */
+        for (size_t i = n - 1; i >= 1 && i + 16 >= n; --i)
+            if (u[i - 1] == 0xFF && u[i] == 0xD9) return true;
+        return false;
+    }
+    if (n >= 20 && b.compare(0, 8, "\x89PNG\r\n\x1a\n") == 0) return b.compare(n - 8, 4, "IEND") == 0;
+    return false;
+}
+} // namespace
+
+long long JellyfinClient::imageCacheBytes() {
+    CacheGuard g;
+    return cacheDir.empty() ? -1 : s_cacheBytes;
+}
+
+long long JellyfinClient::imageCacheCap() { return CACHE_CAP; }
+
+void JellyfinClient::flushImageCache() {
+    CacheGuard g;
+    if (!cacheDir.empty() && s_cacheUncounted) writeCacheCount(cacheDir);
+}
+
 void JellyfinClient::initImageCache(const std::string& settingsPath) {
     size_t first = settingsPath.find('/'), last = settingsPath.rfind('/');
     if (first != std::string::npos && last > first)
@@ -1262,8 +1315,11 @@ void JellyfinClient::initImageCache(const std::string& settingsPath) {
 }
 
 void JellyfinClient::setImageCacheLocation(int location) {
+    CacheGuard g;
+    if (!cacheDir.empty() && s_cacheUncounted) writeCacheCount(cacheDir);
     imageCacheLocation = location == CacheOff ? CacheOff : CacheSD;
     cacheDir.clear();
+    s_cacheBytes = 0;
     if (imageCacheLocation == CacheOff) return;
     bool mounted = false;
     for (int i = 0; i < STD_MAX; ++i) {
@@ -1287,8 +1343,14 @@ void JellyfinClient::setImageCacheLocation(int location) {
     if (fclose(f) != 0) writable = false;
     int error = errno;
     unlink(probe.c_str());
-    if (writable) cacheDir = dir;
-    else SYS_Report("[Cache] SD write probe failed (errno %d)\n", error);
+    if (!writable) { SYS_Report("[Cache] SD write probe failed (errno %d)\n", error); return; }
+    cacheDir = dir;
+    if (FILE* c = fopen((dir + "size").c_str(), "rb")) {
+        if (fscanf(c, "%lld", &s_cacheBytes) != 1 || s_cacheBytes < 0) s_cacheBytes = 0;
+        fclose(c);
+    }
+    s_cacheFullSaid = false;
+    SYS_Report("[Cache] %s, %lld KB of %lld\n", dir.c_str(), s_cacheBytes / 1024, CACHE_CAP / 1024);
 }
 
 /* Percent-escape anything unsafe or ambiguous on FAT. Base paths are case
@@ -1330,13 +1392,13 @@ std::string JellyfinClient::imageCacheKey(const std::string& serverUrl, const st
     return folder + "/" + key;
 }
 
-bool JellyfinClient::readCachedImage(const std::string& key, std::string& outBytes) {
-    if (cacheDir.empty()) return false;
-    std::string path = cacheDir + key;
+bool JellyfinClient::readCachedImage(const std::string& dir, const std::string& key, std::string& outBytes) {
+    std::string path = dir + key;
     struct stat st;
     if (stat(path.c_str(), &st) != 0) return false;
     outBytes.clear();
-    if (st.st_size == 0) return true;   /* a remembered 404 */
+    /* a remembered 404, for a day: the server may get the picture later */
+    if (st.st_size == 0) return time(nullptr) - st.st_mtime < 24 * 3600;
     FILE* f = fopen(path.c_str(), "rb");
     if (!f) return false;
     outBytes.resize((size_t)st.st_size);
@@ -1348,23 +1410,48 @@ bool JellyfinClient::readCachedImage(const std::string& key, std::string& outByt
 
 bool JellyfinClient::fetchImageCached(const std::string& serverUrl, const std::string& key, const std::string& url,
                                      const std::string& authToken, std::string& outBytes) {
-    std::string scopedKey = cacheDir.empty() ? "" : imageCacheKey(serverUrl, key);
-    if (!scopedKey.empty() && readCachedImage(scopedKey, outBytes)) return !outBytes.empty();
+    std::string dir;
+    { CacheGuard g; dir = cacheDir; }
+    std::string scopedKey = dir.empty() ? "" : imageCacheKey(serverUrl, key);
+    if (!scopedKey.empty() && readCachedImage(dir, scopedKey, outBytes)) return !outBytes.empty();
     int status = httpRequest(url, "GET", "", "", authToken, outBytes);
-    if (cacheDir.empty() || scopedKey.empty() || (status != 200 && status != 404)) return status == 200;
+    if (dir.empty() || scopedKey.empty() || (status != 200 && status != 404)) return status == 200;
     if (status == 200 && outBytes.empty()) return false;
-    std::string folder = cacheDir + scopedKey.substr(0, scopedKey.find('/'));
+    if (status == 200 && !wholeImage(outBytes)) {
+        SYS_Report("[Cache] %s: not a whole picture (%u bytes), not kept\n", key.c_str(), (unsigned)outBytes.size());
+        return true;
+    }
+    const long long size = status == 200 ? (long long)outBytes.size() : 0;
+    {
+        CacheGuard g;
+        if (cacheDir != dir) return status == 200;          /* switched off meanwhile */
+        if (s_cacheBytes + size > CACHE_CAP) {
+            if (!s_cacheFullSaid) SYS_Report("[Cache] full (%lld KB): new pictures not kept\n", s_cacheBytes / 1024);
+            s_cacheFullSaid = true;
+            return status == 200;
+        }
+        s_cacheBytes += size;                                /* given back below if not written */
+    }
+    std::string folder = dir + scopedKey.substr(0, scopedKey.find('/'));
     mkdir(folder.c_str(), 0777);   /* EEXIST is fine */
     /* written beside it, then renamed: the loader threads may read or write
      * the same image at once, and must never see half a file */
     char tmp[32];
     snprintf(tmp, sizeof(tmp), ".%08x.tmp", (unsigned)LWP_GetSelf());
-    std::string path = cacheDir + scopedKey, part = path + tmp;
-    FILE* f = fopen(part.c_str(), "wb");
-    if (f) {
+    std::string path = dir + scopedKey, part = path + tmp;
+    bool saved = false;
+    if (FILE* f = fopen(part.c_str(), "wb")) {
         bool ok = status == 404 || fwrite(outBytes.data(), 1, outBytes.size(), f) == outBytes.size();
-        fclose(f);
-        if (!ok || rename(part.c_str(), path.c_str()) != 0) unlink(part.c_str());
+        if (fclose(f) != 0) ok = false;                      /* a full card shows here */
+        /* FAT's rename does not replace: another thread may have saved it first */
+        if (ok) unlink(path.c_str());
+        saved = ok && rename(part.c_str(), path.c_str()) == 0;
+        if (!saved) unlink(part.c_str());
+    }
+    {
+        CacheGuard g;
+        if (!saved) s_cacheBytes -= size;
+        else if (cacheDir == dir && ++s_cacheUncounted >= 16) writeCacheCount(dir);
     }
     return status == 200;
 }
@@ -1388,7 +1475,7 @@ int JellyfinClient::clearImageCache(std::function<bool(int, const char*)> progre
                 if (!child) continue;
                 if (!clearDirectory(child, name + "/")) { complete = false; break; }
                 rmdir(path.c_str());
-            } else {
+            } else if (name != "size") {                    /* the byte count, written again below */
                 if (progress && !progress(removed, name.c_str())) { complete = false; break; }
                 if (unlink(path.c_str()) == 0) removed++;
             }
@@ -1398,6 +1485,12 @@ int JellyfinClient::clearImageCache(std::function<bool(int, const char*)> progre
     };
     clearDirectory(dir, "");
     SYS_Report("[Cache] cleared %d image(s) from %s\n", removed, cacheDir.c_str());
+    {
+        CacheGuard g;
+        s_cacheBytes = 0;
+        s_cacheFullSaid = false;
+        writeCacheCount(cacheDir);
+    }
     return removed;
 }
 
