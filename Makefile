@@ -73,7 +73,8 @@ INCLUDE := $(foreach dir,$(INCLUDES), -I$(CURDIR)/$(dir)) \
 # WERROR=-Werror (set by the CI) turns warnings into errors
 WERROR      ?=
 CFLAGS      := -g -O2 -Wall $(WERROR) -MMD -MP $(MACHDEP) $(INCLUDE)
-CXXFLAGS    := $(CFLAGS)
+# libogc2's processor.h still uses `register`, which C++17 refuses under -Werror
+CXXFLAGS    := $(CFLAGS) -Wno-register
 LDFLAGS     := -g $(MACHDEP) -Wl,-Map,$(TARGET).map -T $(CURDIR)/tools/wii_wiifin.ld \
                -Wl,--wrap=SYS_Report \
                -Wl,--wrap=CONF_GetIdleLedMode \
@@ -100,7 +101,8 @@ ifneq ($(wildcard $(CONTROLLERS)/lib/*.a),)
 CFLAGS      += -I$(CONTROLLERS)/include
 LIBPATHS    += -L$(CONTROLLERS)/lib
 endif
-CXXFLAGS    := $(CFLAGS)
+# libogc2's processor.h still uses `register`, which C++17 refuses under -Werror
+CXXFLAGS    := $(CFLAGS) -Wno-register
 
 # Link against mplayer-ce when available (see MPLAYER_CE_BUILD.md)
 ifneq ($(wildcard $(CURDIR)/libs/mplayer-ce-build/libmplayer.a),)
