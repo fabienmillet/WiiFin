@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WiiFin\n"
 "Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
-"POT-Creation-Date: 2026-11-11 19:15+0100\n"
+"POT-Creation-Date: 2026-11-27 16:16+0100\n"
 "PO-Revision-Date: 2026-10-11 02:59+0200\n"
 "Last-Translator: WiiFin\n"
 "Language-Team: Japanese\n"
@@ -21,9 +21,9 @@ msgstr ""
 msgid "Retry"
 msgstr "再試行"
 
-#: source/core/App.cpp:94 source/core/App.cpp:471
-#: source/player/PlayerView.cpp:598 source/ui/ConnectView.cpp:595
-#: source/ui/ConnectView.cpp:666 source/ui/ConnectView.cpp:727
+#: source/core/App.cpp:94 source/core/App.cpp:469
+#: source/player/PlayerView.cpp:598 source/ui/ConnectView.cpp:601
+#: source/ui/ConnectView.cpp:703 source/ui/ConnectView.cpp:764
 #: source/ui/LibraryDetail.cpp:443 source/ui/LibraryHome.cpp:384
 #: source/ui/LibraryHome.cpp:426 source/ui/LibraryHome.cpp:493
 #: source/ui/LibraryItems.cpp:579 source/ui/LibraryItems.cpp:652
@@ -35,8 +35,8 @@ msgstr "再試行"
 #: source/ui/LibrarySuggestions.cpp:333 source/ui/LibrarySuggestions.cpp:360
 #: source/ui/LibrarySuggestions.cpp:379 source/ui/LibrarySuggestions.cpp:428
 #: source/ui/LibraryView.cpp:1511 source/ui/MusicPlayerView.cpp:931
-#: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:166
-#: source/ui/SettingsView.cpp:118 source/ui/SettingsView.cpp:495
+#: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:188
+#: source/ui/SettingsView.cpp:119 source/ui/SettingsView.cpp:499
 msgid "Back"
 msgstr "戻る"
 
@@ -44,70 +44,70 @@ msgstr "戻る"
 msgid "OK"
 msgstr "OK"
 
-#: source/core/App.cpp:418
+#: source/core/App.cpp:416
 msgid "Does the whole picture fit your TV?"
 msgstr "画面全体がテレビに収まっていますか？"
 
-#: source/core/App.cpp:419
+#: source/core/App.cpp:417
 msgid "Older TVs (CRT) often cut the edges of the picture."
 msgstr "古いテレビ(ブラウン管)は画面の端が切れることがあります。"
 
 #. TRANSLATORS: one sentence on two lines, the second one naming the menu
-#: source/core/App.cpp:421
+#: source/core/App.cpp:419
 msgid "You can shrink it to fit now, or later in"
 msgstr "今すぐ縮小するか、あとで次の場所で調整できます："
 
-#: source/core/App.cpp:422
+#: source/core/App.cpp:420
 msgid "Settings > Screen Area."
 msgstr "設定 > 表示エリア"
 
-#: source/core/App.cpp:423
+#: source/core/App.cpp:421
 msgid "Adjust"
 msgstr "調整する"
 
-#: source/core/App.cpp:424 source/core/App.cpp:426
+#: source/core/App.cpp:422 source/core/App.cpp:424
 msgid "Not now"
 msgstr "あとで"
 
-#: source/core/App.cpp:425 source/core/App.cpp:763
-#: source/core/AppProfiles.cpp:162 source/ui/ConnectView.cpp:594
-#: source/ui/ConnectView.cpp:665 source/ui/ConnectView.cpp:726
+#: source/core/App.cpp:423 source/core/App.cpp:774
+#: source/core/AppProfiles.cpp:162 source/ui/ConnectView.cpp:600
+#: source/ui/ConnectView.cpp:702 source/ui/ConnectView.cpp:763
 #: source/ui/LibraryDetail.cpp:189 source/ui/LibraryHome.cpp:492
 #: source/ui/LibraryShows.cpp:275 source/ui/LibrarySuggestions.cpp:360
 #: source/ui/MusicPlayerView.cpp:930
 msgid "Select"
 msgstr "選択"
 
-#: source/core/App.cpp:442
-msgid "Connect To Jellyfin"
-msgstr "Jellyfinに接続"
+#: source/core/App.cpp:440
+msgid "Connect To a Server"
+msgstr "サーバーに接続"
 
-#: source/core/App.cpp:443 source/ui/LibraryHome.cpp:436
-#: source/ui/SettingsView.cpp:106 source/ui/SettingsView.cpp:359
+#: source/core/App.cpp:441 source/ui/LibraryHome.cpp:436
+#: source/ui/SettingsView.cpp:107 source/ui/SettingsView.cpp:363
 msgid "Settings"
 msgstr "設定"
 
-#: source/core/App.cpp:444
+#: source/core/App.cpp:442
 msgid "Exit"
 msgstr "終了"
 
-#: source/core/App.cpp:468
+#: source/core/App.cpp:466
 msgid "Connecting to the network..."
 msgstr "ネットワークに接続中..."
 
-#: source/core/App.cpp:470
+#: source/core/App.cpp:468
 msgid "This is taking long: the Wii's network may need a restart."
 msgstr "時間がかかっています：Wiiのネットワークの再起動が必要かもしれません。"
 
-#: source/core/App.cpp:476
+#: source/core/App.cpp:474
 msgid "No network connection"
 msgstr "ネットワークに接続されていません"
 
-#: source/core/App.cpp:477
+#: source/core/App.cpp:475
 msgid "Check the Wii's Internet settings, then try again."
 msgstr "Wii本体設定のインターネット設定を確認して、もう一度お試しください。"
 
-#: source/core/App.cpp:764 source/ui/LibraryHome.cpp:330
+#: source/core/App.cpp:775 source/ui/LibraryHome.cpp:330
 msgid "Menu"
 msgstr "メニュー"
 
@@ -119,8 +119,8 @@ msgstr "暗証番号を入力"
 msgid "This profile is locked"
 msgstr "このプロフィールはロックされています"
 
-#: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:117
-#: source/ui/SettingsView.cpp:494
+#: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:118
+#: source/ui/SettingsView.cpp:498
 msgid "Choose"
 msgstr "選ぶ"
 
@@ -149,19 +149,19 @@ msgid "Four digits, asked each time it opens"
 msgstr "4桁の数字。開くたびに入力します"
 
 #: source/core/AppProfiles.cpp:181 source/core/AppProfiles.cpp:194
-#: source/ui/SettingsView.cpp:75 source/ui/SettingsView.cpp:277
+#: source/ui/SettingsView.cpp:76 source/ui/SettingsView.cpp:281
 msgid "Choose a passcode"
 msgstr "暗証番号を決めてください"
 
-#: source/core/AppProfiles.cpp:181 source/ui/SettingsView.cpp:75
+#: source/core/AppProfiles.cpp:181 source/ui/SettingsView.cpp:76
 msgid "Four digits, asked when this profile opens"
 msgstr "4桁の数字。プロフィールを開くときに入力します"
 
-#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:274
+#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:278
 msgid "Enter it again"
 msgstr "もう一度入力してください"
 
-#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:277
+#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:281
 msgid "The two didn't match: once more"
 msgstr "一致しませんでした。もう一度どうぞ"
 
@@ -173,11 +173,11 @@ msgstr "では、毎回パスワードを入力します"
 msgid "Or Quick Connect: this profile keeps no sign-in on the Wii"
 msgstr "またはクイックコネクト。このWiiにサインイン情報は残りません"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:421
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:425
 msgid "Grid"
 msgstr "グリッド"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:421
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:425
 msgid "Rows"
 msgstr "行表示"
 
@@ -189,15 +189,15 @@ msgstr "あとで設定から変更できます"
 msgid "Which home screen?"
 msgstr "ホーム画面はどれにしますか？"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:424
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:428
 msgid "List"
 msgstr "リスト"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:424
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:428
 msgid "List + Posters"
 msgstr "リスト + ポスター"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:424
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:428
 msgid "Posters"
 msgstr "ポスター"
 
@@ -218,7 +218,7 @@ msgstr "決定"
 msgid "Close"
 msgstr "閉じる"
 
-#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:238
+#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:242
 msgid "Reset"
 msgstr "リセット"
 
@@ -259,133 +259,133 @@ msgstr "S%d E%d - %s"
 msgid "Loading subtitles..."
 msgstr "字幕を読み込み中..."
 
-#: source/core/PlaySession.cpp:218 source/core/PlaySession.cpp:248
-#: source/core/PlaySession.cpp:707 source/player/PlayerView.cpp:581
+#: source/core/PlaySession.cpp:218 source/core/PlaySession.cpp:249
+#: source/core/PlaySession.cpp:720 source/player/PlayerView.cpp:581
 #: source/ui/LibraryView.cpp:1475 source/ui/MusicPlayerView.cpp:911
 msgid "Loading..."
 msgstr "読み込み中..."
 
-#: source/core/PlaySession.cpp:364 source/core/PlaySession.cpp:523
-#: source/core/PlaySession.cpp:534 source/core/PlaySession.cpp:569
-#: source/core/PlaySession.cpp:603 source/core/PlaySession.cpp:794
+#: source/core/PlaySession.cpp:366 source/core/PlaySession.cpp:528
+#: source/core/PlaySession.cpp:539 source/core/PlaySession.cpp:574
+#: source/core/PlaySession.cpp:608 source/core/PlaySession.cpp:811
 msgid "Stopping..."
 msgstr "停止中..."
 
-#: source/core/PlaySession.cpp:427
+#: source/core/PlaySession.cpp:429
 msgid "Slow connection: lowering quality..."
 msgstr "通信が遅いため画質を下げています..."
 
-#: source/core/PlaySession.cpp:453
+#: source/core/PlaySession.cpp:458 source/core/PlaySession.cpp:720
 msgid "Reconnecting..."
 msgstr "再接続中..."
 
-#: source/core/PlaySession.cpp:453
+#: source/core/PlaySession.cpp:458
 msgid "The picture is stuck: trying again..."
 msgstr "映像が止まっています：再試行中..."
 
-#: source/core/PlaySession.cpp:501
+#: source/core/PlaySession.cpp:506
 msgid "Too heavy for the Wii: transcoding..."
 msgstr "Wiiには重すぎます：トランスコード中..."
 
-#: source/core/PlaySession.cpp:527
+#: source/core/PlaySession.cpp:532
 msgid "Play next / Add to queue: music only"
 msgstr "次に再生 / キューに追加：音楽のみ"
 
-#: source/core/PlaySession.cpp:539 source/core/PlaySession.cpp:570
+#: source/core/PlaySession.cpp:544 source/core/PlaySession.cpp:575
 msgid "Loading next episode..."
 msgstr "次のエピソードを読み込み中..."
 
-#: source/core/PlaySession.cpp:540 source/player/PlayerView.cpp:467
+#: source/core/PlaySession.cpp:545 source/player/PlayerView.cpp:467
 #: source/player/PlayerView.cpp:499 source/ui/LibraryHome.cpp:380
 msgid "No next episode"
 msgstr "次のエピソードはありません"
 
-#: source/core/PlaySession.cpp:543 source/core/PlaySession.cpp:571
+#: source/core/PlaySession.cpp:548 source/core/PlaySession.cpp:576
 msgid "Loading previous episode..."
 msgstr "前のエピソードを読み込み中..."
 
-#: source/core/PlaySession.cpp:544 source/player/PlayerView.cpp:460
+#: source/core/PlaySession.cpp:549 source/player/PlayerView.cpp:460
 #: source/player/PlayerView.cpp:502
 msgid "No previous episode"
 msgstr "前のエピソードはありません"
 
-#: source/core/PlaySession.cpp:546 source/player/PlayerView.cpp:496
+#: source/core/PlaySession.cpp:551 source/player/PlayerView.cpp:496
 #: source/ui/MusicPlayerView.cpp:1091
 msgid "Volume +"
 msgstr "音量 +"
 
-#: source/core/PlaySession.cpp:547 source/player/PlayerView.cpp:497
+#: source/core/PlaySession.cpp:552 source/player/PlayerView.cpp:497
 #: source/ui/MusicPlayerView.cpp:1092
 msgid "Volume -"
 msgstr "音量 -"
 
-#: source/core/PlaySession.cpp:550
+#: source/core/PlaySession.cpp:555
 #, c-format
 msgid "Volume %d"
 msgstr "音量 %d"
 
-#: source/core/PlaySession.cpp:555 source/core/PlaySession.cpp:559
+#: source/core/PlaySession.cpp:560 source/core/PlaySession.cpp:564
 #: source/ui/MusicPlayerView.cpp:1094 source/ui/MusicPlayerView.cpp:1098
 msgid "Sound off"
 msgstr "消音"
 
-#: source/core/PlaySession.cpp:556 source/core/PlaySession.cpp:559
+#: source/core/PlaySession.cpp:561 source/core/PlaySession.cpp:564
 #: source/ui/MusicPlayerView.cpp:1095 source/ui/MusicPlayerView.cpp:1098
 msgid "Sound on"
 msgstr "消音解除"
 
-#: source/core/PlaySession.cpp:572
+#: source/core/PlaySession.cpp:577
 msgid "Switching audio track..."
 msgstr "音声トラックを切り替え中..."
 
-#: source/core/PlaySession.cpp:582
+#: source/core/PlaySession.cpp:587
 msgid "Switching subtitles..."
 msgstr "字幕を切り替え中..."
 
-#: source/core/PlaySession.cpp:596
+#: source/core/PlaySession.cpp:601
 msgid "Seeking..."
 msgstr "移動中..."
 
-#: source/core/PlaySession.cpp:666
+#: source/core/PlaySession.cpp:675
 msgid "The video comes in, but the Wii can't show it: the picture stays stuck."
 msgstr "映像は届いていますが、Wiiで表示できません。画面が止まったままです。"
 
-#: source/core/PlaySession.cpp:680
+#: source/core/PlaySession.cpp:690
 #, c-format
 msgid "The server could not start this video (HTTP %d)."
 msgstr "サーバーがこの動画を開始できませんでした (HTTP %d)。"
 
-#: source/core/PlaySession.cpp:683
+#: source/core/PlaySession.cpp:693
 msgid "The video stream could not be opened."
 msgstr "動画ストリームを開けませんでした。"
 
-#: source/core/PlaySession.cpp:686
+#: source/core/PlaySession.cpp:696
 msgid "The connection to the server keeps dropping."
 msgstr "サーバーとの接続が何度も切れます。"
 
-#: source/core/PlaySession.cpp:723
+#: source/core/PlaySession.cpp:740
 #, c-format
 msgid "The server did not answer: %s"
 msgstr "サーバーから応答がありません：%s"
 
-#: source/core/PlaySession.cpp:738
+#: source/core/PlaySession.cpp:755
 msgid "Loading episode..."
 msgstr "エピソードを読み込み中..."
 
-#: source/core/PlaySession.cpp:804
+#: source/core/PlaySession.cpp:821
 #, c-format
 msgid "Server says: %s"
 msgstr "サーバーからのメッセージ：%s"
 
-#: source/core/PlaySession.cpp:807
+#: source/core/PlaySession.cpp:824
 msgid "Details are in wiifin.log on the SD card."
 msgstr "詳細はSDカードのwiifin.logにあります。"
 
-#: source/core/PlaySession.cpp:810 source/core/PlaySession.cpp:813
+#: source/core/PlaySession.cpp:827 source/core/PlaySession.cpp:830
 msgid "Can't play this video"
 msgstr "この動画は再生できません"
 
-#: source/core/PlaySession.cpp:811
+#: source/core/PlaySession.cpp:828
 msgid "Check the server's FFmpeg log (Dashboard > Logs)."
 msgstr "サーバーのFFmpegログを確認してください (ダッシュボード > ログ)。"
 
@@ -397,111 +397,55 @@ msgstr "ルーターからIPアドレスを取得できません (DHCP)"
 msgid "UDP socket failed"
 msgstr "UDPソケットのエラー"
 
-#: source/jellyfin/JellyfinClient.cpp:369
+#: source/jellyfin/JellyfinClient.cpp:391
 msgid "Unsupported URL scheme"
 msgstr "未対応のURL形式です"
 
-#: source/jellyfin/JellyfinClient.cpp:721
+#: source/jellyfin/JellyfinClient.cpp:743
 msgid "TLS: DRBG seed failed"
 msgstr "TLS：DRBGの初期化に失敗"
 
-#: source/jellyfin/JellyfinClient.cpp:738
+#: source/jellyfin/JellyfinClient.cpp:760
 msgid "TLS: ssl_config_defaults failed"
 msgstr "TLS：ssl_config_defaultsに失敗"
 
-#: source/jellyfin/JellyfinClient.cpp:775
+#: source/jellyfin/JellyfinClient.cpp:797
 msgid "DNS: unexpected address length"
 msgstr "DNS：想定外のアドレス長"
 
-#: source/jellyfin/JellyfinClient.cpp:799
+#: source/jellyfin/JellyfinClient.cpp:821
 msgid "Server not reachable (connection timed out)"
 msgstr "サーバーに接続できません (タイムアウト)"
 
-#: source/jellyfin/JellyfinClient.cpp:823
+#: source/jellyfin/JellyfinClient.cpp:845
 msgid "TLS handshake failed (network error)"
 msgstr "TLSハンドシェイクに失敗 (ネットワークエラー)"
 
-#: source/jellyfin/JellyfinClient.cpp:933
+#: source/jellyfin/JellyfinClient.cpp:955
 msgid "Failed to send request"
 msgstr "リクエストを送信できません"
 
-#: source/jellyfin/JellyfinClient.cpp:1014
+#: source/jellyfin/JellyfinClient.cpp:1036
 msgid "No response from server (check server URL / port)"
 msgstr "サーバーから応答がありません (URL / ポートを確認)"
 
-#: source/jellyfin/JellyfinClient.cpp:1015
+#: source/jellyfin/JellyfinClient.cpp:1037
 msgid "Invalid HTTP response (server may require HTTPS)"
 msgstr "無効なHTTP応答 (HTTPSが必要かもしれません)"
 
-#: source/jellyfin/JellyfinClient.cpp:1071
-#: source/jellyfin/JellyfinClient.cpp:1075
-#: source/jellyfin/JellyfinClient.cpp:1122
+#: source/jellyfin/JellyfinClient.cpp:1093
+#: source/jellyfin/JellyfinClient.cpp:1097
+#: source/jellyfin/JellyfinClient.cpp:1153
 msgid "Network lost: reconnecting..."
 msgstr "ネットワークが切断されました。再接続中…"
 
-#: source/jellyfin/JellyfinClient.cpp:1101
+#: source/jellyfin/JellyfinClient.cpp:1132
 msgid "Request headers too large"
 msgstr "リクエストヘッダーが大きすぎます"
 
-#: source/jellyfin/JellyfinClient.cpp:1144
+#: source/jellyfin/JellyfinClient.cpp:1175
 msgid "Connection lost"
 msgstr "接続が切れました"
-
-#: source/jellyfin/JellyfinClient.cpp:1174
-#, c-format
-msgid "Auth failed (HTTP %d)"
-msgstr "認証に失敗しました (HTTP %d)"
-
-#: source/jellyfin/JellyfinClient.cpp:1183
-msgid "No token in response"
-msgstr "応答にトークンがありません"
-
-#: source/jellyfin/JellyfinClient.cpp:1194
-#, c-format
-msgid "QuickConnect initiate failed (HTTP %d)"
-msgstr "クイックコネクトを開始できません (HTTP %d)"
-
-#: source/jellyfin/JellyfinClient.cpp:1202
-msgid "No code in QC response"
-msgstr "クイックコネクトの応答にコードがありません"
-
-#: source/jellyfin/JellyfinClient.cpp:1228
-#, c-format
-msgid "QC auth failed (HTTP %d)"
-msgstr "クイックコネクトの認証に失敗 (HTTP %d)"
-
-#: source/jellyfin/JellyfinClient.cpp:1236
-msgid "No token in QC auth response"
-msgstr "クイックコネクトの応答にトークンがありません"
-
-#: source/jellyfin/JellyfinClient.cpp:2452
-msgid "High"
-msgstr "高"
-
-#. TRANSLATORS: video quality levels (Settings)
-#: source/jellyfin/JellyfinClient.cpp:2452
-msgid "Low"
-msgstr "低"
-
-#: source/jellyfin/JellyfinClient.cpp:2452
-msgid "Max"
-msgstr "最高"
-
-#: source/jellyfin/JellyfinClient.cpp:2452
-msgid "Normal"
-msgstr "標準"
-
-#: source/jellyfin/JellyfinClient.cpp:2869
-msgid "No TranscodingUrl in PlaybackInfo response"
-msgstr "PlaybackInfoの応答にTranscodingUrlがありません"
-
-#: source/jellyfin/JellyfinClient.cpp:3264 source/ui/LibrarySpecials.cpp:80
-msgid "No special features"
-msgstr "特典映像はありません"
-
-#: source/jellyfin/JellyfinClient.cpp:3543
-msgid "No PlaySessionId in AudioPlaybackInfo response"
-msgstr "AudioPlaybackInfoの応答にPlaySessionIdがありません"
 
 #: source/player/PlayerView.cpp:57
 #, c-format
@@ -702,7 +646,7 @@ msgstr "一覧"
 #: source/ui/LibraryHome.cpp:330 source/ui/LibraryHome.cpp:383
 #: source/ui/LibraryItems.cpp:579 source/ui/LibrarySearch.cpp:263
 #: source/ui/LibrarySpecials.cpp:185 source/ui/LibrarySuggestions.cpp:428
-#: source/ui/ProfileView.cpp:165 source/ui/SettingsView.cpp:117
+#: source/ui/ProfileView.cpp:187 source/ui/SettingsView.cpp:118
 msgid "Open"
 msgstr "開く"
 
@@ -716,200 +660,209 @@ msgstr "検索"
 msgid "Home"
 msgstr "ホーム"
 
-#: source/ui/ConnectView.cpp:111
+#: source/ui/ConnectView.cpp:120
 msgid "Signing in"
 msgstr "サインイン中"
 
-#: source/ui/ConnectView.cpp:134
+#: source/ui/ConnectView.cpp:143
 msgid "Cancelled."
 msgstr "キャンセルしました。"
 
-#: source/ui/ConnectView.cpp:317
-msgid "Set the Server URL in the Credentials tab first."
-msgstr "先に「アカウント」タブでサーバーURLを設定してください。"
-
-#: source/ui/ConnectView.cpp:327
+#: source/ui/ConnectView.cpp:310
 msgid "Contacting the server"
 msgstr "サーバーに接続中"
 
-#: source/ui/ConnectView.cpp:337
+#: source/ui/ConnectView.cpp:320
 msgid "Enter code on another device:"
 msgstr "別の端末でコードを入力："
 
-#: source/ui/ConnectView.cpp:354
+#: source/ui/ConnectView.cpp:337
 msgid "Waiting for approval"
 msgstr "承認待ち"
 
-#: source/ui/ConnectView.cpp:404
+#: source/ui/ConnectView.cpp:390
 msgid "Failed to start scan thread."
 msgstr "検索を開始できませんでした。"
 
-#: source/ui/ConnectView.cpp:419
+#: source/ui/ConnectView.cpp:405
 msgid "No servers found on the local network."
 msgstr "ローカルネットワークにサーバーが見つかりません。"
 
-#: source/ui/ConnectView.cpp:460
+#: source/ui/ConnectView.cpp:446
 msgid "Server URL set. Enter your credentials."
 msgstr "サーバーURLを設定しました。ユーザー名とパスワードを入力してください。"
 
-#: source/ui/ConnectView.cpp:476 source/ui/ConnectView.cpp:591
-#: source/ui/SettingsView.cpp:239
+#: source/ui/ConnectView.cpp:462 source/ui/ConnectView.cpp:597
+#: source/ui/SettingsView.cpp:243
 msgid "Done"
 msgstr "完了"
 
-#: source/ui/ConnectView.cpp:476 source/ui/ConnectView.cpp:591
+#: source/ui/ConnectView.cpp:462 source/ui/ConnectView.cpp:597
 msgid "Next"
 msgstr "次へ"
 
-#: source/ui/ConnectView.cpp:517
-msgid "Connect to Jellyfin"
-msgstr "Jellyfinに接続"
+#: source/ui/ConnectView.cpp:503
+msgid "Connect to Jellyfin, Emby or Plex"
+msgstr "Jellyfin、Emby、Plexに接続"
 
-#: source/ui/ConnectView.cpp:523
+#: source/ui/ConnectView.cpp:509
 msgid "Credentials"
 msgstr "アカウント"
 
-#: source/ui/ConnectView.cpp:523
+#: source/ui/ConnectView.cpp:509
 msgid "Discover"
 msgstr "検出"
 
-#: source/ui/ConnectView.cpp:523
+#: source/ui/ConnectView.cpp:509
 msgid "Quick Connect"
 msgstr "クイックコネクト"
 
-#: source/ui/ConnectView.cpp:541 source/ui/ConnectView.cpp:544
+#: source/ui/ConnectView.cpp:527 source/ui/ConnectView.cpp:530
 msgid "Connecting to the network"
 msgstr "ネットワークに接続中"
 
-#: source/ui/ConnectView.cpp:577 source/ui/ConnectView.cpp:610
+#: source/ui/ConnectView.cpp:563 source/ui/ConnectView.cpp:616
 msgid "Server URL"
 msgstr "サーバーURL"
 
-#: source/ui/ConnectView.cpp:579 source/ui/ConnectView.cpp:610
+#: source/ui/ConnectView.cpp:565 source/ui/ConnectView.cpp:616
 msgid "Username"
 msgstr "ユーザー名"
 
-#: source/ui/ConnectView.cpp:581 source/ui/ConnectView.cpp:610
-#: source/ui/SettingsView.cpp:473
+#: source/ui/ConnectView.cpp:567 source/ui/ConnectView.cpp:616
+#: source/ui/SettingsView.cpp:477
 msgid "Password"
 msgstr "パスワード"
 
-#: source/ui/ConnectView.cpp:585
+#: source/ui/ConnectView.cpp:573 source/ui/SettingsView.cpp:402
+#: source/ui/SettingsView.cpp:462
+msgid "Auto"
+msgstr "自動"
+
+#: source/ui/ConnectView.cpp:575
+msgid "Server"
+msgstr "サーバー"
+
+#: source/ui/ConnectView.cpp:591
 msgid "Connect"
 msgstr "接続"
 
-#: source/ui/ConnectView.cpp:590 source/ui/LibrarySearch.cpp:194
-#: source/ui/ProfileView.cpp:157 source/ui/ProfileView.cpp:162
-#: source/ui/ProfileView.cpp:165
+#: source/ui/ConnectView.cpp:596 source/ui/LibrarySearch.cpp:194
+#: source/ui/ProfileView.cpp:179 source/ui/ProfileView.cpp:184
+#: source/ui/ProfileView.cpp:187
 msgid "Delete"
 msgstr "削除"
 
-#: source/ui/ConnectView.cpp:590 source/ui/LibrarySearch.cpp:194
+#: source/ui/ConnectView.cpp:596 source/ui/LibrarySearch.cpp:194
 #: source/ui/PinPad.cpp:102
 msgid "Type"
 msgstr "入力"
 
-#: source/ui/ConnectView.cpp:591 source/ui/LibrarySearch.cpp:195
+#: source/ui/ConnectView.cpp:597 source/ui/LibrarySearch.cpp:195
 msgid "Shift"
 msgstr "シフト"
 
-#: source/ui/ConnectView.cpp:594 source/ui/SettingsView.cpp:238
+#: source/ui/ConnectView.cpp:600 source/ui/SettingsView.cpp:242
 msgid "Move"
 msgstr "移動"
 
-#: source/ui/ConnectView.cpp:595 source/ui/ConnectView.cpp:666
-#: source/ui/ConnectView.cpp:727
+#: source/ui/ConnectView.cpp:601 source/ui/ConnectView.cpp:703
+#: source/ui/ConnectView.cpp:764
 msgid "Tabs"
 msgstr "タブ"
 
-#: source/ui/ConnectView.cpp:630
-msgid "Quick Connect lets you sign in by approving"
-msgstr "クイックコネクトなら、Jellyfinのウェブ画面で"
+#: source/ui/ConnectView.cpp:661
+msgid "Sign in with a code: Quick Connect on"
+msgstr "コードでサインイン：Jellyfinではクイックコネクト、"
 
-#: source/ui/ConnectView.cpp:631
-msgid "a code in the Jellyfin web interface."
-msgstr "コードを承認するだけでサインインできます。"
+#: source/ui/ConnectView.cpp:662
+msgid "Jellyfin, or plex.tv/link for Plex."
+msgstr "Plexではplex.tv/linkを使います。"
 
-#: source/ui/ConnectView.cpp:635
-msgid "Go to Credentials tab and enter the Server URL first."
-msgstr "先に「アカウント」タブでサーバーURLを入力してください。"
+#: source/ui/ConnectView.cpp:666
+msgid "No server address: for a Plex account, WiiFin finds its server."
+msgstr "サーバーアドレスなし：Plexアカウントなら、WiiFinがサーバーを見つけます。"
 
-#: source/ui/ConnectView.cpp:638
+#: source/ui/ConnectView.cpp:669
 #, c-format
 msgid "Server: %s"
 msgstr "サーバー：%s"
 
-#: source/ui/ConnectView.cpp:645
-msgid "Start Quick Connect"
+#: source/ui/ConnectView.cpp:676
+msgid "Get a code"
 msgstr "コードを取得"
 
-#: source/ui/ConnectView.cpp:650
-msgid "Enter this code on your Jellyfin server:"
-msgstr "このコードをJellyfinサーバーで入力してください："
+#: source/ui/ConnectView.cpp:681
+msgid "Enter this code in Quick Connect or at plex.tv/link:"
+msgstr "このコードをクイックコネクトかplex.tv/linkで入力してください："
 
-#: source/ui/ConnectView.cpp:655
+#: source/ui/ConnectView.cpp:690
+msgid "or scan with your phone"
+msgstr "またはスマートフォンでスキャン"
+
+#: source/ui/ConnectView.cpp:692
 msgid "Waiting for approval..."
 msgstr "承認待ち..."
 
-#: source/ui/ConnectView.cpp:659
+#: source/ui/ConnectView.cpp:696
 msgid "Approved! Signing in..."
 msgstr "承認されました！サインイン中..."
 
-#: source/ui/ConnectView.cpp:662
+#: source/ui/ConnectView.cpp:699
 msgid "Error. Press A to retry."
 msgstr "エラー。Aで再試行します。"
 
-#: source/ui/ConnectView.cpp:666 source/ui/LibraryDetail.cpp:189
-#: source/ui/ProfileView.cpp:158 source/ui/ProfileView.cpp:162
+#: source/ui/ConnectView.cpp:703 source/ui/LibraryDetail.cpp:189
+#: source/ui/ProfileView.cpp:180 source/ui/ProfileView.cpp:184
 msgid "Cancel"
 msgstr "キャンセル"
 
-#: source/ui/ConnectView.cpp:685
-msgid "Find Jellyfin servers on your local network."
-msgstr "ローカルネットワーク上のJellyfinサーバーを探します。"
+#: source/ui/ConnectView.cpp:722
+msgid "Find Jellyfin, Emby and Plex servers on your network."
+msgstr "ネットワーク上のJellyfin、Emby、Plexサーバーを探します。"
 
-#: source/ui/ConnectView.cpp:686
+#: source/ui/ConnectView.cpp:723
 msgid "The Wii must be on the same network as the server."
 msgstr "Wiiとサーバーは同じネットワークにつないでください。"
 
-#: source/ui/ConnectView.cpp:691
+#: source/ui/ConnectView.cpp:728
 msgid "Scan for Servers"
 msgstr "サーバーを探す"
 
-#: source/ui/ConnectView.cpp:696
+#: source/ui/ConnectView.cpp:733
 msgid "Scanning..."
 msgstr "検索中..."
 
-#: source/ui/ConnectView.cpp:702
+#: source/ui/ConnectView.cpp:739
 msgid "No servers found."
 msgstr "サーバーが見つかりません。"
 
-#: source/ui/ConnectView.cpp:703
+#: source/ui/ConnectView.cpp:740
 msgid "Check your network and server settings, then try again."
 msgstr "ネットワークとサーバーの設定を確認して、もう一度お試しください。"
 
-#: source/ui/ConnectView.cpp:707
+#: source/ui/ConnectView.cpp:744
 msgid "Scan Again"
 msgstr "もう一度探す"
 
-#: source/ui/ConnectView.cpp:710
+#: source/ui/ConnectView.cpp:747
 msgid "Found — select a server:"
 msgstr "見つかりました — サーバーを選んでください："
 
-#: source/ui/Keyboard.cpp:145
+#: source/ui/Keyboard.cpp:151
 msgid "⇧ Shift"
 msgstr "⇧ シフト"
 
 #. TRANSLATORS: keys of the on-screen keyboard; keep the arrow in front
-#: source/ui/Keyboard.cpp:145
+#: source/ui/Keyboard.cpp:151
 msgid "⇪ Caps"
 msgstr "⇪ 大文字"
 
-#: source/ui/Keyboard.cpp:147
+#: source/ui/Keyboard.cpp:153
 msgid "Space"
 msgstr "スペース"
 
-#: source/ui/Keyboard.cpp:148
+#: source/ui/Keyboard.cpp:154
 msgid "← Delete"
 msgstr "← 削除"
 
@@ -1014,7 +967,7 @@ msgstr "特典"
 msgid "Seasons"
 msgstr "シーズン"
 
-#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:494
+#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:498
 msgid "Change"
 msgstr "変更"
 
@@ -1107,8 +1060,8 @@ msgid "Detail"
 msgstr "詳細"
 
 #: source/ui/LibraryHome.cpp:436
-msgid "Back to Jellyfin"
-msgstr "Jellyfinに戻る"
+msgid "Back to the Library"
+msgstr "ライブラリに戻る"
 
 #: source/ui/LibraryHome.cpp:436
 msgid "Now Playing"
@@ -1160,7 +1113,7 @@ msgid "A-Z"
 msgstr "A-Z"
 
 #: source/ui/LibraryItems.cpp:587 source/ui/LibraryItems.cpp:590
-#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:494
+#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:498
 msgid "Page"
 msgstr "ページ"
 
@@ -1285,7 +1238,7 @@ msgstr "評価"
 msgid "Year"
 msgstr "公開年"
 
-#: source/ui/LibrarySort.cpp:15 source/ui/SettingsView.cpp:469
+#: source/ui/LibrarySort.cpp:15 source/ui/SettingsView.cpp:473
 msgid "All"
 msgstr "すべて"
 
@@ -1405,6 +1358,10 @@ msgstr "テーマ動画"
 #: source/ui/LibrarySpecials.cpp:39
 msgid "Extra"
 msgstr "特典"
+
+#: source/ui/LibrarySpecials.cpp:80
+msgid "No special features"
+msgstr "特典映像はありません"
 
 #: source/ui/LibrarySpecials.cpp:142 source/ui/LibraryView.cpp:982
 msgid "Special Features"
@@ -1650,337 +1607,333 @@ msgstr "どなたが見ますか？"
 msgid "Add New Profile"
 msgstr "新しいプロフィール"
 
-#: source/ui/ProfileView.cpp:155
+#: source/ui/ProfileView.cpp:177
 msgid "Delete this profile?"
 msgstr "このプロフィールを削除しますか？"
 
-#: source/ui/ProfileView.cpp:156
+#: source/ui/ProfileView.cpp:178
 msgid "Its saved sign-in will be forgotten."
 msgstr "保存されたサインイン情報は消去されます。"
 
-#: source/ui/SettingsView.cpp:24
+#: source/ui/SettingsView.cpp:25
 msgid "Sign-In Settings"
 msgstr "サインイン設定"
 
-#: source/ui/SettingsView.cpp:24
+#: source/ui/SettingsView.cpp:25
 msgid "System Settings"
 msgstr "システム設定"
 
-#: source/ui/SettingsView.cpp:24
+#: source/ui/SettingsView.cpp:25
 msgid "View Settings"
 msgstr "表示設定"
 
-#: source/ui/SettingsView.cpp:114
-msgid "Made with ❤ for Jellyfin"
-msgstr "Jellyfinのために ❤ を込めて"
+#: source/ui/SettingsView.cpp:115
+msgid "Made with ❤ for Jellyfin, Emby and Plex"
+msgstr "Jellyfin、Emby、Plexのために ❤ を込めて"
 
-#: source/ui/SettingsView.cpp:230 source/ui/SettingsView.cpp:441
+#: source/ui/SettingsView.cpp:234 source/ui/SettingsView.cpp:445
 msgid "Screen Area"
 msgstr "表示エリア"
 
-#: source/ui/SettingsView.cpp:231
+#: source/ui/SettingsView.cpp:235
 msgid "Move each arrow until its tip sits right in"
 msgstr "それぞれの矢印の先が、テレビ画面の"
 
-#: source/ui/SettingsView.cpp:232
+#: source/ui/SettingsView.cpp:236
 msgid "the corner of your TV screen."
 msgstr "角にぴったり合うように動かしてください。"
 
-#: source/ui/SettingsView.cpp:234
+#: source/ui/SettingsView.cpp:238
 #, c-format
 msgid "Left %d   ·   Top %d   ·   Right %d   ·   Bottom %d"
 msgstr "左 %d   ·   上 %d   ·   右 %d   ·   下 %d"
 
-#: source/ui/SettingsView.cpp:238
+#: source/ui/SettingsView.cpp:242
 msgid "Switch"
 msgstr "切替"
 
-#: source/ui/SettingsView.cpp:362
+#: source/ui/SettingsView.cpp:366
 msgid "SSL Verification"
 msgstr "SSL検証"
 
-#: source/ui/SettingsView.cpp:363
+#: source/ui/SettingsView.cpp:367
 msgid "Validate the server HTTPS certificate (disable for self-signed certs)"
 msgstr "サーバーのHTTPS証明書を検証 (自己署名ならオフに)"
 
-#: source/ui/SettingsView.cpp:364 source/ui/SettingsView.cpp:366
-#: source/ui/SettingsView.cpp:370 source/ui/SettingsView.cpp:398
-#: source/ui/SettingsView.cpp:402 source/ui/SettingsView.cpp:436
-#: source/ui/SettingsView.cpp:458 source/ui/SettingsView.cpp:462
-#: source/ui/SettingsView.cpp:469
+#: source/ui/SettingsView.cpp:368 source/ui/SettingsView.cpp:370
+#: source/ui/SettingsView.cpp:374 source/ui/SettingsView.cpp:402
+#: source/ui/SettingsView.cpp:406 source/ui/SettingsView.cpp:440
+#: source/ui/SettingsView.cpp:462 source/ui/SettingsView.cpp:466
+#: source/ui/SettingsView.cpp:473
 msgid "OFF"
 msgstr "オフ"
 
-#: source/ui/SettingsView.cpp:364 source/ui/SettingsView.cpp:366
-#: source/ui/SettingsView.cpp:370 source/ui/SettingsView.cpp:402
-#: source/ui/SettingsView.cpp:436 source/ui/SettingsView.cpp:462
+#: source/ui/SettingsView.cpp:368 source/ui/SettingsView.cpp:370
+#: source/ui/SettingsView.cpp:374 source/ui/SettingsView.cpp:406
+#: source/ui/SettingsView.cpp:440 source/ui/SettingsView.cpp:466
 msgid "ON"
 msgstr "オン"
 
-#: source/ui/SettingsView.cpp:365
+#: source/ui/SettingsView.cpp:369
 msgid "Background Music"
 msgstr "BGM"
 
-#: source/ui/SettingsView.cpp:365
+#: source/ui/SettingsView.cpp:369
 msgid "Play background music in menus"
 msgstr "メニューでBGMを流します"
 
-#: source/ui/SettingsView.cpp:367
+#: source/ui/SettingsView.cpp:371
 msgid "Interface Sounds"
 msgstr "効果音"
 
-#: source/ui/SettingsView.cpp:368
+#: source/ui/SettingsView.cpp:372
 msgid "Sounds in the menus; your own in sounds/ on the SD card"
 msgstr "メニューの効果音。SDカードのsounds/で自作の音も使えます"
 
-#: source/ui/SettingsView.cpp:369
+#: source/ui/SettingsView.cpp:373
 msgid "The menus stay silent"
 msgstr "メニューで音を鳴らしません"
 
-#: source/ui/SettingsView.cpp:380
+#: source/ui/SettingsView.cpp:384
 #, c-format
 msgid "%.1f Mb/s; your connection (%.1f Mb/s measured) holds videos to %.1f"
 msgstr "%.1f Mb/s。回線 (実測 %.1f Mb/s) により上限 %.1f"
 
-#: source/ui/SettingsView.cpp:385
+#: source/ui/SettingsView.cpp:389
 #, c-format
 msgid "%.1f Mb/s: sharpest, for a wired adapter. Lower it if videos stutter"
 msgstr "%.1f Mb/s：最高画質、有線アダプター向け。カクつくなら下げてください"
 
-#: source/ui/SettingsView.cpp:389
+#: source/ui/SettingsView.cpp:393
 #, c-format
 msgid "Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering"
 msgstr "ビットレート：%.1f Mb/s。読み込みが続くなら下げてください"
 
-#: source/ui/SettingsView.cpp:391
+#: source/ui/SettingsView.cpp:395
 msgid "Video Quality"
 msgstr "画質"
 
-#: source/ui/SettingsView.cpp:395
+#: source/ui/SettingsView.cpp:399
 msgid "Direct Play"
 msgstr "ダイレクト再生"
 
-#: source/ui/SettingsView.cpp:396
+#: source/ui/SettingsView.cpp:400
 msgid "Files the Wii can decode play as they are (SD DivX, DVD...): no server work"
 msgstr "Wiiで再生できる形式 (SD DivX、DVD...) はそのまま再生：サーバー負荷なし"
 
-#: source/ui/SettingsView.cpp:397
+#: source/ui/SettingsView.cpp:401
 msgid "Every video is converted by the server"
 msgstr "すべての動画をサーバーで変換します"
 
-#: source/ui/SettingsView.cpp:398 source/ui/SettingsView.cpp:458
-msgid "Auto"
-msgstr "自動"
-
-#: source/ui/SettingsView.cpp:399
+#: source/ui/SettingsView.cpp:403
 msgid "Smooth Motion"
 msgstr "なめらか表示"
 
-#: source/ui/SettingsView.cpp:400
+#: source/ui/SettingsView.cpp:404
 msgid "Blends frames on picture changes: films move evenly on 60 Hz TVs"
 msgstr "フレームを混ぜて、60 Hzのテレビでも映画がなめらかに動きます"
 
-#: source/ui/SettingsView.cpp:401
+#: source/ui/SettingsView.cpp:405
 msgid "Each frame shown as is (24 fps films judder slightly on 60 Hz)"
 msgstr "フレームをそのまま表示 (24 fpsの映画は60 Hzで少しカクつきます)"
 
-#: source/ui/SettingsView.cpp:405
+#: source/ui/SettingsView.cpp:409
 msgid "Light, like the Wii Menu"
 msgstr "Wiiメニューのような明るい色"
 
-#: source/ui/SettingsView.cpp:406
+#: source/ui/SettingsView.cpp:410
 msgid "Dark, for movie nights"
 msgstr "映画を楽しむ夜に、暗い色"
 
-#: source/ui/SettingsView.cpp:407
+#: source/ui/SettingsView.cpp:411
 msgid "Red and charcoal, browse in rows like the old video channels"
 msgstr "赤とチャコール。昔のビデオチャンネルのように行で表示"
 
-#: source/ui/SettingsView.cpp:408
+#: source/ui/SettingsView.cpp:412
 msgid "Black, silver and green"
 msgstr "黒、シルバー、グリーン"
 
-#: source/ui/SettingsView.cpp:409
+#: source/ui/SettingsView.cpp:413
 msgid "Dark grey and orange"
 msgstr "ダークグレー、オレンジ"
 
-#: source/ui/SettingsView.cpp:413
+#: source/ui/SettingsView.cpp:417
 msgid "Christmas for now, until January 6"
 msgstr "1月6日まではクリスマス"
 
-#: source/ui/SettingsView.cpp:413
+#: source/ui/SettingsView.cpp:417
 msgid "Theme"
 msgstr "テーマ"
 
-#: source/ui/SettingsView.cpp:419
+#: source/ui/SettingsView.cpp:423
 msgid "Home Screen"
 msgstr "ホーム画面"
 
-#: source/ui/SettingsView.cpp:419
+#: source/ui/SettingsView.cpp:423
 msgid "Rows of posters to browse, like the old video channels"
 msgstr "ポスターを行で並べて表示。昔のビデオチャンネル風"
 
-#: source/ui/SettingsView.cpp:420
+#: source/ui/SettingsView.cpp:424
 msgid "A grid of your libraries"
 msgstr "ライブラリをグリッドで表示"
 
-#: source/ui/SettingsView.cpp:426
+#: source/ui/SettingsView.cpp:430
 msgid "Browse libraries with their artwork"
 msgstr "ライブラリをポスター付きで表示"
 
-#: source/ui/SettingsView.cpp:427
+#: source/ui/SettingsView.cpp:431
 msgid "Libraries as text lists: quickest to browse big ones"
 msgstr "テキストのリスト：大きなライブラリも素早く見られます"
 
-#: source/ui/SettingsView.cpp:428
+#: source/ui/SettingsView.cpp:432
 msgid "Text lists, with the cover of the selected title"
 msgstr "リストと、選択中の作品のポスター"
 
-#: source/ui/SettingsView.cpp:431
+#: source/ui/SettingsView.cpp:435
 msgid "Library View"
 msgstr "ライブラリ表示"
 
-#: source/ui/SettingsView.cpp:433
+#: source/ui/SettingsView.cpp:437
 msgid "Disc Slot Light"
 msgstr "ディスクスロットの光"
 
-#: source/ui/SettingsView.cpp:434
+#: source/ui/SettingsView.cpp:438
 msgid "Pulses with the sound, as bright as the Wii Settings say"
 msgstr "音に合わせて光ります (明るさはWii本体設定のとおり)"
 
-#: source/ui/SettingsView.cpp:435
+#: source/ui/SettingsView.cpp:439
 msgid "Stays dark during playback"
 msgstr "再生中は光りません"
 
-#: source/ui/SettingsView.cpp:441
+#: source/ui/SettingsView.cpp:445
 msgid "Shrink the interface if your TV crops the edges (overscan)"
 msgstr "テレビで端が切れる場合に画面を縮小 (オーバースキャン)"
 
-#: source/ui/SettingsView.cpp:442
+#: source/ui/SettingsView.cpp:446
 msgid "Adjusted"
 msgstr "調整済み"
 
-#: source/ui/SettingsView.cpp:442
+#: source/ui/SettingsView.cpp:446
 msgid "Full"
 msgstr "全体"
 
-#: source/ui/SettingsView.cpp:444
+#: source/ui/SettingsView.cpp:448
 msgid "Backgrounds"
 msgstr "背景"
 
-#: source/ui/SettingsView.cpp:445
+#: source/ui/SettingsView.cpp:449
 msgid "Solid colours: no bands on TVs that show them in gradients"
 msgstr "単色：グラデーションに縞が出るテレビ向け"
 
-#: source/ui/SettingsView.cpp:446
+#: source/ui/SettingsView.cpp:450
 msgid "Soft gradients, like the Wii Menu"
 msgstr "Wiiメニューのような柔らかなグラデーション"
 
-#: source/ui/SettingsView.cpp:447
+#: source/ui/SettingsView.cpp:451
 msgid "Gradient"
 msgstr "グラデーション"
 
-#: source/ui/SettingsView.cpp:447
+#: source/ui/SettingsView.cpp:451
 msgid "Solid"
 msgstr "単色"
 
-#: source/ui/SettingsView.cpp:448
+#: source/ui/SettingsView.cpp:452
 msgid "Clock"
 msgstr "時計"
 
-#: source/ui/SettingsView.cpp:449
+#: source/ui/SettingsView.cpp:453
 msgid "13:30, the date as day/month"
 msgstr "13:30、日付は日/月"
 
-#: source/ui/SettingsView.cpp:449
+#: source/ui/SettingsView.cpp:453
 msgid "1:30 PM, the date as month/day"
 msgstr "午後1:30、日付は月/日"
 
-#: source/ui/SettingsView.cpp:450
+#: source/ui/SettingsView.cpp:454
 msgid "12-hour"
 msgstr "12時間"
 
-#: source/ui/SettingsView.cpp:450
+#: source/ui/SettingsView.cpp:454
 msgid "24-hour"
 msgstr "24時間"
 
-#: source/ui/SettingsView.cpp:452
+#: source/ui/SettingsView.cpp:456
 msgid "Language"
 msgstr "言語"
 
-#: source/ui/SettingsView.cpp:453
+#: source/ui/SettingsView.cpp:457
 msgid "Chosen here, whatever the Wii's language"
 msgstr "Wiiの言語に関係なく、ここで選びます"
 
-#: source/ui/SettingsView.cpp:453
+#: source/ui/SettingsView.cpp:457
 msgid "The Wii's language, as set in the Wii Settings"
 msgstr "Wii本体設定の言語を使います"
 
-#: source/ui/SettingsView.cpp:455 source/ui/Ui.cpp:135
+#: source/ui/SettingsView.cpp:459 source/ui/Ui.cpp:135
 msgid "Christmas"
 msgstr "クリスマス"
 
-#: source/ui/SettingsView.cpp:456
+#: source/ui/SettingsView.cpp:460
 msgid "Snow and Christmas colours from December 1 to January 6"
 msgstr "12月1日から1月6日まで雪とクリスマスカラー"
 
-#: source/ui/SettingsView.cpp:457
+#: source/ui/SettingsView.cpp:461
 msgid "The chosen theme all year round"
 msgstr "選んだテーマを一年中"
 
-#: source/ui/SettingsView.cpp:459
+#: source/ui/SettingsView.cpp:463
 msgid "Music Autoplay"
 msgstr "自動再生"
 
-#: source/ui/SettingsView.cpp:460
+#: source/ui/SettingsView.cpp:464
 msgid "When an album or a playlist ends, similar songs follow"
 msgstr "アルバムやプレイリストの後に似た曲を再生"
 
-#: source/ui/SettingsView.cpp:461
+#: source/ui/SettingsView.cpp:465
 msgid "The music stops at the end of the album or playlist"
 msgstr "アルバムやプレイリストの最後で停止"
 
-#: source/ui/SettingsView.cpp:465
+#: source/ui/SettingsView.cpp:469
 msgid "Skip Prompts"
 msgstr "スキップボタン"
 
-#: source/ui/SettingsView.cpp:466
+#: source/ui/SettingsView.cpp:470
 msgid "\"Skip intro\", \"Skip recap\"... over the parts the server knows"
 msgstr "サーバーが認識した部分に「イントロをスキップ」などを表示"
 
-#: source/ui/SettingsView.cpp:467
+#: source/ui/SettingsView.cpp:471
 msgid "\"Skip recap\" only: intros and credits play without a prompt"
 msgstr "「あらすじをスキップ」のみ：イントロとクレジットはそのまま再生"
 
-#: source/ui/SettingsView.cpp:468
+#: source/ui/SettingsView.cpp:472
 msgid "Intros, recaps and credits play without a prompt"
 msgstr "イントロ・あらすじ・クレジットをボタンなしで再生"
 
-#: source/ui/SettingsView.cpp:469
+#: source/ui/SettingsView.cpp:473
 msgid "Recaps only"
 msgstr "あらすじのみ"
 
-#: source/ui/SettingsView.cpp:473
+#: source/ui/SettingsView.cpp:477
 msgid "Automatic"
 msgstr "自動"
 
-#: source/ui/SettingsView.cpp:473
+#: source/ui/SettingsView.cpp:477
 msgid "Passcode"
 msgstr "暗証番号"
 
-#: source/ui/SettingsView.cpp:475
+#: source/ui/SettingsView.cpp:479
 msgid "Opens at once on this Wii"
 msgstr "このWiiですぐに開きます"
 
-#: source/ui/SettingsView.cpp:476
+#: source/ui/SettingsView.cpp:480
 msgid "Asks the profile's four-digit passcode first"
 msgstr "最初にプロフィールの4桁の暗証番号を聞きます"
 
-#: source/ui/SettingsView.cpp:477
+#: source/ui/SettingsView.cpp:481
 msgid "Asks the password (or Quick Connect) each time"
 msgstr "毎回パスワード (またはクイックコネクト) を求めます"
 
-#: source/ui/SettingsView.cpp:480
+#: source/ui/SettingsView.cpp:484
 msgid "Sign-In"
 msgstr "サインイン"
 
@@ -2046,3 +1999,60 @@ msgstr "午後"
 #: source/ui/Ui.cpp:1004
 msgid "Message"
 msgstr "メッセージ"
+
+#, c-format
+#~ msgid "Auth failed (HTTP %d)"
+#~ msgstr "認証に失敗しました (HTTP %d)"
+
+#~ msgid "No token in response"
+#~ msgstr "応答にトークンがありません"
+
+#, c-format
+#~ msgid "QuickConnect initiate failed (HTTP %d)"
+#~ msgstr "クイックコネクトを開始できません (HTTP %d)"
+
+#~ msgid "No code in QC response"
+#~ msgstr "クイックコネクトの応答にコードがありません"
+
+#, c-format
+#~ msgid "QC auth failed (HTTP %d)"
+#~ msgstr "クイックコネクトの認証に失敗 (HTTP %d)"
+
+#~ msgid "No token in QC auth response"
+#~ msgstr "クイックコネクトの応答にトークンがありません"
+
+#~ msgid "High"
+#~ msgstr "高"
+
+#~ msgid "Low"
+#~ msgstr "低"
+
+#~ msgid "Max"
+#~ msgstr "最高"
+
+#~ msgid "Normal"
+#~ msgstr "標準"
+
+#~ msgid "No TranscodingUrl in PlaybackInfo response"
+#~ msgstr "PlaybackInfoの応答にTranscodingUrlがありません"
+
+#~ msgid "No PlaySessionId in AudioPlaybackInfo response"
+#~ msgstr "AudioPlaybackInfoの応答にPlaySessionIdがありません"
+
+#~ msgid "Set the Server URL in the Credentials tab first."
+#~ msgstr "先に「アカウント」タブでサーバーURLを設定してください。"
+
+#~ msgid "Quick Connect lets you sign in by approving"
+#~ msgstr "クイックコネクトなら、Jellyfinのウェブ画面で"
+
+#~ msgid "a code in the Jellyfin web interface."
+#~ msgstr "コードを承認するだけでサインインできます。"
+
+#~ msgid "Go to Credentials tab and enter the Server URL first."
+#~ msgstr "先に「アカウント」タブでサーバーURLを入力してください。"
+
+#~ msgid "Enter this code on your Jellyfin server:"
+#~ msgstr "このコードをJellyfinサーバーで入力してください："
+
+#~ msgid "Back to Jellyfin"
+#~ msgstr "Jellyfinに戻る"
