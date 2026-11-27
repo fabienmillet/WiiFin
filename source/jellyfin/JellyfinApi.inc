@@ -1729,6 +1729,8 @@ bool JellyfinClient::jf_getTranscodingUrl(const std::string& serverUrl,
 
     // Extract PlaySessionId from the response (appears in TranscodingInfo).
     outPlaySessionId = jsonGetString(resp, "PlaySessionId");
+    /* a TV channel: the live stream the server opened for it */
+    liveStreamId = jsonGetString(resp, "LiveStreamId");
     SYS_Report("[PlaybackInfo] PlaySessionId='%s'\n", outPlaySessionId.c_str());
 
     // Jellyfin derives the bitrates from the source (e.g. keeps a 384 kb/s
@@ -1795,6 +1797,18 @@ bool JellyfinClient::jf_getTranscodingUrl(const std::string& serverUrl,
     }
     SYS_Report("[PlaybackInfo] final URL length: %zu\n", outUrl.size());
     return true;
+}
+
+/* Live TV: the stream opened for a channel, closed (the tuner freed) */
+bool JellyfinClient::closeLiveStream(const std::string& serverUrl, const JellyfinAuth& auth)
+{
+    if (liveStreamId.empty() || isPlex(serverUrl)) return true;
+    std::string resp;
+    int status = httpRequest(serverUrl + "/LiveStreams/Close?LiveStreamId=" + liveStreamId,   /* hex and _ */
+                             "POST", "application/json", "", auth.accessToken, resp);
+    SYS_Report("[LiveTv] live stream closed: HTTP %d\n", status);
+    liveStreamId.clear();
+    return status == 204 || status == 200;
 }
 
 // Playback reporting
@@ -2605,6 +2619,14 @@ bool JellyfinClient::jf_getItemsByQuery(const std::string& serverUrl,
         item.recursiveItemCount    = c->self->jsonGetInt(obj,    "RecursiveItemCount");
         item.sortName              = c->self->jsonGetString(obj, "SortName");
         item.artist                = c->self->jsonGetString(obj, "AlbumArtist");
+        if (item.type == "TvChannel") {   /* its number first, its programme on now */
+            const std::string num = c->self->jsonGetString(obj, "ChannelNumber");
+            if (!num.empty()) item.name = num + "  " + item.name;
+            size_t cp = obj.find("\"CurrentProgram\":{");
+            if (cp != std::string::npos) item.nowPlaying = c->self->jsonGetString(obj.substr(cp + 18), "Name");
+            /* the rest found was the programme's (its length, year...) */
+            item.runtimeTicks = 0; item.year = 0; item.communityRating = 0.0f; item.officialRating.clear();
+        }
         if (!item.id.empty() && !item.name.empty())
             c->out->push_back(item);
     }, &ctx);

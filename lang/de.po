@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WiiFin\n"
 "Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
-"POT-Creation-Date: 2026-11-27 16:33+0100\n"
+"POT-Creation-Date: 2026-11-27 21:38+0100\n"
 "PO-Revision-Date: 2026-10-11 02:59+0200\n"
 "Last-Translator: WiiFin\n"
 "Language-Team: German\n"
@@ -22,21 +22,22 @@ msgid "Retry"
 msgstr "Erneut versuchen"
 
 #: source/core/App.cpp:94 source/core/App.cpp:470
-#: source/player/PlayerView.cpp:598 source/ui/ConnectView.cpp:601
+#: source/player/PlayerView.cpp:599 source/ui/ConnectView.cpp:601
 #: source/ui/ConnectView.cpp:703 source/ui/ConnectView.cpp:764
 #: source/ui/LibraryDetail.cpp:443 source/ui/LibraryHome.cpp:384
 #: source/ui/LibraryHome.cpp:426 source/ui/LibraryHome.cpp:493
-#: source/ui/LibraryItems.cpp:579 source/ui/LibraryItems.cpp:652
-#: source/ui/LibraryItems.cpp:664 source/ui/LibraryMusic.cpp:135
-#: source/ui/LibraryPhotos.cpp:226 source/ui/LibraryScenes.cpp:113
-#: source/ui/LibrarySearch.cpp:194 source/ui/LibrarySearch.cpp:264
-#: source/ui/LibraryShows.cpp:270 source/ui/LibraryShows.cpp:275
-#: source/ui/LibraryShows.cpp:373 source/ui/LibrarySpecials.cpp:185
-#: source/ui/LibrarySuggestions.cpp:333 source/ui/LibrarySuggestions.cpp:360
-#: source/ui/LibrarySuggestions.cpp:379 source/ui/LibrarySuggestions.cpp:428
-#: source/ui/LibraryView.cpp:1511 source/ui/MusicPlayerView.cpp:931
-#: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:188
-#: source/ui/SettingsView.cpp:157 source/ui/SettingsView.cpp:630
+#: source/ui/LibraryItems.cpp:593 source/ui/LibraryItems.cpp:601
+#: source/ui/LibraryItems.cpp:670 source/ui/LibraryItems.cpp:682
+#: source/ui/LibraryMusic.cpp:135 source/ui/LibraryPhotos.cpp:226
+#: source/ui/LibraryScenes.cpp:113 source/ui/LibrarySearch.cpp:194
+#: source/ui/LibrarySearch.cpp:264 source/ui/LibraryShows.cpp:270
+#: source/ui/LibraryShows.cpp:275 source/ui/LibraryShows.cpp:373
+#: source/ui/LibrarySpecials.cpp:185 source/ui/LibrarySuggestions.cpp:333
+#: source/ui/LibrarySuggestions.cpp:360 source/ui/LibrarySuggestions.cpp:379
+#: source/ui/LibrarySuggestions.cpp:428 source/ui/LibraryView.cpp:1548
+#: source/ui/MusicPlayerView.cpp:931 source/ui/PinPad.cpp:103
+#: source/ui/ProfileView.cpp:188 source/ui/SettingsView.cpp:157
+#: source/ui/SettingsView.cpp:630
 msgid "Back"
 msgstr "Zurück"
 
@@ -256,137 +257,137 @@ msgstr "%d min"
 msgid "S%d E%d - %s"
 msgstr "S%d E%d - %s"
 
-#: source/core/PlaySession.cpp:203
+#: source/core/PlaySession.cpp:207
 msgid "Loading subtitles..."
 msgstr "Untertitel werden geladen..."
 
-#: source/core/PlaySession.cpp:218 source/core/PlaySession.cpp:249
-#: source/core/PlaySession.cpp:720 source/player/PlayerView.cpp:581
-#: source/ui/LibraryView.cpp:1475 source/ui/MusicPlayerView.cpp:911
+#: source/core/PlaySession.cpp:222 source/core/PlaySession.cpp:253
+#: source/core/PlaySession.cpp:725 source/player/PlayerView.cpp:582
+#: source/ui/LibraryView.cpp:1512 source/ui/MusicPlayerView.cpp:911
 msgid "Loading..."
 msgstr "Laden..."
 
-#: source/core/PlaySession.cpp:366 source/core/PlaySession.cpp:528
-#: source/core/PlaySession.cpp:539 source/core/PlaySession.cpp:574
-#: source/core/PlaySession.cpp:608 source/core/PlaySession.cpp:811
+#: source/core/PlaySession.cpp:371 source/core/PlaySession.cpp:533
+#: source/core/PlaySession.cpp:544 source/core/PlaySession.cpp:579
+#: source/core/PlaySession.cpp:613 source/core/PlaySession.cpp:817
 msgid "Stopping..."
 msgstr "Wird beendet..."
 
-#: source/core/PlaySession.cpp:429
+#: source/core/PlaySession.cpp:434
 msgid "Slow connection: lowering quality..."
 msgstr "Langsame Verbindung: Qualität wird gesenkt..."
 
-#: source/core/PlaySession.cpp:458 source/core/PlaySession.cpp:720
+#: source/core/PlaySession.cpp:463 source/core/PlaySession.cpp:725
 msgid "Reconnecting..."
 msgstr "Neu verbinden..."
 
-#: source/core/PlaySession.cpp:458
+#: source/core/PlaySession.cpp:463
 msgid "The picture is stuck: trying again..."
 msgstr "Das Bild hängt: neuer Versuch..."
 
-#: source/core/PlaySession.cpp:506
+#: source/core/PlaySession.cpp:511
 msgid "Too heavy for the Wii: transcoding..."
 msgstr "Zu viel für die Wii: wird transkodiert..."
 
-#: source/core/PlaySession.cpp:532
+#: source/core/PlaySession.cpp:537
 msgid "Play next / Add to queue: music only"
 msgstr "Als Nächstes / Warteschlange: nur Musik"
 
-#: source/core/PlaySession.cpp:544 source/core/PlaySession.cpp:575
+#: source/core/PlaySession.cpp:549 source/core/PlaySession.cpp:580
 msgid "Loading next episode..."
 msgstr "Nächste Episode wird geladen..."
 
-#: source/core/PlaySession.cpp:545 source/player/PlayerView.cpp:467
-#: source/player/PlayerView.cpp:499 source/ui/LibraryHome.cpp:380
+#: source/core/PlaySession.cpp:550 source/player/PlayerView.cpp:468
+#: source/player/PlayerView.cpp:500 source/ui/LibraryHome.cpp:380
 msgid "No next episode"
 msgstr "Keine nächste Episode"
 
-#: source/core/PlaySession.cpp:548 source/core/PlaySession.cpp:576
+#: source/core/PlaySession.cpp:553 source/core/PlaySession.cpp:581
 msgid "Loading previous episode..."
 msgstr "Vorherige Episode wird geladen..."
 
-#: source/core/PlaySession.cpp:549 source/player/PlayerView.cpp:460
-#: source/player/PlayerView.cpp:502
+#: source/core/PlaySession.cpp:554 source/player/PlayerView.cpp:461
+#: source/player/PlayerView.cpp:503
 msgid "No previous episode"
 msgstr "Keine vorherige Episode"
 
-#: source/core/PlaySession.cpp:551 source/player/PlayerView.cpp:496
+#: source/core/PlaySession.cpp:556 source/player/PlayerView.cpp:497
 #: source/ui/MusicPlayerView.cpp:1091
 msgid "Volume +"
 msgstr "Lautstärke +"
 
-#: source/core/PlaySession.cpp:552 source/player/PlayerView.cpp:497
+#: source/core/PlaySession.cpp:557 source/player/PlayerView.cpp:498
 #: source/ui/MusicPlayerView.cpp:1092
 msgid "Volume -"
 msgstr "Lautstärke -"
 
-#: source/core/PlaySession.cpp:555
+#: source/core/PlaySession.cpp:560
 #, c-format
 msgid "Volume %d"
 msgstr "Lautstärke %d"
 
-#: source/core/PlaySession.cpp:560 source/core/PlaySession.cpp:564
+#: source/core/PlaySession.cpp:565 source/core/PlaySession.cpp:569
 #: source/ui/MusicPlayerView.cpp:1094 source/ui/MusicPlayerView.cpp:1098
 msgid "Sound off"
 msgstr "Ton aus"
 
-#: source/core/PlaySession.cpp:561 source/core/PlaySession.cpp:564
+#: source/core/PlaySession.cpp:566 source/core/PlaySession.cpp:569
 #: source/ui/MusicPlayerView.cpp:1095 source/ui/MusicPlayerView.cpp:1098
 msgid "Sound on"
 msgstr "Ton an"
 
-#: source/core/PlaySession.cpp:577
+#: source/core/PlaySession.cpp:582
 msgid "Switching audio track..."
 msgstr "Audiospur wird gewechselt..."
 
-#: source/core/PlaySession.cpp:587
+#: source/core/PlaySession.cpp:592
 msgid "Switching subtitles..."
 msgstr "Untertitel werden gewechselt..."
 
-#: source/core/PlaySession.cpp:601
+#: source/core/PlaySession.cpp:606
 msgid "Seeking..."
 msgstr "Spulen..."
 
-#: source/core/PlaySession.cpp:675
+#: source/core/PlaySession.cpp:680
 msgid "The video comes in, but the Wii can't show it: the picture stays stuck."
 msgstr "Das Video kommt an, aber die Wii kann es nicht anzeigen: Das Bild bleibt stehen."
 
-#: source/core/PlaySession.cpp:690
+#: source/core/PlaySession.cpp:695
 #, c-format
 msgid "The server could not start this video (HTTP %d)."
 msgstr "Der Server konnte dieses Video nicht starten (HTTP %d)."
 
-#: source/core/PlaySession.cpp:693
+#: source/core/PlaySession.cpp:698
 msgid "The video stream could not be opened."
 msgstr "Der Videostream konnte nicht geöffnet werden."
 
-#: source/core/PlaySession.cpp:696
+#: source/core/PlaySession.cpp:701
 msgid "The connection to the server keeps dropping."
 msgstr "Die Verbindung zum Server bricht ständig ab."
 
-#: source/core/PlaySession.cpp:740
+#: source/core/PlaySession.cpp:746
 #, c-format
 msgid "The server did not answer: %s"
 msgstr "Der Server antwortet nicht: %s"
 
-#: source/core/PlaySession.cpp:755
+#: source/core/PlaySession.cpp:761
 msgid "Loading episode..."
 msgstr "Episode wird geladen..."
 
-#: source/core/PlaySession.cpp:821
+#: source/core/PlaySession.cpp:828
 #, c-format
 msgid "Server says: %s"
 msgstr "Server meldet: %s"
 
-#: source/core/PlaySession.cpp:824
+#: source/core/PlaySession.cpp:831
 msgid "Details are in wiifin.log on the SD card."
 msgstr "Details stehen in wiifin.log auf der SD-Karte."
 
-#: source/core/PlaySession.cpp:827 source/core/PlaySession.cpp:830
+#: source/core/PlaySession.cpp:834 source/core/PlaySession.cpp:837
 msgid "Can't play this video"
 msgstr "Video kann nicht abgespielt werden"
 
-#: source/core/PlaySession.cpp:828
+#: source/core/PlaySession.cpp:835
 msgid "Check the server's FFmpeg log (Dashboard > Logs)."
 msgstr "FFmpeg-Protokoll des Servers prüfen (Dashboard > Protokolle)."
 
@@ -477,53 +478,58 @@ msgstr "Abspann überspringen"
 msgid "Skip intro"
 msgstr "Intro überspringen"
 
-#: source/player/PlayerView.cpp:284 source/ui/LibraryDetail.cpp:431
+#: source/player/PlayerView.cpp:285 source/ui/LibraryDetail.cpp:431
 msgid "Off"
 msgstr "Aus"
 
-#: source/player/PlayerView.cpp:339
+#: source/player/PlayerView.cpp:340
 msgid "Zoom: fill the screen"
 msgstr "Zoom: bildschirmfüllend"
 
-#: source/player/PlayerView.cpp:339
+#: source/player/PlayerView.cpp:340
 msgid "Zoom: whole picture"
 msgstr "Zoom: ganzes Bild"
 
-#: source/player/PlayerView.cpp:507
+#: source/player/PlayerView.cpp:508
 msgid "No other audio track"
 msgstr "Keine andere Audiospur"
 
-#: source/player/PlayerView.cpp:511
+#: source/player/PlayerView.cpp:512
 msgid "No subtitles available"
 msgstr "Keine Untertitel verfügbar"
 
-#: source/player/PlayerView.cpp:579
+#: source/player/PlayerView.cpp:580
 #, c-format
 msgid "Buffering... %d%%"
 msgstr "Puffern... %d%%"
 
-#: source/player/PlayerView.cpp:580
+#: source/player/PlayerView.cpp:581
 msgid "Buffering..."
 msgstr "Puffern..."
 
-#: source/player/PlayerView.cpp:597
+#: source/player/PlayerView.cpp:598
 msgid "Zoom"
 msgstr "Zoom"
 
-#: source/player/PlayerView.cpp:598 source/ui/LibraryDetail.cpp:422
+#: source/player/PlayerView.cpp:599 source/ui/LibraryDetail.cpp:422
 msgid "Audio"
 msgstr "Audio"
 
-#: source/player/PlayerView.cpp:598 source/player/PlayerView.cpp:737
+#: source/player/PlayerView.cpp:599 source/player/PlayerView.cpp:741
 #: source/ui/LibraryDetail.cpp:422
 msgid "Subtitles"
 msgstr "Untertitel"
 
-#: source/player/PlayerView.cpp:737
+#. TRANSLATORS: on the player's bar, for a TV channel
+#: source/player/PlayerView.cpp:672
+msgid "LIVE"
+msgstr "LIVE"
+
+#: source/player/PlayerView.cpp:741
 msgid "Audio track"
 msgstr "Audiospur"
 
-#: source/player/PlayerView.cpp:752
+#: source/player/PlayerView.cpp:756
 msgid "✓ Current"
 msgstr "✓ Aktuell"
 
@@ -614,7 +620,7 @@ msgstr "%d Episoden"
 msgid "%d season"
 msgstr "%d Staffel"
 
-#: source/ui/BrowseHome.cpp:742 source/ui/LibraryItems.cpp:547
+#: source/ui/BrowseHome.cpp:742 source/ui/LibraryItems.cpp:554
 #: source/ui/LibraryShows.cpp:209
 #, c-format
 msgid "%d seasons"
@@ -645,7 +651,7 @@ msgstr "Stöbern"
 
 #: source/ui/BrowseHome.cpp:886 source/ui/BrowseHome.cpp:887
 #: source/ui/LibraryHome.cpp:330 source/ui/LibraryHome.cpp:383
-#: source/ui/LibraryItems.cpp:579 source/ui/LibrarySearch.cpp:263
+#: source/ui/LibraryItems.cpp:593 source/ui/LibrarySearch.cpp:263
 #: source/ui/LibrarySpecials.cpp:185 source/ui/LibrarySuggestions.cpp:428
 #: source/ui/ProfileView.cpp:187 source/ui/SettingsView.cpp:156
 msgid "Open"
@@ -891,8 +897,9 @@ msgid "From Start"
 msgstr "Von vorne"
 
 #: source/ui/LibraryDetail.cpp:234 source/ui/LibraryDetail.cpp:443
-#: source/ui/LibraryMusic.cpp:135 source/ui/LibraryScenes.cpp:113
-#: source/ui/LibraryShows.cpp:270 source/ui/MusicPlayerView.cpp:926
+#: source/ui/LibraryItems.cpp:601 source/ui/LibraryMusic.cpp:135
+#: source/ui/LibraryScenes.cpp:113 source/ui/LibraryShows.cpp:270
+#: source/ui/MusicPlayerView.cpp:926
 msgid "Play"
 msgstr "Abspielen"
 
@@ -1027,8 +1034,8 @@ msgid "Activity"
 msgstr "Aktivität"
 
 #: source/ui/LibraryHome.cpp:331 source/ui/LibraryHome.cpp:384
-#: source/ui/LibraryHome.cpp:426 source/ui/LibraryItems.cpp:584
-#: source/ui/LibraryItems.cpp:666 source/ui/LibrarySuggestions.cpp:334
+#: source/ui/LibraryHome.cpp:426 source/ui/LibraryItems.cpp:598
+#: source/ui/LibraryItems.cpp:684 source/ui/LibrarySuggestions.cpp:334
 #: source/ui/LibrarySuggestions.cpp:361 source/ui/LibrarySuggestions.cpp:380
 #: source/ui/LibrarySuggestions.cpp:429
 msgid "Tab"
@@ -1076,49 +1083,56 @@ msgstr "Profil wechseln"
 msgid "WiiFin Menu"
 msgstr "WiiFin-Menü"
 
-#: source/ui/LibraryItems.cpp:479
+#: source/ui/LibraryItems.cpp:481
 msgid "This library is empty"
 msgstr "Diese Bibliothek ist leer"
 
-#: source/ui/LibraryItems.cpp:512
+#: source/ui/LibraryItems.cpp:519
 msgid "COLLECTION"
 msgstr "SAMMLUNG"
 
-#: source/ui/LibraryItems.cpp:512 source/ui/LibrarySearch.cpp:234
+#: source/ui/LibraryItems.cpp:519 source/ui/LibrarySearch.cpp:234
 #: source/ui/LibraryView.cpp:106
 msgid "SERIES"
 msgstr "SERIE"
 
-#: source/ui/LibraryItems.cpp:513
+#: source/ui/LibraryItems.cpp:520
 msgid "FOLDER"
 msgstr "ORDNER"
 
-#: source/ui/LibraryItems.cpp:545
+#: source/ui/LibraryItems.cpp:552
 msgid "1 season"
 msgstr "1 Staffel"
 
-#: source/ui/LibraryItems.cpp:580 source/ui/LibraryItems.cpp:665
+#. TRANSLATORS: under a TV channel's name: the programme on now
+#: source/ui/LibraryItems.cpp:565
+#, c-format
+msgid "Now: %s"
+msgstr "Jetzt: %s"
+
+#: source/ui/LibraryItems.cpp:594 source/ui/LibraryItems.cpp:683
 #: source/ui/LibraryMusic.cpp:135 source/ui/LibraryShows.cpp:270
 #: source/ui/LibraryShows.cpp:275 source/ui/LibraryShows.cpp:373
 #: source/ui/MusicPlayerView.cpp:926
 msgid "Shuffle"
 msgstr "Zufall"
 
-#: source/ui/LibraryItems.cpp:580 source/ui/LibraryItems.cpp:652
-#: source/ui/LibraryItems.cpp:665
+#: source/ui/LibraryItems.cpp:594 source/ui/LibraryItems.cpp:670
+#: source/ui/LibraryItems.cpp:683
 msgid "Sort"
 msgstr "Sortieren"
 
-#: source/ui/LibraryItems.cpp:584 source/ui/LibraryItems.cpp:590
+#: source/ui/LibraryItems.cpp:598 source/ui/LibraryItems.cpp:608
 msgid "A-Z"
 msgstr "A-Z"
 
-#: source/ui/LibraryItems.cpp:587 source/ui/LibraryItems.cpp:590
-#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:629
+#: source/ui/LibraryItems.cpp:602 source/ui/LibraryItems.cpp:605
+#: source/ui/LibraryItems.cpp:608 source/ui/LibraryScenes.cpp:114
+#: source/ui/SettingsView.cpp:629
 msgid "Page"
 msgstr "Seite"
 
-#: source/ui/LibraryItems.cpp:654
+#: source/ui/LibraryItems.cpp:672
 #, c-format
 msgid "Page %d / %d"
 msgstr "Seite %d / %d"
@@ -1247,40 +1261,40 @@ msgstr "Alle"
 msgid "Not watched"
 msgstr "Ungesehen"
 
-#: source/ui/LibrarySort.cpp:60 source/ui/LibrarySort.cpp:125
+#: source/ui/LibrarySort.cpp:61 source/ui/LibrarySort.cpp:126
 msgid "Ascending"
 msgstr "Aufsteigend"
 
-#: source/ui/LibrarySort.cpp:60 source/ui/LibrarySort.cpp:125
+#: source/ui/LibrarySort.cpp:61 source/ui/LibrarySort.cpp:126
 msgid "Descending"
 msgstr "Absteigend"
 
-#: source/ui/LibrarySort.cpp:120
+#: source/ui/LibrarySort.cpp:121
 msgid "Sort & filter"
 msgstr "Sortieren & Filtern"
 
-#: source/ui/LibrarySort.cpp:122
+#: source/ui/LibrarySort.cpp:123
 msgid "Genre"
 msgstr "Genre"
 
-#: source/ui/LibrarySort.cpp:122
+#: source/ui/LibrarySort.cpp:123
 msgid "Order"
 msgstr "Reihenfolge"
 
-#: source/ui/LibrarySort.cpp:122
+#: source/ui/LibrarySort.cpp:123
 msgid "Show"
 msgstr "Anzeigen"
 
-#: source/ui/LibrarySort.cpp:122
+#: source/ui/LibrarySort.cpp:123
 msgid "Sort by"
 msgstr "Sortieren nach"
 
-#: source/ui/LibrarySort.cpp:127
+#: source/ui/LibrarySort.cpp:128
 msgid "Every genre"
 msgstr "Alle Genres"
 
 #. TRANSLATORS: A and B are the Wii Remote's buttons
-#: source/ui/LibrarySort.cpp:139
+#: source/ui/LibrarySort.cpp:140
 msgid "A  apply      B  cancel"
 msgstr "A  übernehmen      B  abbrechen"
 
@@ -1364,7 +1378,7 @@ msgstr "Extra"
 msgid "No special features"
 msgstr "Keine Extras"
 
-#: source/ui/LibrarySpecials.cpp:142 source/ui/LibraryView.cpp:982
+#: source/ui/LibrarySpecials.cpp:142 source/ui/LibraryView.cpp:1019
 msgid "Special Features"
 msgstr "Extras"
 
@@ -1470,19 +1484,19 @@ msgstr "GEMISCHT"
 msgid "MEDIA"
 msgstr "MEDIEN"
 
-#: source/ui/LibraryView.cpp:614
+#: source/ui/LibraryView.cpp:647
 msgid "No library found"
 msgstr "Keine Bibliothek gefunden"
 
-#: source/ui/LibraryView.cpp:754
+#: source/ui/LibraryView.cpp:788
 msgid "Collections unavailable"
 msgstr "Sammlungen nicht verfügbar"
 
-#: source/ui/LibraryView.cpp:768 source/ui/LibraryView.cpp:781
+#: source/ui/LibraryView.cpp:802 source/ui/LibraryView.cpp:815
 msgid "Favorites unavailable"
 msgstr "Favoriten nicht verfügbar"
 
-#: source/ui/LibraryView.cpp:1507
+#: source/ui/LibraryView.cpp:1544
 msgid "Error"
 msgstr "Fehler"
 

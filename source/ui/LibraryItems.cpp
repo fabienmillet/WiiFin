@@ -107,8 +107,8 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
 
     if (Input::isUpPressed())   { itemSel--; irMode = false; clampScroll(); }
     if (Input::isDownPressed()) { itemSel++; irMode = false; clampScroll(); }
-    // Left/Right: previous/next letter (sorted by name only)
-    const bool letters = !sortable() || listSort.sort == 0;
+    // Left/Right: previous/next letter (sorted by name only; not channels)
+    const bool letters = currentLibType != "livetv" && (!sortable() || listSort.sort == 0);
     if (letters && Input::isLeftPressed())  { feed.requestJump(-1, itemSel); irMode = false; }
     if (letters && Input::isRightPressed()) { feed.requestJump(+1, itemSel); irMode = false; }
     {
@@ -205,6 +205,8 @@ bool LibraryView::updateItemList(ir_t& ir, bool aPressed) {
             state = State::SeasonsLoad;
         } else if (sel.type == "Photo") {
             openPhotos(sel.id, State::ItemsReady);
+        } else if (sel.type == "TvChannel") {
+            return playChannel(sel);
         } else if (sel.type == "BoxSet" || sel.type == "Folder" || sel.type == "CollectionFolder" ||
                    sel.type == "PhotoAlbum") {
             // a collection or folder: its own list, B comes back here
@@ -468,7 +470,7 @@ void LibraryView::renderItemList(ir_t& ir) {
         else
             drawBreadcrumb(currentLibName, 20, 420);
         char pos[48];
-        if (n > 0 && haveSel)
+        if (n > 0 && haveSel && currentLibType != "livetv")
             snprintf(pos, sizeof(pos), "%c   \xc2\xb7   %d / %d", ListFeed::letterOf(selItem), itemSel + 1, n);
         else
             snprintf(pos, sizeof(pos), "%d / %d", n > 0 ? itemSel + 1 : 0, n);
@@ -506,6 +508,11 @@ void LibraryView::renderItemList(ir_t& ir) {
             snprintf(y, sizeof(y), "%d", it.year);
             Ui::textRight(LIST_X + LW - 12 - rightW, ry + 10, y, 14, p.textDim);
             rightW += Ui::textWidth(y, 14) + 12;
+        }
+        if (!it.nowPlaying.empty()) {   /* a TV channel: what is on, half the row at most */
+            std::string on = fitText(font, filterDejaVu(it.nowPlaying, 80), 14, LW / 2 - 20);
+            Ui::textRight(LIST_X + LW - 12 - rightW, ry + 10, on.c_str(), 14, p.textDim);
+            rightW += Ui::textWidth(on.c_str(), 14) + 12;
         }
         int textX = LIST_X + 14;
         // type badge for mixed lists (series among films, folders...)
@@ -552,6 +559,13 @@ void LibraryView::renderItemList(ir_t& ir) {
             snprintf(meta + l, sizeof(meta) - l, "%s%d", l ? "  \xc2\xb7  " : "", selItem.year);
         }
         if (meta[0]) Ui::text(PX, ty + 20, meta, 13, p.textDim);
+        if (!selItem.nowPlaying.empty()) {
+            char on[160];
+            /* TRANSLATORS: under a TV channel's name: the programme on now */
+            snprintf(on, sizeof(on), tr("Now: %s"), selItem.nowPlaying.c_str());
+            Ui::text(PX, ty + (meta[0] ? 38 : 20), fitText(font, filterDejaVu(on, 80), 13, (int)PW).c_str(),
+                     13, p.accentDark);
+        }
         /* an album's or a song's artist: albums of the same name told apart */
         if (!selItem.artist.empty())
             Ui::text(PX, ty + (meta[0] ? 38 : 20), fitText(font, filterDejaVu(selItem.artist, 60), 13, (int)PW).c_str(),
@@ -583,6 +597,10 @@ void LibraryView::renderItemList(ir_t& ir) {
         const bool az = !(sortable() && listSort.sort != 0);   /* A-Z: by name only */
         const Ui::Hint r[] = { { "LR", N_("A-Z") }, { "-/+", N_("Tab") } };
         Ui::footer(l, nl, az ? r : r + 1, az ? 2 : 1);
+    } else if (currentLibType == "livetv") {
+        const Ui::Hint lw[] = { { "A", N_("Play") }, { "B", N_("Back") } };
+        const Ui::Hint r[]  = { { "-/+", N_("Page") } };
+        Ui::footer(lw, 2, r, 1);
     } else if (sortable() && listSort.sort != 0) {
         const Ui::Hint r[] = { { "-/+", N_("Page") } };
         Ui::footer(l, nl, r, 1);

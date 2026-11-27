@@ -338,6 +338,39 @@ void LibraryView::preparePlay(long long startTicks, const std::vector<JellyfinEp
     }
 }
 
+/* Live TV: a channel plays at once, transcoded (no page: nothing to pick) */
+bool LibraryView::playChannel(const JellyfinItem& ch)
+{
+    freeDetail();
+    detail              = JellyfinItemDetail();
+    detail.name         = ch.name;
+    detailItemId        = ch.id;
+    detailIsEpisode     = false;
+    detailAudioSel      = 0;
+    detailSubSel        = -1;
+    detailVersionSel    = 0;
+    SYS_Report("[LiveTv] channel %s\n", ch.name.c_str());
+    std::string url, session;
+    SoundFX::play(SoundFX::FX::Play);
+    drawLoadingFrame();
+    drawLoadingFrame();
+    pendingPlayHow = JellyfinClient::PlaybackChoice();
+    client.liveStreamId.clear();
+    /* no media source to name: the server opens the channel's own */
+    if (!client.getPlaybackUrl(serverUrl, auth, ch.id, "", -1, -1, 0, url, session, pendingPlayHow, false)) {
+        errMsg = client.lastError();
+        state  = State::Error;
+        return false;
+    }
+    clearPendingPlay();
+    pendingPlayUrl           = url;
+    pendingPlayTitle         = ch.name;
+    pendingPlayItemId        = ch.id;
+    pendingPlaySessionId     = session;
+    pendingPlayIsLive        = true;
+    return true;
+}
+
 /* Shuffle (2 on the season or episode list): the server draws up to 100
  * episodes of the series, or of one season, in random order; the first one
  * starts and the rest become the queue for next / previous. */
@@ -639,6 +672,7 @@ void LibraryView::clearPendingPlay() {
     pendingPlayStartTimeTicks = 0;
     pendingPlayRuntimeTicks   = 0;
     pendingPlayIsMusic        = false;
+    pendingPlayIsLive         = false;
     pendingMusicTracks.clear();
     pendingMusicTrackIdx      = 0;
     pendingPlayEpisodes.clear();
@@ -898,6 +932,9 @@ bool LibraryView::tabbedList() const {
 
 /* Collections and Favorites as lists too: the grid's queries */
 std::string LibraryView::listFilter() const {
+    /* Live TV: the channels, in their numbers' order, with what is on */
+    if (currentLibType == "livetv")
+        return "/LiveTv/Channels?UserId=" + auth.userId + "&AddCurrentProgram=true";
     if (currentLibType == "movies" && tabbedList()) {
         if (movieTab == 1) return "IncludeItemTypes=BoxSet&Recursive=true&SortBy=SortName&SortOrder=Ascending";
         if (movieTab == 2)

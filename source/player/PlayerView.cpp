@@ -146,6 +146,7 @@ void PlayerView::showControls(int ms)
  * the transcode at the target.  Repeated presses are merged into one. */
 void PlayerView::nudgeSeek(float delta)
 {
+    if (ctx.live) { showControls(); return; }   /* a channel goes on: nowhere to seek */
     float base = seekPending ? seekPendingTo : position();
     float target = base + delta;
     float dur = duration();
@@ -325,7 +326,7 @@ void PlayerView::hitTest(const ir_t& ir)
     }
     /* still on screen while they fade out: still clickable */
     if (!controlsVisible() && controlsAlpha < 0.3f) return;
-    hoverBar = inRect(ir, BAR_X - 8, BAR_Y - 12, BAR_W + 16, BAR_H + 24);
+    hoverBar = !ctx.live && inRect(ir, BAR_X - 8, BAR_Y - 12, BAR_W + 16, BAR_H + 24);
     for (int i = 0; i < BTN_COUNT; ++i)
         if (inRect(ir, BTN_X0 + i * (BTN_W + BTN_GAP), BTN_Y, BTN_W, BTN_H))
             hoverButton = i;
@@ -447,7 +448,7 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
                 seekTo = to;
                 act = Action::SeekTo;
             }
-        } else if (visible && hoverBar && duration() > 0.0f) {
+        } else if (visible && hoverBar && duration() > 0.0f && !ctx.live) {
             /* the handle taken: it jumps when A is let go (a click too) */
             dragFrac = (ir.x - BAR_X) / (float)BAR_W;
             if (dragFrac < 0.0f) dragFrac = 0.0f;
@@ -614,7 +615,7 @@ void PlayerView::render(const ir_t& ir)
 
         float dur = duration();
         float pos = displayPosition();
-        float frac = dragging ? dragFrac : dur > 0.0f ? pos / dur : 0.0f;
+        float frac = dragging ? dragFrac : ctx.live ? 1.0f : dur > 0.0f ? pos / dur : 0.0f;
         if (frac > 1.0f) frac = 1.0f;
         if (frac < 0.0f) frac = 0.0f;
         float barH = hoverBar || dragging ? BAR_H + 4 : BAR_H;
@@ -667,14 +668,17 @@ void PlayerView::render(const ir_t& ir)
             Ui::textCentered(px, BAR_Y - 31, t.c_str(), 14, p.textOnAccent);
         }
         Ui::text(BAR_X, TIME_Y, fmtTime(pos).c_str(), 15, p.text);
-        Ui::textRight(BAR_X + BAR_W, TIME_Y, dur > 0.0f ? fmtTime(dur).c_str() : "--:--", 15, p.textDim);
+        if (ctx.live)   /* TRANSLATORS: on the player's bar, for a TV channel */
+            Ui::textRight(BAR_X + BAR_W, TIME_Y, tr("LIVE"), 15, p.accent);
+        else
+            Ui::textRight(BAR_X + BAR_W, TIME_Y, dur > 0.0f ? fmtTime(dur).c_str() : "--:--", 15, p.textDim);
 
         /* Transport buttons */
         const bool hasNext = ctx.episodeIdx + 1 < (int)ctx.episodes.size();
         const bool hasPrev = !ctx.episodes.empty() && ctx.episodeIdx > 0;
         /* |< and >| go from chapter to chapter first */
         const bool chapters = ctx.chapters.size() >= 2;
-        const bool enabled[BTN_COUNT] = { hasPrev || chapters, true, true, true, hasNext || chapters };
+        const bool enabled[BTN_COUNT] = { hasPrev || chapters, !ctx.live, true, !ctx.live, hasNext || chapters };
         for (int i = 0; i < BTN_COUNT; ++i) {
             float x = BTN_X0 + i * (BTN_W + BTN_GAP);
             float f = (hoverButton == i && enabled[i]) ? Ui::pulse() : 0.0f;
