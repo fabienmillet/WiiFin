@@ -116,7 +116,7 @@ if renamed), with a folder for each server address, for example
 `cache/http_media.example.com_8096/primary_<item-id>_130x185.jpg`.
 HTTPS uses `https_`; a server base path goes after `__`, before the port, with
 unsafe characters escaped (for example `https_media.example.com__jellyfin_443/`).
-It works with Jellyfin and Emby. Only whole pictures are kept (not one cut
+It works with Jellyfin, Emby and Plex. Only whole pictures are kept (not one cut
 by a dropped connection), and a picture the server doesn't have is asked again
 the next day. The cache stops at 64 MB: new artwork is then downloaded without
 being saved until you clear it.
