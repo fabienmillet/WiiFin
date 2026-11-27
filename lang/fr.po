@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WiiFin\n"
 "Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
-"POT-Creation-Date: 2026-11-27 16:16+0100\n"
+"POT-Creation-Date: 2026-11-27 16:33+0100\n"
 "PO-Revision-Date: 2026-10-10 23:29+0200\n"
 "Last-Translator: WiiFin\n"
 "Language-Team: French\n"
@@ -21,7 +21,7 @@ msgstr ""
 msgid "Retry"
 msgstr "Réessayer"
 
-#: source/core/App.cpp:94 source/core/App.cpp:469
+#: source/core/App.cpp:94 source/core/App.cpp:470
 #: source/player/PlayerView.cpp:598 source/ui/ConnectView.cpp:601
 #: source/ui/ConnectView.cpp:703 source/ui/ConnectView.cpp:764
 #: source/ui/LibraryDetail.cpp:443 source/ui/LibraryHome.cpp:384
@@ -36,7 +36,7 @@ msgstr "Réessayer"
 #: source/ui/LibrarySuggestions.cpp:379 source/ui/LibrarySuggestions.cpp:428
 #: source/ui/LibraryView.cpp:1511 source/ui/MusicPlayerView.cpp:931
 #: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:188
-#: source/ui/SettingsView.cpp:119 source/ui/SettingsView.cpp:499
+#: source/ui/SettingsView.cpp:157 source/ui/SettingsView.cpp:630
 msgid "Back"
 msgstr "Retour"
 
@@ -44,32 +44,32 @@ msgstr "Retour"
 msgid "OK"
 msgstr "OK"
 
-#: source/core/App.cpp:416
+#: source/core/App.cpp:417
 msgid "Does the whole picture fit your TV?"
 msgstr "L'image entière tient-elle sur votre TV ?"
 
-#: source/core/App.cpp:417
+#: source/core/App.cpp:418
 msgid "Older TVs (CRT) often cut the edges of the picture."
 msgstr "Les anciennes TV (CRT) coupent souvent les bords de l'image."
 
 #. TRANSLATORS: one sentence on two lines, the second one naming the menu
-#: source/core/App.cpp:419
+#: source/core/App.cpp:420
 msgid "You can shrink it to fit now, or later in"
 msgstr "Vous pouvez la réduire maintenant, ou plus tard dans"
 
-#: source/core/App.cpp:420
+#: source/core/App.cpp:421
 msgid "Settings > Screen Area."
 msgstr "Paramètres > Zone d'affichage."
 
-#: source/core/App.cpp:421
+#: source/core/App.cpp:422
 msgid "Adjust"
 msgstr "Ajuster"
 
-#: source/core/App.cpp:422 source/core/App.cpp:424
+#: source/core/App.cpp:423 source/core/App.cpp:425
 msgid "Not now"
 msgstr "Plus tard"
 
-#: source/core/App.cpp:423 source/core/App.cpp:774
+#: source/core/App.cpp:424 source/core/App.cpp:775
 #: source/core/AppProfiles.cpp:162 source/ui/ConnectView.cpp:600
 #: source/ui/ConnectView.cpp:702 source/ui/ConnectView.cpp:763
 #: source/ui/LibraryDetail.cpp:189 source/ui/LibraryHome.cpp:492
@@ -78,36 +78,37 @@ msgstr "Plus tard"
 msgid "Select"
 msgstr "Choisir"
 
-#: source/core/App.cpp:440
+#: source/core/App.cpp:441
 msgid "Connect To a Server"
 msgstr "Se connecter à un serveur"
 
-#: source/core/App.cpp:441 source/ui/LibraryHome.cpp:436
-#: source/ui/SettingsView.cpp:107 source/ui/SettingsView.cpp:363
+#: source/core/App.cpp:442 source/ui/LibraryHome.cpp:436
+#: source/ui/SettingsView.cpp:145 source/ui/SettingsView.cpp:257
+#: source/ui/SettingsView.cpp:467
 msgid "Settings"
 msgstr "Paramètres"
 
-#: source/core/App.cpp:442
+#: source/core/App.cpp:443
 msgid "Exit"
 msgstr "Quitter"
 
-#: source/core/App.cpp:466
+#: source/core/App.cpp:467
 msgid "Connecting to the network..."
 msgstr "Connexion au réseau..."
 
-#: source/core/App.cpp:468
+#: source/core/App.cpp:469
 msgid "This is taking long: the Wii's network may need a restart."
 msgstr "C'est long : le réseau de la Wii doit peut-être redémarrer."
 
-#: source/core/App.cpp:474
+#: source/core/App.cpp:475
 msgid "No network connection"
 msgstr "Pas de connexion réseau"
 
-#: source/core/App.cpp:475
+#: source/core/App.cpp:476
 msgid "Check the Wii's Internet settings, then try again."
 msgstr "Vérifiez les paramètres Internet de la Wii, puis réessayez."
 
-#: source/core/App.cpp:775 source/ui/LibraryHome.cpp:330
+#: source/core/App.cpp:776 source/ui/LibraryHome.cpp:330
 msgid "Menu"
 msgstr "Menu"
 
@@ -119,8 +120,8 @@ msgstr "Entrez le code"
 msgid "This profile is locked"
 msgstr "Ce profil est verrouillé"
 
-#: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:118
-#: source/ui/SettingsView.cpp:498
+#: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:156
+#: source/ui/SettingsView.cpp:629
 msgid "Choose"
 msgstr "Choisir"
 
@@ -149,19 +150,19 @@ msgid "Four digits, asked each time it opens"
 msgstr "Quatre chiffres, demandés à chaque ouverture"
 
 #: source/core/AppProfiles.cpp:181 source/core/AppProfiles.cpp:194
-#: source/ui/SettingsView.cpp:76 source/ui/SettingsView.cpp:281
+#: source/ui/SettingsView.cpp:114 source/ui/SettingsView.cpp:385
 msgid "Choose a passcode"
 msgstr "Choisissez un code"
 
-#: source/core/AppProfiles.cpp:181 source/ui/SettingsView.cpp:76
+#: source/core/AppProfiles.cpp:181 source/ui/SettingsView.cpp:114
 msgid "Four digits, asked when this profile opens"
 msgstr "Quatre chiffres, demandés à l'ouverture du profil"
 
-#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:278
+#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:382
 msgid "Enter it again"
 msgstr "Entrez-le à nouveau"
 
-#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:281
+#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:385
 msgid "The two didn't match: once more"
 msgstr "Les deux ne correspondent pas : encore une fois"
 
@@ -173,11 +174,11 @@ msgstr "Le mot de passe à chaque fois, alors"
 msgid "Or Quick Connect: this profile keeps no sign-in on the Wii"
 msgstr "Ou la connexion rapide : ce profil ne garde aucune connexion sur la Wii"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:425
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:529
 msgid "Grid"
 msgstr "Grille"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:425
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:529
 msgid "Rows"
 msgstr "Rangées"
 
@@ -189,15 +190,15 @@ msgstr "Modifiable plus tard dans les Paramètres"
 msgid "Which home screen?"
 msgstr "Quel écran d'accueil ?"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:428
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:532
 msgid "List"
 msgstr "Liste"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:428
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:532
 msgid "List + Posters"
 msgstr "Liste + Affiches"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:428
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:532
 msgid "Posters"
 msgstr "Affiches"
 
@@ -218,7 +219,7 @@ msgstr "Confirmer"
 msgid "Close"
 msgstr "Fermer"
 
-#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:242
+#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:346
 msgid "Reset"
 msgstr "Réinitialiser"
 
@@ -389,61 +390,61 @@ msgstr "Impossible de lire cette vidéo"
 msgid "Check the server's FFmpeg log (Dashboard > Logs)."
 msgstr "Voir le journal FFmpeg du serveur (Tableau de bord > Journaux)."
 
-#: source/jellyfin/JellyfinClient.cpp:110
+#: source/jellyfin/JellyfinClient.cpp:115
 msgid "No IP address from the router (DHCP)"
 msgstr "Pas d'adresse IP du routeur (DHCP)"
 
-#: source/jellyfin/JellyfinClient.cpp:172
+#: source/jellyfin/JellyfinClient.cpp:177
 msgid "UDP socket failed"
 msgstr "Échec du socket UDP"
 
-#: source/jellyfin/JellyfinClient.cpp:391
+#: source/jellyfin/JellyfinClient.cpp:396
 msgid "Unsupported URL scheme"
 msgstr "Type d'URL non pris en charge"
 
-#: source/jellyfin/JellyfinClient.cpp:743
+#: source/jellyfin/JellyfinClient.cpp:748
 msgid "TLS: DRBG seed failed"
 msgstr "TLS : échec de l'initialisation DRBG"
 
-#: source/jellyfin/JellyfinClient.cpp:760
+#: source/jellyfin/JellyfinClient.cpp:765
 msgid "TLS: ssl_config_defaults failed"
 msgstr "TLS : échec de ssl_config_defaults"
 
-#: source/jellyfin/JellyfinClient.cpp:797
+#: source/jellyfin/JellyfinClient.cpp:802
 msgid "DNS: unexpected address length"
 msgstr "DNS : longueur d'adresse inattendue"
 
-#: source/jellyfin/JellyfinClient.cpp:821
+#: source/jellyfin/JellyfinClient.cpp:826
 msgid "Server not reachable (connection timed out)"
 msgstr "Serveur injoignable (délai dépassé)"
 
-#: source/jellyfin/JellyfinClient.cpp:845
+#: source/jellyfin/JellyfinClient.cpp:850
 msgid "TLS handshake failed (network error)"
 msgstr "Échec de la négociation TLS (erreur réseau)"
 
-#: source/jellyfin/JellyfinClient.cpp:955
+#: source/jellyfin/JellyfinClient.cpp:960
 msgid "Failed to send request"
 msgstr "Échec de l'envoi de la requête"
 
-#: source/jellyfin/JellyfinClient.cpp:1036
+#: source/jellyfin/JellyfinClient.cpp:1041
 msgid "No response from server (check server URL / port)"
 msgstr "Pas de réponse du serveur (vérifiez l'URL / le port)"
 
-#: source/jellyfin/JellyfinClient.cpp:1037
+#: source/jellyfin/JellyfinClient.cpp:1042
 msgid "Invalid HTTP response (server may require HTTPS)"
 msgstr "Réponse HTTP invalide (le serveur exige peut-être HTTPS)"
 
-#: source/jellyfin/JellyfinClient.cpp:1093
-#: source/jellyfin/JellyfinClient.cpp:1097
-#: source/jellyfin/JellyfinClient.cpp:1153
+#: source/jellyfin/JellyfinClient.cpp:1098
+#: source/jellyfin/JellyfinClient.cpp:1102
+#: source/jellyfin/JellyfinClient.cpp:1158
 msgid "Network lost: reconnecting..."
 msgstr "Réseau perdu : reconnexion…"
 
-#: source/jellyfin/JellyfinClient.cpp:1132
+#: source/jellyfin/JellyfinClient.cpp:1137
 msgid "Request headers too large"
 msgstr "En-têtes de requête trop grands"
 
-#: source/jellyfin/JellyfinClient.cpp:1175
+#: source/jellyfin/JellyfinClient.cpp:1180
 msgid "Connection lost"
 msgstr "Connexion perdue"
 
@@ -646,7 +647,7 @@ msgstr "Parcourir"
 #: source/ui/LibraryHome.cpp:330 source/ui/LibraryHome.cpp:383
 #: source/ui/LibraryItems.cpp:579 source/ui/LibrarySearch.cpp:263
 #: source/ui/LibrarySpecials.cpp:185 source/ui/LibrarySuggestions.cpp:428
-#: source/ui/ProfileView.cpp:187 source/ui/SettingsView.cpp:118
+#: source/ui/ProfileView.cpp:187 source/ui/SettingsView.cpp:156
 msgid "Open"
 msgstr "Ouvrir"
 
@@ -693,7 +694,7 @@ msgid "Server URL set. Enter your credentials."
 msgstr "URL du serveur enregistrée. Entrez vos identifiants."
 
 #: source/ui/ConnectView.cpp:462 source/ui/ConnectView.cpp:597
-#: source/ui/SettingsView.cpp:243
+#: source/ui/SettingsView.cpp:347
 msgid "Done"
 msgstr "Terminé"
 
@@ -730,12 +731,12 @@ msgid "Username"
 msgstr "Nom d'utilisateur"
 
 #: source/ui/ConnectView.cpp:567 source/ui/ConnectView.cpp:616
-#: source/ui/SettingsView.cpp:477
+#: source/ui/SettingsView.cpp:608
 msgid "Password"
 msgstr "Mot de passe"
 
-#: source/ui/ConnectView.cpp:573 source/ui/SettingsView.cpp:402
-#: source/ui/SettingsView.cpp:462
+#: source/ui/ConnectView.cpp:573 source/ui/SettingsView.cpp:506
+#: source/ui/SettingsView.cpp:566
 msgid "Auto"
 msgstr "Auto"
 
@@ -762,7 +763,7 @@ msgstr "Saisir"
 msgid "Shift"
 msgstr "Maj"
 
-#: source/ui/ConnectView.cpp:600 source/ui/SettingsView.cpp:242
+#: source/ui/ConnectView.cpp:600 source/ui/SettingsView.cpp:346
 msgid "Move"
 msgstr "Déplacer"
 
@@ -967,7 +968,7 @@ msgstr "Bonus"
 msgid "Seasons"
 msgstr "Saisons"
 
-#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:498
+#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:629
 msgid "Change"
 msgstr "Changer"
 
@@ -1113,7 +1114,7 @@ msgid "A-Z"
 msgstr "A-Z"
 
 #: source/ui/LibraryItems.cpp:587 source/ui/LibraryItems.cpp:590
-#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:498
+#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:629
 msgid "Page"
 msgstr "Page"
 
@@ -1238,7 +1239,7 @@ msgstr "Note"
 msgid "Year"
 msgstr "Année"
 
-#: source/ui/LibrarySort.cpp:15 source/ui/SettingsView.cpp:473
+#: source/ui/LibrarySort.cpp:15 source/ui/SettingsView.cpp:577
 msgid "All"
 msgstr "Tout"
 
@@ -1615,325 +1616,383 @@ msgstr "Supprimer ce profil ?"
 msgid "Its saved sign-in will be forgotten."
 msgstr "Sa connexion enregistrée sera oubliée."
 
-#: source/ui/SettingsView.cpp:25
+#: source/ui/SettingsView.cpp:62
 msgid "Sign-In Settings"
 msgstr "Paramètres de connexion"
 
-#: source/ui/SettingsView.cpp:25
+#: source/ui/SettingsView.cpp:62
 msgid "System Settings"
 msgstr "Paramètres système"
 
-#: source/ui/SettingsView.cpp:25
+#: source/ui/SettingsView.cpp:62
 msgid "View Settings"
 msgstr "Paramètres d'affichage"
 
-#: source/ui/SettingsView.cpp:115
+#: source/ui/SettingsView.cpp:153
 msgid "Made with ❤ for Jellyfin, Emby and Plex"
 msgstr "Fait avec ❤ pour Jellyfin, Emby et Plex"
 
-#: source/ui/SettingsView.cpp:234 source/ui/SettingsView.cpp:445
+#: source/ui/SettingsView.cpp:257 source/ui/SettingsView.cpp:585
+msgid "Image Cache"
+msgstr "Cache d'images"
+
+#: source/ui/SettingsView.cpp:259
+msgid "Clearing image cache..."
+msgstr "Vidage du cache d'images..."
+
+#: source/ui/SettingsView.cpp:261 source/ui/SettingsView.cpp:598
+#, c-format
+msgid "Removed %d image(s)"
+msgstr "%d image(s) supprimée(s)"
+
+#: source/ui/SettingsView.cpp:338 source/ui/SettingsView.cpp:549
 msgid "Screen Area"
 msgstr "Zone d'affichage"
 
-#: source/ui/SettingsView.cpp:235
+#: source/ui/SettingsView.cpp:339
 msgid "Move each arrow until its tip sits right in"
 msgstr "Déplacez chaque flèche jusqu'à ce que sa pointe"
 
-#: source/ui/SettingsView.cpp:236
+#: source/ui/SettingsView.cpp:340
 msgid "the corner of your TV screen."
 msgstr "touche le coin de l'écran de votre TV."
 
-#: source/ui/SettingsView.cpp:238
+#: source/ui/SettingsView.cpp:342
 #, c-format
 msgid "Left %d   ·   Top %d   ·   Right %d   ·   Bottom %d"
 msgstr "Gauche %d   ·   Haut %d   ·   Droite %d   ·   Bas %d"
 
-#: source/ui/SettingsView.cpp:242
+#: source/ui/SettingsView.cpp:346
 msgid "Switch"
 msgstr "Changer"
 
-#: source/ui/SettingsView.cpp:366
+#: source/ui/SettingsView.cpp:470
 msgid "SSL Verification"
 msgstr "Vérification SSL"
 
-#: source/ui/SettingsView.cpp:367
+#: source/ui/SettingsView.cpp:471
 msgid "Validate the server HTTPS certificate (disable for self-signed certs)"
 msgstr "Vérifie le certificat HTTPS (à couper s'il est auto-signé)"
 
-#: source/ui/SettingsView.cpp:368 source/ui/SettingsView.cpp:370
-#: source/ui/SettingsView.cpp:374 source/ui/SettingsView.cpp:402
-#: source/ui/SettingsView.cpp:406 source/ui/SettingsView.cpp:440
-#: source/ui/SettingsView.cpp:462 source/ui/SettingsView.cpp:466
-#: source/ui/SettingsView.cpp:473
+#: source/ui/SettingsView.cpp:472 source/ui/SettingsView.cpp:474
+#: source/ui/SettingsView.cpp:478 source/ui/SettingsView.cpp:506
+#: source/ui/SettingsView.cpp:510 source/ui/SettingsView.cpp:544
+#: source/ui/SettingsView.cpp:566 source/ui/SettingsView.cpp:570
+#: source/ui/SettingsView.cpp:577 source/ui/SettingsView.cpp:586
+#: source/ui/SettingsView.cpp:603
 msgid "OFF"
 msgstr "NON"
 
-#: source/ui/SettingsView.cpp:368 source/ui/SettingsView.cpp:370
-#: source/ui/SettingsView.cpp:374 source/ui/SettingsView.cpp:406
-#: source/ui/SettingsView.cpp:440 source/ui/SettingsView.cpp:466
+#: source/ui/SettingsView.cpp:472 source/ui/SettingsView.cpp:474
+#: source/ui/SettingsView.cpp:478 source/ui/SettingsView.cpp:510
+#: source/ui/SettingsView.cpp:544 source/ui/SettingsView.cpp:570
 msgid "ON"
 msgstr "OUI"
 
-#: source/ui/SettingsView.cpp:369
+#: source/ui/SettingsView.cpp:473
 msgid "Background Music"
 msgstr "Musique de fond"
 
-#: source/ui/SettingsView.cpp:369
+#: source/ui/SettingsView.cpp:473
 msgid "Play background music in menus"
 msgstr "De la musique dans les menus"
 
-#: source/ui/SettingsView.cpp:371
+#: source/ui/SettingsView.cpp:475
 msgid "Interface Sounds"
 msgstr "Sons de l'interface"
 
-#: source/ui/SettingsView.cpp:372
+#: source/ui/SettingsView.cpp:476
 msgid "Sounds in the menus; your own in sounds/ on the SD card"
 msgstr "Sons des menus ; les vôtres dans sounds/ sur la carte SD"
 
-#: source/ui/SettingsView.cpp:373
+#: source/ui/SettingsView.cpp:477
 msgid "The menus stay silent"
 msgstr "Les menus restent silencieux"
 
-#: source/ui/SettingsView.cpp:384
+#: source/ui/SettingsView.cpp:488
 #, c-format
 msgid "%.1f Mb/s; your connection (%.1f Mb/s measured) holds videos to %.1f"
 msgstr "%.1f Mb/s ; votre connexion (%.1f Mb/s mesurés) limite à %.1f"
 
-#: source/ui/SettingsView.cpp:389
+#: source/ui/SettingsView.cpp:493
 #, c-format
 msgid "%.1f Mb/s: sharpest, for a wired adapter. Lower it if videos stutter"
 msgstr "%.1f Mb/s : le plus net, pour un adaptateur filaire. Baissez si ça saccade"
 
-#: source/ui/SettingsView.cpp:393
+#: source/ui/SettingsView.cpp:497
 #, c-format
 msgid "Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering"
 msgstr "Débit vidéo : %.1f Mb/s. Baissez-le si la lecture s'interrompt"
 
-#: source/ui/SettingsView.cpp:395
+#: source/ui/SettingsView.cpp:499
 msgid "Video Quality"
 msgstr "Qualité vidéo"
 
-#: source/ui/SettingsView.cpp:399
+#: source/ui/SettingsView.cpp:503
 msgid "Direct Play"
 msgstr "Lecture directe"
 
-#: source/ui/SettingsView.cpp:400
+#: source/ui/SettingsView.cpp:504
 msgid "Files the Wii can decode play as they are (SD DivX, DVD...): no server work"
 msgstr "Lu tel quel si la Wii sait le lire (DivX, DVD...) : serveur au repos"
 
-#: source/ui/SettingsView.cpp:401
+#: source/ui/SettingsView.cpp:505
 msgid "Every video is converted by the server"
 msgstr "Le serveur convertit chaque vidéo"
 
-#: source/ui/SettingsView.cpp:403
+#: source/ui/SettingsView.cpp:507
 msgid "Smooth Motion"
 msgstr "Mouvement fluide"
 
-#: source/ui/SettingsView.cpp:404
+#: source/ui/SettingsView.cpp:508
 msgid "Blends frames on picture changes: films move evenly on 60 Hz TVs"
 msgstr "Fond les images entre elles : films fluides sur les TV 60 Hz"
 
-#: source/ui/SettingsView.cpp:405
+#: source/ui/SettingsView.cpp:509
 msgid "Each frame shown as is (24 fps films judder slightly on 60 Hz)"
 msgstr "Chaque image telle quelle (les films 24 i/s saccadent un peu en 60 Hz)"
 
-#: source/ui/SettingsView.cpp:409
+#: source/ui/SettingsView.cpp:513
 msgid "Light, like the Wii Menu"
 msgstr "Clair, comme le Menu Wii"
 
-#: source/ui/SettingsView.cpp:410
+#: source/ui/SettingsView.cpp:514
 msgid "Dark, for movie nights"
 msgstr "Sombre, pour les soirées ciné"
 
-#: source/ui/SettingsView.cpp:411
+#: source/ui/SettingsView.cpp:515
 msgid "Red and charcoal, browse in rows like the old video channels"
 msgstr "Rouge et anthracite, en rangées comme les anciennes chaînes vidéo"
 
-#: source/ui/SettingsView.cpp:412
+#: source/ui/SettingsView.cpp:516
 msgid "Black, silver and green"
 msgstr "Noir, argent et vert"
 
-#: source/ui/SettingsView.cpp:413
+#: source/ui/SettingsView.cpp:517
 msgid "Dark grey and orange"
 msgstr "Gris foncé et orange"
 
-#: source/ui/SettingsView.cpp:417
+#: source/ui/SettingsView.cpp:521
 msgid "Christmas for now, until January 6"
 msgstr "Noël pour l'instant, jusqu'au 6 janvier"
 
-#: source/ui/SettingsView.cpp:417
+#: source/ui/SettingsView.cpp:521
 msgid "Theme"
 msgstr "Thème"
 
-#: source/ui/SettingsView.cpp:423
+#: source/ui/SettingsView.cpp:527
 msgid "Home Screen"
 msgstr "Écran d'accueil"
 
-#: source/ui/SettingsView.cpp:423
+#: source/ui/SettingsView.cpp:527
 msgid "Rows of posters to browse, like the old video channels"
 msgstr "Des rangées d'affiches, comme les anciennes chaînes vidéo"
 
-#: source/ui/SettingsView.cpp:424
+#: source/ui/SettingsView.cpp:528
 msgid "A grid of your libraries"
 msgstr "Une grille de vos médiathèques"
 
-#: source/ui/SettingsView.cpp:430
+#: source/ui/SettingsView.cpp:534
 msgid "Browse libraries with their artwork"
 msgstr "Les médiathèques avec leurs affiches"
 
-#: source/ui/SettingsView.cpp:431
+#: source/ui/SettingsView.cpp:535
 msgid "Libraries as text lists: quickest to browse big ones"
 msgstr "Des listes de texte : le plus rapide pour les grandes médiathèques"
 
-#: source/ui/SettingsView.cpp:432
+#: source/ui/SettingsView.cpp:536
 msgid "Text lists, with the cover of the selected title"
 msgstr "Des listes, avec l'affiche du titre choisi"
 
-#: source/ui/SettingsView.cpp:435
+#: source/ui/SettingsView.cpp:539
 msgid "Library View"
 msgstr "Vue des médiathèques"
 
-#: source/ui/SettingsView.cpp:437
+#: source/ui/SettingsView.cpp:541
 msgid "Disc Slot Light"
 msgstr "Voyant du lecteur"
 
-#: source/ui/SettingsView.cpp:438
+#: source/ui/SettingsView.cpp:542
 msgid "Pulses with the sound, as bright as the Wii Settings say"
 msgstr "Pulse avec le son, aussi fort que le disent les Paramètres Wii"
 
-#: source/ui/SettingsView.cpp:439
+#: source/ui/SettingsView.cpp:543
 msgid "Stays dark during playback"
 msgstr "Reste éteint pendant la lecture"
 
-#: source/ui/SettingsView.cpp:445
+#: source/ui/SettingsView.cpp:549
 msgid "Shrink the interface if your TV crops the edges (overscan)"
 msgstr "Réduit l'interface si votre TV coupe les bords (overscan)"
 
-#: source/ui/SettingsView.cpp:446
+#: source/ui/SettingsView.cpp:550
 msgid "Adjusted"
 msgstr "Ajustée"
 
-#: source/ui/SettingsView.cpp:446
+#: source/ui/SettingsView.cpp:550
 msgid "Full"
 msgstr "Entière"
 
-#: source/ui/SettingsView.cpp:448
+#: source/ui/SettingsView.cpp:552
 msgid "Backgrounds"
 msgstr "Fonds"
 
-#: source/ui/SettingsView.cpp:449
+#: source/ui/SettingsView.cpp:553
 msgid "Solid colours: no bands on TVs that show them in gradients"
 msgstr "Couleurs unies : pas de bandes sur les TV qui en font dans les dégradés"
 
-#: source/ui/SettingsView.cpp:450
+#: source/ui/SettingsView.cpp:554
 msgid "Soft gradients, like the Wii Menu"
 msgstr "Dégradés doux, comme le Menu Wii"
 
-#: source/ui/SettingsView.cpp:451
+#: source/ui/SettingsView.cpp:555
 msgid "Gradient"
 msgstr "Dégradé"
 
-#: source/ui/SettingsView.cpp:451
+#: source/ui/SettingsView.cpp:555
 msgid "Solid"
 msgstr "Uni"
 
-#: source/ui/SettingsView.cpp:452
+#: source/ui/SettingsView.cpp:556
 msgid "Clock"
 msgstr "Horloge"
 
-#: source/ui/SettingsView.cpp:453
+#: source/ui/SettingsView.cpp:557
 msgid "13:30, the date as day/month"
 msgstr "13:30, la date en jour/mois"
 
-#: source/ui/SettingsView.cpp:453
+#: source/ui/SettingsView.cpp:557
 msgid "1:30 PM, the date as month/day"
 msgstr "1:30 PM, la date en mois/jour"
 
-#: source/ui/SettingsView.cpp:454
+#: source/ui/SettingsView.cpp:558
 msgid "12-hour"
 msgstr "12 h"
 
-#: source/ui/SettingsView.cpp:454
+#: source/ui/SettingsView.cpp:558
 msgid "24-hour"
 msgstr "24 h"
 
-#: source/ui/SettingsView.cpp:456
+#: source/ui/SettingsView.cpp:560
 msgid "Language"
 msgstr "Langue"
 
-#: source/ui/SettingsView.cpp:457
+#: source/ui/SettingsView.cpp:561
 msgid "Chosen here, whatever the Wii's language"
 msgstr "Choisie ici, quelle que soit celle de la Wii"
 
-#: source/ui/SettingsView.cpp:457
+#: source/ui/SettingsView.cpp:561
 msgid "The Wii's language, as set in the Wii Settings"
 msgstr "Celle de la Wii, d'après les Paramètres Wii"
 
-#: source/ui/SettingsView.cpp:459 source/ui/Ui.cpp:135
+#: source/ui/SettingsView.cpp:563 source/ui/Ui.cpp:135
 msgid "Christmas"
 msgstr "Noël"
 
-#: source/ui/SettingsView.cpp:460
+#: source/ui/SettingsView.cpp:564
 msgid "Snow and Christmas colours from December 1 to January 6"
 msgstr "De la neige et les couleurs de Noël du 1er décembre au 6 janvier"
 
-#: source/ui/SettingsView.cpp:461
+#: source/ui/SettingsView.cpp:565
 msgid "The chosen theme all year round"
 msgstr "Le thème choisi toute l'année"
 
-#: source/ui/SettingsView.cpp:463
+#: source/ui/SettingsView.cpp:567
 msgid "Music Autoplay"
 msgstr "Lecture automatique"
 
-#: source/ui/SettingsView.cpp:464
+#: source/ui/SettingsView.cpp:568
 msgid "When an album or a playlist ends, similar songs follow"
 msgstr "À la fin d'un album ou d'une playlist, des titres similaires suivent"
 
-#: source/ui/SettingsView.cpp:465
+#: source/ui/SettingsView.cpp:569
 msgid "The music stops at the end of the album or playlist"
 msgstr "La musique s'arrête à la fin de l'album ou de la playlist"
 
-#: source/ui/SettingsView.cpp:469
+#: source/ui/SettingsView.cpp:573
 msgid "Skip Prompts"
 msgstr "Boutons « Passer »"
 
-#: source/ui/SettingsView.cpp:470
+#: source/ui/SettingsView.cpp:574
 msgid "\"Skip intro\", \"Skip recap\"... over the parts the server knows"
 msgstr "« Passer l'intro », « Passer le résumé »... sur les passages connus du serveur"
 
-#: source/ui/SettingsView.cpp:471
+#: source/ui/SettingsView.cpp:575
 msgid "\"Skip recap\" only: intros and credits play without a prompt"
 msgstr "« Passer le résumé » seulement : génériques sans bouton"
 
-#: source/ui/SettingsView.cpp:472
+#: source/ui/SettingsView.cpp:576
 msgid "Intros, recaps and credits play without a prompt"
 msgstr "Intros, résumés et génériques passent sans bouton"
 
-#: source/ui/SettingsView.cpp:473
+#: source/ui/SettingsView.cpp:577
 msgid "Recaps only"
 msgstr "Résumés seuls"
 
-#: source/ui/SettingsView.cpp:477
+#: source/ui/SettingsView.cpp:582
+msgid "Download artwork without saving it"
+msgstr "Télécharge les images sans les garder"
+
+#: source/ui/SettingsView.cpp:583 source/ui/SettingsView.cpp:594
+msgid "No SD card, or it cannot be written to"
+msgstr "Pas de carte SD, ou impossible d'y écrire"
+
+#: source/ui/SettingsView.cpp:584
+msgid "Save artwork here for faster browsing"
+msgstr "Garde les images ici pour parcourir plus vite"
+
+#: source/ui/SettingsView.cpp:586
+msgid "SD"
+msgstr "SD"
+
+#: source/ui/SettingsView.cpp:592
+msgid "Choose SD to clear saved artwork"
+msgstr "Choisissez SD pour vider les images gardées"
+
+#: source/ui/SettingsView.cpp:596
+msgid "Could not clear image cache. Try again"
+msgstr "Impossible de vider le cache d'images. Réessayez"
+
+#: source/ui/SettingsView.cpp:600
+msgid "Full: clear it to keep new artwork"
+msgstr "Plein : videz-le pour garder les nouvelles images"
+
+#: source/ui/SettingsView.cpp:602
+msgid "Clear saved artwork to refresh it or free space"
+msgstr "Pour rafraîchir les images ou libérer de la place"
+
+#: source/ui/SettingsView.cpp:603
+msgid "Clear"
+msgstr "Vider"
+
+#: source/ui/SettingsView.cpp:603
+msgid "Cleared"
+msgstr "Vidé"
+
+#: source/ui/SettingsView.cpp:604
+msgid "Clear Image Cache"
+msgstr "Vider le cache d'images"
+
+#: source/ui/SettingsView.cpp:608
 msgid "Automatic"
 msgstr "Automatique"
 
-#: source/ui/SettingsView.cpp:477
+#: source/ui/SettingsView.cpp:608
 msgid "Passcode"
 msgstr "Code"
 
-#: source/ui/SettingsView.cpp:479
+#: source/ui/SettingsView.cpp:610
 msgid "Opens at once on this Wii"
 msgstr "S'ouvre directement sur cette Wii"
 
-#: source/ui/SettingsView.cpp:480
+#: source/ui/SettingsView.cpp:611
 msgid "Asks the profile's four-digit passcode first"
 msgstr "Demande d'abord le code à quatre chiffres du profil"
 
-#: source/ui/SettingsView.cpp:481
+#: source/ui/SettingsView.cpp:612
 msgid "Asks the password (or Quick Connect) each time"
 msgstr "Demande le mot de passe (ou la connexion rapide) à chaque fois"
 
-#: source/ui/SettingsView.cpp:484
+#: source/ui/SettingsView.cpp:615
 msgid "Sign-In"
 msgstr "Connexion"
 
