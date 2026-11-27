@@ -27,8 +27,10 @@ std::string ListFeed::query(int start, int limit, const char* nameLessThan) cons
     snprintf(q, sizeof(q),
              "%s%s&Limit=%d&StartIndex=%d%s%s",
              base.c_str(),
-             /* the filter's own sort, else by name (the letters need it) */
-             filter.find("SortBy=") == std::string::npos ? "&SortBy=SortName&SortOrder=Ascending" : "",
+             /* the filter's own sort, else by name (the letters need it);
+              * Live TV's channels come in their numbers' order */
+             filter.find("SortBy=") == std::string::npos && filter.compare(0, 8, "/LiveTv/") != 0
+                 ? "&SortBy=SortName&SortOrder=Ascending" : "",
              limit, start,
              nameLessThan ? "&NameLessThan=" : "", nameLessThan ? nameLessThan : "");
     return q;

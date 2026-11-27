@@ -171,6 +171,10 @@ bool runPlaySession(JellyfinClient& client,
      * the Wii can't keep up with goes on transcoded (allowDirect, per item) */
     JellyfinClient::PlaybackChoice how = lv.pendingPlayHow;
     bool allowDirect = true;
+    /* a Live TV channel: always transcoded, never sought, its live stream
+     * (opened by PlaybackInfo) closed when it stops */
+    const bool live = lv.pendingPlayIsLive;
+    if (live) { allowDirect = false; audioIdx = -1; }
 
     /* ao_gekko needs the DSP: no menu music while a video plays. */
     /* the music session stops (the menu music's place kept) */
@@ -230,7 +234,7 @@ bool runPlaySession(JellyfinClient& client,
     float qualityRestartAt = -1.0f;
     IntroInfo intro;
     std::vector<float> chapters;   /* their starts, s (fetched with intro) */
-    bool introFetched = false;
+    bool introFetched = live;    /* a channel has no segments nor chapters */
     int  retries      = 0;
     bool everPlayed   = false;   /* this item showed something */
     bool reconnecting = false;   /* the next stream picks up a dropped one */
@@ -277,9 +281,10 @@ bool runPlaySession(JellyfinClient& client,
         /* Skip the RESUME_PAD at demuxer level so output starts on target */
         ctx.startSkip    = !itemTimestamps && startTicks > RESUME_PAD_TICKS ? 3.0f : 0.0f;
         ctx.runtime      = (float)(runtimeTicks / 10000000.0);
+        ctx.live         = live;
         view.setContext(ctx);
         view.setSubtitles(subLoaded >= 0 ? &subs : nullptr, subIdx);
-        if (trickplay.item() != itemId)
+        if (!live && trickplay.item() != itemId)
             trickplay.start(client, serverUrl, auth, itemId, mediaSourceId);
 
         /* Fallback stream length when the MPEG-TS demuxer can't find it */
@@ -632,7 +637,7 @@ bool runPlaySession(JellyfinClient& client,
         /* The stream died on its own (transcoder session expired, network
          * drop): pick up where it stopped, up to 3 times. */
         bool dropped = !stopRequested && reason == PLAYER_STOP_EOF &&
-                       ctx.runtime > 0.0f && posSecs < ctx.runtime - 30.0f;
+                       (live || (ctx.runtime > 0.0f && posSecs < ctx.runtime - 30.0f));
         /* The episode played to its end (not stopped with B): go on with the
          * next one of the list, season order or shuffled, as Jellyfin does. */
         bool finished = reason == PLAYER_STOP_EOF && !dropped && everPlayed &&
@@ -711,7 +716,7 @@ bool runPlaySession(JellyfinClient& client,
             int newBurn  = burnIndex(newSub);
             if (newSub >= 0 && newBurn < 0 && !loadSub(newSub)) newBurn = newSub;
             if (newSub < 0) loadSub(-1);
-            long long fromTicks = (long long)(restartAt * 10000000.0);
+            long long fromTicks = live ? 0 : (long long)(restartAt * 10000000.0);   /* a channel: now */
             std::string newUrl, newSession;
             bool ok = false;
             /* after a drop the network may take a minute to come back (seen on
@@ -719,6 +724,7 @@ bool runPlaySession(JellyfinClient& client,
             const int tries = reconnecting ? 8 : 1;
             runWithPlayerUI(view, ir, reconnecting ? N_("Reconnecting...") : N_("Loading..."), [&]() {
                 client.deleteActiveEncoding(serverUrl, auth, playSessionId);
+                if (live) client.closeLiveStream(serverUrl, auth);   /* a new one is opened */
                 for (int t = 0; t < tries && !ok; t++) {
                     if (t) { SYS_Report("[runPlay] server not answering, asking again (%d/%d)\n", t + 1, tries); usleep(10 * 1000 * 1000); }
                     ok = client.getPlaybackUrl(serverUrl, auth, itemId, mediaSourceId,
@@ -814,6 +820,7 @@ bool runPlaySession(JellyfinClient& client,
             client.reportPlaybackStopped(serverUrl, auth, itemId, mediaSourceId,
                                          playSessionId, posTicks);
         client.deleteActiveEncoding(serverUrl, auth, playSessionId);
+        if (live) client.closeLiveStream(serverUrl, auth);
     });
     wiifin_video_clear();
     if (!failWhy.empty() && !g_app_powerOff && !g_app_reset) {

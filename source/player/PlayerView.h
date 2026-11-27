@@ -38,6 +38,7 @@ struct PlayerViewContext {
     float streamOrigin = 0.0f;
     float startSkip    = 0.0f;  /* seconds MPlayer discards at start (-ss) */
     float runtime      = 0.0f;  /* item length in seconds, 0 = unknown */
+    bool  live         = false; /* a TV channel: no seeking, "Live" on the bar */
 };
 
 /* -----------------------------------------------------------------------

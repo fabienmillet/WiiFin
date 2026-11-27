@@ -56,6 +56,7 @@ public:
     long long   pendingPlayStartTimeTicks = 0; // seek offset passed to the transcoder (100-ns ticks)
     long long   pendingPlayRuntimeTicks  = 0; // RunTimeTicks from Jellyfin (for progress bar duration)
     JellyfinClient::PlaybackChoice pendingPlayHow; // direct play or transcode
+    bool        pendingPlayIsLive = false;   // a Live TV channel: no seek, no resume
 
     // Music play request (set when returning true from a music library)
     bool                              pendingPlayIsMusic  = false;
@@ -369,6 +370,7 @@ private:
     void loadPosters();
     void loadDetail();
     void preparePlay(long long startTicks, const std::vector<JellyfinEpisode>* queue = nullptr);
+    bool playChannel(const JellyfinItem& channel);   /* Live TV: straight to the player */
     bool startShuffle(const std::string& seasonId);   /* "" = whole series */
     /* 2 in music: an album or a playlist (its id), or every song of the
      * library ("": the server draws them), played shuffled */

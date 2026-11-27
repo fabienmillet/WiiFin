@@ -29,6 +29,7 @@ struct JellyfinItem {
     std::string extraType;                 // a special feature's: "Trailer", "Featurette"...
     std::string artist;                    // an album's or a song's: AlbumArtist
     bool        played = false;            // UserData.Played (a series: all its episodes)
+    std::string nowPlaying;                // a TV channel's programme on now
 };
 
 struct JellyfinSeason {
@@ -623,6 +624,11 @@ public:
     bool deleteActiveEncoding(const std::string& serverUrl,
                               const JellyfinAuth& auth,
                               const std::string& playSessionId);
+
+    // Live TV: the live stream the last transcode opened (PlaybackInfo with
+    // AutoOpenLiveStream), "" when none; closed with closeLiveStream.
+    std::string liveStreamId;
+    bool closeLiveStream(const std::string& serverUrl, const JellyfinAuth& auth);
 
     // Search items across all libraries (Movie, Series, MusicAlbum, Audio)
     bool searchItems(const std::string& serverUrl,

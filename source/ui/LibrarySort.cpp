@@ -20,6 +20,7 @@ bool LibraryView::sortable() const
     if (currentLibType == "music") return musicTab == 0;   /* the albums (2 shuffles the others) */
     /* 2 shuffles these */
     if (currentLibType == "musicvideos" || currentLibType == "playlists") return false;
+    if (currentLibType == "livetv") return false;   /* channels: in their numbers' order */
     if (currentLibType == "movies") return movieTab == 0;
     if (currentLibType == "tvshows") return tvTab == 0;
     return true;   /* other media: home videos, mixed libraries... */
