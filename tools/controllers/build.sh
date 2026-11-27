@@ -18,7 +18,7 @@ DEST=$REPO/libs/controllers
 : "${DEVKITPPC:=$DEVKITPRO/devkitPPC}"
 CC=$DEVKITPPC/bin/powerpc-eabi-gcc
 AR=$DEVKITPPC/bin/powerpc-eabi-ar
-CFLAGS="-O2 -Wall -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -I${LIBOGC_INC:-$DEVKITPRO/libogc/include}"
+CFLAGS="-O2 -Wall -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -I${LIBOGC_INC:-$DEVKITPRO/libogc2/wii/include}"
 
 fetch() {  # name url commit; the commit hash vouches for the content
     if [ ! -d "$OUT/$1/.git" ]; then
