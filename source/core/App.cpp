@@ -52,7 +52,7 @@ volatile bool g_restartApp = false;
 static bool s_exitToLoader = false;
 static std::string s_argv0;
 static void onPower() { g_app_powerOff = true; }
-static void onReset(u32, void*) { g_app_reset = true; }
+static void onReset(void) { g_app_reset = true; }
 
 /* The power button turns the Wii off even when WiiFin is stuck: a request
  * that never returns (the loading spinner waits for it), a thread that

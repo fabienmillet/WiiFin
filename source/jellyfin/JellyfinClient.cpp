@@ -6,18 +6,14 @@
 #include "../core/NetConnect.h"
 #include "../player/WiiPlayer.h"   /* the volume, for the reports */
 #include <network.h>
-#include <ogc/if_config.h>
 #include <ogc/lwp.h>
 #include <ogc/mutex.h>
 #include <ogc/lwp_watchdog.h>
-#include <sys/filio.h>
 #include <string.h>
 #include <map>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <arpa/inet.h>
-#include <netdb.h>
 #include <vector>
 
 #include <mbedtls/ssl.h>
@@ -95,7 +91,7 @@ void JellyfinClient::bringUpNetwork() {
     s32 ret = -1;
     for (int attempt = 0; attempt < 4; ++attempt) {
         char ip[16] = "", mask[16] = "";
-        ret = if_config(ip, mask, nullptr, true, 20);
+        ret = if_config(ip, mask, nullptr, true);
         SYS_Report("[Net] attempt %d: if_config=%d ip=%s\n", attempt + 1, (int)ret, ip);
         if (ret >= 0 && ip[0] && strcmp(ip, "0.0.0.0") != 0) {
             localIp_   = ip;

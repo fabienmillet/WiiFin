@@ -55,3 +55,22 @@ void __wrap_iosFree(int hid, void* ptr)
 	if (ptr && ((unsigned)ptr & 0xE0000000) == 0) ptr = (void*)((unsigned)ptr | 0x80000000);
 	__real_iosFree(hid, ptr);
 }
+
+/* libogc2: the two libogc 3.2 functions libmplayer.a (built with 3.2's
+ * headers) calls where libogc2 has other names.  PPCDCacheFlushAsync is
+ * DCFlushRangeNoSync; AESND_AllocateVoiceWithArg is only ever called with a
+ * NULL argument (3.2's AESND_AllocateVoice inline), so the callback's third
+ * parameter, which it ignores, can be left to whatever the register holds. */
+#include <ogc/cache.h>
+#include <aesndlib.h>
+
+void PPCDCacheFlushAsync(const volatile void* buf, unsigned size)
+{
+	DCFlushRangeNoSync((void*)buf, size);
+}
+
+AESNDPB* AESND_AllocateVoiceWithArg(void* cb, void* arg)
+{
+	(void)arg;
+	return AESND_AllocateVoice((AESNDVoiceCallback)cb);
+}
