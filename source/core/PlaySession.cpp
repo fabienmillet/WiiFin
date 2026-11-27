@@ -785,6 +785,7 @@ bool runPlaySession(JellyfinClient& client,
                     subIdx        = nextSub;
                     burnSub       = nextBurn;
                     subs.clear();
+                    subs.setDelay(0.0f);   /* another file: its own timing */
                     subLoaded     = -1;
                     if (subIdx >= 0 && burnSub < 0 && !loadSub(subIdx)) subIdx = -1;
                     startTicks    = 0;

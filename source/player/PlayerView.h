@@ -163,6 +163,18 @@ private:
     int   hoverButton = -1;    /* 0..4 = transport buttons, 5 = zoom */
     bool  hoverBar    = false;
     int   hoverRow    = -1;    /* panel row */
+    /* Subtitle delay, under the subtitle tracks: the selection there is
+     * panelSel == panelCount(); the pointer over its -, + or Reset */
+    enum { DELAY_MINUS = 0, DELAY_PLUS, DELAY_RESET, DELAY_ROW };
+    int   hoverDelay  = -1;
+    u64   delayHoldSince = 0, delayHoldLast = 0;   /* -/+ held: on stepping */
+    bool  delayShown() const;      /* text subtitles: their delay can change */
+    bool  delayNote() const;       /* subtitles burned in: a word instead */
+    int   delayFooterH() const;
+    int   listRows() const;        /* track rows shown at once */
+    int   panelRowsShown() const;
+    void  stepDelay(float d);
+    void  lineDelay(int dir);
     int   prevHoverRow = -1;   /* hover only moves the selection when it changes */
     bool  hoverIntro  = false;
 
