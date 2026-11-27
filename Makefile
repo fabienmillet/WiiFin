@@ -113,6 +113,10 @@ endif
 #---------------------------------------------------------------------------------
 .PHONY: all clean run
 
+# Made at parse time: with -j, the rules below can run before the `$(BUILD)` rule (xxd
+# then fails with "Directory nonexistent").
+$(shell mkdir -p $(BUILD))
+
 all: $(BUILD) $(TARGET).dol
 
 $(BUILD):
