@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WiiFin\n"
 "Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
-"POT-Creation-Date: 2026-11-27 16:33+0100\n"
+"POT-Creation-Date: 2026-11-27 21:38+0100\n"
 "PO-Revision-Date: 2026-10-11 02:59+0200\n"
 "Last-Translator: WiiFin\n"
 "Language-Team: Chinese (Traditional)\n"
@@ -21,7 +21,7 @@ msgid "Retry"
 msgstr "重試"
 
 #: source/core/App.cpp:94 source/core/App.cpp:470
-#: source/player/PlayerView.cpp:598 source/ui/ConnectView.cpp:601
+#: source/player/PlayerView.cpp:599 source/ui/ConnectView.cpp:601
 #: source/ui/ConnectView.cpp:703 source/ui/ConnectView.cpp:764
 #: source/ui/LibraryDetail.cpp:443 source/ui/LibraryHome.cpp:384
 #: source/ui/LibraryHome.cpp:426 source/ui/LibraryHome.cpp:493
@@ -35,7 +35,7 @@ msgstr "重試"
 #: source/ui/LibrarySuggestions.cpp:379 source/ui/LibrarySuggestions.cpp:428
 #: source/ui/LibraryView.cpp:1511 source/ui/MusicPlayerView.cpp:931
 #: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:188
-#: source/ui/SettingsView.cpp:157 source/ui/SettingsView.cpp:630
+#: source/ui/SettingsView.cpp:157 source/ui/SettingsView.cpp:635
 msgid "Back"
 msgstr "返回"
 
@@ -82,8 +82,8 @@ msgid "Connect To a Server"
 msgstr "連線到伺服器"
 
 #: source/core/App.cpp:442 source/ui/LibraryHome.cpp:436
-#: source/ui/SettingsView.cpp:145 source/ui/SettingsView.cpp:257
-#: source/ui/SettingsView.cpp:467
+#: source/ui/SettingsView.cpp:145 source/ui/SettingsView.cpp:258
+#: source/ui/SettingsView.cpp:468
 msgid "Settings"
 msgstr "設定"
 
@@ -120,7 +120,7 @@ msgid "This profile is locked"
 msgstr "此使用者已鎖定"
 
 #: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:156
-#: source/ui/SettingsView.cpp:629
+#: source/ui/SettingsView.cpp:634
 msgid "Choose"
 msgstr "選擇"
 
@@ -149,7 +149,7 @@ msgid "Four digits, asked each time it opens"
 msgstr "4位數字，每次開啟時詢問"
 
 #: source/core/AppProfiles.cpp:181 source/core/AppProfiles.cpp:194
-#: source/ui/SettingsView.cpp:114 source/ui/SettingsView.cpp:385
+#: source/ui/SettingsView.cpp:114 source/ui/SettingsView.cpp:386
 msgid "Choose a passcode"
 msgstr "設定PIN碼"
 
@@ -157,11 +157,11 @@ msgstr "設定PIN碼"
 msgid "Four digits, asked when this profile opens"
 msgstr "4位數字，開啟此使用者時詢問"
 
-#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:382
+#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:383
 msgid "Enter it again"
 msgstr "再輸入一次"
 
-#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:385
+#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:386
 msgid "The two didn't match: once more"
 msgstr "兩次不一致：請再試一次"
 
@@ -173,11 +173,11 @@ msgstr "那就每次輸入密碼"
 msgid "Or Quick Connect: this profile keeps no sign-in on the Wii"
 msgstr "或用快速連線：此使用者不在Wii上保存登入資訊"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:529
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:530
 msgid "Grid"
 msgstr "網格"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:529
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:530
 msgid "Rows"
 msgstr "橫列"
 
@@ -189,15 +189,15 @@ msgstr "稍後可在設定中變更"
 msgid "Which home screen?"
 msgstr "哪種主畫面？"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:532
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:533
 msgid "List"
 msgstr "清單"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:532
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:533
 msgid "List + Posters"
 msgstr "清單 + 海報"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:532
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:533
 msgid "Posters"
 msgstr "海報"
 
@@ -218,7 +218,7 @@ msgstr "確認"
 msgid "Close"
 msgstr "關閉"
 
-#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:346
+#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:347
 msgid "Reset"
 msgstr "重設"
 
@@ -250,142 +250,142 @@ msgid "%dmin"
 msgstr "%d分鐘"
 
 #. TRANSLATORS: season and episode numbers, then the episode's name
-#: source/core/PlaySession.cpp:129
+#: source/core/PlaySession.cpp:146
 #, c-format
 msgid "S%d E%d - %s"
 msgstr "S%d E%d - %s"
 
-#: source/core/PlaySession.cpp:203
+#: source/core/PlaySession.cpp:222
 msgid "Loading subtitles..."
 msgstr "字幕載入中..."
 
-#: source/core/PlaySession.cpp:218 source/core/PlaySession.cpp:249
-#: source/core/PlaySession.cpp:720 source/player/PlayerView.cpp:581
+#: source/core/PlaySession.cpp:237 source/core/PlaySession.cpp:268
+#: source/core/PlaySession.cpp:740 source/player/PlayerView.cpp:582
 #: source/ui/LibraryView.cpp:1475 source/ui/MusicPlayerView.cpp:911
 msgid "Loading..."
 msgstr "載入中..."
 
-#: source/core/PlaySession.cpp:366 source/core/PlaySession.cpp:528
-#: source/core/PlaySession.cpp:539 source/core/PlaySession.cpp:574
-#: source/core/PlaySession.cpp:608 source/core/PlaySession.cpp:811
+#: source/core/PlaySession.cpp:385 source/core/PlaySession.cpp:547
+#: source/core/PlaySession.cpp:558 source/core/PlaySession.cpp:593
+#: source/core/PlaySession.cpp:628 source/core/PlaySession.cpp:840
 msgid "Stopping..."
 msgstr "正在停止..."
 
-#: source/core/PlaySession.cpp:429
+#: source/core/PlaySession.cpp:448
 msgid "Slow connection: lowering quality..."
 msgstr "網路較慢：正在降低畫質..."
 
-#: source/core/PlaySession.cpp:458 source/core/PlaySession.cpp:720
+#: source/core/PlaySession.cpp:477 source/core/PlaySession.cpp:740
 msgid "Reconnecting..."
 msgstr "正在重新連線..."
 
-#: source/core/PlaySession.cpp:458
+#: source/core/PlaySession.cpp:477
 msgid "The picture is stuck: trying again..."
 msgstr "畫面卡住了：正在重試..."
 
-#: source/core/PlaySession.cpp:506
+#: source/core/PlaySession.cpp:525
 msgid "Too heavy for the Wii: transcoding..."
 msgstr "超出Wii效能：正在轉碼..."
 
-#: source/core/PlaySession.cpp:532
+#: source/core/PlaySession.cpp:551
 msgid "Play next / Add to queue: music only"
 msgstr "接著播放 / 加入佇列：僅限音樂"
 
-#: source/core/PlaySession.cpp:544 source/core/PlaySession.cpp:575
+#: source/core/PlaySession.cpp:563 source/core/PlaySession.cpp:594
 msgid "Loading next episode..."
 msgstr "正在載入下一集..."
 
-#: source/core/PlaySession.cpp:545 source/player/PlayerView.cpp:467
-#: source/player/PlayerView.cpp:499 source/ui/LibraryHome.cpp:380
+#: source/core/PlaySession.cpp:564 source/player/PlayerView.cpp:468
+#: source/player/PlayerView.cpp:500 source/ui/LibraryHome.cpp:380
 msgid "No next episode"
 msgstr "沒有下一集"
 
-#: source/core/PlaySession.cpp:548 source/core/PlaySession.cpp:576
+#: source/core/PlaySession.cpp:567 source/core/PlaySession.cpp:595
 msgid "Loading previous episode..."
 msgstr "正在載入上一集..."
 
-#: source/core/PlaySession.cpp:549 source/player/PlayerView.cpp:460
-#: source/player/PlayerView.cpp:502
+#: source/core/PlaySession.cpp:568 source/player/PlayerView.cpp:461
+#: source/player/PlayerView.cpp:503
 msgid "No previous episode"
 msgstr "沒有上一集"
 
-#: source/core/PlaySession.cpp:551 source/player/PlayerView.cpp:496
+#: source/core/PlaySession.cpp:570 source/player/PlayerView.cpp:497
 #: source/ui/MusicPlayerView.cpp:1091
 msgid "Volume +"
 msgstr "音量 +"
 
-#: source/core/PlaySession.cpp:552 source/player/PlayerView.cpp:497
+#: source/core/PlaySession.cpp:571 source/player/PlayerView.cpp:498
 #: source/ui/MusicPlayerView.cpp:1092
 msgid "Volume -"
 msgstr "音量 -"
 
-#: source/core/PlaySession.cpp:555
+#: source/core/PlaySession.cpp:574
 #, c-format
 msgid "Volume %d"
 msgstr "音量 %d"
 
-#: source/core/PlaySession.cpp:560 source/core/PlaySession.cpp:564
+#: source/core/PlaySession.cpp:579 source/core/PlaySession.cpp:583
 #: source/ui/MusicPlayerView.cpp:1094 source/ui/MusicPlayerView.cpp:1098
 msgid "Sound off"
 msgstr "靜音"
 
-#: source/core/PlaySession.cpp:561 source/core/PlaySession.cpp:564
+#: source/core/PlaySession.cpp:580 source/core/PlaySession.cpp:583
 #: source/ui/MusicPlayerView.cpp:1095 source/ui/MusicPlayerView.cpp:1098
 msgid "Sound on"
 msgstr "取消靜音"
 
-#: source/core/PlaySession.cpp:577
+#: source/core/PlaySession.cpp:596
 msgid "Switching audio track..."
 msgstr "正在切換音軌..."
 
-#: source/core/PlaySession.cpp:587
+#: source/core/PlaySession.cpp:607
 msgid "Switching subtitles..."
 msgstr "正在切換字幕..."
 
-#: source/core/PlaySession.cpp:601
+#: source/core/PlaySession.cpp:621
 msgid "Seeking..."
 msgstr "正在跳轉..."
 
-#: source/core/PlaySession.cpp:675
+#: source/core/PlaySession.cpp:695
 msgid "The video comes in, but the Wii can't show it: the picture stays stuck."
 msgstr "已收到影片資料，但Wii無法顯示：畫面一直卡住。"
 
-#: source/core/PlaySession.cpp:690
+#: source/core/PlaySession.cpp:710
 #, c-format
 msgid "The server could not start this video (HTTP %d)."
 msgstr "伺服器無法開始播放此影片（HTTP %d）。"
 
-#: source/core/PlaySession.cpp:693
+#: source/core/PlaySession.cpp:713
 msgid "The video stream could not be opened."
 msgstr "無法開啟影片串流。"
 
-#: source/core/PlaySession.cpp:696
+#: source/core/PlaySession.cpp:716
 msgid "The connection to the server keeps dropping."
 msgstr "與伺服器的連線不斷中斷。"
 
-#: source/core/PlaySession.cpp:740
+#: source/core/PlaySession.cpp:761
 #, c-format
 msgid "The server did not answer: %s"
 msgstr "伺服器沒有回應：%s"
 
-#: source/core/PlaySession.cpp:755
+#: source/core/PlaySession.cpp:776
 msgid "Loading episode..."
 msgstr "正在載入影集..."
 
-#: source/core/PlaySession.cpp:821
+#: source/core/PlaySession.cpp:850
 #, c-format
 msgid "Server says: %s"
 msgstr "伺服器訊息：%s"
 
-#: source/core/PlaySession.cpp:824
+#: source/core/PlaySession.cpp:853
 msgid "Details are in wiifin.log on the SD card."
 msgstr "詳情請見SD卡上的 wiifin.log。"
 
-#: source/core/PlaySession.cpp:827 source/core/PlaySession.cpp:830
+#: source/core/PlaySession.cpp:856 source/core/PlaySession.cpp:859
 msgid "Can't play this video"
 msgstr "無法播放此影片"
 
-#: source/core/PlaySession.cpp:828
+#: source/core/PlaySession.cpp:857
 msgid "Check the server's FFmpeg log (Dashboard > Logs)."
 msgstr "請查看伺服器的 FFmpeg 日誌（控制台 > 日誌）。"
 
@@ -452,77 +452,77 @@ msgstr "連線已中斷"
 msgid "Track %d"
 msgstr "音軌 %d"
 
-#: source/player/PlayerView.cpp:123
+#: source/player/PlayerView.cpp:124
 msgid "Skip recap"
 msgstr "跳過前情提要"
 
-#: source/player/PlayerView.cpp:124
+#: source/player/PlayerView.cpp:125
 msgid "Skip preview"
 msgstr "跳過預告"
 
-#: source/player/PlayerView.cpp:125
+#: source/player/PlayerView.cpp:126
 msgid "Skip ad"
 msgstr "跳過廣告"
 
-#: source/player/PlayerView.cpp:127
+#: source/player/PlayerView.cpp:128
 msgid "Next episode"
 msgstr "下一集"
 
-#: source/player/PlayerView.cpp:127
+#: source/player/PlayerView.cpp:128
 msgid "Skip credits"
 msgstr "跳過片尾"
 
-#: source/player/PlayerView.cpp:128
+#: source/player/PlayerView.cpp:129
 msgid "Skip intro"
 msgstr "跳過片頭"
 
-#: source/player/PlayerView.cpp:284 source/ui/LibraryDetail.cpp:431
+#: source/player/PlayerView.cpp:285 source/ui/LibraryDetail.cpp:431
 msgid "Off"
 msgstr "關閉"
 
-#: source/player/PlayerView.cpp:339
+#: source/player/PlayerView.cpp:340
 msgid "Zoom: fill the screen"
 msgstr "縮放：填滿畫面"
 
-#: source/player/PlayerView.cpp:339
+#: source/player/PlayerView.cpp:340
 msgid "Zoom: whole picture"
 msgstr "縮放：完整畫面"
 
-#: source/player/PlayerView.cpp:507
+#: source/player/PlayerView.cpp:508
 msgid "No other audio track"
 msgstr "沒有其他音軌"
 
-#: source/player/PlayerView.cpp:511
+#: source/player/PlayerView.cpp:512
 msgid "No subtitles available"
 msgstr "沒有可用的字幕"
 
-#: source/player/PlayerView.cpp:579
+#: source/player/PlayerView.cpp:580
 #, c-format
 msgid "Buffering... %d%%"
 msgstr "緩衝中... %d%%"
 
-#: source/player/PlayerView.cpp:580
+#: source/player/PlayerView.cpp:581
 msgid "Buffering..."
 msgstr "緩衝中..."
 
-#: source/player/PlayerView.cpp:597
+#: source/player/PlayerView.cpp:598
 msgid "Zoom"
 msgstr "縮放"
 
-#: source/player/PlayerView.cpp:598 source/ui/LibraryDetail.cpp:422
+#: source/player/PlayerView.cpp:599 source/ui/LibraryDetail.cpp:422
 msgid "Audio"
 msgstr "音訊"
 
-#: source/player/PlayerView.cpp:598 source/player/PlayerView.cpp:737
+#: source/player/PlayerView.cpp:599 source/player/PlayerView.cpp:738
 #: source/ui/LibraryDetail.cpp:422
 msgid "Subtitles"
 msgstr "字幕"
 
-#: source/player/PlayerView.cpp:737
+#: source/player/PlayerView.cpp:738
 msgid "Audio track"
 msgstr "音軌"
 
-#: source/player/PlayerView.cpp:752
+#: source/player/PlayerView.cpp:753
 msgid "✓ Current"
 msgstr "✓ 目前"
 
@@ -693,7 +693,7 @@ msgid "Server URL set. Enter your credentials."
 msgstr "伺服器URL已設定。請輸入登入資訊。"
 
 #: source/ui/ConnectView.cpp:462 source/ui/ConnectView.cpp:597
-#: source/ui/SettingsView.cpp:347
+#: source/ui/SettingsView.cpp:348
 msgid "Done"
 msgstr "完成"
 
@@ -730,12 +730,12 @@ msgid "Username"
 msgstr "使用者名稱"
 
 #: source/ui/ConnectView.cpp:567 source/ui/ConnectView.cpp:616
-#: source/ui/SettingsView.cpp:608
+#: source/ui/SettingsView.cpp:613
 msgid "Password"
 msgstr "密碼"
 
-#: source/ui/ConnectView.cpp:573 source/ui/SettingsView.cpp:506
-#: source/ui/SettingsView.cpp:566
+#: source/ui/ConnectView.cpp:573 source/ui/SettingsView.cpp:507
+#: source/ui/SettingsView.cpp:567 source/ui/SettingsView.cpp:584
 msgid "Auto"
 msgstr "自動"
 
@@ -762,7 +762,7 @@ msgstr "輸入"
 msgid "Shift"
 msgstr "Shift"
 
-#: source/ui/ConnectView.cpp:600 source/ui/SettingsView.cpp:346
+#: source/ui/ConnectView.cpp:600 source/ui/SettingsView.cpp:347
 msgid "Move"
 msgstr "移動"
 
@@ -967,7 +967,7 @@ msgstr "花絮"
 msgid "Seasons"
 msgstr "季"
 
-#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:629
+#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:634
 msgid "Change"
 msgstr "變更"
 
@@ -1113,7 +1113,7 @@ msgid "A-Z"
 msgstr "A-Z"
 
 #: source/ui/LibraryItems.cpp:587 source/ui/LibraryItems.cpp:590
-#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:629
+#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:634
 msgid "Page"
 msgstr "翻頁"
 
@@ -1238,7 +1238,7 @@ msgstr "評分"
 msgid "Year"
 msgstr "年份"
 
-#: source/ui/LibrarySort.cpp:15 source/ui/SettingsView.cpp:577
+#: source/ui/LibrarySort.cpp:15 source/ui/SettingsView.cpp:578
 msgid "All"
 msgstr "全部"
 
@@ -1631,367 +1631,379 @@ msgstr "顯示設定"
 msgid "Made with ❤ for Jellyfin, Emby and Plex"
 msgstr "用 ❤ 為 Jellyfin、Emby 和 Plex 打造"
 
-#: source/ui/SettingsView.cpp:257 source/ui/SettingsView.cpp:585
+#: source/ui/SettingsView.cpp:258 source/ui/SettingsView.cpp:590
 msgid "Image Cache"
 msgstr "圖片快取"
 
-#: source/ui/SettingsView.cpp:259
+#: source/ui/SettingsView.cpp:260
 msgid "Clearing image cache..."
 msgstr "正在清除圖片快取..."
 
-#: source/ui/SettingsView.cpp:261 source/ui/SettingsView.cpp:598
+#: source/ui/SettingsView.cpp:262 source/ui/SettingsView.cpp:603
 #, c-format
 msgid "Removed %d image(s)"
 msgstr "已刪除 %d 張圖片"
 
-#: source/ui/SettingsView.cpp:338 source/ui/SettingsView.cpp:549
+#: source/ui/SettingsView.cpp:339 source/ui/SettingsView.cpp:550
 msgid "Screen Area"
 msgstr "顯示區域"
 
-#: source/ui/SettingsView.cpp:339
+#: source/ui/SettingsView.cpp:340
 msgid "Move each arrow until its tip sits right in"
 msgstr "移動每個箭頭，直到箭頭尖端剛好位於"
 
-#: source/ui/SettingsView.cpp:340
+#: source/ui/SettingsView.cpp:341
 msgid "the corner of your TV screen."
 msgstr "電視畫面的角落。"
 
-#: source/ui/SettingsView.cpp:342
+#: source/ui/SettingsView.cpp:343
 #, c-format
 msgid "Left %d   ·   Top %d   ·   Right %d   ·   Bottom %d"
 msgstr "左 %d   ·   上 %d   ·   右 %d   ·   下 %d"
 
-#: source/ui/SettingsView.cpp:346
+#: source/ui/SettingsView.cpp:347
 msgid "Switch"
 msgstr "切換"
 
-#: source/ui/SettingsView.cpp:470
+#: source/ui/SettingsView.cpp:471
 msgid "SSL Verification"
 msgstr "SSL 驗證"
 
-#: source/ui/SettingsView.cpp:471
+#: source/ui/SettingsView.cpp:472
 msgid "Validate the server HTTPS certificate (disable for self-signed certs)"
 msgstr "驗證伺服器的HTTPS憑證（自簽憑證請關閉）"
 
-#: source/ui/SettingsView.cpp:472 source/ui/SettingsView.cpp:474
-#: source/ui/SettingsView.cpp:478 source/ui/SettingsView.cpp:506
-#: source/ui/SettingsView.cpp:510 source/ui/SettingsView.cpp:544
-#: source/ui/SettingsView.cpp:566 source/ui/SettingsView.cpp:570
-#: source/ui/SettingsView.cpp:577 source/ui/SettingsView.cpp:586
-#: source/ui/SettingsView.cpp:603
+#: source/ui/SettingsView.cpp:473 source/ui/SettingsView.cpp:475
+#: source/ui/SettingsView.cpp:479 source/ui/SettingsView.cpp:507
+#: source/ui/SettingsView.cpp:511 source/ui/SettingsView.cpp:545
+#: source/ui/SettingsView.cpp:567 source/ui/SettingsView.cpp:571
+#: source/ui/SettingsView.cpp:578 source/ui/SettingsView.cpp:584
+#: source/ui/SettingsView.cpp:591 source/ui/SettingsView.cpp:608
 msgid "OFF"
 msgstr "關"
 
-#: source/ui/SettingsView.cpp:472 source/ui/SettingsView.cpp:474
-#: source/ui/SettingsView.cpp:478 source/ui/SettingsView.cpp:510
-#: source/ui/SettingsView.cpp:544 source/ui/SettingsView.cpp:570
+#: source/ui/SettingsView.cpp:473 source/ui/SettingsView.cpp:475
+#: source/ui/SettingsView.cpp:479 source/ui/SettingsView.cpp:511
+#: source/ui/SettingsView.cpp:545 source/ui/SettingsView.cpp:571
 msgid "ON"
 msgstr "開"
 
-#: source/ui/SettingsView.cpp:473
+#: source/ui/SettingsView.cpp:474
 msgid "Background Music"
 msgstr "背景音樂"
 
-#: source/ui/SettingsView.cpp:473
+#: source/ui/SettingsView.cpp:474
 msgid "Play background music in menus"
 msgstr "在選單中播放背景音樂"
 
-#: source/ui/SettingsView.cpp:475
+#: source/ui/SettingsView.cpp:476
 msgid "Interface Sounds"
 msgstr "介面音效"
 
-#: source/ui/SettingsView.cpp:476
+#: source/ui/SettingsView.cpp:477
 msgid "Sounds in the menus; your own in sounds/ on the SD card"
 msgstr "選單音效；自訂音效放在SD卡的 sounds/ 中"
 
-#: source/ui/SettingsView.cpp:477
+#: source/ui/SettingsView.cpp:478
 msgid "The menus stay silent"
 msgstr "選單保持靜音"
 
-#: source/ui/SettingsView.cpp:488
+#: source/ui/SettingsView.cpp:489
 #, c-format
 msgid "%.1f Mb/s; your connection (%.1f Mb/s measured) holds videos to %.1f"
 msgstr "%.1f Mb/s；目前網路（實測 %.1f Mb/s）將影片限制在 %.1f"
 
-#: source/ui/SettingsView.cpp:493
+#: source/ui/SettingsView.cpp:494
 #, c-format
 msgid "%.1f Mb/s: sharpest, for a wired adapter. Lower it if videos stutter"
 msgstr "%.1f Mb/s：最清晰，適合有線網卡。影片卡頓請調低"
 
-#: source/ui/SettingsView.cpp:497
+#: source/ui/SettingsView.cpp:498
 #, c-format
 msgid "Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering"
 msgstr "影片位元率：%.1f Mb/s。頻繁緩衝請調低"
 
-#: source/ui/SettingsView.cpp:499
+#: source/ui/SettingsView.cpp:500
 msgid "Video Quality"
 msgstr "影片畫質"
 
-#: source/ui/SettingsView.cpp:503
+#: source/ui/SettingsView.cpp:504
 msgid "Direct Play"
 msgstr "直接播放"
 
-#: source/ui/SettingsView.cpp:504
+#: source/ui/SettingsView.cpp:505
 msgid "Files the Wii can decode play as they are (SD DivX, DVD...): no server work"
 msgstr "Wii能解碼的檔案直接播放（SD DivX、DVD...）：伺服器無需處理"
 
-#: source/ui/SettingsView.cpp:505
+#: source/ui/SettingsView.cpp:506
 msgid "Every video is converted by the server"
 msgstr "所有影片均由伺服器轉碼"
 
-#: source/ui/SettingsView.cpp:507
+#: source/ui/SettingsView.cpp:508
 msgid "Smooth Motion"
 msgstr "動態平滑"
 
-#: source/ui/SettingsView.cpp:508
+#: source/ui/SettingsView.cpp:509
 msgid "Blends frames on picture changes: films move evenly on 60 Hz TVs"
 msgstr "畫面變化時混合影格：電影在60 Hz電視上更流暢"
 
-#: source/ui/SettingsView.cpp:509
+#: source/ui/SettingsView.cpp:510
 msgid "Each frame shown as is (24 fps films judder slightly on 60 Hz)"
 msgstr "逐格原樣顯示（24 fps電影在60 Hz下略有抖動）"
 
-#: source/ui/SettingsView.cpp:513
+#: source/ui/SettingsView.cpp:514
 msgid "Light, like the Wii Menu"
 msgstr "淺色，如Wii選單"
 
-#: source/ui/SettingsView.cpp:514
+#: source/ui/SettingsView.cpp:515
 msgid "Dark, for movie nights"
 msgstr "深色，適合電影之夜"
 
-#: source/ui/SettingsView.cpp:515
+#: source/ui/SettingsView.cpp:516
 msgid "Red and charcoal, browse in rows like the old video channels"
 msgstr "紅與炭黑，像舊影片頻道一樣按列瀏覽"
 
-#: source/ui/SettingsView.cpp:516
+#: source/ui/SettingsView.cpp:517
 msgid "Black, silver and green"
 msgstr "黑、銀、綠"
 
-#: source/ui/SettingsView.cpp:517
+#: source/ui/SettingsView.cpp:518
 msgid "Dark grey and orange"
 msgstr "深灰、橘"
 
-#: source/ui/SettingsView.cpp:521
+#: source/ui/SettingsView.cpp:522
 msgid "Christmas for now, until January 6"
 msgstr "現在是聖誕，到1月6日為止"
 
-#: source/ui/SettingsView.cpp:521
+#: source/ui/SettingsView.cpp:522
 msgid "Theme"
 msgstr "主題"
 
-#: source/ui/SettingsView.cpp:527
+#: source/ui/SettingsView.cpp:528
 msgid "Home Screen"
 msgstr "主畫面"
 
-#: source/ui/SettingsView.cpp:527
+#: source/ui/SettingsView.cpp:528
 msgid "Rows of posters to browse, like the old video channels"
 msgstr "成排瀏覽海報，像舊影片頻道一樣"
 
-#: source/ui/SettingsView.cpp:528
+#: source/ui/SettingsView.cpp:529
 msgid "A grid of your libraries"
 msgstr "以網格顯示媒體庫"
 
-#: source/ui/SettingsView.cpp:534
+#: source/ui/SettingsView.cpp:535
 msgid "Browse libraries with their artwork"
 msgstr "附封面瀏覽媒體庫"
 
-#: source/ui/SettingsView.cpp:535
+#: source/ui/SettingsView.cpp:536
 msgid "Libraries as text lists: quickest to browse big ones"
 msgstr "以文字清單顯示：瀏覽大型媒體庫最快"
 
-#: source/ui/SettingsView.cpp:536
+#: source/ui/SettingsView.cpp:537
 msgid "Text lists, with the cover of the selected title"
 msgstr "文字清單，並顯示所選項目的封面"
 
-#: source/ui/SettingsView.cpp:539
+#: source/ui/SettingsView.cpp:540
 msgid "Library View"
 msgstr "媒體庫檢視"
 
-#: source/ui/SettingsView.cpp:541
+#: source/ui/SettingsView.cpp:542
 msgid "Disc Slot Light"
 msgstr "光碟槽指示燈"
 
-#: source/ui/SettingsView.cpp:542
+#: source/ui/SettingsView.cpp:543
 msgid "Pulses with the sound, as bright as the Wii Settings say"
 msgstr "隨聲音閃爍，亮度依照Wii設定"
 
-#: source/ui/SettingsView.cpp:543
+#: source/ui/SettingsView.cpp:544
 msgid "Stays dark during playback"
 msgstr "播放時保持熄滅"
 
-#: source/ui/SettingsView.cpp:549
+#: source/ui/SettingsView.cpp:550
 msgid "Shrink the interface if your TV crops the edges (overscan)"
 msgstr "若電視裁掉畫面邊緣，可縮小介面（overscan）"
 
-#: source/ui/SettingsView.cpp:550
+#: source/ui/SettingsView.cpp:551
 msgid "Adjusted"
 msgstr "已調整"
 
-#: source/ui/SettingsView.cpp:550
+#: source/ui/SettingsView.cpp:551
 msgid "Full"
 msgstr "完整"
 
-#: source/ui/SettingsView.cpp:552
+#: source/ui/SettingsView.cpp:553
 msgid "Backgrounds"
 msgstr "背景"
 
-#: source/ui/SettingsView.cpp:553
+#: source/ui/SettingsView.cpp:554
 msgid "Solid colours: no bands on TVs that show them in gradients"
 msgstr "純色：避免電視在漸層中出現色帶"
 
-#: source/ui/SettingsView.cpp:554
+#: source/ui/SettingsView.cpp:555
 msgid "Soft gradients, like the Wii Menu"
 msgstr "柔和漸層，如Wii選單"
 
-#: source/ui/SettingsView.cpp:555
+#: source/ui/SettingsView.cpp:556
 msgid "Gradient"
 msgstr "漸層"
 
-#: source/ui/SettingsView.cpp:555
+#: source/ui/SettingsView.cpp:556
 msgid "Solid"
 msgstr "純色"
 
-#: source/ui/SettingsView.cpp:556
+#: source/ui/SettingsView.cpp:557
 msgid "Clock"
 msgstr "時鐘"
 
-#: source/ui/SettingsView.cpp:557
+#: source/ui/SettingsView.cpp:558
 msgid "13:30, the date as day/month"
 msgstr "13:30，日期為 日/月"
 
-#: source/ui/SettingsView.cpp:557
+#: source/ui/SettingsView.cpp:558
 msgid "1:30 PM, the date as month/day"
 msgstr "1:30 下午，日期為 月/日"
 
-#: source/ui/SettingsView.cpp:558
+#: source/ui/SettingsView.cpp:559
 msgid "12-hour"
 msgstr "12小時制"
 
-#: source/ui/SettingsView.cpp:558
+#: source/ui/SettingsView.cpp:559
 msgid "24-hour"
 msgstr "24小時制"
 
-#: source/ui/SettingsView.cpp:560
+#: source/ui/SettingsView.cpp:561
 msgid "Language"
 msgstr "語言"
 
-#: source/ui/SettingsView.cpp:561
+#: source/ui/SettingsView.cpp:562
 msgid "Chosen here, whatever the Wii's language"
 msgstr "在此選擇，不受Wii語言影響"
 
-#: source/ui/SettingsView.cpp:561
+#: source/ui/SettingsView.cpp:562
 msgid "The Wii's language, as set in the Wii Settings"
 msgstr "依照Wii設定中的語言"
 
-#: source/ui/SettingsView.cpp:563 source/ui/Ui.cpp:135
+#: source/ui/SettingsView.cpp:564 source/ui/Ui.cpp:135
 msgid "Christmas"
 msgstr "聖誕"
 
-#: source/ui/SettingsView.cpp:564
+#: source/ui/SettingsView.cpp:565
 msgid "Snow and Christmas colours from December 1 to January 6"
 msgstr "12月1日至1月6日：飄雪和聖誕配色"
 
-#: source/ui/SettingsView.cpp:565
+#: source/ui/SettingsView.cpp:566
 msgid "The chosen theme all year round"
 msgstr "全年使用所選主題"
 
-#: source/ui/SettingsView.cpp:567
+#: source/ui/SettingsView.cpp:568
 msgid "Music Autoplay"
 msgstr "自動播放"
 
-#: source/ui/SettingsView.cpp:568
+#: source/ui/SettingsView.cpp:569
 msgid "When an album or a playlist ends, similar songs follow"
 msgstr "專輯或播放清單結束後播放相似歌曲"
 
-#: source/ui/SettingsView.cpp:569
+#: source/ui/SettingsView.cpp:570
 msgid "The music stops at the end of the album or playlist"
 msgstr "專輯或播放清單結束時停止播放"
 
-#: source/ui/SettingsView.cpp:573
+#: source/ui/SettingsView.cpp:574
 msgid "Skip Prompts"
 msgstr "跳過提示"
 
-#: source/ui/SettingsView.cpp:574
+#: source/ui/SettingsView.cpp:575
 msgid "\"Skip intro\", \"Skip recap\"... over the parts the server knows"
 msgstr "在伺服器識別的片段上顯示「跳過片頭」「跳過回顧」等"
 
-#: source/ui/SettingsView.cpp:575
+#: source/ui/SettingsView.cpp:576
 msgid "\"Skip recap\" only: intros and credits play without a prompt"
 msgstr "僅「跳過回顧」：片頭片尾直接播放"
 
-#: source/ui/SettingsView.cpp:576
+#: source/ui/SettingsView.cpp:577
 msgid "Intros, recaps and credits play without a prompt"
 msgstr "片頭、回顧和片尾直接播放，不顯示提示"
 
-#: source/ui/SettingsView.cpp:577
+#: source/ui/SettingsView.cpp:578
 msgid "Recaps only"
 msgstr "僅回顧"
 
+#: source/ui/SettingsView.cpp:581
+msgid "Next Episode"
+msgstr "下一集"
+
 #: source/ui/SettingsView.cpp:582
+msgid "When an episode ends, the next one starts"
+msgstr "一集結束後自動播放下一集"
+
+#: source/ui/SettingsView.cpp:583
+msgid "The video stops at the end of each episode"
+msgstr "每集結束後停止播放"
+
+#: source/ui/SettingsView.cpp:587
 msgid "Download artwork without saving it"
 msgstr "下載圖片但不儲存"
 
-#: source/ui/SettingsView.cpp:583 source/ui/SettingsView.cpp:594
+#: source/ui/SettingsView.cpp:588 source/ui/SettingsView.cpp:599
 msgid "No SD card, or it cannot be written to"
 msgstr "沒有SD卡，或無法寫入"
 
-#: source/ui/SettingsView.cpp:584
+#: source/ui/SettingsView.cpp:589
 msgid "Save artwork here for faster browsing"
 msgstr "在此儲存圖片，瀏覽更快"
 
-#: source/ui/SettingsView.cpp:586
+#: source/ui/SettingsView.cpp:591
 msgid "SD"
 msgstr "SD"
 
-#: source/ui/SettingsView.cpp:592
+#: source/ui/SettingsView.cpp:597
 msgid "Choose SD to clear saved artwork"
 msgstr "選擇SD以清除已儲存的圖片"
 
-#: source/ui/SettingsView.cpp:596
+#: source/ui/SettingsView.cpp:601
 msgid "Could not clear image cache. Try again"
 msgstr "無法清除圖片快取。請重試"
 
-#: source/ui/SettingsView.cpp:600
+#: source/ui/SettingsView.cpp:605
 msgid "Full: clear it to keep new artwork"
 msgstr "已滿：清除後才能儲存新圖片"
 
-#: source/ui/SettingsView.cpp:602
+#: source/ui/SettingsView.cpp:607
 msgid "Clear saved artwork to refresh it or free space"
 msgstr "清除已儲存的圖片以重新整理或釋放空間"
 
-#: source/ui/SettingsView.cpp:603
+#: source/ui/SettingsView.cpp:608
 msgid "Clear"
 msgstr "清除"
 
-#: source/ui/SettingsView.cpp:603
+#: source/ui/SettingsView.cpp:608
 msgid "Cleared"
 msgstr "已清除"
 
-#: source/ui/SettingsView.cpp:604
+#: source/ui/SettingsView.cpp:609
 msgid "Clear Image Cache"
 msgstr "清除圖片快取"
 
-#: source/ui/SettingsView.cpp:608
+#: source/ui/SettingsView.cpp:613
 msgid "Automatic"
 msgstr "自動"
 
-#: source/ui/SettingsView.cpp:608
+#: source/ui/SettingsView.cpp:613
 msgid "Passcode"
 msgstr "PIN碼"
 
-#: source/ui/SettingsView.cpp:610
+#: source/ui/SettingsView.cpp:615
 msgid "Opens at once on this Wii"
 msgstr "在這台Wii上直接開啟"
 
-#: source/ui/SettingsView.cpp:611
+#: source/ui/SettingsView.cpp:616
 msgid "Asks the profile's four-digit passcode first"
 msgstr "先詢問此使用者的4位數PIN碼"
 
-#: source/ui/SettingsView.cpp:612
+#: source/ui/SettingsView.cpp:617
 msgid "Asks the password (or Quick Connect) each time"
 msgstr "每次詢問密碼（或快速連線）"
 
-#: source/ui/SettingsView.cpp:615
+#: source/ui/SettingsView.cpp:620
 msgid "Sign-In"
 msgstr "登入"
 

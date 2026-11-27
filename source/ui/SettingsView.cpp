@@ -54,7 +54,7 @@ void* clearCacheWorker(void* arg) {
 
 /* The rows, by what they set (drawRow and activate take these) */
 enum Row { R_SSL, R_MUSIC, R_SOUNDS, R_QUALITY, R_DIRECT, R_SMOOTH, R_THEME, R_HOME, R_VIEW,
-           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_CHRISTMAS, R_AUTOPLAY, R_SKIP, R_CACHE, R_CACHE_LOCATION };
+           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_CHRISTMAS, R_AUTOPLAY, R_SKIP, R_CACHE, R_CACHE_LOCATION, R_NEXT_EP };
 
 /* the sections: a profile's own look (WiiFin's menu: the start-up one,
  * theme and backgrounds only), what every profile shares, how a profile
@@ -98,7 +98,7 @@ void SettingsView::openSection(int s) {
     if (s == 0) rows = profile ? std::vector<int>{ R_THEME, R_BACKGROUNDS, R_HOME, R_VIEW }
                                : std::vector<int>{ R_THEME, R_BACKGROUNDS };
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE, R_AREA,
-                              R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT, R_CHRISTMAS, R_AUTOPLAY, R_SKIP, R_CACHE_LOCATION, R_CACHE };
+                              R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT, R_CHRISTMAS, R_AUTOPLAY, R_SKIP, R_NEXT_EP, R_CACHE_LOCATION, R_CACHE };
     else rows = { R_SIGNIN };
     signInWant = profile ? profile->signIn : -1;
     cacheCleared = -1;
@@ -211,6 +211,7 @@ void SettingsView::activate(int index) {
             break;
         case R_CHRISTMAS: Ui::setFestive(!Ui::festive()); break;
         case R_AUTOPLAY: MusicSession::setAutoplay(!MusicSession::autoplay()); break;
+        case R_NEXT_EP:  g_wiifin_next_episode = !g_wiifin_next_episode; break;
         case R_SKIP:   /* All, Recaps only, Off */
             g_wiifin_skip_prompts = g_wiifin_skip_prompts == SKIP_PROMPTS_ALL ? SKIP_PROMPTS_RECAPS
                                   : g_wiifin_skip_prompts == SKIP_PROMPTS_RECAPS ? SKIP_PROMPTS_OFF : SKIP_PROMPTS_ALL;
@@ -577,6 +578,10 @@ void SettingsView::render(ir_t& ir) {
                 k == SKIP_PROMPTS_ALL ? N_("All") : k == SKIP_PROMPTS_RECAPS ? N_("Recaps only") : N_("OFF"),
                 k == SKIP_PROMPTS_OFF ? 0x8A9099FF : p.ok);
     }
+    drawRow(R_NEXT_EP, N_("Next Episode"),
+            g_wiifin_next_episode ? N_("When an episode ends, the next one starts")
+                                  : N_("The video stops at the end of each episode"),
+            g_wiifin_next_episode ? N_("Auto") : N_("OFF"), g_wiifin_next_episode ? p.ok : 0x8A9099FF);
     {
         const char* desc = client.imageCacheLocation == JellyfinClient::CacheOff
             ? N_("Download artwork without saving it")

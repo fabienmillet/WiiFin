@@ -89,6 +89,8 @@ void App::loadSettings() {
                 int v = atoi(val);
                 g_wiifin_skip_prompts = v >= 0 && v <= 2 ? v : SKIP_PROMPTS_ALL;
             }
+        } else if (strcmp(key, "next_episode") == 0) {
+            g_wiifin_next_episode = atoi(val) != 0;
         } else if (strcmp(key, "music_autoplay") == 0) {
             MusicSession::setAutoplay(atoi(val) != 0);
         } else if (strcmp(key, "ui_sounds") == 0) {
@@ -257,6 +259,7 @@ void App::saveSettings() {
     fprintf(f, "ui_sounds=%d\n",        SoundFX::enabled() ? 1 : 0);
     fprintf(f, "music_autoplay=%d\n",   MusicSession::autoplay() ? 1 : 0);
     fprintf(f, "skip_prompts=%d\n",     g_wiifin_skip_prompts);
+    fprintf(f, "next_episode=%d\n",     g_wiifin_next_episode ? 1 : 0);
     fprintf(f, "video_quality=%d\n",    jellyfinClient.videoQuality);
     fprintf(f, "direct_play=%d\n",      jellyfinClient.directPlay ? 1 : 0);
     /* WiiFin's own look: not the one of the profile open */

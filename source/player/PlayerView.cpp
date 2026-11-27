@@ -100,6 +100,7 @@ float PlayerView::duration() const
 }
 
 int g_wiifin_skip_prompts = SKIP_PROMPTS_ALL;
+bool g_wiifin_next_episode = true;
 
 int PlayerView::activeSegment() const
 {

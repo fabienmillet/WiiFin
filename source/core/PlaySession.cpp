@@ -39,6 +39,23 @@ struct {
     const char*    playMethod;   /* "DirectPlay" or "Transcode" */
 } s_pendingReport;
 
+/* The track of `to` like track idx of `from`: same language, the same
+ * name and codec preferred.  nullptr when none (or no language to go by). */
+static const MediaStream* likeStream(const std::vector<MediaStream>& from, int idx,
+                                     const std::vector<MediaStream>& to) {
+    const MediaStream* cur = nullptr;
+    for (const MediaStream& s : from) if (s.index == idx) cur = &s;
+    if (!cur || cur->language.empty()) return nullptr;
+    const MediaStream* best = nullptr;
+    int bestScore = -1;
+    for (const MediaStream& s : to) {
+        if (s.language != cur->language) continue;
+        int score = (s.displayTitle == cur->displayTitle ? 2 : 0) + (s.codec == cur->codec ? 1 : 0);
+        if (score > bestScore) { best = &s; bestScore = score; }
+    }
+    return best;
+}
+
 static void onStreamOpened() {
     s_pendingReport.client->reportPlaybackStart(
         s_pendingReport.serverUrl,
@@ -165,6 +182,8 @@ bool runPlaySession(JellyfinClient& client,
     std::vector<MediaStream>     subStreams   = lv.pendingPlaySubStreams;
     int audioIdx = lv.pendingPlayAudioIdx;
     int subIdx   = lv.pendingPlaySubIdx;
+    /* subtitles turned off during this session: the next episodes too */
+    bool subsTurnedOff = false;
     long long startTicks   = lv.pendingPlayStartTimeTicks;
     long long runtimeTicks = lv.pendingPlayRuntimeTicks;
     /* the file as it is, or a transcode; a direct play that fails or that
@@ -580,6 +599,7 @@ bool runPlaySession(JellyfinClient& client,
                  * restart, the new track is drawn over this stream */
                 int newSub = view.chosenSub();
                 if (burnSub < 0 && burnIndex(newSub) < 0 && loadSub(newSub)) {
+                    subsTurnedOff = newSub < 0;
                     subIdx = newSub;
                     s_pendingReport.subIndex = subIdx;
                     view.setSubtitles(subLoaded >= 0 ? &subs : nullptr, subIdx);
@@ -637,7 +657,7 @@ bool runPlaySession(JellyfinClient& client,
          * next one of the list, season order or shuffled, as Jellyfin does. */
         bool finished = reason == PLAYER_STOP_EOF && !dropped && everPlayed &&
                         (!stopRequested || reachedEnd);
-        if (finished && episodeIdx + 1 < (int)episodes.size()) {
+        if (finished && g_wiifin_next_episode && episodeIdx + 1 < (int)episodes.size()) {
             SYS_Report("[runPlay] episode finished, playing the next one\n");
             reason = PLAYER_STOP_NEXT;
         }
@@ -731,6 +751,7 @@ bool runPlaySession(JellyfinClient& client,
                 url           = newUrl;
                 playSessionId = newSession;
                 audioIdx      = newAudio;
+                if (reason == PLAYER_STOP_SUB) subsTurnedOff = newSub < 0;
                 subIdx        = newSub;
                 burnSub       = newBurn;
                 startTicks    = fromTicks;
@@ -760,10 +781,18 @@ bool runPlaySession(JellyfinClient& client,
                     ok = client.getItemDetail(serverUrl, auth, episodes[nextIdx].id, nextDetail);
                     if (ok) {
                         if (nextDetail.defaultAudioIndex >= 0) nextAudio = nextDetail.defaultAudioIndex;
-                        for (const MediaStream& s : nextDetail.subtitleStreams)
-                            if (s.index == nextDetail.defaultSubIndex) {
-                                nextSub  = s.index;
-                                nextBurn = s.isText ? -1 : s.index;   /* text: drawn by WiiFin */
+                        int defSub = nextDetail.defaultSubIndex;
+                        /* the tracks of this episode, in the next one's language
+                         * (as Jellyfin's apps remember them); else the server's */
+                        const MediaStream* a = likeStream(audioStreams, audioIdx, nextDetail.audioStreams);
+                        if (a) nextAudio = a->index;
+                        const MediaStream* s = likeStream(subStreams, subIdx, nextDetail.subtitleStreams);
+                        if (s) defSub = s->index;
+                        else if (subIdx < 0 && subsTurnedOff) defSub = -1;
+                        for (const MediaStream& t : nextDetail.subtitleStreams)
+                            if (t.index == defSub) {
+                                nextSub  = t.index;
+                                nextBurn = t.isText ? -1 : t.index;   /* text: drawn by WiiFin */
                             }
                     }
                     ok = ok && client.getPlaybackUrl(serverUrl, auth,

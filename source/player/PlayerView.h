@@ -4,6 +4,8 @@
  * ads too: intros and credits play with nothing shown), or none */
 enum SkipPrompts { SKIP_PROMPTS_OFF = 0, SKIP_PROMPTS_ALL = 1, SKIP_PROMPTS_RECAPS = 2 };
 extern int g_wiifin_skip_prompts;
+/* Settings > Next Episode: at the end of an episode the next one starts */
+extern bool g_wiifin_next_episode;
 
 #include <grrlib.h>
 #include <wiiuse/wpad.h>
