@@ -7,7 +7,7 @@ ifeq ($(strip $(DEVKITPPC)),)
 $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC")
 endif
 
-include $(DEVKITPPC)/wii_rules
+include $(DEVKITPRO)/libogc2/wii_rules
 
 PREFIX      := $(DEVKITPPC)/bin/powerpc-eabi-
 CC          := $(PREFIX)gcc
@@ -73,15 +73,16 @@ INCLUDE := $(foreach dir,$(INCLUDES), -I$(CURDIR)/$(dir)) \
 # WERROR=-Werror (set by the CI) turns warnings into errors
 WERROR      ?=
 CFLAGS      := -g -O2 -Wall $(WERROR) -MMD -MP $(MACHDEP) $(INCLUDE)
-CXXFLAGS    := $(CFLAGS)
+# libogc2's processor.h still uses `register`, which C++17 refuses under -Werror
+CXXFLAGS    := $(CFLAGS) -Wno-register
 LDFLAGS     := -g $(MACHDEP) -Wl,-Map,$(TARGET).map -T $(CURDIR)/tools/wii_wiifin.ld \
-               -Wl,--wrap=LWP_JoinThread \
                -Wl,--wrap=SYS_Report \
                -Wl,--wrap=CONF_GetIdleLedMode \
+               -Wl,--allow-multiple-definition \
                -Wl,--wrap=GRRLIB_Render -Wl,--wrap=iosFree \
                -Wl,--wrap=wiiuse_init_cmd_queue \
                -Wl,--wrap=classic_ctrl_handshake -Wl,--wrap=parse_event \
-               -Wl,--wrap=USB_GetDeviceList   # see source/core/LwpJoinFix.cpp, Log.cpp, WiiPlayer.cpp, RenderHook.cpp, player/OgcCompat.c, input/WpadQueue.c, UDraw.c, Tablet.c
+               -Wl,--wrap=USB_GetDeviceList   # see source/core/Log.cpp, WiiPlayer.cpp, RenderHook.cpp, player/OgcCompat.c, input/WpadQueue.c, UDraw.c, Tablet.c
 LIBPATHS    := -L$(LIBOGC_LIB) -L/opt/devkitpro/portlibs/wii/lib -L/opt/devkitpro/portlibs/ppc/lib \
                -L$(CURDIR)/libs/mbedtls/lib
 
@@ -100,7 +101,8 @@ ifneq ($(wildcard $(CONTROLLERS)/lib/*.a),)
 CFLAGS      += -I$(CONTROLLERS)/include
 LIBPATHS    += -L$(CONTROLLERS)/lib
 endif
-CXXFLAGS    := $(CFLAGS)
+# libogc2's processor.h still uses `register`, which C++17 refuses under -Werror
+CXXFLAGS    := $(CFLAGS) -Wno-register
 
 # Link against mplayer-ce when available (see MPLAYER_CE_BUILD.md)
 ifneq ($(wildcard $(CURDIR)/libs/mplayer-ce-build/libmplayer.a),)
@@ -112,6 +114,10 @@ endif
 # Rules
 #---------------------------------------------------------------------------------
 .PHONY: all clean run
+
+# Made at parse time: with -j, the rules below can run before the `$(BUILD)` rule (xxd
+# then fails with "Directory nonexistent").
+$(shell mkdir -p $(BUILD))
 
 all: $(BUILD) $(TARGET).dol
 

@@ -29,8 +29,9 @@
 #include "Tablet.h"
 #include "InputDrivers.h"
 
-/* parse_event and classic_ctrl_handshake are the same in 3.1 and 3.2 */
-#if _V_MAJOR_ != 3 || _V_MINOR_ < 1 || _V_MINOR_ > 2
+/* parse_event and classic_ctrl_handshake are the same in 3.1 and 3.2; libogc2
+ * (version 2.x) keeps the 3.1 wiiuse: they link there, not tried on hardware */
+#if !(_V_MAJOR_ == 2) && (_V_MAJOR_ != 3 || _V_MINOR_ < 1 || _V_MINOR_ > 2)
 #warning "uDraw: the wiiuse wrappers were written against libogc 3.1 and 3.2; check them against this version"
 #endif
 

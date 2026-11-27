@@ -15,6 +15,7 @@
 #include "../core/Log.h"
 #include "../core/NetConnect.h"
 #include <ogc/lwp.h>
+#include <ogc/system.h>
 
 #include <network.h>
 #include <ogc/lwp_watchdog.h>

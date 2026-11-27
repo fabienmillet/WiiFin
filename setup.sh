@@ -134,10 +134,9 @@ mkdir -p "$DEPS_DIR"
 #---------------------------------------------------------------------------------
 # 2. GRRLIB + libpngu
 #---------------------------------------------------------------------------------
-PORTLIBS_WII="$DEVKITPRO/portlibs/wii"
-# GRRLIB's install puts libpngu.a in portlibs/ppc, libgrrlib.a in portlibs/wii
-if [ -f "$PORTLIBS_WII/lib/libgrrlib.a" ] &&
-   { [ -f "$PORTLIBS_WII/lib/libpngu.a" ] || [ -f "$DEVKITPRO/portlibs/ppc/lib/libpngu.a" ]; }; then
+# GRRLIB's own Makefiles build against libogc2 and install into libogc2/wii
+PORTLIBS_WII="$DEVKITPRO/libogc2/wii"
+if [ -f "$PORTLIBS_WII/lib/libgrrlib.a" ] && [ -f "$PORTLIBS_WII/lib/libpngu.a" ]; then
 	ok "GRRLIB already installed"
 else
 	info "Building GRRLIB + libpngu"
