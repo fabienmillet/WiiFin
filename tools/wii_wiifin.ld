@@ -68,7 +68,8 @@ SECTIONS {
 
         .rodata : {
                 KEEP( *(.rodata.__sys_versioninfo) )
-                *(.rodata .rodata.* .gnu.linkonce.r.*)
+                /* two big constant tables live with the blobs (see .data.blobs) */
+                EXCLUDE_FILE(*libbrotlicommon.a:dictionary.o *libmplayer.a:mpegaudiodec.o) *(.rodata .rodata.* .gnu.linkonce.r.*)
                 *(.rodata1)
                 *(.fixup)
                 *(.got1)
@@ -183,6 +184,12 @@ SECTIONS {
                 *fx_*_mp3.o(.data .data.*)
                 *_png.o(.data .data.*)
                 *lang_mo.o(.data .data.*)
+                /* constant tables (Brotli's dictionary, 120 KB; MPlayer's MP3
+                 * table, 128 KB): the data below 0x80804000 had a few KB left.
+                 * Free to move: the dead-at-exit buffers after the data reach
+                 * past the stub zone either way, so the BSS just starts sooner. */
+                *libbrotlicommon.a:dictionary.o(.rodata .rodata.*)
+                *libmplayer.a:mpegaudiodec.o(.rodata .rodata.*)
                 *stub_zone.o(.stub_zone)
                 . = ALIGN(32);   /* DOL loaders round section sizes up to 32 bytes */
         } :text2 = 0
