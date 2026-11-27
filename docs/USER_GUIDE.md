@@ -107,7 +107,7 @@ Settings open on their sections: **View Settings** (from a profile's menu, that 
 | Backgrounds | Soft gradients, or solid colours for TVs that show bands in them |
 | Clock | 24-hour or 12-hour (AM/PM, the date as month/day); 12-hour by default on a US Wii |
 | Language | The Wii's, or one chosen here |
-| Image Cache | SD (default) or OFF; save posters, episode thumbnails and backdrops for faster browsing |
+| Image Cache | OFF (default) or SD; save posters, episode thumbnails and backdrops for faster browsing |
 | Clear Image Cache | Delete saved artwork on the SD card, with a live file count and filename |
 | Sign-In | At once, a four-digit passcode, or the password each time (Sign-In Settings, per profile) |
 
@@ -116,10 +116,13 @@ if renamed), with a folder for each server address, for example
 `cache/http_media.example.com_8096/primary_<item-id>_130x185.jpg`.
 HTTPS uses `https_`; a server base path goes after `__`, before the port, with
 unsafe characters escaped (for example `https_media.example.com__jellyfin_443/`).
+It works with Jellyfin, Emby and Plex. Only whole pictures are kept (not one cut
+by a dropped connection), and a picture the server doesn't have is asked again
+the next day. The cache stops at 64 MB: new artwork is then downloaded without
+being saved until you clear it.
 An unavailable or unwritable SD card leaves caching disabled; WiiFin still
 downloads artwork normally. Choosing OFF keeps existing files. Choose SD again
-and clear its cache to free space or refresh changed artwork. Older settings
-that selected USB reset to SD; existing USB files are left untouched.
+and clear its cache to free space or refresh changed artwork.
 
 ## 🔊 Custom sounds
 

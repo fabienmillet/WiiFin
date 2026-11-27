@@ -580,7 +580,7 @@ void SettingsView::render(ir_t& ir) {
     {
         const char* desc = client.imageCacheLocation == JellyfinClient::CacheOff
             ? N_("Download artwork without saving it")
-            : client.cacheDir.empty() ? N_("Selected drive is unavailable or not writable")
+            : client.cacheDir.empty() ? N_("No SD card, or it cannot be written to")
                                       : N_("Save artwork here for faster browsing");
         drawRow(R_CACHE_LOCATION, N_("Image Cache"), desc,
                 client.imageCacheLocation == JellyfinClient::CacheSD ? N_("SD") : N_("OFF"),
@@ -591,11 +591,13 @@ void SettingsView::render(ir_t& ir) {
         if (client.imageCacheLocation == JellyfinClient::CacheOff)
             snprintf(desc, sizeof(desc), "%s", tr("Choose SD to clear saved artwork"));
         else if (client.cacheDir.empty())
-            snprintf(desc, sizeof(desc), "%s", tr("Selected drive is unavailable or not writable"));
+            snprintf(desc, sizeof(desc), "%s", tr("No SD card, or it cannot be written to"));
         else if (cacheCleared == -2)
             snprintf(desc, sizeof(desc), "%s", tr("Could not clear image cache. Try again"));
         else if (cacheCleared >= 0)
             snprintf(desc, sizeof(desc), tr("Removed %d image(s)"), cacheCleared);
+        else if (client.imageCacheBytes() + 512 * 1024 >= JellyfinClient::imageCacheCap())
+            snprintf(desc, sizeof(desc), "%s", tr("Full: clear it to keep new artwork"));
         else
             snprintf(desc, sizeof(desc), "%s", tr("Clear saved artwork to refresh it or free space"));
         const char* val = client.cacheDir.empty() ? N_("OFF") : cacheCleared >= 0 ? N_("Cleared") : N_("Clear");

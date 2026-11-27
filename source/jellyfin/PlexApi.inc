@@ -640,6 +640,15 @@ bool JellyfinClient::plexImage(const std::string& serverUrl, const JellyfinAuth&
     snprintf(q, sizeof(q), "/photo/:/transcode?width=%d&height=%d&minSize=%d&upscale=1&format=jpeg&url=",
              w, h, crop ? 1 : 0);
     outBytes.clear();
+    if (crop) {
+        /* posters and backdrops go through the image cache (photos don't) */
+        std::string key = "plex" + imagePath;
+        for (char& c : key) if (c == '/' || c == '\\' || c == ':') c = '_';
+        char size[32];
+        snprintf(size, sizeof(size), "_%dx%d.jpg", w, h);
+        return fetchImageCached(serverUrl, key + size, serverUrl + q + urlEncode(imagePath), auth.accessToken,
+                                outBytes) && !outBytes.empty();
+    }
     return httpRequest(serverUrl + q + urlEncode(imagePath), "GET", "", "", auth.accessToken, outBytes) == 200 &&
            !outBytes.empty();
 }
