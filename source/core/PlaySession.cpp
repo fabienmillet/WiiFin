@@ -113,13 +113,14 @@ static void runWithPlayerUI(PlayerView& view, ir_t& ir, const char* msg,
 }
 
 /* getTranscodingUrl() starts the transcode 3 s before the requested position
- * (RESUME_PAD) once that position is past 3 s, otherwise at 0. */
+ * (RESUME_PAD) once that position is past 3 s, otherwise at 0.  Not for
+ * H.264 transcodes (resumePadTicks): their keyframes come every 5 s, and
+ * MPlayer's 3 s skip found none and stalled; they start on a keyframe. */
 static const long long RESUME_PAD_TICKS = 30000000LL;
 
-static float streamOriginSecs(long long startTicks) {
-    return startTicks > RESUME_PAD_TICKS
-           ? (float)((startTicks - RESUME_PAD_TICKS) / 10000000.0)
-           : 0.0f;
+static float streamOriginSecs(long long startTicks, long long pad) {
+    if (!pad) return (float)(startTicks / 10000000.0);
+    return startTicks > pad ? (float)((startTicks - pad) / 10000000.0) : 0.0f;
 }
 
 static std::string episodeTitle(const JellyfinEpisode& ep) {
@@ -273,9 +274,10 @@ bool runPlaySession(JellyfinClient& client,
          * the position needs no origin, and MPlayer's -ss would land before
          * the stream: playback then starts at the RESUME_PAD, 3 s early. */
         const bool itemTimestamps = burnSub >= 0 || how.direct;   /* a file: its own */
-        ctx.streamOrigin = itemTimestamps ? 0.0f : streamOriginSecs(startTicks);
+        const long long pad = client.resumePadTicks(serverUrl);
+        ctx.streamOrigin = itemTimestamps ? 0.0f : streamOriginSecs(startTicks, pad);
         /* Skip the RESUME_PAD at demuxer level so output starts on target */
-        ctx.startSkip    = !itemTimestamps && startTicks > RESUME_PAD_TICKS ? 3.0f : 0.0f;
+        ctx.startSkip    = !itemTimestamps && pad && startTicks > pad ? 3.0f : 0.0f;
         ctx.runtime      = (float)(runtimeTicks / 10000000.0);
         view.setContext(ctx);
         view.setSubtitles(subLoaded >= 0 ? &subs : nullptr, subIdx);

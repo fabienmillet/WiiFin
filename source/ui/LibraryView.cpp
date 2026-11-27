@@ -249,22 +249,24 @@ void LibraryView::preparePlay(long long startTicks, const std::vector<JellyfinEp
         if (subIdx >= 0) {
             snprintf(fallback, sizeof(fallback),
                 "%s/Videos/%s/stream?Static=false&MediaSourceId=%s"
-                "&VideoCodec=mpeg4&AudioCodec=mp3&Container=ts"
+                "&VideoCodec=%s&AudioCodec=mp3&Container=ts"
                 "&MaxWidth=640&MaxHeight=480"
                 "&VideoBitrate=%d&AudioBitrate=128000"
                 "&AllowVideoStreamCopy=false&AllowAudioStreamCopy=false"
                 "&AudioStreamIndex=%d&SubtitleStreamIndex=%d&ApiKey=%s",
                 serverUrl.c_str(), detailItemId.c_str(), detailSourceId().c_str(),
+                client.transcodeH264 ? "h264" : "mpeg4",
                 client.videoBitrate(), audioIdx, subIdx, auth.accessToken.c_str());
         } else {
             snprintf(fallback, sizeof(fallback),
                 "%s/Videos/%s/stream?Static=false&MediaSourceId=%s"
-                "&VideoCodec=mpeg4&AudioCodec=mp3&Container=ts"
+                "&VideoCodec=%s&AudioCodec=mp3&Container=ts"
                 "&MaxWidth=640&MaxHeight=480"
                 "&VideoBitrate=%d&AudioBitrate=128000"
                 "&AllowVideoStreamCopy=false&AllowAudioStreamCopy=false"
                 "&AudioStreamIndex=%d&ApiKey=%s",
                 serverUrl.c_str(), detailItemId.c_str(), detailSourceId().c_str(),
+                client.transcodeH264 ? "h264" : "mpeg4",
                 client.videoBitrate(), audioIdx, auth.accessToken.c_str());
         }
         url = fallback;

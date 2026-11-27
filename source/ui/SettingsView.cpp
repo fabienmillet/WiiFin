@@ -54,7 +54,7 @@ void* clearCacheWorker(void* arg) {
 
 /* The rows, by what they set (drawRow and activate take these) */
 enum Row { R_SSL, R_MUSIC, R_SOUNDS, R_QUALITY, R_DIRECT, R_SMOOTH, R_THEME, R_HOME, R_VIEW,
-           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_CHRISTMAS, R_AUTOPLAY, R_SKIP, R_CACHE, R_CACHE_LOCATION };
+           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_CHRISTMAS, R_AUTOPLAY, R_SKIP, R_CACHE, R_CACHE_LOCATION, R_CODEC };
 
 /* the sections: a profile's own look (WiiFin's menu: the start-up one,
  * theme and backgrounds only), what every profile shares, how a profile
@@ -98,7 +98,7 @@ void SettingsView::openSection(int s) {
     if (s == 0) rows = profile ? std::vector<int>{ R_THEME, R_BACKGROUNDS, R_HOME, R_VIEW }
                                : std::vector<int>{ R_THEME, R_BACKGROUNDS };
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE, R_AREA,
-                              R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT, R_CHRISTMAS, R_AUTOPLAY, R_SKIP, R_CACHE_LOCATION, R_CACHE };
+                              R_SSL, R_QUALITY, R_DIRECT, R_CODEC, R_SMOOTH, R_LIGHT, R_CHRISTMAS, R_AUTOPLAY, R_SKIP, R_CACHE_LOCATION, R_CACHE };
     else rows = { R_SIGNIN };
     signInWant = profile ? profile->signIn : -1;
     cacheCleared = -1;
@@ -189,6 +189,7 @@ void SettingsView::activate(int index) {
         case 2: SoundFX::setEnabled(!SoundFX::enabled()); break;
         case 3: client.videoQuality = (client.videoQuality + 1) % JellyfinClient::VIDEO_QUALITY_COUNT; break;
         case 4: client.directPlay = !client.directPlay; break;
+        case R_CODEC: client.transcodeH264 = !client.transcodeH264; break;
         case 5: g_wiifin_smooth_motion = !g_wiifin_smooth_motion; break;
         case 6:
             Ui::setTheme(Ui::nextTheme(Ui::chosenTheme()));
@@ -504,6 +505,10 @@ void SettingsView::render(ir_t& ir) {
             client.directPlay ? N_("Files the Wii can decode play as they are (SD DivX, DVD...): no server work")
                               : N_("Every video is converted by the server"),
             client.directPlay ? N_("Auto") : N_("OFF"), client.directPlay ? p.ok : 0x8A9099FF);
+    drawRow(R_CODEC, N_("Transcode Format"),
+            client.transcodeH264 ? N_("H.264: for servers that encode it on their GPU. Heavier for the Wii")
+                                 : N_("MPEG-4: the lightest for the Wii to decode"),
+            client.transcodeH264 ? N_("H.264") : N_("MPEG-4"), p.accent);
     drawRow(5, N_("Smooth Motion"),
             g_wiifin_smooth_motion ? N_("Blends frames on picture changes: films move evenly on 60 Hz TVs")
                                    : N_("Each frame shown as is (24 fps films judder slightly on 60 Hz)"),

@@ -130,6 +130,8 @@ void App::loadSettings() {
             Ui::setSolidColors(atoi(val) != 0);
         } else if (strcmp(key, "direct_play") == 0) {
             jellyfinClient.directPlay = atoi(val) != 0;
+        } else if (strcmp(key, "transcode_h264") == 0) {
+            jellyfinClient.transcodeH264 = atoi(val) != 0;
         } else if (strcmp(key, "device_id") == 0) {
             JellyfinClient::setDeviceId(val);   /* tests: several Dolphins, one id each */
         } else if (strcmp(key, "screen_area_asked") == 0) {
@@ -259,6 +261,7 @@ void App::saveSettings() {
     fprintf(f, "skip_prompts=%d\n",     g_wiifin_skip_prompts);
     fprintf(f, "video_quality=%d\n",    jellyfinClient.videoQuality);
     fprintf(f, "direct_play=%d\n",      jellyfinClient.directPlay ? 1 : 0);
+    fprintf(f, "transcode_h264=%d\n",   jellyfinClient.transcodeH264 ? 1 : 0);
     /* WiiFin's own look: not the one of the profile open */
     fprintf(f, "ui_theme=%d\n",         startView.theme);
     fprintf(f, "home_layout=%d\n",      startView.homeLayout);

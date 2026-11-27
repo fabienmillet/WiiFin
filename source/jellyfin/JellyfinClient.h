@@ -542,6 +542,14 @@ public:
                           int subtitleStreamIndex,
                           DirectPlay& out);
     bool directPlay = true;   // the "Direct play" setting (Auto / Off)
+    // Settings > Transcode Format: H.264 Baseline instead of MPEG-4 (servers
+    // that encode H.264 on their GPU); heavier for the Wii to decode
+    bool transcodeH264 = false;
+    // How far before the asked position a transcode starts (getTranscodingUrl):
+    // 3 s, none for Jellyfin's H.264 (it starts on a keyframe)
+    long long resumePadTicks(const std::string& serverUrl) {
+        return transcodeH264 && !isPlex(serverUrl) ? 0 : 30000000LL;
+    }
 
     // How a video is played: the file as it is, or a transcode.
     struct PlaybackChoice {
