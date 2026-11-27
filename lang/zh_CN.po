@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WiiFin\n"
 "Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
-"POT-Creation-Date: 2026-11-11 19:15+0100\n"
+"POT-Creation-Date: 2026-11-27 16:16+0100\n"
 "PO-Revision-Date: 2026-10-11 02:59+0200\n"
 "Last-Translator: WiiFin\n"
 "Language-Team: Chinese (Simplified)\n"
@@ -20,9 +20,9 @@ msgstr ""
 msgid "Retry"
 msgstr "重试"
 
-#: source/core/App.cpp:94 source/core/App.cpp:471
-#: source/player/PlayerView.cpp:598 source/ui/ConnectView.cpp:595
-#: source/ui/ConnectView.cpp:666 source/ui/ConnectView.cpp:727
+#: source/core/App.cpp:94 source/core/App.cpp:469
+#: source/player/PlayerView.cpp:598 source/ui/ConnectView.cpp:601
+#: source/ui/ConnectView.cpp:703 source/ui/ConnectView.cpp:764
 #: source/ui/LibraryDetail.cpp:443 source/ui/LibraryHome.cpp:384
 #: source/ui/LibraryHome.cpp:426 source/ui/LibraryHome.cpp:493
 #: source/ui/LibraryItems.cpp:579 source/ui/LibraryItems.cpp:652
@@ -34,8 +34,8 @@ msgstr "重试"
 #: source/ui/LibrarySuggestions.cpp:333 source/ui/LibrarySuggestions.cpp:360
 #: source/ui/LibrarySuggestions.cpp:379 source/ui/LibrarySuggestions.cpp:428
 #: source/ui/LibraryView.cpp:1511 source/ui/MusicPlayerView.cpp:931
-#: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:166
-#: source/ui/SettingsView.cpp:118 source/ui/SettingsView.cpp:495
+#: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:188
+#: source/ui/SettingsView.cpp:119 source/ui/SettingsView.cpp:499
 msgid "Back"
 msgstr "返回"
 
@@ -43,70 +43,70 @@ msgstr "返回"
 msgid "OK"
 msgstr "确定"
 
-#: source/core/App.cpp:418
+#: source/core/App.cpp:416
 msgid "Does the whole picture fit your TV?"
 msgstr "电视能显示完整画面吗？"
 
-#: source/core/App.cpp:419
+#: source/core/App.cpp:417
 msgid "Older TVs (CRT) often cut the edges of the picture."
 msgstr "老式电视（CRT）常会裁掉画面边缘。"
 
 #. TRANSLATORS: one sentence on two lines, the second one naming the menu
-#: source/core/App.cpp:421
+#: source/core/App.cpp:419
 msgid "You can shrink it to fit now, or later in"
 msgstr "可以现在缩小画面，也可以稍后在"
 
-#: source/core/App.cpp:422
+#: source/core/App.cpp:420
 msgid "Settings > Screen Area."
 msgstr "设置 > 显示区域 中调整。"
 
-#: source/core/App.cpp:423
+#: source/core/App.cpp:421
 msgid "Adjust"
 msgstr "调整"
 
-#: source/core/App.cpp:424 source/core/App.cpp:426
+#: source/core/App.cpp:422 source/core/App.cpp:424
 msgid "Not now"
 msgstr "以后再说"
 
-#: source/core/App.cpp:425 source/core/App.cpp:763
-#: source/core/AppProfiles.cpp:162 source/ui/ConnectView.cpp:594
-#: source/ui/ConnectView.cpp:665 source/ui/ConnectView.cpp:726
+#: source/core/App.cpp:423 source/core/App.cpp:774
+#: source/core/AppProfiles.cpp:162 source/ui/ConnectView.cpp:600
+#: source/ui/ConnectView.cpp:702 source/ui/ConnectView.cpp:763
 #: source/ui/LibraryDetail.cpp:189 source/ui/LibraryHome.cpp:492
 #: source/ui/LibraryShows.cpp:275 source/ui/LibrarySuggestions.cpp:360
 #: source/ui/MusicPlayerView.cpp:930
 msgid "Select"
 msgstr "选择"
 
-#: source/core/App.cpp:442
-msgid "Connect To Jellyfin"
-msgstr "连接到 Jellyfin"
+#: source/core/App.cpp:440
+msgid "Connect To a Server"
+msgstr "连接到服务器"
 
-#: source/core/App.cpp:443 source/ui/LibraryHome.cpp:436
-#: source/ui/SettingsView.cpp:106 source/ui/SettingsView.cpp:359
+#: source/core/App.cpp:441 source/ui/LibraryHome.cpp:436
+#: source/ui/SettingsView.cpp:107 source/ui/SettingsView.cpp:363
 msgid "Settings"
 msgstr "设置"
 
-#: source/core/App.cpp:444
+#: source/core/App.cpp:442
 msgid "Exit"
 msgstr "退出"
 
-#: source/core/App.cpp:468
+#: source/core/App.cpp:466
 msgid "Connecting to the network..."
 msgstr "正在连接网络..."
 
-#: source/core/App.cpp:470
+#: source/core/App.cpp:468
 msgid "This is taking long: the Wii's network may need a restart."
 msgstr "耗时较长：Wii的网络可能需要重启。"
 
-#: source/core/App.cpp:476
+#: source/core/App.cpp:474
 msgid "No network connection"
 msgstr "无网络连接"
 
-#: source/core/App.cpp:477
+#: source/core/App.cpp:475
 msgid "Check the Wii's Internet settings, then try again."
 msgstr "请检查Wii的互联网设置，然后重试。"
 
-#: source/core/App.cpp:764 source/ui/LibraryHome.cpp:330
+#: source/core/App.cpp:775 source/ui/LibraryHome.cpp:330
 msgid "Menu"
 msgstr "菜单"
 
@@ -118,8 +118,8 @@ msgstr "输入PIN码"
 msgid "This profile is locked"
 msgstr "此用户已锁定"
 
-#: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:117
-#: source/ui/SettingsView.cpp:494
+#: source/core/AppProfiles.cpp:162 source/ui/SettingsView.cpp:118
+#: source/ui/SettingsView.cpp:498
 msgid "Choose"
 msgstr "选择"
 
@@ -148,19 +148,19 @@ msgid "Four digits, asked each time it opens"
 msgstr "4位数字，每次打开时询问"
 
 #: source/core/AppProfiles.cpp:181 source/core/AppProfiles.cpp:194
-#: source/ui/SettingsView.cpp:75 source/ui/SettingsView.cpp:277
+#: source/ui/SettingsView.cpp:76 source/ui/SettingsView.cpp:281
 msgid "Choose a passcode"
 msgstr "设置PIN码"
 
-#: source/core/AppProfiles.cpp:181 source/ui/SettingsView.cpp:75
+#: source/core/AppProfiles.cpp:181 source/ui/SettingsView.cpp:76
 msgid "Four digits, asked when this profile opens"
 msgstr "4位数字，打开此用户时询问"
 
-#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:274
+#: source/core/AppProfiles.cpp:191 source/ui/SettingsView.cpp:278
 msgid "Enter it again"
 msgstr "再次输入"
 
-#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:277
+#: source/core/AppProfiles.cpp:194 source/ui/SettingsView.cpp:281
 msgid "The two didn't match: once more"
 msgstr "两次不一致：请再试一次"
 
@@ -172,11 +172,11 @@ msgstr "那就每次输入密码"
 msgid "Or Quick Connect: this profile keeps no sign-in on the Wii"
 msgstr "或用快速连接：此用户不在Wii上保存登录信息"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:421
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:425
 msgid "Grid"
 msgstr "网格"
 
-#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:421
+#: source/core/AppProfiles.cpp:217 source/ui/SettingsView.cpp:425
 msgid "Rows"
 msgstr "横排"
 
@@ -188,15 +188,15 @@ msgstr "稍后可在设置中更改"
 msgid "Which home screen?"
 msgstr "哪种主屏幕？"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:424
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:428
 msgid "List"
 msgstr "列表"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:424
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:428
 msgid "List + Posters"
 msgstr "列表 + 海报"
 
-#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:424
+#: source/core/AppProfiles.cpp:224 source/ui/SettingsView.cpp:428
 msgid "Posters"
 msgstr "海报"
 
@@ -217,7 +217,7 @@ msgstr "确认"
 msgid "Close"
 msgstr "关闭"
 
-#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:238
+#: source/core/HomeMenu.cpp:195 source/ui/SettingsView.cpp:242
 msgid "Reset"
 msgstr "重置"
 
@@ -258,133 +258,133 @@ msgstr "S%d E%d - %s"
 msgid "Loading subtitles..."
 msgstr "字幕加载中..."
 
-#: source/core/PlaySession.cpp:218 source/core/PlaySession.cpp:248
-#: source/core/PlaySession.cpp:707 source/player/PlayerView.cpp:581
+#: source/core/PlaySession.cpp:218 source/core/PlaySession.cpp:249
+#: source/core/PlaySession.cpp:720 source/player/PlayerView.cpp:581
 #: source/ui/LibraryView.cpp:1475 source/ui/MusicPlayerView.cpp:911
 msgid "Loading..."
 msgstr "加载中..."
 
-#: source/core/PlaySession.cpp:364 source/core/PlaySession.cpp:523
-#: source/core/PlaySession.cpp:534 source/core/PlaySession.cpp:569
-#: source/core/PlaySession.cpp:603 source/core/PlaySession.cpp:794
+#: source/core/PlaySession.cpp:366 source/core/PlaySession.cpp:528
+#: source/core/PlaySession.cpp:539 source/core/PlaySession.cpp:574
+#: source/core/PlaySession.cpp:608 source/core/PlaySession.cpp:811
 msgid "Stopping..."
 msgstr "正在停止..."
 
-#: source/core/PlaySession.cpp:427
+#: source/core/PlaySession.cpp:429
 msgid "Slow connection: lowering quality..."
 msgstr "网速较慢：正在降低画质..."
 
-#: source/core/PlaySession.cpp:453
+#: source/core/PlaySession.cpp:458 source/core/PlaySession.cpp:720
 msgid "Reconnecting..."
 msgstr "正在重新连接..."
 
-#: source/core/PlaySession.cpp:453
+#: source/core/PlaySession.cpp:458
 msgid "The picture is stuck: trying again..."
 msgstr "画面卡住了：正在重试..."
 
-#: source/core/PlaySession.cpp:501
+#: source/core/PlaySession.cpp:506
 msgid "Too heavy for the Wii: transcoding..."
 msgstr "超出Wii性能：正在转码..."
 
-#: source/core/PlaySession.cpp:527
+#: source/core/PlaySession.cpp:532
 msgid "Play next / Add to queue: music only"
 msgstr "下一首播放 / 加入队列：仅限音乐"
 
-#: source/core/PlaySession.cpp:539 source/core/PlaySession.cpp:570
+#: source/core/PlaySession.cpp:544 source/core/PlaySession.cpp:575
 msgid "Loading next episode..."
 msgstr "正在加载下一集..."
 
-#: source/core/PlaySession.cpp:540 source/player/PlayerView.cpp:467
+#: source/core/PlaySession.cpp:545 source/player/PlayerView.cpp:467
 #: source/player/PlayerView.cpp:499 source/ui/LibraryHome.cpp:380
 msgid "No next episode"
 msgstr "没有下一集"
 
-#: source/core/PlaySession.cpp:543 source/core/PlaySession.cpp:571
+#: source/core/PlaySession.cpp:548 source/core/PlaySession.cpp:576
 msgid "Loading previous episode..."
 msgstr "正在加载上一集..."
 
-#: source/core/PlaySession.cpp:544 source/player/PlayerView.cpp:460
+#: source/core/PlaySession.cpp:549 source/player/PlayerView.cpp:460
 #: source/player/PlayerView.cpp:502
 msgid "No previous episode"
 msgstr "没有上一集"
 
-#: source/core/PlaySession.cpp:546 source/player/PlayerView.cpp:496
+#: source/core/PlaySession.cpp:551 source/player/PlayerView.cpp:496
 #: source/ui/MusicPlayerView.cpp:1091
 msgid "Volume +"
 msgstr "音量 +"
 
-#: source/core/PlaySession.cpp:547 source/player/PlayerView.cpp:497
+#: source/core/PlaySession.cpp:552 source/player/PlayerView.cpp:497
 #: source/ui/MusicPlayerView.cpp:1092
 msgid "Volume -"
 msgstr "音量 -"
 
-#: source/core/PlaySession.cpp:550
+#: source/core/PlaySession.cpp:555
 #, c-format
 msgid "Volume %d"
 msgstr "音量 %d"
 
-#: source/core/PlaySession.cpp:555 source/core/PlaySession.cpp:559
+#: source/core/PlaySession.cpp:560 source/core/PlaySession.cpp:564
 #: source/ui/MusicPlayerView.cpp:1094 source/ui/MusicPlayerView.cpp:1098
 msgid "Sound off"
 msgstr "静音"
 
-#: source/core/PlaySession.cpp:556 source/core/PlaySession.cpp:559
+#: source/core/PlaySession.cpp:561 source/core/PlaySession.cpp:564
 #: source/ui/MusicPlayerView.cpp:1095 source/ui/MusicPlayerView.cpp:1098
 msgid "Sound on"
 msgstr "取消静音"
 
-#: source/core/PlaySession.cpp:572
+#: source/core/PlaySession.cpp:577
 msgid "Switching audio track..."
 msgstr "正在切换音轨..."
 
-#: source/core/PlaySession.cpp:582
+#: source/core/PlaySession.cpp:587
 msgid "Switching subtitles..."
 msgstr "正在切换字幕..."
 
-#: source/core/PlaySession.cpp:596
+#: source/core/PlaySession.cpp:601
 msgid "Seeking..."
 msgstr "正在跳转..."
 
-#: source/core/PlaySession.cpp:666
+#: source/core/PlaySession.cpp:675
 msgid "The video comes in, but the Wii can't show it: the picture stays stuck."
 msgstr "已收到视频数据，但Wii无法显示：画面一直卡住。"
 
-#: source/core/PlaySession.cpp:680
+#: source/core/PlaySession.cpp:690
 #, c-format
 msgid "The server could not start this video (HTTP %d)."
 msgstr "服务器无法开始播放此视频（HTTP %d）。"
 
-#: source/core/PlaySession.cpp:683
+#: source/core/PlaySession.cpp:693
 msgid "The video stream could not be opened."
 msgstr "无法打开视频流。"
 
-#: source/core/PlaySession.cpp:686
+#: source/core/PlaySession.cpp:696
 msgid "The connection to the server keeps dropping."
 msgstr "与服务器的连接不断中断。"
 
-#: source/core/PlaySession.cpp:723
+#: source/core/PlaySession.cpp:740
 #, c-format
 msgid "The server did not answer: %s"
 msgstr "服务器无响应：%s"
 
-#: source/core/PlaySession.cpp:738
+#: source/core/PlaySession.cpp:755
 msgid "Loading episode..."
 msgstr "正在加载剧集..."
 
-#: source/core/PlaySession.cpp:804
+#: source/core/PlaySession.cpp:821
 #, c-format
 msgid "Server says: %s"
 msgstr "服务器消息：%s"
 
-#: source/core/PlaySession.cpp:807
+#: source/core/PlaySession.cpp:824
 msgid "Details are in wiifin.log on the SD card."
 msgstr "详情见SD卡上的 wiifin.log。"
 
-#: source/core/PlaySession.cpp:810 source/core/PlaySession.cpp:813
+#: source/core/PlaySession.cpp:827 source/core/PlaySession.cpp:830
 msgid "Can't play this video"
 msgstr "无法播放此视频"
 
-#: source/core/PlaySession.cpp:811
+#: source/core/PlaySession.cpp:828
 msgid "Check the server's FFmpeg log (Dashboard > Logs)."
 msgstr "请查看服务器的 FFmpeg 日志（控制台 > 日志）。"
 
@@ -396,111 +396,55 @@ msgstr "未从路由器获取到IP地址（DHCP）"
 msgid "UDP socket failed"
 msgstr "UDP socket 失败"
 
-#: source/jellyfin/JellyfinClient.cpp:369
+#: source/jellyfin/JellyfinClient.cpp:391
 msgid "Unsupported URL scheme"
 msgstr "不支持的URL协议"
 
-#: source/jellyfin/JellyfinClient.cpp:721
+#: source/jellyfin/JellyfinClient.cpp:743
 msgid "TLS: DRBG seed failed"
 msgstr "TLS：DRBG 种子初始化失败"
 
-#: source/jellyfin/JellyfinClient.cpp:738
+#: source/jellyfin/JellyfinClient.cpp:760
 msgid "TLS: ssl_config_defaults failed"
 msgstr "TLS：ssl_config_defaults 失败"
 
-#: source/jellyfin/JellyfinClient.cpp:775
+#: source/jellyfin/JellyfinClient.cpp:797
 msgid "DNS: unexpected address length"
 msgstr "DNS：地址长度异常"
 
-#: source/jellyfin/JellyfinClient.cpp:799
+#: source/jellyfin/JellyfinClient.cpp:821
 msgid "Server not reachable (connection timed out)"
 msgstr "无法访问服务器（连接超时）"
 
-#: source/jellyfin/JellyfinClient.cpp:823
+#: source/jellyfin/JellyfinClient.cpp:845
 msgid "TLS handshake failed (network error)"
 msgstr "TLS 握手失败（网络错误）"
 
-#: source/jellyfin/JellyfinClient.cpp:933
+#: source/jellyfin/JellyfinClient.cpp:955
 msgid "Failed to send request"
 msgstr "发送请求失败"
 
-#: source/jellyfin/JellyfinClient.cpp:1014
+#: source/jellyfin/JellyfinClient.cpp:1036
 msgid "No response from server (check server URL / port)"
 msgstr "服务器无响应（请检查服务器URL / 端口）"
 
-#: source/jellyfin/JellyfinClient.cpp:1015
+#: source/jellyfin/JellyfinClient.cpp:1037
 msgid "Invalid HTTP response (server may require HTTPS)"
 msgstr "无效的HTTP响应（服务器可能要求HTTPS）"
 
-#: source/jellyfin/JellyfinClient.cpp:1071
-#: source/jellyfin/JellyfinClient.cpp:1075
-#: source/jellyfin/JellyfinClient.cpp:1122
+#: source/jellyfin/JellyfinClient.cpp:1093
+#: source/jellyfin/JellyfinClient.cpp:1097
+#: source/jellyfin/JellyfinClient.cpp:1153
 msgid "Network lost: reconnecting..."
 msgstr "网络已断开：正在重新连接…"
 
-#: source/jellyfin/JellyfinClient.cpp:1101
+#: source/jellyfin/JellyfinClient.cpp:1132
 msgid "Request headers too large"
 msgstr "请求头过大"
 
-#: source/jellyfin/JellyfinClient.cpp:1144
+#: source/jellyfin/JellyfinClient.cpp:1175
 msgid "Connection lost"
 msgstr "连接已断开"
-
-#: source/jellyfin/JellyfinClient.cpp:1174
-#, c-format
-msgid "Auth failed (HTTP %d)"
-msgstr "认证失败（HTTP %d）"
-
-#: source/jellyfin/JellyfinClient.cpp:1183
-msgid "No token in response"
-msgstr "响应中没有令牌"
-
-#: source/jellyfin/JellyfinClient.cpp:1194
-#, c-format
-msgid "QuickConnect initiate failed (HTTP %d)"
-msgstr "快速连接启动失败（HTTP %d）"
-
-#: source/jellyfin/JellyfinClient.cpp:1202
-msgid "No code in QC response"
-msgstr "快速连接响应中没有代码"
-
-#: source/jellyfin/JellyfinClient.cpp:1228
-#, c-format
-msgid "QC auth failed (HTTP %d)"
-msgstr "快速连接认证失败（HTTP %d）"
-
-#: source/jellyfin/JellyfinClient.cpp:1236
-msgid "No token in QC auth response"
-msgstr "快速连接认证响应中没有令牌"
-
-#: source/jellyfin/JellyfinClient.cpp:2452
-msgid "High"
-msgstr "高"
-
-#. TRANSLATORS: video quality levels (Settings)
-#: source/jellyfin/JellyfinClient.cpp:2452
-msgid "Low"
-msgstr "低"
-
-#: source/jellyfin/JellyfinClient.cpp:2452
-msgid "Max"
-msgstr "最高"
-
-#: source/jellyfin/JellyfinClient.cpp:2452
-msgid "Normal"
-msgstr "标准"
-
-#: source/jellyfin/JellyfinClient.cpp:2869
-msgid "No TranscodingUrl in PlaybackInfo response"
-msgstr "PlaybackInfo 响应中没有 TranscodingUrl"
-
-#: source/jellyfin/JellyfinClient.cpp:3264 source/ui/LibrarySpecials.cpp:80
-msgid "No special features"
-msgstr "没有特别花絮"
-
-#: source/jellyfin/JellyfinClient.cpp:3543
-msgid "No PlaySessionId in AudioPlaybackInfo response"
-msgstr "AudioPlaybackInfo 响应中没有 PlaySessionId"
 
 #: source/player/PlayerView.cpp:57
 #, c-format
@@ -701,7 +645,7 @@ msgstr "浏览"
 #: source/ui/LibraryHome.cpp:330 source/ui/LibraryHome.cpp:383
 #: source/ui/LibraryItems.cpp:579 source/ui/LibrarySearch.cpp:263
 #: source/ui/LibrarySpecials.cpp:185 source/ui/LibrarySuggestions.cpp:428
-#: source/ui/ProfileView.cpp:165 source/ui/SettingsView.cpp:117
+#: source/ui/ProfileView.cpp:187 source/ui/SettingsView.cpp:118
 msgid "Open"
 msgstr "打开"
 
@@ -715,200 +659,209 @@ msgstr "搜索"
 msgid "Home"
 msgstr "主页"
 
-#: source/ui/ConnectView.cpp:111
+#: source/ui/ConnectView.cpp:120
 msgid "Signing in"
 msgstr "正在登录"
 
-#: source/ui/ConnectView.cpp:134
+#: source/ui/ConnectView.cpp:143
 msgid "Cancelled."
 msgstr "已取消。"
 
-#: source/ui/ConnectView.cpp:317
-msgid "Set the Server URL in the Credentials tab first."
-msgstr "请先在「登录信息」标签中设置服务器URL。"
-
-#: source/ui/ConnectView.cpp:327
+#: source/ui/ConnectView.cpp:310
 msgid "Contacting the server"
 msgstr "正在联系服务器"
 
-#: source/ui/ConnectView.cpp:337
+#: source/ui/ConnectView.cpp:320
 msgid "Enter code on another device:"
 msgstr "在另一台设备上输入代码："
 
-#: source/ui/ConnectView.cpp:354
+#: source/ui/ConnectView.cpp:337
 msgid "Waiting for approval"
 msgstr "等待批准"
 
-#: source/ui/ConnectView.cpp:404
+#: source/ui/ConnectView.cpp:390
 msgid "Failed to start scan thread."
 msgstr "无法启动扫描。"
 
-#: source/ui/ConnectView.cpp:419
+#: source/ui/ConnectView.cpp:405
 msgid "No servers found on the local network."
 msgstr "局域网中未找到服务器。"
 
-#: source/ui/ConnectView.cpp:460
+#: source/ui/ConnectView.cpp:446
 msgid "Server URL set. Enter your credentials."
 msgstr "服务器URL已设置。请输入登录信息。"
 
-#: source/ui/ConnectView.cpp:476 source/ui/ConnectView.cpp:591
-#: source/ui/SettingsView.cpp:239
+#: source/ui/ConnectView.cpp:462 source/ui/ConnectView.cpp:597
+#: source/ui/SettingsView.cpp:243
 msgid "Done"
 msgstr "完成"
 
-#: source/ui/ConnectView.cpp:476 source/ui/ConnectView.cpp:591
+#: source/ui/ConnectView.cpp:462 source/ui/ConnectView.cpp:597
 msgid "Next"
 msgstr "下一步"
 
-#: source/ui/ConnectView.cpp:517
-msgid "Connect to Jellyfin"
-msgstr "连接到 Jellyfin"
+#: source/ui/ConnectView.cpp:503
+msgid "Connect to Jellyfin, Emby or Plex"
+msgstr "连接到 Jellyfin、Emby 或 Plex"
 
-#: source/ui/ConnectView.cpp:523
+#: source/ui/ConnectView.cpp:509
 msgid "Credentials"
 msgstr "登录信息"
 
-#: source/ui/ConnectView.cpp:523
+#: source/ui/ConnectView.cpp:509
 msgid "Discover"
 msgstr "发现"
 
-#: source/ui/ConnectView.cpp:523
+#: source/ui/ConnectView.cpp:509
 msgid "Quick Connect"
 msgstr "快速连接"
 
-#: source/ui/ConnectView.cpp:541 source/ui/ConnectView.cpp:544
+#: source/ui/ConnectView.cpp:527 source/ui/ConnectView.cpp:530
 msgid "Connecting to the network"
 msgstr "正在连接网络"
 
-#: source/ui/ConnectView.cpp:577 source/ui/ConnectView.cpp:610
+#: source/ui/ConnectView.cpp:563 source/ui/ConnectView.cpp:616
 msgid "Server URL"
 msgstr "服务器URL"
 
-#: source/ui/ConnectView.cpp:579 source/ui/ConnectView.cpp:610
+#: source/ui/ConnectView.cpp:565 source/ui/ConnectView.cpp:616
 msgid "Username"
 msgstr "用户名"
 
-#: source/ui/ConnectView.cpp:581 source/ui/ConnectView.cpp:610
-#: source/ui/SettingsView.cpp:473
+#: source/ui/ConnectView.cpp:567 source/ui/ConnectView.cpp:616
+#: source/ui/SettingsView.cpp:477
 msgid "Password"
 msgstr "密码"
 
-#: source/ui/ConnectView.cpp:585
+#: source/ui/ConnectView.cpp:573 source/ui/SettingsView.cpp:402
+#: source/ui/SettingsView.cpp:462
+msgid "Auto"
+msgstr "自动"
+
+#: source/ui/ConnectView.cpp:575
+msgid "Server"
+msgstr "服务器"
+
+#: source/ui/ConnectView.cpp:591
 msgid "Connect"
 msgstr "登录"
 
-#: source/ui/ConnectView.cpp:590 source/ui/LibrarySearch.cpp:194
-#: source/ui/ProfileView.cpp:157 source/ui/ProfileView.cpp:162
-#: source/ui/ProfileView.cpp:165
+#: source/ui/ConnectView.cpp:596 source/ui/LibrarySearch.cpp:194
+#: source/ui/ProfileView.cpp:179 source/ui/ProfileView.cpp:184
+#: source/ui/ProfileView.cpp:187
 msgid "Delete"
 msgstr "删除"
 
-#: source/ui/ConnectView.cpp:590 source/ui/LibrarySearch.cpp:194
+#: source/ui/ConnectView.cpp:596 source/ui/LibrarySearch.cpp:194
 #: source/ui/PinPad.cpp:102
 msgid "Type"
 msgstr "输入"
 
-#: source/ui/ConnectView.cpp:591 source/ui/LibrarySearch.cpp:195
+#: source/ui/ConnectView.cpp:597 source/ui/LibrarySearch.cpp:195
 msgid "Shift"
 msgstr "Shift"
 
-#: source/ui/ConnectView.cpp:594 source/ui/SettingsView.cpp:238
+#: source/ui/ConnectView.cpp:600 source/ui/SettingsView.cpp:242
 msgid "Move"
 msgstr "移动"
 
-#: source/ui/ConnectView.cpp:595 source/ui/ConnectView.cpp:666
-#: source/ui/ConnectView.cpp:727
+#: source/ui/ConnectView.cpp:601 source/ui/ConnectView.cpp:703
+#: source/ui/ConnectView.cpp:764
 msgid "Tabs"
 msgstr "标签"
 
-#: source/ui/ConnectView.cpp:630
-msgid "Quick Connect lets you sign in by approving"
-msgstr "快速连接：只需在 Jellyfin 网页界面中"
+#: source/ui/ConnectView.cpp:661
+msgid "Sign in with a code: Quick Connect on"
+msgstr "用代码登录：Jellyfin 用快速连接，"
 
-#: source/ui/ConnectView.cpp:631
-msgid "a code in the Jellyfin web interface."
-msgstr "批准一个代码即可登录。"
+#: source/ui/ConnectView.cpp:662
+msgid "Jellyfin, or plex.tv/link for Plex."
+msgstr "Plex 用 plex.tv/link。"
 
-#: source/ui/ConnectView.cpp:635
-msgid "Go to Credentials tab and enter the Server URL first."
-msgstr "请先到「登录信息」标签中输入服务器URL。"
+#: source/ui/ConnectView.cpp:666
+msgid "No server address: for a Plex account, WiiFin finds its server."
+msgstr "无服务器地址：使用 Plex 账户时，WiiFin 会找到其服务器。"
 
-#: source/ui/ConnectView.cpp:638
+#: source/ui/ConnectView.cpp:669
 #, c-format
 msgid "Server: %s"
 msgstr "服务器：%s"
 
-#: source/ui/ConnectView.cpp:645
-msgid "Start Quick Connect"
+#: source/ui/ConnectView.cpp:676
+msgid "Get a code"
 msgstr "获取代码"
 
-#: source/ui/ConnectView.cpp:650
-msgid "Enter this code on your Jellyfin server:"
-msgstr "请在 Jellyfin 服务器上输入此代码："
+#: source/ui/ConnectView.cpp:681
+msgid "Enter this code in Quick Connect or at plex.tv/link:"
+msgstr "在快速连接或 plex.tv/link 中输入此代码："
 
-#: source/ui/ConnectView.cpp:655
+#: source/ui/ConnectView.cpp:690
+msgid "or scan with your phone"
+msgstr "或用手机扫描"
+
+#: source/ui/ConnectView.cpp:692
 msgid "Waiting for approval..."
 msgstr "等待批准..."
 
-#: source/ui/ConnectView.cpp:659
+#: source/ui/ConnectView.cpp:696
 msgid "Approved! Signing in..."
 msgstr "已批准！正在登录..."
 
-#: source/ui/ConnectView.cpp:662
+#: source/ui/ConnectView.cpp:699
 msgid "Error. Press A to retry."
 msgstr "出错了。按A重试。"
 
-#: source/ui/ConnectView.cpp:666 source/ui/LibraryDetail.cpp:189
-#: source/ui/ProfileView.cpp:158 source/ui/ProfileView.cpp:162
+#: source/ui/ConnectView.cpp:703 source/ui/LibraryDetail.cpp:189
+#: source/ui/ProfileView.cpp:180 source/ui/ProfileView.cpp:184
 msgid "Cancel"
 msgstr "取消"
 
-#: source/ui/ConnectView.cpp:685
-msgid "Find Jellyfin servers on your local network."
-msgstr "查找局域网中的 Jellyfin 服务器。"
+#: source/ui/ConnectView.cpp:722
+msgid "Find Jellyfin, Emby and Plex servers on your network."
+msgstr "查找局域网中的 Jellyfin、Emby 和 Plex 服务器。"
 
-#: source/ui/ConnectView.cpp:686
+#: source/ui/ConnectView.cpp:723
 msgid "The Wii must be on the same network as the server."
 msgstr "Wii必须与服务器位于同一网络。"
 
-#: source/ui/ConnectView.cpp:691
+#: source/ui/ConnectView.cpp:728
 msgid "Scan for Servers"
 msgstr "扫描服务器"
 
-#: source/ui/ConnectView.cpp:696
+#: source/ui/ConnectView.cpp:733
 msgid "Scanning..."
 msgstr "正在扫描..."
 
-#: source/ui/ConnectView.cpp:702
+#: source/ui/ConnectView.cpp:739
 msgid "No servers found."
 msgstr "未找到服务器。"
 
-#: source/ui/ConnectView.cpp:703
+#: source/ui/ConnectView.cpp:740
 msgid "Check your network and server settings, then try again."
 msgstr "请检查网络和服务器设置，然后重试。"
 
-#: source/ui/ConnectView.cpp:707
+#: source/ui/ConnectView.cpp:744
 msgid "Scan Again"
 msgstr "重新扫描"
 
-#: source/ui/ConnectView.cpp:710
+#: source/ui/ConnectView.cpp:747
 msgid "Found — select a server:"
 msgstr "已找到 — 请选择服务器："
 
-#: source/ui/Keyboard.cpp:145
+#: source/ui/Keyboard.cpp:151
 msgid "⇧ Shift"
 msgstr "⇧ Shift"
 
 #. TRANSLATORS: keys of the on-screen keyboard; keep the arrow in front
-#: source/ui/Keyboard.cpp:145
+#: source/ui/Keyboard.cpp:151
 msgid "⇪ Caps"
 msgstr "⇪ 大写"
 
-#: source/ui/Keyboard.cpp:147
+#: source/ui/Keyboard.cpp:153
 msgid "Space"
 msgstr "空格"
 
-#: source/ui/Keyboard.cpp:148
+#: source/ui/Keyboard.cpp:154
 msgid "← Delete"
 msgstr "← 删除"
 
@@ -1013,7 +966,7 @@ msgstr "花絮"
 msgid "Seasons"
 msgstr "季"
 
-#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:494
+#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:498
 msgid "Change"
 msgstr "更改"
 
@@ -1106,8 +1059,8 @@ msgid "Detail"
 msgstr "详情"
 
 #: source/ui/LibraryHome.cpp:436
-msgid "Back to Jellyfin"
-msgstr "返回 Jellyfin"
+msgid "Back to the Library"
+msgstr "返回媒体库"
 
 #: source/ui/LibraryHome.cpp:436
 msgid "Now Playing"
@@ -1159,7 +1112,7 @@ msgid "A-Z"
 msgstr "A-Z"
 
 #: source/ui/LibraryItems.cpp:587 source/ui/LibraryItems.cpp:590
-#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:494
+#: source/ui/LibraryScenes.cpp:114 source/ui/SettingsView.cpp:498
 msgid "Page"
 msgstr "翻页"
 
@@ -1284,7 +1237,7 @@ msgstr "评分"
 msgid "Year"
 msgstr "年份"
 
-#: source/ui/LibrarySort.cpp:15 source/ui/SettingsView.cpp:469
+#: source/ui/LibrarySort.cpp:15 source/ui/SettingsView.cpp:473
 msgid "All"
 msgstr "全部"
 
@@ -1404,6 +1357,10 @@ msgstr "主题视频"
 #: source/ui/LibrarySpecials.cpp:39
 msgid "Extra"
 msgstr "花絮"
+
+#: source/ui/LibrarySpecials.cpp:80
+msgid "No special features"
+msgstr "没有特别花絮"
 
 #: source/ui/LibrarySpecials.cpp:142 source/ui/LibraryView.cpp:982
 msgid "Special Features"
@@ -1649,337 +1606,333 @@ msgstr "谁在观看？"
 msgid "Add New Profile"
 msgstr "新建用户"
 
-#: source/ui/ProfileView.cpp:155
+#: source/ui/ProfileView.cpp:177
 msgid "Delete this profile?"
 msgstr "删除此用户？"
 
-#: source/ui/ProfileView.cpp:156
+#: source/ui/ProfileView.cpp:178
 msgid "Its saved sign-in will be forgotten."
 msgstr "已保存的登录信息将被清除。"
 
-#: source/ui/SettingsView.cpp:24
+#: source/ui/SettingsView.cpp:25
 msgid "Sign-In Settings"
 msgstr "登录设置"
 
-#: source/ui/SettingsView.cpp:24
+#: source/ui/SettingsView.cpp:25
 msgid "System Settings"
 msgstr "系统设置"
 
-#: source/ui/SettingsView.cpp:24
+#: source/ui/SettingsView.cpp:25
 msgid "View Settings"
 msgstr "显示设置"
 
-#: source/ui/SettingsView.cpp:114
-msgid "Made with ❤ for Jellyfin"
-msgstr "用 ❤ 为 Jellyfin 打造"
+#: source/ui/SettingsView.cpp:115
+msgid "Made with ❤ for Jellyfin, Emby and Plex"
+msgstr "用 ❤ 为 Jellyfin、Emby 和 Plex 打造"
 
-#: source/ui/SettingsView.cpp:230 source/ui/SettingsView.cpp:441
+#: source/ui/SettingsView.cpp:234 source/ui/SettingsView.cpp:445
 msgid "Screen Area"
 msgstr "显示区域"
 
-#: source/ui/SettingsView.cpp:231
+#: source/ui/SettingsView.cpp:235
 msgid "Move each arrow until its tip sits right in"
 msgstr "移动每个箭头，直到箭头尖端正好位于"
 
-#: source/ui/SettingsView.cpp:232
+#: source/ui/SettingsView.cpp:236
 msgid "the corner of your TV screen."
 msgstr "电视屏幕的角落。"
 
-#: source/ui/SettingsView.cpp:234
+#: source/ui/SettingsView.cpp:238
 #, c-format
 msgid "Left %d   ·   Top %d   ·   Right %d   ·   Bottom %d"
 msgstr "左 %d   ·   上 %d   ·   右 %d   ·   下 %d"
 
-#: source/ui/SettingsView.cpp:238
+#: source/ui/SettingsView.cpp:242
 msgid "Switch"
 msgstr "切换"
 
-#: source/ui/SettingsView.cpp:362
+#: source/ui/SettingsView.cpp:366
 msgid "SSL Verification"
 msgstr "SSL 验证"
 
-#: source/ui/SettingsView.cpp:363
+#: source/ui/SettingsView.cpp:367
 msgid "Validate the server HTTPS certificate (disable for self-signed certs)"
 msgstr "验证服务器的HTTPS证书（自签名证书请关闭）"
 
-#: source/ui/SettingsView.cpp:364 source/ui/SettingsView.cpp:366
-#: source/ui/SettingsView.cpp:370 source/ui/SettingsView.cpp:398
-#: source/ui/SettingsView.cpp:402 source/ui/SettingsView.cpp:436
-#: source/ui/SettingsView.cpp:458 source/ui/SettingsView.cpp:462
-#: source/ui/SettingsView.cpp:469
+#: source/ui/SettingsView.cpp:368 source/ui/SettingsView.cpp:370
+#: source/ui/SettingsView.cpp:374 source/ui/SettingsView.cpp:402
+#: source/ui/SettingsView.cpp:406 source/ui/SettingsView.cpp:440
+#: source/ui/SettingsView.cpp:462 source/ui/SettingsView.cpp:466
+#: source/ui/SettingsView.cpp:473
 msgid "OFF"
 msgstr "关"
 
-#: source/ui/SettingsView.cpp:364 source/ui/SettingsView.cpp:366
-#: source/ui/SettingsView.cpp:370 source/ui/SettingsView.cpp:402
-#: source/ui/SettingsView.cpp:436 source/ui/SettingsView.cpp:462
+#: source/ui/SettingsView.cpp:368 source/ui/SettingsView.cpp:370
+#: source/ui/SettingsView.cpp:374 source/ui/SettingsView.cpp:406
+#: source/ui/SettingsView.cpp:440 source/ui/SettingsView.cpp:466
 msgid "ON"
 msgstr "开"
 
-#: source/ui/SettingsView.cpp:365
+#: source/ui/SettingsView.cpp:369
 msgid "Background Music"
 msgstr "背景音乐"
 
-#: source/ui/SettingsView.cpp:365
+#: source/ui/SettingsView.cpp:369
 msgid "Play background music in menus"
 msgstr "在菜单中播放背景音乐"
 
-#: source/ui/SettingsView.cpp:367
+#: source/ui/SettingsView.cpp:371
 msgid "Interface Sounds"
 msgstr "界面音效"
 
-#: source/ui/SettingsView.cpp:368
+#: source/ui/SettingsView.cpp:372
 msgid "Sounds in the menus; your own in sounds/ on the SD card"
 msgstr "菜单音效；自定义音效放在SD卡的 sounds/ 中"
 
-#: source/ui/SettingsView.cpp:369
+#: source/ui/SettingsView.cpp:373
 msgid "The menus stay silent"
 msgstr "菜单保持静音"
 
-#: source/ui/SettingsView.cpp:380
+#: source/ui/SettingsView.cpp:384
 #, c-format
 msgid "%.1f Mb/s; your connection (%.1f Mb/s measured) holds videos to %.1f"
 msgstr "%.1f Mb/s；当前网络（实测 %.1f Mb/s）将视频限制在 %.1f"
 
-#: source/ui/SettingsView.cpp:385
+#: source/ui/SettingsView.cpp:389
 #, c-format
 msgid "%.1f Mb/s: sharpest, for a wired adapter. Lower it if videos stutter"
 msgstr "%.1f Mb/s：最清晰，适合有线网卡。视频卡顿请调低"
 
-#: source/ui/SettingsView.cpp:389
+#: source/ui/SettingsView.cpp:393
 #, c-format
 msgid "Video bitrate: %.1f Mb/s. Lower it if playback keeps buffering"
 msgstr "视频码率：%.1f Mb/s。频繁缓冲请调低"
 
-#: source/ui/SettingsView.cpp:391
+#: source/ui/SettingsView.cpp:395
 msgid "Video Quality"
 msgstr "视频画质"
 
-#: source/ui/SettingsView.cpp:395
+#: source/ui/SettingsView.cpp:399
 msgid "Direct Play"
 msgstr "直接播放"
 
-#: source/ui/SettingsView.cpp:396
+#: source/ui/SettingsView.cpp:400
 msgid "Files the Wii can decode play as they are (SD DivX, DVD...): no server work"
 msgstr "Wii能解码的文件直接播放（SD DivX、DVD...）：服务器无需处理"
 
-#: source/ui/SettingsView.cpp:397
+#: source/ui/SettingsView.cpp:401
 msgid "Every video is converted by the server"
 msgstr "所有视频均由服务器转码"
 
-#: source/ui/SettingsView.cpp:398 source/ui/SettingsView.cpp:458
-msgid "Auto"
-msgstr "自动"
-
-#: source/ui/SettingsView.cpp:399
+#: source/ui/SettingsView.cpp:403
 msgid "Smooth Motion"
 msgstr "运动平滑"
 
-#: source/ui/SettingsView.cpp:400
+#: source/ui/SettingsView.cpp:404
 msgid "Blends frames on picture changes: films move evenly on 60 Hz TVs"
 msgstr "画面变化时混合帧：电影在60 Hz电视上更流畅"
 
-#: source/ui/SettingsView.cpp:401
+#: source/ui/SettingsView.cpp:405
 msgid "Each frame shown as is (24 fps films judder slightly on 60 Hz)"
 msgstr "逐帧原样显示（24 fps电影在60 Hz下略有抖动）"
 
-#: source/ui/SettingsView.cpp:405
+#: source/ui/SettingsView.cpp:409
 msgid "Light, like the Wii Menu"
 msgstr "浅色，如Wii菜单"
 
-#: source/ui/SettingsView.cpp:406
+#: source/ui/SettingsView.cpp:410
 msgid "Dark, for movie nights"
 msgstr "深色，适合电影之夜"
 
-#: source/ui/SettingsView.cpp:407
+#: source/ui/SettingsView.cpp:411
 msgid "Red and charcoal, browse in rows like the old video channels"
 msgstr "红与炭黑，像旧视频频道一样按行浏览"
 
-#: source/ui/SettingsView.cpp:408
+#: source/ui/SettingsView.cpp:412
 msgid "Black, silver and green"
 msgstr "黑、银、绿"
 
-#: source/ui/SettingsView.cpp:409
+#: source/ui/SettingsView.cpp:413
 msgid "Dark grey and orange"
 msgstr "深灰、橙"
 
-#: source/ui/SettingsView.cpp:413
+#: source/ui/SettingsView.cpp:417
 msgid "Christmas for now, until January 6"
 msgstr "现在是圣诞，到1月6日为止"
 
-#: source/ui/SettingsView.cpp:413
+#: source/ui/SettingsView.cpp:417
 msgid "Theme"
 msgstr "主题"
 
-#: source/ui/SettingsView.cpp:419
+#: source/ui/SettingsView.cpp:423
 msgid "Home Screen"
 msgstr "主屏幕"
 
-#: source/ui/SettingsView.cpp:419
+#: source/ui/SettingsView.cpp:423
 msgid "Rows of posters to browse, like the old video channels"
 msgstr "成排浏览海报，像旧视频频道一样"
 
-#: source/ui/SettingsView.cpp:420
+#: source/ui/SettingsView.cpp:424
 msgid "A grid of your libraries"
 msgstr "以网格显示媒体库"
 
-#: source/ui/SettingsView.cpp:426
+#: source/ui/SettingsView.cpp:430
 msgid "Browse libraries with their artwork"
 msgstr "带封面浏览媒体库"
 
-#: source/ui/SettingsView.cpp:427
+#: source/ui/SettingsView.cpp:431
 msgid "Libraries as text lists: quickest to browse big ones"
 msgstr "以文字列表显示：浏览大型媒体库最快"
 
-#: source/ui/SettingsView.cpp:428
+#: source/ui/SettingsView.cpp:432
 msgid "Text lists, with the cover of the selected title"
 msgstr "文字列表，并显示所选项目的封面"
 
-#: source/ui/SettingsView.cpp:431
+#: source/ui/SettingsView.cpp:435
 msgid "Library View"
 msgstr "媒体库视图"
 
-#: source/ui/SettingsView.cpp:433
+#: source/ui/SettingsView.cpp:437
 msgid "Disc Slot Light"
 msgstr "光盘槽指示灯"
 
-#: source/ui/SettingsView.cpp:434
+#: source/ui/SettingsView.cpp:438
 msgid "Pulses with the sound, as bright as the Wii Settings say"
 msgstr "随声音闪烁，亮度遵循Wii设置"
 
-#: source/ui/SettingsView.cpp:435
+#: source/ui/SettingsView.cpp:439
 msgid "Stays dark during playback"
 msgstr "播放时保持熄灭"
 
-#: source/ui/SettingsView.cpp:441
+#: source/ui/SettingsView.cpp:445
 msgid "Shrink the interface if your TV crops the edges (overscan)"
 msgstr "若电视裁掉了画面边缘，可缩小界面（overscan）"
 
-#: source/ui/SettingsView.cpp:442
+#: source/ui/SettingsView.cpp:446
 msgid "Adjusted"
 msgstr "已调整"
 
-#: source/ui/SettingsView.cpp:442
+#: source/ui/SettingsView.cpp:446
 msgid "Full"
 msgstr "完整"
 
-#: source/ui/SettingsView.cpp:444
+#: source/ui/SettingsView.cpp:448
 msgid "Backgrounds"
 msgstr "背景"
 
-#: source/ui/SettingsView.cpp:445
+#: source/ui/SettingsView.cpp:449
 msgid "Solid colours: no bands on TVs that show them in gradients"
 msgstr "纯色：避免电视在渐变中出现色带"
 
-#: source/ui/SettingsView.cpp:446
+#: source/ui/SettingsView.cpp:450
 msgid "Soft gradients, like the Wii Menu"
 msgstr "柔和渐变，如Wii菜单"
 
-#: source/ui/SettingsView.cpp:447
+#: source/ui/SettingsView.cpp:451
 msgid "Gradient"
 msgstr "渐变"
 
-#: source/ui/SettingsView.cpp:447
+#: source/ui/SettingsView.cpp:451
 msgid "Solid"
 msgstr "纯色"
 
-#: source/ui/SettingsView.cpp:448
+#: source/ui/SettingsView.cpp:452
 msgid "Clock"
 msgstr "时钟"
 
-#: source/ui/SettingsView.cpp:449
+#: source/ui/SettingsView.cpp:453
 msgid "13:30, the date as day/month"
 msgstr "13:30，日期为 日/月"
 
-#: source/ui/SettingsView.cpp:449
+#: source/ui/SettingsView.cpp:453
 msgid "1:30 PM, the date as month/day"
 msgstr "1:30 下午，日期为 月/日"
 
-#: source/ui/SettingsView.cpp:450
+#: source/ui/SettingsView.cpp:454
 msgid "12-hour"
 msgstr "12小时制"
 
-#: source/ui/SettingsView.cpp:450
+#: source/ui/SettingsView.cpp:454
 msgid "24-hour"
 msgstr "24小时制"
 
-#: source/ui/SettingsView.cpp:452
+#: source/ui/SettingsView.cpp:456
 msgid "Language"
 msgstr "语言"
 
-#: source/ui/SettingsView.cpp:453
+#: source/ui/SettingsView.cpp:457
 msgid "Chosen here, whatever the Wii's language"
 msgstr "在此选择，不受Wii语言影响"
 
-#: source/ui/SettingsView.cpp:453
+#: source/ui/SettingsView.cpp:457
 msgid "The Wii's language, as set in the Wii Settings"
 msgstr "跟随Wii设置中的语言"
 
-#: source/ui/SettingsView.cpp:455 source/ui/Ui.cpp:135
+#: source/ui/SettingsView.cpp:459 source/ui/Ui.cpp:135
 msgid "Christmas"
 msgstr "圣诞"
 
-#: source/ui/SettingsView.cpp:456
+#: source/ui/SettingsView.cpp:460
 msgid "Snow and Christmas colours from December 1 to January 6"
 msgstr "12月1日至1月6日：飘雪和圣诞配色"
 
-#: source/ui/SettingsView.cpp:457
+#: source/ui/SettingsView.cpp:461
 msgid "The chosen theme all year round"
 msgstr "全年使用所选主题"
 
-#: source/ui/SettingsView.cpp:459
+#: source/ui/SettingsView.cpp:463
 msgid "Music Autoplay"
 msgstr "自动播放"
 
-#: source/ui/SettingsView.cpp:460
+#: source/ui/SettingsView.cpp:464
 msgid "When an album or a playlist ends, similar songs follow"
 msgstr "专辑或播放列表结束后播放相似歌曲"
 
-#: source/ui/SettingsView.cpp:461
+#: source/ui/SettingsView.cpp:465
 msgid "The music stops at the end of the album or playlist"
 msgstr "专辑或播放列表结束时停止播放"
 
-#: source/ui/SettingsView.cpp:465
+#: source/ui/SettingsView.cpp:469
 msgid "Skip Prompts"
 msgstr "跳过提示"
 
-#: source/ui/SettingsView.cpp:466
+#: source/ui/SettingsView.cpp:470
 msgid "\"Skip intro\", \"Skip recap\"... over the parts the server knows"
 msgstr "在服务器识别的片段上显示“跳过片头”“跳过回顾”等"
 
-#: source/ui/SettingsView.cpp:467
+#: source/ui/SettingsView.cpp:471
 msgid "\"Skip recap\" only: intros and credits play without a prompt"
 msgstr "仅“跳过回顾”：片头片尾直接播放"
 
-#: source/ui/SettingsView.cpp:468
+#: source/ui/SettingsView.cpp:472
 msgid "Intros, recaps and credits play without a prompt"
 msgstr "片头、回顾和片尾直接播放，不显示提示"
 
-#: source/ui/SettingsView.cpp:469
+#: source/ui/SettingsView.cpp:473
 msgid "Recaps only"
 msgstr "仅回顾"
 
-#: source/ui/SettingsView.cpp:473
+#: source/ui/SettingsView.cpp:477
 msgid "Automatic"
 msgstr "自动"
 
-#: source/ui/SettingsView.cpp:473
+#: source/ui/SettingsView.cpp:477
 msgid "Passcode"
 msgstr "PIN码"
 
-#: source/ui/SettingsView.cpp:475
+#: source/ui/SettingsView.cpp:479
 msgid "Opens at once on this Wii"
 msgstr "在此Wii上直接打开"
 
-#: source/ui/SettingsView.cpp:476
+#: source/ui/SettingsView.cpp:480
 msgid "Asks the profile's four-digit passcode first"
 msgstr "先询问此用户的4位PIN码"
 
-#: source/ui/SettingsView.cpp:477
+#: source/ui/SettingsView.cpp:481
 msgid "Asks the password (or Quick Connect) each time"
 msgstr "每次询问密码（或快速连接）"
 
-#: source/ui/SettingsView.cpp:480
+#: source/ui/SettingsView.cpp:484
 msgid "Sign-In"
 msgstr "登录"
 
@@ -2045,3 +1998,60 @@ msgstr "下午"
 #: source/ui/Ui.cpp:1004
 msgid "Message"
 msgstr "消息"
+
+#, c-format
+#~ msgid "Auth failed (HTTP %d)"
+#~ msgstr "认证失败（HTTP %d）"
+
+#~ msgid "No token in response"
+#~ msgstr "响应中没有令牌"
+
+#, c-format
+#~ msgid "QuickConnect initiate failed (HTTP %d)"
+#~ msgstr "快速连接启动失败（HTTP %d）"
+
+#~ msgid "No code in QC response"
+#~ msgstr "快速连接响应中没有代码"
+
+#, c-format
+#~ msgid "QC auth failed (HTTP %d)"
+#~ msgstr "快速连接认证失败（HTTP %d）"
+
+#~ msgid "No token in QC auth response"
+#~ msgstr "快速连接认证响应中没有令牌"
+
+#~ msgid "High"
+#~ msgstr "高"
+
+#~ msgid "Low"
+#~ msgstr "低"
+
+#~ msgid "Max"
+#~ msgstr "最高"
+
+#~ msgid "Normal"
+#~ msgstr "标准"
+
+#~ msgid "No TranscodingUrl in PlaybackInfo response"
+#~ msgstr "PlaybackInfo 响应中没有 TranscodingUrl"
+
+#~ msgid "No PlaySessionId in AudioPlaybackInfo response"
+#~ msgstr "AudioPlaybackInfo 响应中没有 PlaySessionId"
+
+#~ msgid "Set the Server URL in the Credentials tab first."
+#~ msgstr "请先在「登录信息」标签中设置服务器URL。"
+
+#~ msgid "Quick Connect lets you sign in by approving"
+#~ msgstr "快速连接：只需在 Jellyfin 网页界面中"
+
+#~ msgid "a code in the Jellyfin web interface."
+#~ msgstr "批准一个代码即可登录。"
+
+#~ msgid "Go to Credentials tab and enter the Server URL first."
+#~ msgstr "请先到「登录信息」标签中输入服务器URL。"
+
+#~ msgid "Enter this code on your Jellyfin server:"
+#~ msgstr "请在 Jellyfin 服务器上输入此代码："
+
+#~ msgid "Back to Jellyfin"
+#~ msgstr "返回 Jellyfin"
