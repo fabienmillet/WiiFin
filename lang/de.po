@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WiiFin\n"
 "Report-Msgid-Bugs-To: https://github.com/fabienmillet/WiiFin/issues\n"
-"POT-Creation-Date: 2026-11-27 16:33+0100\n"
+"POT-Creation-Date: 2026-11-27 21:38+0100\n"
 "PO-Revision-Date: 2026-10-11 02:59+0200\n"
 "Last-Translator: WiiFin\n"
 "Language-Team: German\n"
@@ -24,19 +24,20 @@ msgstr "Erneut versuchen"
 #: source/core/App.cpp:94 source/core/App.cpp:470
 #: source/player/PlayerView.cpp:598 source/ui/ConnectView.cpp:601
 #: source/ui/ConnectView.cpp:703 source/ui/ConnectView.cpp:764
-#: source/ui/LibraryDetail.cpp:443 source/ui/LibraryHome.cpp:384
-#: source/ui/LibraryHome.cpp:426 source/ui/LibraryHome.cpp:493
-#: source/ui/LibraryItems.cpp:579 source/ui/LibraryItems.cpp:652
-#: source/ui/LibraryItems.cpp:664 source/ui/LibraryMusic.cpp:135
-#: source/ui/LibraryPhotos.cpp:226 source/ui/LibraryScenes.cpp:113
-#: source/ui/LibrarySearch.cpp:194 source/ui/LibrarySearch.cpp:264
-#: source/ui/LibraryShows.cpp:270 source/ui/LibraryShows.cpp:275
-#: source/ui/LibraryShows.cpp:373 source/ui/LibrarySpecials.cpp:185
-#: source/ui/LibrarySuggestions.cpp:333 source/ui/LibrarySuggestions.cpp:360
-#: source/ui/LibrarySuggestions.cpp:379 source/ui/LibrarySuggestions.cpp:428
-#: source/ui/LibraryView.cpp:1511 source/ui/MusicPlayerView.cpp:931
-#: source/ui/PinPad.cpp:103 source/ui/ProfileView.cpp:188
-#: source/ui/SettingsView.cpp:157 source/ui/SettingsView.cpp:630
+#: source/ui/LibraryDetail.cpp:482 source/ui/LibraryFlix.cpp:222
+#: source/ui/LibraryHome.cpp:384 source/ui/LibraryHome.cpp:426
+#: source/ui/LibraryHome.cpp:493 source/ui/LibraryItems.cpp:579
+#: source/ui/LibraryItems.cpp:652 source/ui/LibraryItems.cpp:664
+#: source/ui/LibraryMusic.cpp:135 source/ui/LibraryPhotos.cpp:226
+#: source/ui/LibraryScenes.cpp:113 source/ui/LibrarySearch.cpp:194
+#: source/ui/LibrarySearch.cpp:264 source/ui/LibraryShows.cpp:271
+#: source/ui/LibraryShows.cpp:276 source/ui/LibraryShows.cpp:375
+#: source/ui/LibrarySpecials.cpp:185 source/ui/LibrarySuggestions.cpp:333
+#: source/ui/LibrarySuggestions.cpp:360 source/ui/LibrarySuggestions.cpp:379
+#: source/ui/LibrarySuggestions.cpp:428 source/ui/LibraryView.cpp:1517
+#: source/ui/MusicPlayerView.cpp:931 source/ui/PinPad.cpp:103
+#: source/ui/ProfileView.cpp:188 source/ui/SettingsView.cpp:157
+#: source/ui/SettingsView.cpp:630
 msgid "Back"
 msgstr "Zurück"
 
@@ -72,9 +73,9 @@ msgstr "Später"
 #: source/core/App.cpp:424 source/core/App.cpp:775
 #: source/core/AppProfiles.cpp:162 source/ui/ConnectView.cpp:600
 #: source/ui/ConnectView.cpp:702 source/ui/ConnectView.cpp:763
-#: source/ui/LibraryDetail.cpp:189 source/ui/LibraryHome.cpp:492
-#: source/ui/LibraryShows.cpp:275 source/ui/LibrarySuggestions.cpp:360
-#: source/ui/MusicPlayerView.cpp:930
+#: source/ui/LibraryDetail.cpp:216 source/ui/LibraryFlix.cpp:223
+#: source/ui/LibraryHome.cpp:492 source/ui/LibraryShows.cpp:276
+#: source/ui/LibrarySuggestions.cpp:360 source/ui/MusicPlayerView.cpp:930
 msgid "Select"
 msgstr "Auswählen"
 
@@ -210,11 +211,11 @@ msgstr "Welche Bibliotheksansicht?"
 msgid "HOME Menu"
 msgstr "HOME-Menü"
 
-#: source/core/HomeMenu.cpp:183 source/ui/LibraryDetail.cpp:189
+#: source/core/HomeMenu.cpp:183 source/ui/LibraryDetail.cpp:216
 msgid "Confirm"
 msgstr "Bestätigen"
 
-#: source/core/HomeMenu.cpp:184 source/ui/LibraryDetail.cpp:477
+#: source/core/HomeMenu.cpp:184 source/ui/LibraryDetail.cpp:516
 #: source/ui/MusicPlayerView.cpp:927
 msgid "Close"
 msgstr "Schließen"
@@ -262,7 +263,7 @@ msgstr "Untertitel werden geladen..."
 
 #: source/core/PlaySession.cpp:218 source/core/PlaySession.cpp:249
 #: source/core/PlaySession.cpp:720 source/player/PlayerView.cpp:581
-#: source/ui/LibraryView.cpp:1475 source/ui/MusicPlayerView.cpp:911
+#: source/ui/LibraryView.cpp:1481 source/ui/MusicPlayerView.cpp:911
 msgid "Loading..."
 msgstr "Laden..."
 
@@ -477,7 +478,7 @@ msgstr "Abspann überspringen"
 msgid "Skip intro"
 msgstr "Intro überspringen"
 
-#: source/player/PlayerView.cpp:284 source/ui/LibraryDetail.cpp:431
+#: source/player/PlayerView.cpp:284 source/ui/LibraryDetail.cpp:467
 msgid "Off"
 msgstr "Aus"
 
@@ -510,12 +511,12 @@ msgstr "Puffern..."
 msgid "Zoom"
 msgstr "Zoom"
 
-#: source/player/PlayerView.cpp:598 source/ui/LibraryDetail.cpp:422
+#: source/player/PlayerView.cpp:598 source/ui/LibraryDetail.cpp:458
 msgid "Audio"
 msgstr "Audio"
 
 #: source/player/PlayerView.cpp:598 source/player/PlayerView.cpp:737
-#: source/ui/LibraryDetail.cpp:422
+#: source/ui/LibraryDetail.cpp:458
 msgid "Subtitles"
 msgstr "Untertitel"
 
@@ -609,13 +610,13 @@ msgid "%d episodes"
 msgstr "%d Episoden"
 
 #. TRANSLATORS: how many seasons a series has
-#: source/ui/BrowseHome.cpp:742 source/ui/LibraryShows.cpp:209
+#: source/ui/BrowseHome.cpp:742 source/ui/LibraryShows.cpp:210
 #, c-format
 msgid "%d season"
 msgstr "%d Staffel"
 
 #: source/ui/BrowseHome.cpp:742 source/ui/LibraryItems.cpp:547
-#: source/ui/LibraryShows.cpp:209
+#: source/ui/LibraryShows.cpp:210
 #, c-format
 msgid "%d seasons"
 msgstr "%d Staffeln"
@@ -813,7 +814,7 @@ msgstr "Bestätigt! Anmeldung..."
 msgid "Error. Press A to retry."
 msgstr "Fehler. A drücken, um es erneut zu versuchen."
 
-#: source/ui/ConnectView.cpp:703 source/ui/LibraryDetail.cpp:189
+#: source/ui/ConnectView.cpp:703 source/ui/LibraryDetail.cpp:216
 #: source/ui/ProfileView.cpp:180 source/ui/ProfileView.cpp:184
 msgid "Cancel"
 msgstr "Abbrechen"
@@ -867,116 +868,123 @@ msgstr "Leertaste"
 msgid "← Delete"
 msgstr "← Löschen"
 
-#: source/ui/LibraryDetail.cpp:167
+#: source/ui/LibraryDetail.cpp:194
 msgid "Resume playback?"
 msgstr "Wiedergabe fortsetzen?"
 
 #. TRANSLATORS: under "Resume playback?": where it stopped, h:mm:ss or m:ss
-#: source/ui/LibraryDetail.cpp:173
+#: source/ui/LibraryDetail.cpp:200
 #, c-format
 msgid "at %d:%02d:%02d"
 msgstr "bei %d:%02d:%02d"
 
-#: source/ui/LibraryDetail.cpp:174
+#: source/ui/LibraryDetail.cpp:201
 #, c-format
 msgid "at %d:%02d"
 msgstr "bei %d:%02d"
 
-#: source/ui/LibraryDetail.cpp:179
+#: source/ui/LibraryDetail.cpp:206
 msgid "Continue"
 msgstr "Fortsetzen"
 
-#: source/ui/LibraryDetail.cpp:179
+#: source/ui/LibraryDetail.cpp:206
 msgid "From Start"
 msgstr "Von vorne"
 
-#: source/ui/LibraryDetail.cpp:234 source/ui/LibraryDetail.cpp:443
-#: source/ui/LibraryMusic.cpp:135 source/ui/LibraryScenes.cpp:113
-#: source/ui/LibraryShows.cpp:270 source/ui/MusicPlayerView.cpp:926
+#: source/ui/LibraryDetail.cpp:263 source/ui/LibraryDetail.cpp:481
+#: source/ui/LibraryFlix.cpp:266 source/ui/LibraryMusic.cpp:135
+#: source/ui/LibraryScenes.cpp:113 source/ui/LibraryShows.cpp:271
+#: source/ui/MusicPlayerView.cpp:926
 msgid "Play"
 msgstr "Abspielen"
 
-#: source/ui/LibraryDetail.cpp:261
+#: source/ui/LibraryDetail.cpp:290 source/ui/LibraryFlix.cpp:42
 #, c-format
 msgid "%ds"
 msgstr "%d s"
 
-#: source/ui/LibraryDetail.cpp:267 source/ui/LibraryDetail.cpp:445
-#: source/ui/LibraryShows.cpp:374 source/ui/LibrarySort.cpp:15
+#: source/ui/LibraryDetail.cpp:296 source/ui/LibraryDetail.cpp:484
+#: source/ui/LibraryFlix.cpp:45 source/ui/LibraryFlix.cpp:223
+#: source/ui/LibraryShows.cpp:376 source/ui/LibrarySort.cpp:15
 msgid "Watched"
 msgstr "Gesehen"
 
 #. TRANSLATORS: hours and minutes into the video, then how much of it is watched
-#: source/ui/LibraryDetail.cpp:287
+#: source/ui/LibraryDetail.cpp:316 source/ui/LibraryFlix.cpp:203
+#: source/ui/LibraryFlix.cpp:287
 #, c-format
 msgid "Resume at %dh%02d (%d%%)"
 msgstr "Fortsetzen bei %dh%02d (%d%%)"
 
-#: source/ui/LibraryDetail.cpp:288
+#: source/ui/LibraryDetail.cpp:317 source/ui/LibraryFlix.cpp:204
+#: source/ui/LibraryFlix.cpp:288
 #, c-format
 msgid "Resume at %dmin (%d%%)"
 msgstr "Fortsetzen bei %d min (%d%%)"
 
-#: source/ui/LibraryDetail.cpp:317
+#: source/ui/LibraryDetail.cpp:346 source/ui/LibraryFlix.cpp:334
 msgid "Read more"
 msgstr "Mehr lesen"
 
-#: source/ui/LibraryDetail.cpp:327
+#: source/ui/LibraryDetail.cpp:356 source/ui/LibraryFlix.cpp:338
 msgid "Cast & crew"
 msgstr "Besetzung & Crew"
 
-#: source/ui/LibraryDetail.cpp:341
+#: source/ui/LibraryDetail.cpp:370
 msgid "(director)"
 msgstr "(Regie)"
 
-#: source/ui/LibraryDetail.cpp:406
+#: source/ui/LibraryDetail.cpp:442
 #, c-format
 msgid "%d chapters"
 msgstr "%d Kapitel"
 
-#: source/ui/LibraryDetail.cpp:408 source/ui/LibraryDetail.cpp:443
+#: source/ui/LibraryDetail.cpp:444 source/ui/LibraryDetail.cpp:481
 #: source/ui/LibraryScenes.cpp:79 source/ui/LibrarySpecials.cpp:25
 msgid "Scenes"
 msgstr "Szenen"
 
-#: source/ui/LibraryDetail.cpp:422
+#: source/ui/LibraryDetail.cpp:458
 msgid "Version"
 msgstr "Version"
 
-#: source/ui/LibraryDetail.cpp:444 source/ui/LibraryShows.cpp:252
-#: source/ui/LibraryShows.cpp:271 source/ui/LibraryShows.cpp:276
+#: source/ui/LibraryDetail.cpp:480 source/ui/LibraryDetail.cpp:483
+#: source/ui/LibraryFlix.cpp:273 source/ui/LibraryShows.cpp:253
+#: source/ui/LibraryShows.cpp:272 source/ui/LibraryShows.cpp:277
 msgid "Favorite"
 msgstr "Favorit"
 
-#: source/ui/LibraryDetail.cpp:444 source/ui/LibraryShows.cpp:271
-#: source/ui/LibraryShows.cpp:276
+#: source/ui/LibraryDetail.cpp:480 source/ui/LibraryDetail.cpp:483
+#: source/ui/LibraryFlix.cpp:273 source/ui/LibraryShows.cpp:272
+#: source/ui/LibraryShows.cpp:277
 msgid "Unfavorite"
 msgstr "Kein Favorit"
 
-#: source/ui/LibraryDetail.cpp:445 source/ui/LibraryShows.cpp:374
+#: source/ui/LibraryDetail.cpp:484 source/ui/LibraryFlix.cpp:223
+#: source/ui/LibraryShows.cpp:376
 msgid "Unwatched"
 msgstr "Ungesehen"
 
 #. TRANSLATORS: an episode's page: 2 opens its series' seasons
-#: source/ui/LibraryDetail.cpp:447 source/ui/LibrarySpecials.cpp:43
+#: source/ui/LibraryDetail.cpp:486 source/ui/LibrarySpecials.cpp:43
 msgid "Extras"
 msgstr "Extras"
 
 #. TRANSLATORS: at the bottom of a series' page: Down shows its seasons
-#: source/ui/LibraryDetail.cpp:447 source/ui/LibraryShows.cpp:243
-#: source/ui/LibraryShows.cpp:271
+#: source/ui/LibraryDetail.cpp:486 source/ui/LibraryShows.cpp:244
+#: source/ui/LibraryShows.cpp:272
 msgid "Seasons"
 msgstr "Staffeln"
 
-#: source/ui/LibraryDetail.cpp:448 source/ui/SettingsView.cpp:629
+#: source/ui/LibraryDetail.cpp:487 source/ui/SettingsView.cpp:629
 msgid "Change"
 msgstr "Ändern"
 
-#: source/ui/LibraryDetail.cpp:448
+#: source/ui/LibraryDetail.cpp:487
 msgid "Focus"
 msgstr "Zeile"
 
-#: source/ui/LibraryDetail.cpp:477
+#: source/ui/LibraryDetail.cpp:516
 msgid "Scroll"
 msgstr "Scrollen"
 
@@ -1025,6 +1033,35 @@ msgstr "Titel"
 #: source/ui/LibraryDraw.cpp:183
 msgid "Activity"
 msgstr "Aktivität"
+
+#. TRANSLATORS: the Flix theme's episode card: its place in the season
+#: source/ui/LibraryFlix.cpp:181
+#, c-format
+msgid "episode %d / %d"
+msgstr "Folge %d / %d"
+
+#. TRANSLATORS: season and episode numbers before an episode's name (S1:E9)
+#: source/ui/LibraryFlix.cpp:188
+#, c-format
+msgid "S%d:E%d"
+msgstr "S%d:F%d"
+
+#: source/ui/LibraryFlix.cpp:222 source/ui/LibraryShows.cpp:375
+#: source/ui/LibrarySpecials.cpp:185
+msgid "Details"
+msgstr "Details"
+
+#: source/ui/LibraryFlix.cpp:222 source/ui/LibraryItems.cpp:580
+#: source/ui/LibraryItems.cpp:665 source/ui/LibraryMusic.cpp:135
+#: source/ui/LibraryShows.cpp:271 source/ui/LibraryShows.cpp:276
+#: source/ui/LibraryShows.cpp:375 source/ui/MusicPlayerView.cpp:926
+msgid "Shuffle"
+msgstr "Zufall"
+
+#. TRANSLATORS: the Flix theme's big button when the video has a resume point
+#: source/ui/LibraryFlix.cpp:266
+msgid "Resume"
+msgstr "Fortsetzen"
 
 #: source/ui/LibraryHome.cpp:331 source/ui/LibraryHome.cpp:384
 #: source/ui/LibraryHome.cpp:426 source/ui/LibraryItems.cpp:584
@@ -1096,13 +1133,6 @@ msgstr "ORDNER"
 #: source/ui/LibraryItems.cpp:545
 msgid "1 season"
 msgstr "1 Staffel"
-
-#: source/ui/LibraryItems.cpp:580 source/ui/LibraryItems.cpp:665
-#: source/ui/LibraryMusic.cpp:135 source/ui/LibraryShows.cpp:270
-#: source/ui/LibraryShows.cpp:275 source/ui/LibraryShows.cpp:373
-#: source/ui/MusicPlayerView.cpp:926
-msgid "Shuffle"
-msgstr "Zufall"
 
 #: source/ui/LibraryItems.cpp:580 source/ui/LibraryItems.cpp:652
 #: source/ui/LibraryItems.cpp:665
@@ -1204,24 +1234,20 @@ msgid "New search"
 msgstr "Neue Suche"
 
 #. TRANSLATORS: under the series' poster: A on it plays the first episode
-#: source/ui/LibraryShows.cpp:191
+#: source/ui/LibraryShows.cpp:192
 msgid "Play from the start"
 msgstr "Von Anfang an"
 
 #. TRANSLATORS: before the series' actors' names
-#: source/ui/LibraryShows.cpp:235
+#: source/ui/LibraryShows.cpp:236
 msgid "With"
 msgstr "Mit"
 
 #. TRANSLATORS: E = episode, its number in the season
-#: source/ui/LibraryShows.cpp:358
+#: source/ui/LibraryShows.cpp:360
 #, c-format
 msgid "E%02d"
 msgstr "E%02d"
-
-#: source/ui/LibraryShows.cpp:373 source/ui/LibrarySpecials.cpp:185
-msgid "Details"
-msgstr "Details"
 
 #: source/ui/LibrarySort.cpp:14
 msgid "Date added"
@@ -1364,7 +1390,7 @@ msgstr "Extra"
 msgid "No special features"
 msgstr "Keine Extras"
 
-#: source/ui/LibrarySpecials.cpp:142 source/ui/LibraryView.cpp:982
+#: source/ui/LibrarySpecials.cpp:142 source/ui/LibraryView.cpp:986
 msgid "Special Features"
 msgstr "Extras"
 
@@ -1470,19 +1496,19 @@ msgstr "GEMISCHT"
 msgid "MEDIA"
 msgstr "MEDIEN"
 
-#: source/ui/LibraryView.cpp:614
+#: source/ui/LibraryView.cpp:618
 msgid "No library found"
 msgstr "Keine Bibliothek gefunden"
 
-#: source/ui/LibraryView.cpp:754
+#: source/ui/LibraryView.cpp:758
 msgid "Collections unavailable"
 msgstr "Sammlungen nicht verfügbar"
 
-#: source/ui/LibraryView.cpp:768 source/ui/LibraryView.cpp:781
+#: source/ui/LibraryView.cpp:772 source/ui/LibraryView.cpp:785
 msgid "Favorites unavailable"
 msgstr "Favoriten nicht verfügbar"
 
-#: source/ui/LibraryView.cpp:1507
+#: source/ui/LibraryView.cpp:1513
 msgid "Error"
 msgstr "Fehler"
 

@@ -44,6 +44,11 @@ struct JellyfinEpisode {
     int         seasonNumber = 0;
     long long   playbackPositionTicks = 0;
     bool        played = false;   // UserData.Played
+    /* a season's list only (the Flix theme's episode card) */
+    std::string overview;
+    std::string officialRating;
+    int         year         = 0;
+    long long   runtimeTicks = 0;
 };
 
 struct JellyfinPerson {

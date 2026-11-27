@@ -139,6 +139,7 @@ bool LibraryView::updateSeasons(ir_t& ir, bool aPressed) {
 }
 
 bool LibraryView::updateEpisodes(ir_t& ir, bool aPressed) {
+    if (flixLayout()) return updateEpisodesFlix(ir, aPressed);
     int n = (int)episodes.size();
     if (Input::isBackPressed()) {
         if (episodesFromHome) { episodesFromHome = false; state = State::LibsReady; }
@@ -332,6 +333,7 @@ void LibraryView::drawSeasonsBody(ir_t& ir) {
 
 // Episode list
 void LibraryView::renderEpisodes(ir_t& ir) {
+    if (flixLayout()) { renderEpisodesFlix(ir); return; }
     const Ui::Palette& p = Ui::pal();
     std::string hdr = currentSeriesName + "  /  " + currentSeasonName;
     drawBreadcrumb(hdr, 18, 580);

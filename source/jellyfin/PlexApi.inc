@@ -907,6 +907,10 @@ bool JellyfinClient::plexFetchEpisodes(const std::string& path, const JellyfinAu
         e.seasonNumber = p.i(o, "parentIndex");
         e.playbackPositionTicks = p.ll(o, "viewOffset") * TICKS_PER_MS;
         e.played = p.i(o, "viewCount") > 0;
+        e.overview = p.s(o, "summary");
+        e.officialRating = p.s(o, "contentRating");
+        e.year = p.i(o, "year");
+        e.runtimeTicks = p.ll(o, "duration") * TICKS_PER_MS;
         c->out->push_back(e);
     }, &ctx);
     return true;

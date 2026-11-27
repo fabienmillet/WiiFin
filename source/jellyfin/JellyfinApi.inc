@@ -650,7 +650,7 @@ bool JellyfinClient::jf_getEpisodes(const std::string& serverUrl,
     char qs[512];
     snprintf(qs, sizeof(qs),
         "/Shows/%s/Episodes?SeasonId=%s&UserId=%s"
-        "&Fields=IndexNumber,ParentIndexNumber,UserData&EnableImages=false",
+        "&Fields=IndexNumber,ParentIndexNumber,UserData,Overview&EnableImages=false",
         seriesId.c_str(), seasonId.c_str(), auth.userId.c_str());
     return jf_fetchEpisodes(serverUrl + qs, auth, out);
 }
@@ -704,6 +704,10 @@ bool JellyfinClient::jf_fetchEpisodes(const std::string& url, const JellyfinAuth
         e.seasonNumber          = c->self->jsonGetInt(obj,    "ParentIndexNumber");
         e.playbackPositionTicks = c->self->jsonGetLongLong(obj, "PlaybackPositionTicks");
         e.played                = c->self->jsonGetBool(obj, "Played");
+        e.overview              = c->self->jsonGetString(obj, "Overview");
+        e.officialRating        = c->self->jsonGetString(obj, "OfficialRating");
+        e.year                  = c->self->jsonGetInt(obj, "ProductionYear");
+        e.runtimeTicks          = c->self->jsonGetLongLong(obj, "RunTimeTicks");
         if (!e.id.empty()) c->out->push_back(e);
     }, &ctx);
 

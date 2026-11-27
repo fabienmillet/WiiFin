@@ -22,15 +22,30 @@ bool LibraryView::updateDetail(ir_t& ir, bool aPressed) {
         return false;
     }
     /* -, or A with the pointer on it: the overview the page cuts short */
-    const bool onOverview = ir.valid && ir.x >= 240 && ir.x < 630 && ir.y >= detailOvY0 && ir.y < detailOvY1;
+    const bool onOverview = ir.valid && ir.x >= detailOvX0 && ir.x < 630 && ir.y >= detailOvY0 && ir.y < detailOvY1;
     if (overviewCut && (Input::isLPressed() || (aPressed && onOverview))) {
         SYS_Report("[Detail] the whole overview: %d lines\n", (int)overviewAll.size());
         overviewPanel = true;
         overviewTop = 0;
         return false;
     }
+    /* the Flix page: the pointer on a button (or the picture) focuses it;
+     * A on the favourite toggles it, anywhere else it plays (below) */
+    const bool flix = flixLayout();
+    if (flix) {
+        auto on = [&](float y, float h) { return ir.valid && ir.x >= flixBtnX && ir.x < flixBtnX + flixBtnW &&
+                                                 ir.y >= y && ir.y < y + h; };
+        const bool onFav = on(flixFavY, FLIX_FAV_H);
+        if (on(flixPlayY, FLIX_PLAY_H) ||
+            (ir.valid && ir.x < flixBtnX - 10 && ir.y >= flixPlayY && ir.y < flixPlayY + 195)) flixBtn = 0;
+        else if (onFav) flixBtn = 1;
+        if (aPressed && (ir.valid ? onFav : flixBtn == 1)) {
+            toggleFavorite(detailItemId, detail.isFavorite);
+            return false;
+        }
+    }
     /* A on the Scenes row: its chapters */
-    if (aPressed && detailFocusRow == 2 && !detail.chapters.empty()) {
+    if (aPressed && !(flix && flixBtn >= 0) && detailFocusRow == 2 && !detail.chapters.empty()) {
         state = State::ScenesLoad;
         return false;
     }
@@ -84,9 +99,21 @@ bool LibraryView::updateDetail(ir_t& ir, bool aPressed) {
         openSpecials(detailItemId, detail.name, State::DetailReady);
         return false;
     }
+    /* the rows there are: Version (several files), Audio, Subtitles,
+     * Scenes (chapters) */
+    int firstRow = !detail.versions.empty() ? -1 : !detail.audioStreams.empty() ? 0
+                 : !detail.subtitleStreams.empty() ? 1 : !detail.chapters.empty() ? 2 : 3;
     if (Input::isBackPressed()) {
         freeDetail();
         state = detailReturnState;
+    } else if (flix && flixBtn >= 0 && (Input::isUpPressed() || Input::isDownPressed() ||
+                                        Input::isLeftPressed() || Input::isRightPressed())) {
+        /* Flix: Play, Favorite, then down into the rows */
+        if (Input::isUpPressed()) flixBtn = 0;
+        else if (Input::isDownPressed() && flixBtn == 0) flixBtn = 1;
+        else if (Input::isDownPressed() && firstRow < 3) { flixBtn = -1; detailFocusRow = firstRow; }
+    } else if (flix && Input::isUpPressed() && (detailFocusRow == firstRow || firstRow == 3)) {
+        flixBtn = 1;   /* up from the first row: the buttons */
     } else if (Input::isUpPressed() || Input::isDownPressed()) {
         /* the rows there are: Version (several files), Audio, Subtitles,
          * Scenes (chapters); Audio when none */
@@ -198,7 +225,9 @@ void LibraryView::renderResumePrompt() {
 // drawDetailView()
 // ---------------------------------------------------------------
 void LibraryView::drawDetailView(ir_t& ir) {
+    if (flixLayout()) { drawDetailFlix(ir); return; }
     const Ui::Palette& p = Ui::pal();
+    detailOvX0 = 240;
     const int POSTER_X  = 20;
     const int POSTER_Y  = 30;
     const int INFO_X    = 240;
@@ -353,6 +382,13 @@ void LibraryView::drawDetailView(ir_t& ir) {
         y += 4;
     }
 
+    drawDetailRows(INFO_X, INFO_W, true);
+}
+
+/* the bottom of the page: the Version, Audio, Subtitles and Scenes rows
+ * (focused one lit when showFocus), the hints, the overview panel */
+void LibraryView::drawDetailRows(int INFO_X, int INFO_W, bool showFocus) {
+    const Ui::Palette& p = Ui::pal();
     // ---- Audio / Subtitle stream selectors ----
     // Drawn at a fixed bottom-anchor position so they're always visible.
     const int STREAM_ROW_H = 24;
@@ -398,7 +434,7 @@ void LibraryView::drawDetailView(ir_t& ir) {
             if (row == 2) {   /* the Scenes: A opens them */
                 if (!hasScenes) continue;
                 int ry = STREAM_Y0 + (2 + (hasVersions ? 1 : 0)) * STREAM_ROW_H;
-                bool focused = detailFocusRow == 2;
+                bool focused = showFocus && detailFocusRow == 2;
                 if (focused)
                     Ui::roundRect(INFO_X - 6, ry - 3, INFO_W - 8, STREAM_ROW_H - 3, (STREAM_ROW_H - 3) * 0.5f,
                                   Ui::mix(p.accent, 0xFFFFFFFF, 0.2f), p.accentDark);
@@ -411,7 +447,7 @@ void LibraryView::drawDetailView(ir_t& ir) {
             }
 
             int ry = STREAM_Y0 + (row + (hasVersions ? 1 : 0)) * STREAM_ROW_H;
-            bool focused = (detailFocusRow == row);
+            bool focused = showFocus && detailFocusRow == row;
             if (focused)
                 Ui::roundRect(INFO_X - 6, ry - 3, INFO_W - 8, STREAM_ROW_H - 3, (STREAM_ROW_H - 3) * 0.5f,
                               Ui::mix(p.accent, 0xFFFFFFFF, 0.2f), p.accentDark);
@@ -440,7 +476,10 @@ void LibraryView::drawDetailView(ir_t& ir) {
     }
 
     // ---- Footer ----
-    const Ui::Hint l[] = { { "A", detailFocusRow == 2 && hasScenes ? N_("Scenes") : N_("Play") }, { "B", N_("Back") },
+    /* A on the Flix page's second button: the favourite */
+    const char* aLabel = flixLayout() && flixBtn == 1 ? (detail.isFavorite ? N_("Unfavorite") : N_("Favorite"))
+                       : showFocus && detailFocusRow == 2 && hasScenes ? N_("Scenes") : N_("Play");
+    const Ui::Hint l[] = { { "A", aLabel }, { "B", N_("Back") },
                            { "1", detail.isFavorite ? N_("Unfavorite") : N_("Favorite") },
                            { "+!", detail.played ? N_("Unwatched") : N_("Watched") },
                            /* TRANSLATORS: an episode's page: 2 opens its series' seasons */
