@@ -1637,7 +1637,9 @@ bool JellyfinClient::jf_getTranscodingUrl(const std::string& serverUrl,
     // Snap startTimeTicks 3 seconds back so Jellyfin can output a full GOP before
     // the resume point — guarantees audio and video are aligned at stream start.
     static const long long RESUME_PAD_TICKS = 30000000LL; // 3s in 100ns ticks
-    if (startTimeTicks > RESUME_PAD_TICKS)
+    if (transcodeH264)
+        ;   /* x264 starts on a keyframe: no pad (see resumePadTicks) */
+    else if (startTimeTicks > RESUME_PAD_TICKS)
         startTimeTicks -= RESUME_PAD_TICKS;
     else if (startTimeTicks > 0)
         startTimeTicks = 0;
@@ -1663,15 +1665,25 @@ bool JellyfinClient::jf_getTranscodingUrl(const std::string& serverUrl,
     // body are hints; the internal scale filter uses its own 1280px default unless
     // the device profile declares explicit width/height constraints.
     measureLink(serverUrl, auth);
-    const int videoBps = videoBitrate();
+    /* Settings > Transcode Format: H.264 Baseline (no B-frames, no CABAC)
+     * at level 3.0 for servers that encode it on their GPU.  MPlayer decodes
+     * it in software, heavier than MPEG-4: its bitrate stays within what
+     * direct play takes for H.264 (2.5 Mb/s). */
+    const char* vcodec = transcodeH264 ? "h264" : "mpeg4";
+    const int videoBps = transcodeH264 && videoBitrate() > 2500000 ? 2500000 : videoBitrate();
     static const int AUDIO_BPS = 128000;
-    static const char* codecProfiles =
-        "[{\"Type\":\"Video\",\"Codec\":\"mpeg4\",\"Conditions\":["
+    char codecProfiles[512];
+    snprintf(codecProfiles, sizeof(codecProfiles),
+        "[{\"Type\":\"Video\",\"Codec\":\"%s\",\"Conditions\":["
         "{\"Condition\":\"LessThanEqual\",\"Property\":\"Width\","
             "\"Value\":\"640\",\"IsRequired\":true},"
         "{\"Condition\":\"LessThanEqual\",\"Property\":\"Height\","
-            "\"Value\":\"480\",\"IsRequired\":true}"
-        "]}]";
+            "\"Value\":\"480\",\"IsRequired\":true}%s"
+        "]}]", vcodec,
+        transcodeH264 ? ",{\"Condition\":\"EqualsAny\",\"Property\":\"VideoProfile\","
+                            "\"Value\":\"baseline|constrained baseline\",\"IsRequired\":true},"
+                        "{\"Condition\":\"LessThanEqual\",\"Property\":\"VideoLevel\","
+                            "\"Value\":\"30\",\"IsRequired\":true}" : "");
 
     char subField[48] = "";
     if (subtitleStreamIndex >= 0)
@@ -1693,12 +1705,12 @@ bool JellyfinClient::jf_getTranscodingUrl(const std::string& serverUrl,
         "\"DeviceProfile\":{"
         "\"DirectPlayProfiles\":[],"
         "\"TranscodingProfiles\":[{\"Container\":\"ts\",\"Type\":\"Video\","
-        "\"VideoCodec\":\"mpeg4\",\"AudioCodec\":\"mp3\","
+        "\"VideoCodec\":\"%s\",\"AudioCodec\":\"mp3\","
         "\"Protocol\":\"http\",\"Context\":\"Streaming\","
         "\"MaxAudioChannels\":\"2\",\"MaxFramerate\":30}],"
         "\"CodecProfiles\":%s,\"SubtitleProfiles\":[]}}",
         auth.userId.c_str(), mediaSourceId.c_str(), audioStreamIndex, subField,
-        videoBps + AUDIO_BPS, (long long)startTimeTicks, codecProfiles);
+        videoBps + AUDIO_BPS, (long long)startTimeTicks, vcodec, codecProfiles);
 
     SYS_Report("[PlaybackInfo] POST %s\n", fullUrl);
     SYS_Report("[PlaybackInfo] body: %.256s\n", bodyBuf);
@@ -1736,7 +1748,11 @@ bool JellyfinClient::jf_getTranscodingUrl(const std::string& serverUrl,
     char vbBuf[16], abBuf[16];
     snprintf(vbBuf, sizeof(vbBuf), "%d", videoBps);
     snprintf(abBuf, sizeof(abBuf), "%d", AUDIO_BPS);
-    urlReplaceParam(relUrl, "VideoCodec", "mpeg4");
+    urlReplaceParam(relUrl, "VideoCodec", vcodec);
+    if (transcodeH264) {
+        urlReplaceParam(relUrl, "h264-profile", "baseline");
+        urlReplaceParam(relUrl, "h264-level", "30");
+    }
     urlReplaceParam(relUrl, "AudioCodec", "mp3");
     urlReplaceParam(relUrl, "AudioBitrate", abBuf);
     urlReplaceParam(relUrl, "VideoBitrate", vbBuf);
